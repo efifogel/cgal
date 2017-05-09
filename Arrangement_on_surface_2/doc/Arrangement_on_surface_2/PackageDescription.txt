@@ -55,6 +55,9 @@ namespace ArrTraits {}
 /// \defgroup PkgArrangement2Enums Enumerations
 /// \ingroup PkgArrangement2
 
+/// \defgroup PkgArrangement2GaussianMap Gaussian Map
+/// \ingroup PkgArrangement2
+
 /*!
 \addtogroup PkgArrangement2
 \todo check generated documentation
@@ -118,6 +121,13 @@ implemented as peripheral classes or as free (global) functions.
 - `ArrangementWithHistoryOutputFormatter`
 - `ArrangementPointLocation_2`
 - `ArrangementVerticalRayShoot_2`
+- `ArrSphericalGaussianMap`
+- `ArrPolyhedralSgmInitializerVisitor`
+- `ArrPolyhedralSgm`
+- `ArrPolyhedralSgmArrDcel`
+- `ArrPolyhedralSgmArrVertex`
+- `ArrPolyhedralSgmArrHalfedge`
+- `ArrPolyhedralSgmArrFace`
 
 ## Geometric Object Concepts ##
 
@@ -187,6 +197,15 @@ implemented as peripheral classes or as free (global) functions.
 - `CGAL::Arr_vertex_index_map<Arrangement>`
 - `CGAL::Arr_face_index_map<Arrangement>`
 - `CGAL::Arr_point_location_result<Arrangement>`
+- `CGAL::Arr_sgm_initializer<Sgm, Traits>`
+- `CGAL::Arr_spherical_gaussian_map_3<GeometryTraits_2, Dcel>`
+- `CGAL::Arr_polyhedral_sgm_initializer<PolyhedralSgm, Polyhedron, Visitor>`
+- `CGAL::Arr_polyhedral_sgm<GeometryTraits_2, Dcel>`
+- `CGAL::Arr_polyhedral_sgm_initializer_visitor<PolyhedralSgmT, Polyhedron>`
+- `CGAL::Arr_polyhedral_sgm_arr_vertex<Point_2>`
+- `CGAL::Arr_polyhedral_sgm_arr_halfedge<X_monotone_curve_2>`
+- `CGAL::Arr_polyhedral_sgm_arr_face<Point_3>`
+- `CGAL::Arr_polyhedral_sgm_arr_dcel<GeometryTraits_2>`
 
 ## Macros ##
 - \link CGAL_ARR_POINT_LOCATION_VERSION `CGAL_ARR_POINT_LOCATION_VERSION` \endlink
