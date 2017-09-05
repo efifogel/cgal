@@ -44,6 +44,7 @@ public:
   typedef typename Kernel::FT                            NT;
   typedef typename Kernel::Point_2                       Rational_point_2;
   typedef typename Kernel::Segment_2                     Rational_segment_2;
+  typedef typename Kernel::Line_2                        Rational_line_2;
   typedef typename Kernel::Circle_2                      Rational_circle_2;
   typedef _One_root_point_2<NT, Filter>                  Point_2;
   typedef typename Point_2::CoordNT                      CoordNT;
@@ -689,6 +690,79 @@ public:
   {
     return Construct_opposite_2();
   }
+
+  /// \name Functor definitions for the landmarks point-location strategy.
+  //@{
+  typedef double                          Approximate_number_type;
+
+  class Approximate_2 {
+  public:
+    /*! Return an approximation of a point coordinate.
+     * \param p The exact point.
+     * \param i The coordinate index (either 0 or 1).
+     * \pre i is either 0 or 1.
+     * \return An approximation of p's x-coordinate (if i == 0), or an
+     *         approximation of p's y-coordinate (if i == 1).
+     */
+    Approximate_number_type operator()(const Point_2& p, int i) const
+    {
+      CGAL_precondition((i == 0) || (i == 1));
+      return (i == 0) ? (CGAL::to_double(p.x())) : (CGAL::to_double(p.y()));
+    }
+  };
+
+  /*! Obtain an Approximate_2 functor object. */
+  Approximate_2 approximate_2_object() const { return Approximate_2(); }
+
+  class Construct_x_monotone_curve_2 {
+  public:
+    /*! Return an x-monotone curve connecting the two given endpoints.
+     * \param p The first point.
+     * \param q The second point.
+     * \pre p and q must not be the same.
+     * \return A segment connecting p and q.
+     */
+    X_monotone_curve_2 operator()(const Point_2& p, const Point_2& q) const
+    {
+      // a = p.y - q.y
+      // b = q.x - p.x
+      // c = p.x * q.y - q.x * p.y
+      CoordNT a = p.y() - q.y();
+      CoordNT b = q.x() - p.x();
+      CoordNT c = p.x() * q.y() - q.x() * p.y();
+      /* Ensure that each of the coefficients can be converted to an NT
+       * representation without loss of precision.  We are conservative. It's
+       * possible to relax the condition allowing for a normalization process
+       * that uniformly scales each of the 3 coefficinets, such that the each of
+       * the scaled coefficients can be converted to an NT representation
+       * without loss of precision.
+       */
+      NT a_nt = (!a.is_extended() || (a.a1() == 0)) ? a.a0() : simplify(a);
+      NT b_nt = (!b.is_extended() || (b.a1() == 0)) ? b.a0() : simplify(b);
+      NT c_nt = (!c.is_extended() || (c.a1() == 0)) ? c.a0() : simplify(c);
+      Rational_line_2 supporting_line(a_nt, b_nt, c_nt);
+      return X_monotone_curve_2(supporting_line, p, q);
+    }
+
+  private:
+    NT simplify(const CoordNT& c) const
+    {
+      NT r = c.root();
+      CGAL_precondition(CGAL::is_square(r));
+      //! The following statement is obviously wrong.
+      //! \todo change with the appropriate code
+      NT s = ::sqrt(CGAL::to_double(r));
+      CGAL_assertion(s*s==r);
+      // std::cout << "s: " << s.exact() << ", r: " << r.exact()
+      //           << ", s*s: " << (s*s).exact() << std::endl;
+      return c.a0() + c.a1() * s;
+    }
+  };
+
+  /*! Obtain a Construct_x_monotone_curve_2 functor object. */
+  Construct_x_monotone_curve_2 construct_x_monotone_curve_2_object() const
+  { return Construct_x_monotone_curve_2(); }
+  //@}
 
   class Trim_2 {
   protected:
