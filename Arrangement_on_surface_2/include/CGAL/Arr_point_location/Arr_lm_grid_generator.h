@@ -166,6 +166,7 @@ public:
       (CGAL::compare(qy, y_max) == LARGER) ? (sqrt_n - 1) :
       static_cast<int>(((qy - y_min) / step_y) + 0.5);
     unsigned int index = sqrt_n * i + j;
+    CGAL_assertion(index < lm_pairs.size());
 
     // Return the result.
     obj = lm_pairs[index].second;
@@ -260,9 +261,9 @@ protected:
     unsigned int  i, j;
 
     for (i = 0; i< sqrt_n; i++) {
-      px = x_min + i*sx;
+      px = x_min + sx * i;
       for (j = 0; j< sqrt_n; j++) {
-        py = y_min + j*sy;
+        py = y_min + sy * j;
         points.push_back(Point_2(px, py));
       }
     }
