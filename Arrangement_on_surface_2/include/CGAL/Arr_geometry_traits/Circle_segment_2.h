@@ -75,6 +75,14 @@ public:
     _x (x),
     _y (y)
   {}
+
+  /*! Constructor of a point with one-root coefficients.
+     This constructor of a point can also be used with rational coefficients
+     thanks to convertor of CoordNT. */
+  _One_root_point_2_rep (double x, const double y) :
+    _x (CoordNT(x)),
+    _y (CoordNT(y))
+  {}
 };
 
 /*! \class
@@ -112,6 +120,10 @@ public:
      This constructor of a point can also be used with rational coefficients
      thanks to convertor of CoordNT. */
   _One_root_point_2 (const CoordNT& x, const CoordNT& y) :
+    Point_handle (Point_rep (x, y))
+  {}
+
+  _One_root_point_2 (double x, double y) :
     Point_handle (Point_rep (x, y))
   {}
 
