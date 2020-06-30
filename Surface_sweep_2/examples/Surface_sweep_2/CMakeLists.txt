@@ -33,3 +33,4 @@ endif()
 # ##########################################################
 
 create_single_source_cgal_program( "plane_sweep.cpp" )
+create_single_source_cgal_program( "projected_plane_sweep.cpp" )
