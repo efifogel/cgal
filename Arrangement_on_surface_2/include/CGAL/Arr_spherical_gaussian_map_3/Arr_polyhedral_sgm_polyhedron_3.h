@@ -226,6 +226,20 @@ struct property_map<CGAL::Arr_polyhedral_sgm_polyhedron_3<Sgm, Traits>, Tag> :
                       Tag>
 {};
 
+#define PM_DT_SPEC(DTAG) \
+  template <typename Sgm, typename Traits, typename T>                   \
+  struct property_map<CGAL::Arr_polyhedral_sgm_polyhedron_3<Sgm, Traits>, DTAG<T> > : \
+    property_map<CGAL::Polyhedron_3<Traits, CGAL::Arr_polyhedral_sgm_polyhedron_items<Sgm> >, DTAG<T> > \
+{};
+
+
+PM_DT_SPEC(CGAL::dynamic_vertex_property_t)
+PM_DT_SPEC(CGAL::dynamic_halfedge_property_t)
+PM_DT_SPEC(CGAL::dynamic_face_property_t)
+PM_DT_SPEC(CGAL::dynamic_edge_property_t)
+
+#undef PM_DT_SPEC
+
 }
 
 #endif
