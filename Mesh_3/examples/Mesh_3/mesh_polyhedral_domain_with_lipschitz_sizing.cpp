@@ -13,7 +13,7 @@
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::FT FT;
 
-// Domain 
+// Domain
 typedef CGAL::Mesh_polyhedron_3<K>::type Polyhedron;
 typedef CGAL::Polyhedral_mesh_domain_with_features_3<K> Mesh_domain;
 
@@ -26,7 +26,7 @@ typedef CGAL::Sequential_tag Concurrency_tag;
 // Triangulation
 typedef CGAL::Mesh_triangulation_3<Mesh_domain,CGAL::Default,Concurrency_tag>::type Tr;
 typedef CGAL::Mesh_complex_3_in_triangulation_3<
-  Tr,Mesh_domain::Corner_index,Mesh_domain::Curve_segment_index> C3t3;
+  Tr,Mesh_domain::Corner_index,Mesh_domain::Curve_index> C3t3;
 
 // Criteria
 typedef CGAL::Mesh_criteria_3<Tr> Mesh_criteria;
@@ -39,7 +39,7 @@ using namespace CGAL::parameters;
 
 int main(int argc, char*argv[])
 {
-  const char* fname = (argc>1) ? argv[1] : "data/fandisk.off";
+  const std::string fname = (argc>1) ? argv[1] : CGAL::data_file_path("meshes/fandisk.off");
   std::ifstream input(fname);
   Polyhedron polyhedron;
   input >> polyhedron;
@@ -47,6 +47,12 @@ int main(int argc, char*argv[])
     std::cerr << "Error: Cannot read file " << fname << std::endl;
     return EXIT_FAILURE;
   }
+
+  if (!CGAL::is_triangle_mesh(polyhedron)){
+    std::cerr << "Input geometry is not triangulated." << std::endl;
+    return EXIT_FAILURE;
+  }
+
   // Create domain
   Mesh_domain domain(polyhedron);
 

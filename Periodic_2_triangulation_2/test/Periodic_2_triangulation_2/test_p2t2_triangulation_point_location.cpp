@@ -23,11 +23,11 @@ Face_handle test_point_location(const Triangulation &t,
   os = t.oriented_side(fh, query);
   CGAL_USE(bs);
   CGAL_USE(os);
-  
+
   CGAL_assertion(lt2 == lt_in);
 
   switch (lt_in)
-    {
+  {
     case Triangulation::VERTEX:
     case Triangulation::EDGE:
     {
@@ -45,13 +45,13 @@ Face_handle test_point_location(const Triangulation &t,
       CGAL_assertion(os == CGAL::ON_POSITIVE_SIDE);
       break;
     }
-    case Triangulation::EMPTY:
+    default:
     {
       // Handled above
       CGAL_assertion(false);
       break;
     }
-    }
+  }
 
   return fh;
 }

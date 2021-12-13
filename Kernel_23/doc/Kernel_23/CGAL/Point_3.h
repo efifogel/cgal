@@ -17,6 +17,7 @@ to `NT`, and `Kernel::FT` is equal to `Quotient<NT>`.
 The following operations can be applied on points:
 
 \cgalModels `Kernel::Point_3`
+\cgalModels `Hashable` if `Kernel` is a cartesian kernel and if `Kernel::FT` is `Hashable`
 
 */
 template< typename Kernel >
@@ -66,8 +67,11 @@ Point_3(const Kernel::FT &x, const Kernel::FT &y, const Kernel::FT &z);
 
 /*!
 introduces a point from a weighted point.
+
+\warning The `explicit` keyword is used to avoid accidental implicit conversions
+         between Point_3 and Weighted_point_3.
 */
-Point_3(const Kernel::Weighted_point_3 &wp);
+explicit Point_3(const Kernel::Weighted_point_3 &wp);
 
 /// @}
 

@@ -38,8 +38,8 @@ double squared_length(const Point& p)
 void compare_mesh(const Mesh& mesh_1, const Mesh& mesh_2)
 {
   vertex_iterator it_1,end_1, it_2, end_2;
-  CGAL::cpp11::tie(it_1, end_1) = vertices(mesh_1);
-  CGAL::cpp11::tie(it_2, end_2) = vertices(mesh_2);
+  std::tie(it_1, end_1) = vertices(mesh_1);
+  std::tie(it_2, end_2) = vertices(mesh_2);
   boost::property_map<Mesh, boost::vertex_point_t>::type
     ppmap_1 = get(boost::vertex_point, mesh_1), ppmap_2 = get(boost::vertex_point, mesh_2);
   Point total_dif(0,0,0);
@@ -105,7 +105,7 @@ void read_handle_difs_and_deform(DeformMesh& deform_mesh, InputIterator begin, I
 int main()
 {
   Mesh mesh_1;
-  OpenMesh::IO::read_mesh(mesh_1, "data/cactus.off");
+  OpenMesh::IO::read_mesh(mesh_1, CGAL::data_file_path("meshes/cactus.off"));
   Mesh mesh_2 = mesh_1;
 
   Deform_mesh_arap deform_mesh_arap(mesh_1);

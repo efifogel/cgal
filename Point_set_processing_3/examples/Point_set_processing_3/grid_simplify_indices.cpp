@@ -1,6 +1,6 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+
 #include <CGAL/grid_simplify_point_set.h>
-#include <CGAL/IO/read_xyz_points.h>
 #include <CGAL/property_map.h>
 
 #include <vector>
@@ -13,17 +13,19 @@ typedef Kernel::Vector_3 Vector;
 
 int main(int argc, char*argv[])
 {
+  const std::string fname = (argc>1) ? argv[1] : CGAL::data_file_path("points_3/fin90_with_PCA_normals.xyz");
+
   // Reads a .xyz point set file in points[].
   std::vector<Point> points;
   std::vector<Vector> normals;
-  const char* fname = (argc>1)?argv[1]:"data/fin90_with_PCA_normals.xyz";
   std::ifstream stream(fname);
   Point p;
   Vector v;
-  while(stream >> p >> v){
+  while(stream >> p >> v)
+  {
     points.push_back(p);
     normals.push_back(v);
-  } 
+  }
 
   std::cout << points.size() << " input points" << std::endl;
   std::vector<std::size_t> indices(points.size());
@@ -33,14 +35,13 @@ int main(int argc, char*argv[])
   // simplification by clustering using erase-remove idiom
   double cell_size = 0.05;
   std::vector<std::size_t>::iterator end;
-  end = CGAL::grid_simplify_point_set(indices.begin(),
-                                      indices.end(),
-                                      CGAL::make_property_map(points),
-                                      cell_size);
+  end = CGAL::grid_simplify_point_set(indices,
+                                      cell_size,
+                                      CGAL::parameters::point_map (CGAL::make_property_map(points)));
 
   std::size_t k = end - indices.begin();
 
-  std::cerr << "Keep " << k << " of " << indices.size() <<  "indices" << std::endl;
+  std::cerr << "Keep " << k << " of " << indices.size() <<  " indices" << std::endl;
 
   {
     std::vector<Point> tmp_points(k);

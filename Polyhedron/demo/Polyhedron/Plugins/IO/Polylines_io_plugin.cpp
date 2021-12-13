@@ -4,16 +4,16 @@
 #include <CGAL/Three/Polyhedron_demo_io_plugin_interface.h>
 #include <CGAL/Three/Polyhedron_demo_plugin_interface.h>
 #include <CGAL/Three/Polyhedron_demo_plugin_helper.h>
+#include <CGAL/Polygon_mesh_processing/internal/simplify_polyline.h>
+#include <CGAL/boost/graph/split_graph_into_polylines.h>
+#include <CGAL/Mesh_3/polylines_to_protect.h>
+
+#include <CGAL/Three/Three.h>
 #include <fstream>
 #include <QVariant>
-#include <boost/foreach.hpp>
 #include <QMessageBox>
-
-#include "ui_Add_polylines_dialog.h"
+#include <QInputDialog>
 using namespace CGAL::Three;
-namespace Ui{
-    class Add_polylines_dialog;
-}
 class Polyhedron_demo_polylines_io_plugin :
   public QObject,
   public Polyhedron_demo_io_plugin_interface,
@@ -21,52 +21,23 @@ class Polyhedron_demo_polylines_io_plugin :
 {
   Q_OBJECT
     Q_INTERFACES(CGAL::Three::Polyhedron_demo_plugin_interface CGAL::Three::Polyhedron_demo_io_plugin_interface)
-    Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.PluginInterface/1.0")
-    Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.IOPluginInterface/1.0")
+    Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.PluginInterface/1.0" FILE "polylines_io_plugin.json")
+    Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.IOPluginInterface/1.90")
 
 
 public:
     // To silent a warning -Woverloaded-virtual
     // See http://stackoverflow.com/questions/9995421/gcc-woverloaded-virtual-warnings
 
-    //! Adds an action to the menu and configures the widget
+    using Polyhedron_demo_io_plugin_interface::init;
+    //! Configures the widget
     void init(QMainWindow* mainWindow,
               CGAL::Three::Scene_interface* scene_interface,
-              Messages_interface*) {
+              Messages_interface*) override{
       //get the references
       this->scene = scene_interface;
       this->mw = mainWindow;
       //creates and link the actions
-      actionAdd_polylines= new QAction("Add Polylines", mw);
-      connect(actionAdd_polylines, SIGNAL(triggered()), this, SLOT(on_actionAdd_polylines_triggered()));
-      QMenu* menuFile = mw->findChild<QMenu*>("menuFile");
-      if ( NULL != menuFile )
-      {
-        QList<QAction*> menuFileActions = menuFile->actions();
-
-        // Look for action just after "Load..." action
-        QAction* actionAfterLoad = NULL;
-        for ( QList<QAction*>::iterator it_action = menuFileActions.begin(),
-             end = menuFileActions.end() ; it_action != end ; ++ it_action ) //Q_FOREACH( QAction* action, menuFileActions)
-        {
-          if ( NULL != *it_action && (*it_action)->text().contains("Load Plugin") )
-          {
-            ++it_action;
-            if ( it_action != end && NULL != *it_action )
-            {
-              actionAfterLoad = *it_action;
-            }
-          }
-        }
-
-        // Insert "Load implicit function" action
-        if ( NULL != actionAfterLoad )
-        {
-          menuFile->insertAction(actionAfterLoad,actionAdd_polylines);
-        }
-      }
-
-
       actionJoin_polylines= new QAction(tr("Join Selected Polylines"), mainWindow);
       actionJoin_polylines->setProperty("subMenuName", "Operations on Polylines");
       actionJoin_polylines->setObjectName("actionJoinPolylines");
@@ -74,18 +45,33 @@ public:
       actionSplit_polylines= new QAction(tr("Split Selected Polylines"), mainWindow);
       actionSplit_polylines->setProperty("subMenuName", "Operations on Polylines");
       actionSplit_polylines->setObjectName("actionSplitPolylines");
+
+      actionSplit_polylines_graph= new QAction(tr("Split Graph into Polylines"), mainWindow);
+      actionSplit_polylines_graph->setProperty("subMenuName", "Operations on Polylines");
+      actionSplit_polylines_graph->setObjectName("actionSplitPolylinesGraph");
+
+      actionSimplify_polylines = new QAction(tr("Simplify Selected Polyline"), mainWindow);
+      actionSimplify_polylines->setProperty("subMenuName", "Operations on Polylines");
+      actionSimplify_polylines->setObjectName("actionSimplifyPolylines");
+
       connect(actionSplit_polylines, &QAction::triggered, this, &Polyhedron_demo_polylines_io_plugin::split);
+      connect(actionSplit_polylines_graph, &QAction::triggered, this, &Polyhedron_demo_polylines_io_plugin::split_graph);
       connect(actionJoin_polylines, &QAction::triggered, this, &Polyhedron_demo_polylines_io_plugin::join);
+      connect(actionSimplify_polylines, &QAction::triggered, this, &Polyhedron_demo_polylines_io_plugin::simplify);
+
 
     }
-  QString name() const { return "polylines_io_plugin"; }
-  QString nameFilters() const { return "Polylines files (*.polylines.txt *.cgal)"; }
-  bool canLoad() const;
-  CGAL::Three::Scene_item* load(QFileInfo fileinfo);
+  QString name() const override{ return "polylines_io_plugin"; }
+  QString nameFilters() const override{ return "Polylines files (*.polylines.txt *.cgal)"; }
+  bool canLoad(QFileInfo fileinfo) const override;
+  QList<Scene_item*> load(QFileInfo fileinfo, bool& ok, bool add_to_scene=true) override;
 
-  bool canSave(const CGAL::Three::Scene_item*);
-  bool save(const CGAL::Three::Scene_item*, QFileInfo fileinfo);
-  bool applicable(QAction* a) const {
+  bool canSave(const CGAL::Three::Scene_item*) override;
+  bool save(QFileInfo fileinfo,QList<CGAL::Three::Scene_item*>&) override;
+  bool applicable(QAction* a) const override{
+    if( a == actionSimplify_polylines || a == actionSplit_polylines_graph)
+      return qobject_cast<Scene_polylines_item*>(scene->item(
+                                                   scene->mainSelectionIndex()));
     bool all_polylines_selected = true;
     Q_FOREACH(int index, scene->selectionIndices())
     {
@@ -104,49 +90,75 @@ public:
     else
       return false;
   }
-  QList<QAction*> actions() const {
+  QList<QAction*> actions() const override{
 
     return QList<QAction*>()<<actionSplit_polylines
-                            <<actionJoin_polylines;
+                            <<actionJoin_polylines
+                           <<actionSimplify_polylines
+                          <<actionSplit_polylines_graph;
+  }
+
+  bool isDefaultLoader(const Scene_item* item) const override{
+    if(qobject_cast<const Scene_polylines_item*>(item))
+      return true;
+    return false;
   }
   protected Q_SLOTS:
-  //!Opens a dialog to add polylines on the fly.
-  void on_actionAdd_polylines_triggered();
-  //!Adds a polyline
-  void addPolylineButton_clicked();
-  //!Closes the dialog
-  void closePolylinesButton_clicked();
   //!Splits the selected Scene_polylines_item in multiple items all containing a single polyline.
   void split();
+  void split_graph();
   //!Joins the selected Scene_polylines_items in a single item containing all their polylines.
   void join();
+  void simplify();
 
 private:
-  QAction* actionAdd_polylines;
   QAction* actionSplit_polylines;
+  QAction* actionSplit_polylines_graph;
   QAction* actionJoin_polylines;
-  Ui::Add_polylines_dialog *add_polydiagui;
-  QDialog *add_polydiag;
+  QAction* actionSimplify_polylines;
 };
 
-bool Polyhedron_demo_polylines_io_plugin::canLoad() const {
+bool Polyhedron_demo_polylines_io_plugin::canLoad(QFileInfo fileinfo) const{
+  if(!fileinfo.suffix().contains("cgal"))
+    return true;
+  std::ifstream in(fileinfo.filePath().toUtf8());
+  if(!in) {
+    return false;
+  }
+  int first;
+  if(!(in >> first)
+     || first <= 0)
+    return false;
   return true;
 }
 
 
-CGAL::Three::Scene_item*
-Polyhedron_demo_polylines_io_plugin::load(QFileInfo fileinfo) {
+QList<Scene_item*>
+Polyhedron_demo_polylines_io_plugin::
+load(QFileInfo fileinfo, bool& ok, bool add_to_scene){
 
   // Open file
   std::ifstream ifs(fileinfo.filePath().toUtf8());
   if(!ifs) {
     std::cerr << "Error! Cannot open file " << (const char*)fileinfo.filePath().toUtf8() << std::endl;
-    return NULL;
+    ok = false;
+    return QList<Scene_item*>();
+  }
+
+  if(fileinfo.size() == 0)
+  {
+    CGAL::Three::Three::warning( tr("The file you are trying to load is empty."));
+    Scene_polylines_item* item = new Scene_polylines_item;
+    item->setName(fileinfo.completeBaseName());
+    ok = true;
+    if(add_to_scene)
+      CGAL::Three::Three::scene()->addItem(item);
+    return QList<Scene_item*>()<<item;
   }
 
   std::list<std::vector<Scene_polylines_item::Point_3> > polylines;
   QStringList polylines_metadata;
-  
+
   int counter = 0;
   std::size_t n;
   while(ifs >> n) {
@@ -159,12 +171,16 @@ Polyhedron_demo_polylines_io_plugin::load(QFileInfo fileinfo) {
       Scene_polylines_item::Point_3 p;
       ifs >> p;
       polyline.push_back(p);
-      if(!ifs.good()) return 0;
+      if(!ifs.good())
+      {
+        ok = false;
+        return QList<Scene_item*>();
+      }
     }
     std::string line_remainder;
     std::getline(ifs, line_remainder);
     QString metadata(line_remainder.c_str());
-    if(metadata[0].isSpace()) {
+    if(!metadata.isEmpty() && metadata[0].isSpace()) {
       metadata.remove(0, 1);
     }
     polylines_metadata << metadata;
@@ -172,9 +188,17 @@ Polyhedron_demo_polylines_io_plugin::load(QFileInfo fileinfo) {
       std::cerr << " (metadata: \"" << qPrintable(metadata) << "\")\n";
     } else {
     }
-    if(ifs.bad() || ifs.fail()) return 0;
+    if(ifs.bad() || ifs.fail())
+    {
+      ok = false;
+      return QList<Scene_item*>();
+    }
   }
-  if(counter == 0) return 0;
+  if(counter == 0)
+  {
+    ok = false;
+    return QList<Scene_item*>();
+  }
   Scene_polylines_item* item = new Scene_polylines_item;
   item->polylines = polylines;
   item->setName(fileinfo.baseName());
@@ -182,7 +206,10 @@ Polyhedron_demo_polylines_io_plugin::load(QFileInfo fileinfo) {
   item->setProperty("polylines metadata", polylines_metadata);
   std::cerr << "Number of polylines in item: " << item->polylines.size() << std::endl;
   item->invalidateOpenGLBuffers();
-  return item;
+  ok = true;
+  if(add_to_scene)
+    CGAL::Three::Three::scene()->addItem(item);
+  return QList<Scene_item*>()<<item;
 }
 
 bool Polyhedron_demo_polylines_io_plugin::canSave(const CGAL::Three::Scene_item* item)
@@ -190,9 +217,11 @@ bool Polyhedron_demo_polylines_io_plugin::canSave(const CGAL::Three::Scene_item*
   return qobject_cast<const Scene_polylines_item*>(item) != 0;
 }
 
-bool Polyhedron_demo_polylines_io_plugin::save(const CGAL::Three::Scene_item* item, QFileInfo fileinfo)
+bool Polyhedron_demo_polylines_io_plugin::
+save(QFileInfo fileinfo,QList<CGAL::Three::Scene_item*>& items)
 {
-  const Scene_polylines_item* poly_item = 
+  Scene_item* item = items.front();
+  const Scene_polylines_item* poly_item =
     qobject_cast<const Scene_polylines_item*>(item);
 
   if(!poly_item)
@@ -213,9 +242,9 @@ bool Polyhedron_demo_polylines_io_plugin::save(const CGAL::Three::Scene_item* it
 
   QStringList metadata = item->property("polylines metadata").toStringList();
 
-  BOOST_FOREACH(const Polyline& polyline, poly_item->polylines) {
+  for(const Polyline& polyline : poly_item->polylines) {
     out << polyline.size();
-    BOOST_FOREACH(const Point_3& p, polyline) {
+    for(const Point_3& p : polyline) {
       out << " " << p.x() << " " << p.y() << " " << p.z();
     }
     if(!metadata.isEmpty()) {
@@ -224,91 +253,10 @@ bool Polyhedron_demo_polylines_io_plugin::save(const CGAL::Three::Scene_item* it
     }
     out << std::endl;
   }
-  return (bool) out;
-}
-
-void Polyhedron_demo_polylines_io_plugin::on_actionAdd_polylines_triggered()
-{
-  add_polydiag = new QDialog(mw);
-  add_polydiagui = new Ui::Add_polylines_dialog();
-  add_polydiagui->setupUi(add_polydiag);
-  connect(add_polydiagui->add_polylineButton, SIGNAL(clicked()), this, SLOT(addPolylineButton_clicked()));
-  connect(add_polydiagui->close_polylineButton, SIGNAL(clicked()), this, SLOT(closePolylinesButton_clicked()));
-  add_polydiag->exec();
-}
-
-
-void Polyhedron_demo_polylines_io_plugin::addPolylineButton_clicked()
-{
-    static int nb_of_polylines = 0;
-  QString text = add_polydiagui->textEdit->toPlainText();
-  std::list<std::vector<Scene_polylines_item::Point_3> > polylines;
-  polylines.resize(polylines.size()+1);
-  std::vector<Scene_polylines_item::Point_3>& polyline = *(polylines.rbegin());
-  QStringList polylines_metadata;
-  QStringList list = text.split(QRegExp("\\s+"), QString::SkipEmptyParts);
-  int counter = 0;
-  double coord[3];
-  bool ok = true;
-  if (list.isEmpty()) return;
-  if (list.size()%3!=0){
-    QMessageBox *msgBox = new QMessageBox;
-    msgBox->setWindowTitle("Error");
-    msgBox->setText("ERROR : Input should consists of triplets.");
-    msgBox->exec();
-    return;
-  }
-  Q_FOREACH(QString s, list)
-  {
-      if(!s.isEmpty())
-      {
-          double res = s.toDouble(&ok);
-          if(!ok)
-          {
-              QMessageBox *msgBox = new QMessageBox;
-              msgBox->setWindowTitle("Error");
-              msgBox->setText("ERROR : Coordinates are invalid.");
-              msgBox->exec();
-              break;
-          }
-          else
-          {
-            coord[counter] = res;
-            counter++;
-          }
-      }
-      if(counter == 3)
-      {
-          Scene_polylines_item::Point_3 p(coord[0], coord[1], coord[2]);
-          polyline.push_back(p);
-          counter =0;
-      }
-  }
-    if(ok)
-    {
-        add_polydiagui->textEdit->clear();
-        Scene_polylines_item* item = new Scene_polylines_item;
-        item->polylines = polylines;
-        QString name;
-        if(add_polydiagui->name_lineEdit->text() != "")
-          name = add_polydiagui->name_lineEdit->text();
-        else
-        {
-          nb_of_polylines++;
-          name = QString("Polyline #%1").arg(QString::number(nb_of_polylines));
-        }
-        add_polydiagui->name_lineEdit->clear();
-        item->setName(name);
-        item->setColor(Qt::black);
-        item->setProperty("polylines metadata", polylines_metadata);
-        item->invalidateOpenGLBuffers();
-        scene->addItem(item);
-    }
-}
-
-void Polyhedron_demo_polylines_io_plugin::closePolylinesButton_clicked()
-{
-    add_polydiag->close();
+  bool res = (bool) out;
+  if(res)
+    items.pop_front();
+  return res;
 }
 
 void Polyhedron_demo_polylines_io_plugin::split()
@@ -329,6 +277,89 @@ void Polyhedron_demo_polylines_io_plugin::split()
     scene->addItem(new_polyline);
     scene->changeGroup(new_polyline, group);
   }
+}
+
+template <typename P,
+          typename PolylineInputIterator>
+void
+polylines_to_split(std::vector<std::vector<P> >& polylines,
+                     PolylineInputIterator existing_polylines_begin,
+                     PolylineInputIterator existing_polylines_end)
+{
+  typedef P Point_3;
+  typedef typename CGAL::Kernel_traits<P>::Kernel K;
+  using CGAL::internal::polylines_to_protect_namespace::Vertex_info;
+  typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS,
+                                Vertex_info<Point_3> > Graph;
+  typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
+  typedef typename std::iterator_traits<PolylineInputIterator>::value_type Polyline;
+
+  Graph graph;
+  typedef CGAL::Mesh_3::internal::Returns_midpoint<K, int> Midpoint_fct;
+  CGAL::Mesh_3::internal::Graph_manipulations<Graph,
+                                        Point_3,
+                                        int,
+                                        Midpoint_fct> g_manip(graph);
+
+  for (PolylineInputIterator poly_it = existing_polylines_begin;
+       poly_it != existing_polylines_end; ++poly_it)
+  {
+    Polyline polyline = *poly_it;
+    if (polyline.size() < 2)
+      continue;
+
+    typename Polyline::iterator pit = polyline.begin();
+    while (boost::next(pit) != polyline.end())
+    {
+      vertex_descriptor v = g_manip.get_vertex(*pit, false);
+      vertex_descriptor w = g_manip.get_vertex(*boost::next(pit), false);
+      g_manip.try_add_edge(v, w);
+      ++pit;
+    }
+  }
+
+  CGAL::Mesh_3::Polyline_visitor<Point_3, Graph> visitor(polylines, graph);
+  const Graph& const_graph = graph;
+  typedef typename CGAL::Kernel_traits<P>::Kernel K;
+  CGAL::split_graph_into_polylines(const_graph, visitor);
+}
+
+void Polyhedron_demo_polylines_io_plugin::split_graph()
+{
+  Scene_item* main_item = scene->item(scene->mainSelectionIndex());
+  Scene_polylines_item* polylines_item =
+      qobject_cast<Scene_polylines_item*>(main_item);
+  if(polylines_item == nullptr) return;
+  std::vector<Scene_polylines_item::Polylines_container::value_type> new_polylines;
+  polylines_to_split(new_polylines, polylines_item->polylines.begin(), polylines_item->polylines.end());
+  Scene_polylines_item* new_item = new Scene_polylines_item;
+  new_item->polylines =
+      Scene_polylines_item::Polylines_container{new_polylines.begin(), new_polylines.end()};
+  new_item->setName(tr("%1 (split)").arg(polylines_item->name()));
+  scene->addItem(new_item);
+}
+
+void Polyhedron_demo_polylines_io_plugin::simplify()
+{
+  Scene_polylines_item* item = qobject_cast<Scene_polylines_item*>(scene->item(scene->mainSelectionIndex()));
+  bool ok;
+  double err = QInputDialog::getDouble(mw, "Squared Frechet Distance", "Enter the squared approximation error:", pow(0.01*item->diagonalBbox(),2),0,999,8,&ok);
+  if(!ok)
+    return;
+  for(Scene_polylines_item::Polylines_container::iterator
+      it = item->polylines.begin();
+      it!= item->polylines.end();
+      ++it)
+  {
+    Scene_polylines_item::Polyline out_range;
+    CGAL::Polygon_mesh_processing::experimental::simplify_polyline(*it,
+                                                                   out_range,
+                                                                   err);
+    it->clear();
+    it->insert(it->begin(), out_range.begin(), out_range.end());
+  }
+  item->invalidateOpenGLBuffers();
+  item->redraw();
 }
 
 void Polyhedron_demo_polylines_io_plugin::join()

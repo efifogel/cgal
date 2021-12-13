@@ -77,17 +77,25 @@ void test_global_access()
   CGAL_USE(number_of_stored_edges);
   CGAL_assertion(number_of_stored_edges == t.number_of_stored_edges());
 
+  bool is_triang1 = t_const.is_triangulation_in_1_sheet();
+  CGAL_USE(is_triang1);
+  CGAL_assertion(is_triang1 == t.is_triangulation_in_1_sheet());
+  t.convert_to_1_sheeted_covering();
+  t.convert_to_9_sheeted_covering();
+}
+
+template <class T>
+void test_delaunay_global_access()
+{
+  T t;
+  const T &t_const = t;
+
   bool ext1 = t_const.is_extensible_triangulation_in_1_sheet_h1();
   CGAL_USE(ext1);
   CGAL_assertion(ext1 == t.is_extensible_triangulation_in_1_sheet_h1());
   bool ext2 = t_const.is_extensible_triangulation_in_1_sheet_h2();
   CGAL_USE(ext2);
   CGAL_assertion(ext2 == t.is_extensible_triangulation_in_1_sheet_h2());
-  bool is_triang1 = t_const.is_triangulation_in_1_sheet();
-  CGAL_USE(is_triang1);
-  CGAL_assertion(is_triang1 == t.is_triangulation_in_1_sheet());
-  t.convert_to_1_sheeted_covering();
-  t.convert_to_9_sheeted_covering();
 }
 
 template <class T>
@@ -480,7 +488,7 @@ template <class T>
 void test_io(T &pt1, bool ex)
 {
   std::cout << "I/O" << std::endl;
-  std::cout << "  ascii" << std::endl;
+  std::cout << "  ASCII" << std::endl;
 
   std::stringstream ss1;
   ss1 << pt1;
@@ -488,7 +496,7 @@ void test_io(T &pt1, bool ex)
   T pt1r;
   ss1 >> pt1r;
 
-  assert(CGAL::is_ascii(ss1));
+  assert(CGAL::IO::is_ascii(ss1));
   if (!ex)
   {
     assert(pt1 == pt1r);
@@ -500,12 +508,12 @@ void test_io(T &pt1, bool ex)
   if (!ex)
   {
     std::stringstream ss1b;
-    CGAL::set_binary_mode(ss1b);
+    CGAL::IO::set_binary_mode(ss1b);
     ss1b << pt1;
-    
+
     ss1b >> pt1r;
-    assert(CGAL::is_binary(ss1b));
-    
+    assert(CGAL::IO::is_binary(ss1b));
+
     assert(pt1 == pt1r);
   }
 
@@ -513,10 +521,10 @@ void test_io(T &pt1, bool ex)
 
   pt1r.clear();
   std::stringstream ss1p;
-  CGAL::set_pretty_mode(ss1p);
+  CGAL::IO::set_pretty_mode(ss1p);
   ss1p << pt1;
 
-  assert(CGAL::is_pretty(ss1p));
+  assert(CGAL::IO::is_pretty(ss1p));
 }
 
 template <class T>
@@ -664,6 +672,7 @@ void test_locally_delaunay()
 template <class T>
 void test_delaunay()
 {
+  test_delaunay_global_access<T>();
   test_batch_insertion<T>();
   test_nearest<T>();
   test_locally_delaunay<T>();

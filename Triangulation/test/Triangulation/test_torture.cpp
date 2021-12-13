@@ -1,15 +1,7 @@
-#if defined(__GNUC__) && defined(__GNUC_MINOR__) && (__GNUC__ <= 4) && (__GNUC_MINOR__ < 4)
-
-#include <iostream>
-int main()
-{
-  std::cerr << "NOTICE: This test requires G++ >= 4.4, and will not be compiled." << std::endl;
-}
-
-#else
+#include <CGAL/config.h>
 
 #include <CGAL/Epick_d.h>
-#include <CGAL/internal/Combination_enumerator.h>
+#include <CGAL/Triangulation/internal/Combination_enumerator.h>
 #include <CGAL/point_generators_d.h>
 #include <CGAL/Delaunay_triangulation.h>
 #include <CGAL/algorithm.h>
@@ -82,11 +74,7 @@ void test(const int D, const int d, const int N, bool no_transform)
             for( int j = 0; j < d; ++j )
                 coords[i] = coords[i] + (*pit)[j] * aff[j][i];
         }
-#ifdef USE_NEW_KERNEL
-        points.push_back(Point(coords)); // this is for New_kernel_d
-#else
-        points.push_back(Point(D, coords.begin(), coords.end())); // this is for Old_kernel_d
-#endif
+        points.push_back(Point(D, coords.begin(), coords.end()));
     }
     assert( dc.is_valid() );
     cout << " Inserting " << points.size() << " points.";
@@ -100,7 +88,7 @@ void test(const int D, const int d, const int N, bool no_transform)
         assert( 2 * dc.number_of_vertices() == dc.number_of_full_cells() + 2 );
     if( dc.current_dimension() > 3 )
     {
-        std::random_shuffle(points.begin(), points.end());
+        CGAL::cpp98::random_shuffle(points.begin(), points.end());
         if (points.size() > 100)
           points.resize(100);
     }
@@ -135,7 +123,7 @@ int main(int argc, char **argv)
 {
     int N = 3;
     int nb_trials = 2;
-    unsigned int rand_init = static_cast<unsigned int>(time(NULL));
+    unsigned int rand_init = static_cast<unsigned int>(time(nullptr));
     if( argc > 1 )
         N = atoi(argv[1]);
     if( argc > 2 )
@@ -155,4 +143,3 @@ int main(int argc, char **argv)
     return 0;
 }
 
-#endif

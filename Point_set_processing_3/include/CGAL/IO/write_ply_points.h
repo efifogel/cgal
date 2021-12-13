@@ -2,240 +2,424 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 // Author(s) : Simon Giraudot
 
-#ifndef CGAL_WRITE_PLY_POINTS_H
-#define CGAL_WRITE_PLY_POINTS_H
+#ifndef CGAL_POINT_SET_PROCESSING_WRITE_PLY_POINTS_H
+#define CGAL_POINT_SET_PROCESSING_WRITE_PLY_POINTS_H
 
 #include <CGAL/license/Point_set_processing_3.h>
 
+#include <CGAL/IO/helpers.h>
+#include <CGAL/IO/PLY.h>
 
 #include <CGAL/property_map.h>
 #include <CGAL/point_set_processing_assertions.h>
+#include <CGAL/Iterator_range.h>
 
+#include <CGAL/boost/graph/Named_function_parameters.h>
+#include <CGAL/boost/graph/named_params_helper.h>
+
+#include <boost/utility/enable_if.hpp>
 #include <boost/version.hpp>
 
 #include <iostream>
+#include <fstream>
 #include <iterator>
+#include <tuple>
+
+#ifdef DOXYGEN_RUNNING
+#define CGAL_BGL_NP_TEMPLATE_PARAMETERS NamedParameters
+#define CGAL_BGL_NP_CLASS NamedParameters
+#define CGAL_DEPRECATED
+#endif
 
 namespace CGAL {
 
+namespace IO {
 
-//===================================================================================
-/// \ingroup PkgPointSetProcessing
-/// Saves the [first, beyond) range of points (positions + normals) to a .ply ASCII stream.
-///
-/// \pre normals must be unit vectors
-///
-/// @tparam ForwardIterator iterator over input points.
-/// @tparam PointPMap is a model of `ReadablePropertyMap` with  value type `Point_3<Kernel>`.
-///        It can be omitted if the value type of `ForwardIterator` is convertible to `Point_3<Kernel>`.
-/// @tparam NormalPMap is a model of `ReadablePropertyMap` with a value type  `Vector_3<Kernel>`.
-/// @tparam Kernel Geometric traits class.
-///        It can be omitted and deduced automatically from the value type of `PointPMap`.
-///
-/// @return true on success.
+#ifdef DOXYGEN_RUNNING // Document some parts from Stream_support here for convenience
+  /**
+     \ingroup PkgPointSetProcessing3IOPly
 
-// This variant requires all parameters.
-template < typename ForwardIterator,
-           typename PointPMap,
-           typename NormalPMap,
-           typename Kernel >
-bool
-write_ply_points_and_normals(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first,  ///< iterator over the first input point.
-  ForwardIterator beyond, ///< past-the-end iterator over the input points.
-  PointPMap point_pmap, ///< property map: value_type of ForwardIterator -> Point_3. 
-  NormalPMap normal_pmap, ///< property map: value_type of ForwardIterator -> Vector_3. 
-  const Kernel& /*kernel*/) ///< geometric traits.
+     Generates a %PLY property handler to write 3D points. Points are
+     written as 3 %PLY properties of type `FT` and named `x`, `y` and
+     `z`. `FT` is `float` if the points use
+     `CGAL::Simple_cartesian<float>` and `double` otherwise.
+
+     \tparam PointMap the property map used to store points.
+
+     \sa `write_PLY_with_properties()`
+     \sa \ref IOStreamPLY
+  */
+  template <typename PointMap>
+  std::tuple<PointMap, PLY_property<FT>, PLY_property<FT>, PLY_property<FT> >
+  make_ply_point_writer(PointMap point_map);
+
+  /**
+     \ingroup PkgPointSetProcessing3IOPly
+
+     Generates a %PLY property handler to write 3D normal
+     vectors. Vectors are written as 3 %PLY properties of type `FT`
+     and named `nx`, `ny` and `nz`. `FT` is `float` if the vectors use
+     `CGAL::Simple_cartesian<float>` and `double` otherwise.
+
+     \tparam VectorMap the property map used to store vectors.
+
+     \sa `write_PLY_with_properties()`
+     \sa \ref IOStreamPLY
+  */
+  template <typename VectorMap>
+  std::tuple<VectorMap, PLY_property<FT>, PLY_property<FT>, PLY_property<FT> >
+  make_ply_normal_writer(VectorMap normal_map);
+#endif
+
+/**
+   \ingroup PkgPointSetProcessing3IOPly
+
+   \brief writes the range of `points` with properties using \ref IOStreamPLY.
+
+   Properties are handled through a variadic list of property
+   handlers. A `PropertyHandler` can either be:
+
+   - A `std::pair<PropertyMap, PLY_property<T> >` if the user wants
+   to write a scalar value T as a %PLY property (for example, writing
+   an `int` variable as an `int` %PLY property).
+
+   - A `std::tuple<PropertyMap, PLY_property<T>...>` if the
+   user wants to write a complex object as several %PLY
+   properties. In that case, a specialization of `Output_rep` must
+   be provided for `PropertyMap::value_type` that handles both ASCII
+   and binary output (see `CGAL::IO::get_mode()`).
+
+   \attention To write to a binary file, the flag `std::ios::binary` must be set during the creation
+              of the `ofstream`, and the \link PkgStreamSupportEnumRef `IO::Mode` \endlink
+              of the stream must be set to `BINARY`.
+
+   \tparam PointRange is a model of `ConstRange`. The value type of
+                      its iterator is the key type of the `PropertyMap` objects provided
+                      within the `PropertyHandler` parameter.
+   \tparam PropertyHandler handlers to recover properties.
+
+   \returns `true` if writing was successful, `false` otherwise.
+
+   \sa \ref IOStreamPLY
+   \sa `make_ply_point_writer()`
+   \sa `make_ply_normal_writer()`
+*/
+template <typename PointRange,
+          typename ... PropertyHandler>
+  bool write_PLY_with_properties(std::ostream& os, ///< output stream.
+                                 const PointRange& points, ///< input point range.
+                                 PropertyHandler&& ... properties) ///< parameter pack of property handlers
 {
-  CGAL_point_set_processing_precondition(first != beyond);
+  CGAL_point_set_processing_precondition(points.begin() != points.end());
 
-  if(!stream)
+  if(!os)
   {
     std::cerr << "Error: cannot open file" << std::endl;
     return false;
   }
 
   // Write header
-  stream << "ply" << std::endl
-         << "format ascii 1.0" << std::endl
-         << "comment Generated by the CGAL library" << std::endl
-         << "element vertex " << std::distance (first, beyond) << std::endl
-         << "property double x" << std::endl
-         << "property double y" << std::endl
-         << "property double z" << std::endl
-         << "property double nx" << std::endl
-         << "property double ny" << std::endl
-         << "property double nz" << std::endl
-         << "end_header" << std::endl;
-  
+  os << "ply" << std::endl
+     << ((get_mode(os) == BINARY) ? "format binary_little_endian 1.0" : "format ascii 1.0") << std::endl
+     << "comment Generated by the CGAL library" << std::endl
+     << "element vertex " << points.size() << std::endl;
+
+  internal::output_property_header (os, std::forward<PropertyHandler>(properties)...);
+
+  os << "end_header" << std::endl;
 
   // Write positions + normals
-  for(ForwardIterator it = first; it != beyond; it++)
-  {
-    stream << get(point_pmap, *it) << " "
-           << get(normal_pmap, *it) << std::endl;
-  }
+  for(typename PointRange::const_iterator it = points.begin(); it != points.end(); it++)
+    internal::output_properties (os, it, std::forward<PropertyHandler>(properties)...);
 
-  return ! stream.fail();
+  return !os.fail();
 }
 
-/// @cond SKIP_IN_MANUAL
-// This variant deduces the kernel from the point property map.
-template < typename ForwardIterator,
-           typename PointPMap,
-           typename NormalPMap >
-bool
-write_ply_points_and_normals(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first, ///< first input point.
-  ForwardIterator beyond, ///< past-the-end input point.
-  PointPMap point_pmap, ///< property map: value_type of OutputIterator -> Point_3.
-  NormalPMap normal_pmap) ///< property map: value_type of OutputIterator -> Vector_3.
+/**
+   \ingroup PkgPointSetProcessing3IOPly
+
+   \brief writes the range of `points` (positions + normals, if available) using \ref IOStreamPLY.
+
+   \attention To write to a binary file, the flag `std::ios::binary` must be set during the creation
+              of the `ofstream`, and the \link PkgStreamSupportEnumRef `IO::Mode` \endlink
+              of the stream must be set to `BINARY`.
+
+   \tparam PointRange is a model of `ConstRange`. The value type of
+                      its iterator is the key type of the named parameter `point_map`.
+   \tparam NamedParameters a sequence of \ref bgl_namedparameters "Named Parameters"
+
+   \param os output stream
+   \param points input point range
+   \param np an optional sequence of \ref bgl_namedparameters "Named Parameters" among the ones listed below
+
+   \cgalNamedParamsBegin
+     \cgalParamNBegin{point_map}
+       \cgalParamDescription{a property map associating points to the elements of the point range}
+       \cgalParamType{a model of `ReadablePropertyMap` with value type `geom_traits::Point_3`}
+       \cgalParamDefault{`CGAL::Identity_property_map<geom_traits::Point_3>`}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{normal_map}
+       \cgalParamDescription{a property map associating normals to the elements of the point range}
+       \cgalParamType{a model of `ReadablePropertyMap` with value type `geom_traits::Vector_3`}
+       \cgalParamDefault{If this parameter is omitted, normals are not written in the output stream.}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{geom_traits}
+       \cgalParamDescription{an instance of a geometric traits class}
+       \cgalParamType{a model of `Kernel`}
+       \cgalParamDefault{a \cgal Kernel deduced from the point type, using `CGAL::Kernel_traits`}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{stream_precision}
+       \cgalParamDescription{a parameter used to set the precision (i.e. how many digits are generated) of the output stream}
+       \cgalParamType{int}
+       \cgalParamDefault{the precision of the stream `os`}
+       \cgalParamExtra{This parameter is only meaningful while using \ascii encoding.}
+     \cgalParamNEnd
+   \cgalNamedParamsEnd
+
+   \returns `true` if writing was successful, `false` otherwise.
+
+   \sa `write_PLY_with_properties()`
+*/
+template <typename PointRange, typename CGAL_BGL_NP_TEMPLATE_PARAMETERS>
+bool write_PLY(std::ostream& os,
+               const PointRange& points,
+               const CGAL_BGL_NP_CLASS& np
+#ifndef DOXYGEN_RUNNING
+               , typename boost::enable_if<internal::is_Range<PointRange> >::type* = nullptr
+#endif
+               )
 {
-  typedef typename boost::property_traits<PointPMap>::value_type Point;
-  typedef typename Kernel_traits<Point>::Kernel Kernel;
-  return write_ply_points_and_normals(
-    stream,
-    first, beyond,
-    point_pmap,
-    normal_pmap,
-    Kernel());
-}
-/// @endcond
+  using parameters::choose_parameter;
+  using parameters::get_parameter;
 
-/// @cond SKIP_IN_MANUAL
-// This variant creates a default point property map = Identity_property_map.
-template <typename ForwardIterator,
-          typename NormalPMap
->
-bool
-write_ply_points_and_normals(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first, ///< first input point.
-  ForwardIterator beyond, ///< past-the-end input point.
-  NormalPMap normal_pmap) ///< property map: value_type of OutputIterator -> Vector_3.
-{
-  return write_ply_points_and_normals(
-    stream,
-    first, beyond,
-    make_identity_property_map(
-    typename std::iterator_traits<ForwardIterator>::value_type()),
-    normal_pmap);
-}
-/// @endcond
-
-
-//===================================================================================
-/// \ingroup PkgPointSetProcessing
-/// Saves the [first, beyond) range of points (positions only) to a .ply ASCII stream.
-///
-/// @tparam ForwardIterator iterator over input points.
-/// @tparam PointPMap is a model of `ReadablePropertyMap` with a value_type = `Point_3<Kernel>`.
-///        It can be omitted if the value type of `ForwardIterator` is convertible to `Point_3<Kernel>`.
-/// @tparam Kernel Geometric traits class.
-///        It can be omitted and deduced automatically from the value type of `PointPMap`.
-///
-/// @return true on success.
-
-// This variant requires all parameters.
-template < typename ForwardIterator,
-           typename PointPMap,
-           typename Kernel >
-bool
-write_ply_points(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first,  ///< iterator over the first input point.
-  ForwardIterator beyond, ///< past-the-end iterator over the input points.
-  PointPMap point_pmap, ///< property map: value_type of ForwardIterator -> Point_3.
-  const Kernel& ) ///< geometric traits.
-{
   // basic geometric types
-  typedef typename Kernel::Point_3 Point;
+  typedef typename CGAL::GetPointMap<PointRange, CGAL_BGL_NP_CLASS>::type PointMap;
+  typedef typename Point_set_processing_3::GetNormalMap<PointRange, CGAL_BGL_NP_CLASS>::type NormalMap;
 
-  CGAL_point_set_processing_precondition(first != beyond);
+  bool has_normals = !(boost::is_same<NormalMap,
+                       typename Point_set_processing_3::GetNormalMap<PointRange, CGAL_BGL_NP_CLASS>::NoMap>::value);
 
-  if(!stream)
+  PointMap point_map = choose_parameter<PointMap>(get_parameter(np, internal_np::point_map));
+  NormalMap normal_map = choose_parameter<NormalMap>(get_parameter(np, internal_np::normal_map));
+
+  if(!os)
   {
     std::cerr << "Error: cannot open file" << std::endl;
     return false;
   }
 
-  // Write header
-  stream << "ply" << std::endl
-         << "format ascii 1.0" << std::endl
-         << "comment Generated by the CGAL library" << std::endl
-         << "element vertex " << std::distance (first, beyond) << std::endl
-         << "property double x" << std::endl
-         << "property double y" << std::endl
-         << "property double z" << std::endl
-         << "end_header" << std::endl;
+  set_stream_precision_from_NP(os, np);
 
-  // Write positions
-  for(ForwardIterator it = first; it != beyond; it++)
+  if(has_normals)
+    return write_PLY_with_properties(os, points,
+                                     make_ply_point_writer(point_map),
+                                     make_ply_normal_writer(normal_map));
+
+  return write_PLY_with_properties(os, points, make_ply_point_writer(point_map));
+}
+
+/// \cond SKIP_IN_MANUAL
+
+template <typename PointRange>
+bool write_PLY(std::ostream& os, const PointRange& points,
+               typename boost::enable_if<internal::is_Range<PointRange> >::type* = nullptr)
+{
+  return write_PLY(os, points, parameters::all_default());
+}
+
+/// \endcond
+
+/**
+   \ingroup PkgPointSetProcessing3IOPly
+
+   \brief writes the range of `points` (positions + normals, if available) using \ref IOStreamPLY.
+
+   \tparam PointRange is a model of `ConstRange`. The value type of
+                      its iterator is the key type of the named parameter `point_map`.
+   \tparam NamedParameters a sequence of \ref bgl_namedparameters "Named Parameters"
+
+   \param filename the path to the output file
+   \param points input point range
+   \param np an optional sequence of \ref bgl_namedparameters "Named Parameters" among the ones listed below
+
+   \cgalNamedParamsBegin
+     \cgalParamNBegin{use_binary_mode}
+       \cgalParamDescription{indicates whether data should be written in binary (`true`) or in \ascii (`false`)}
+       \cgalParamType{Boolean}
+       \cgalParamDefault{`true`}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{point_map}
+       \cgalParamDescription{a property map associating points to the elements of the point range}
+       \cgalParamType{a model of `ReadablePropertyMap` with value type `geom_traits::Point_3`}
+       \cgalParamDefault{`CGAL::Identity_property_map<geom_traits::Point_3>`}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{normal_map}
+       \cgalParamDescription{a property map associating normals to the elements of the point range}
+       \cgalParamType{a model of `ReadablePropertyMap` with value type `geom_traits::Vector_3`}
+       \cgalParamDefault{If this parameter is omitted, normals are not written in the output file.}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{geom_traits}
+       \cgalParamDescription{an instance of a geometric traits class}
+       \cgalParamType{a model of `Kernel`}
+       \cgalParamDefault{a \cgal Kernel deduced from the point type, using `CGAL::Kernel_traits`}
+     \cgalParamNEnd
+
+     \cgalParamNBegin{stream_precision}
+       \cgalParamDescription{a parameter used to set the precision (i.e. how many digits are generated) of the output stream}
+       \cgalParamType{int}
+       \cgalParamDefault{`6`}
+       \cgalParamExtra{This parameter is only meaningful while using \ascii encoding.}
+     \cgalParamNEnd
+   \cgalNamedParamsEnd
+
+   \returns `true` if writing was successful, `false` otherwise.
+
+   \sa `write_PLY_with_properties()`
+*/
+template <typename PointRange, typename CGAL_BGL_NP_TEMPLATE_PARAMETERS>
+bool write_PLY(const std::string& filename,
+               const PointRange& points,
+               const CGAL_BGL_NP_CLASS& np
+#ifndef DOXYGEN_RUNNING
+               , typename boost::enable_if<internal::is_Range<PointRange> >::type* = nullptr
+#endif
+               )
+{
+  const bool binary = CGAL::parameters::choose_parameter(CGAL::parameters::get_parameter(np, internal_np::use_binary_mode), true);
+  if(binary)
   {
-    Point p = get(point_pmap, *it);
-    stream << p << std::endl;
+    std::ofstream os(filename, std::ios::binary);
+    CGAL::IO::set_mode(os, CGAL::IO::BINARY);
+    return write_PLY(os, points, np);
   }
-
-  return ! stream.fail();
+  else
+  {
+    std::ofstream os(filename);
+    CGAL::IO::set_mode(os, CGAL::IO::ASCII);
+    return write_PLY(os, points, np);
+  }
 }
 
-/// @cond SKIP_IN_MANUAL
-// This variant deduces the kernel from the point property map.
-template < typename ForwardIterator,
-           typename PointPMap >
-bool
-write_ply_points(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first, ///< first input point.
-  ForwardIterator beyond, ///< past-the-end input point.
-  PointPMap point_pmap) ///< property map: value_type of OutputIterator -> Point_3.
+/// \cond SKIP_IN_MANUAL
+
+template <typename PointRange>
+bool write_PLY(const std::string& filename, const PointRange& points,
+               typename boost::enable_if<internal::is_Range<PointRange> >::type* = nullptr)
 {
-  typedef typename boost::property_traits<PointPMap>::value_type Point;
-  typedef typename Kernel_traits<Point>::Kernel Kernel;
-  return write_ply_points(
-    stream,
-    first, beyond,
-    point_pmap,
-    Kernel());
+  return write_PLY(filename, points, parameters::all_default());
 }
-/// @endcond
 
-/// @cond SKIP_IN_MANUAL
-// This variant creates a default point property map = Identity_property_map.
-template < typename ForwardIterator >
-bool
-write_ply_points(
-  std::ostream& stream, ///< output stream.
-  ForwardIterator first, ///< first input point.
-  ForwardIterator beyond) ///< past-the-end input point.
+/// \endcond
+
+} // namespace IO
+
+#ifndef CGAL_NO_DEPRECATED_CODE
+
+/// \cond SKIP_IN_MANUAL
+
+template <typename ForwardIterator,
+          typename PointMap,
+          typename VectorMap>
+CGAL_DEPRECATED_MSG("you are using the deprecated V1 API of CGAL::write_ply_points_and_normals(), please update your code")
+bool write_ply_points_and_normals(std::ostream& os, ///< output stream.
+                                  ForwardIterator first, ///< first input point.
+                                  ForwardIterator beyond, ///< past-the-end input point.
+                                  PointMap point_map, ///< property map: value_type of OutputIterator -> Point_3.
+                                  VectorMap normal_map) ///< property map: value_type of OutputIterator -> Vector_3.
 {
-  return write_ply_points(
-    stream,
-    first, beyond,
-    make_identity_property_map(
-    typename std::iterator_traits<ForwardIterator>::value_type())
-    );
+  CGAL::Iterator_range<ForwardIterator> points (first, beyond);
+  return IO::write_PLY(os, points, parameters::point_map(point_map)
+                                              .normal_map(normal_map));
 }
-/// @endcond
 
+template <typename ForwardIterator,
+          typename VectorMap>
+CGAL_DEPRECATED_MSG("you are using the deprecated V1 API of CGAL::write_ply_points_and_normals(), please update your code")
+bool write_ply_points_and_normals(std::ostream& os, ///< output stream.
+                                  ForwardIterator first, ///< first input point.
+                                  ForwardIterator beyond, ///< past-the-end input point.
+                                  VectorMap normal_map) ///< property map: value_type of OutputIterator -> Vector_3.
+{
+  CGAL::Iterator_range<ForwardIterator> points(first, beyond);
+  return IO::write_PLY(os, points, parameters::normal_map (normal_map));
+}
 
-} //namespace CGAL
+template <typename ForwardIterator,
+          typename PointMap >
+CGAL_DEPRECATED_MSG("you are using the deprecated V1 API of CGAL::write_ply_points(), please update your code")
+bool write_ply_points(std::ostream& os, ///< output stream.
+                      ForwardIterator first, ///< first input point.
+                      ForwardIterator beyond, ///< past-the-end input point.
+                      PointMap point_map) ///< property map: value_type of OutputIterator -> Point_3.
+{
+  CGAL::Iterator_range<ForwardIterator> points(first, beyond);
+  return IO::write_PLY(os, points, parameters::point_map(point_map));
+}
 
-#endif // CGAL_WRITE_PLY_POINTS_H
+template <typename ForwardIterator >
+CGAL_DEPRECATED_MSG("you are using the deprecated V1 API of CGAL::write_ply_points(), please update your code")
+bool write_ply_points(std::ostream& os, ///< output stream.
+                      ForwardIterator first, ///< first input point.
+                      ForwardIterator beyond) ///< past-the-end input point.
+{
+  CGAL::Iterator_range<ForwardIterator> points (first, beyond);
+  return IO::write_PLY(os, points);
+}
+
+/// \endcond
+
+/**
+\ingroup PkgPointSetProcessing3IODeprecated
+
+\deprecated This function is deprecated since \cgal 5.3,
+            \link PkgPointSetProcessing3IOPly `CGAL::IO::write_PLY_with_properties()` \endlink should be used instead.
+*/
+template <typename PointRange,
+          typename ... PropertyHandler>
+CGAL_DEPRECATED bool write_ply_points_with_properties(std::ostream& os, ///< output stream.
+                                                      const PointRange& points, ///< input point range.
+                                                      PropertyHandler&& ... properties) ///< parameter pack of property handlers
+{
+  return IO::write_PLY_with_properties(os, points, std::forward<PropertyHandler>(properties)...);
+}
+
+/**
+\ingroup PkgPointSetProcessing3IODeprecated
+
+\deprecated This function is deprecated since \cgal 5.3,
+            \link PkgPointSetProcessing3IOPly `CGAL::IO::write_PLY()` \endlink should be used instead.
+*/
+template <typename PointRange, typename CGAL_BGL_NP_TEMPLATE_PARAMETERS>
+CGAL_DEPRECATED bool write_ply_points(std::ostream& os, const PointRange& points, const CGAL_BGL_NP_CLASS& np)
+{
+  return IO::write_PLY(os, points, np);
+}
+
+/// \cond SKIP_IN_MANUAL
+
+template <typename PointRange>
+CGAL_DEPRECATED bool write_ply_points(std::ostream& os, const PointRange& points)
+{
+  return IO::write_PLY(os, points, parameters::all_default());
+}
+
+/// \endcond
+
+#endif // CGAL_NO_DEPRECATED_CODE
+
+} // namespace CGAL
+
+#endif // CGAL_POINT_SET_PROCESSING_WRITE_PLY_POINTS_H

@@ -2,33 +2,38 @@
 #include <QMessageBox>
 #include <QMainWindow>
 #include "Kernel_type.h"
-#include "Polyhedron_type.h"
-#include "Scene_polyhedron_item.h"
+
+#include "Scene_surface_mesh_item.h"
 #include "Scene_polyhedron_selection_item.h"
 #include "Scene_polylines_item.h"
 #include "Messages_interface.h"
 
 #include <CGAL/Three/Polyhedron_demo_plugin_interface.h>
 #include <CGAL/Three/Polyhedron_demo_plugin_helper.h>
+#include <CGAL/Three/Three.h>
 
 #include <CGAL/Polyhedron_copy_3.h>
+#include <CGAL/boost/graph/Face_filtered_graph.h>
 #include <CGAL/Polygon_mesh_processing/connected_components.h>
-#include <CGAL/internal/corefinement/connected_components.h>
+
+#include <CGAL/boost/graph/copy_face_graph.h>
 
 #include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/property_map.h>
 
-#include <boost/foreach.hpp>
-#include <boost/function_output_iterator.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 #include <boost/unordered_map.hpp>
 #include "Color_map.h"
+
+typedef Scene_surface_mesh_item Scene_facegraph_item;
+typedef Scene_facegraph_item::Face_graph FaceGraph;
 using namespace CGAL::Three;
 class Polyhedron_demo_join_and_split_polyhedra_plugin:
   public QObject,
   public Polyhedron_demo_plugin_helper
 {
   Q_OBJECT
-  Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.PluginInterface/1.0")
+  Q_PLUGIN_METADATA(IID "com.geometryfactory.PolyhedronDemo.PluginInterface/1.0" FILE "join_and_split_polyhedra_plugin.json")
   Q_INTERFACES(CGAL::Three::Polyhedron_demo_plugin_interface)
   QAction* actionJoinPolyhedra, *actionSplitPolyhedra, *actionColorConnectedComponents;
   Messages_interface* msg_interface;
@@ -46,7 +51,7 @@ public:
     actionJoinPolyhedra->setObjectName("actionJoinPolyhedra");
 
     actionSplitPolyhedra= new QAction(tr("Split Selected Polyhedra"), mainWindow);
-    actionSplitPolyhedra->setProperty("subMenuName", "Operations on Polyhedra");
+    actionSplitPolyhedra->setProperty("subMenuName", "Polygon Mesh Processing");
     actionSplitPolyhedra->setObjectName("actionSplitPolyhedra");
 
     actionColorConnectedComponents = new QAction(tr("Color Each Connected Component"), mainWindow);
@@ -60,7 +65,7 @@ public:
   {
     Q_FOREACH(int index, scene->selectionIndices())
     {
-      if (qobject_cast<Scene_polyhedron_item*>(scene->item(index)))
+      if (qobject_cast<Scene_facegraph_item*>(scene->item(index)))
         return true;
       else if (a == actionColorConnectedComponents
             && qobject_cast<Scene_polyhedron_selection_item*>(scene->item(index)))
@@ -76,33 +81,30 @@ public Q_SLOTS:
 
 private :
   CGAL::Three::Scene_interface* scene;
-  std::vector<QColor> colors_;
 }; // end Polyhedron_demo_polyhedron_stitching_plugin
 
 void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionJoinPolyhedra_triggered()
 {
   CGAL::Three::Scene_interface::Item_id mainSelectionIndex
-    = scene->mainSelectionIndex();
-  Scene_polyhedron_item* mainSelectionItem
-    = qobject_cast<Scene_polyhedron_item*>(scene->item(mainSelectionIndex));
+    = scene->selectionIndices().first();
+  Scene_facegraph_item* mainSelectionItem
+    = qobject_cast<Scene_facegraph_item*>(scene->item(mainSelectionIndex));
   if(!mainSelectionItem)
   {
     std::cerr<<"No selected polyhedron_item"<<std::endl;
     return;
   }
-  QList<int> indices_to_remove;
+  std::vector<int> indices_to_remove;
   Q_FOREACH(int index, scene->selectionIndices()) {
     if (index == mainSelectionIndex)
       continue;
 
-    Scene_polyhedron_item* item =
-      qobject_cast<Scene_polyhedron_item*>(scene->item(index));
+    Scene_facegraph_item* item =
+      qobject_cast<Scene_facegraph_item*>(scene->item(index));
     if(item)
     {
-      indices_to_remove.push_front(index);
-      CGAL::Polyhedron_copy_3<Polyhedron, Polyhedron::HalfedgeDS, false>
-        modifier( *(item->polyhedron()) );
-      mainSelectionItem->polyhedron()->delegate(modifier);
+      indices_to_remove.push_back(index);
+      CGAL::copy_face_graph(*item->polyhedron(), *mainSelectionItem->polyhedron());
     }
     else
       std::cerr<<"No selected polyhedron_item"<<std::endl;
@@ -111,6 +113,7 @@ void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionJoinPolyhedra_tri
   scene->itemChanged(mainSelectionIndex);
 
   //remove the other items
+  std::sort(indices_to_remove.begin(), indices_to_remove.end(), std::greater<int>());
   Q_FOREACH(int index, indices_to_remove)
   {
     scene->erase(index);
@@ -118,47 +121,56 @@ void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionJoinPolyhedra_tri
 }
 
 struct Polyhedron_appender{
-  Polyhedron_appender(std::list<Polyhedron*>& new_polyhedra):
+  Polyhedron_appender(std::list<FaceGraph*>& new_polyhedra):
     m_new_polyhedra(new_polyhedra) {}
-  void operator()(const Polyhedron& p){
-    m_new_polyhedra.push_back( new Polyhedron(p) );
+  void operator()(const FaceGraph& p){
+    m_new_polyhedra.push_back( new FaceGraph(p) );
   }
-  std::list<Polyhedron*>& m_new_polyhedra;
+  std::list<FaceGraph*>& m_new_polyhedra;
+};
+
+struct Compare{
+bool operator()(const FaceGraph& mesh1, const FaceGraph& mesh2)
+{
+  return num_faces(mesh1) < num_faces(mesh2);
+}
 };
 
 void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionSplitPolyhedra_triggered()
 {
   Q_FOREACH(int index, scene->selectionIndices()) {
-    colors_.clear();
-    Scene_polyhedron_item* item =
-      qobject_cast<Scene_polyhedron_item*>(scene->item(index));
+    Scene_facegraph_item* item =
+      qobject_cast<Scene_facegraph_item*>(scene->item(index));
     if(item)
     {
       QApplication::setOverrideCursor(Qt::WaitCursor);
-      std::list<Polyhedron*> new_polyhedra;
-      CGAL::internal::corefinement::extract_connected_components(
-        *item->polyhedron(),
-        boost::make_function_output_iterator(Polyhedron_appender(new_polyhedra))
-      );
+      std::vector<FaceGraph> new_polyhedra;
+      CGAL::Polygon_mesh_processing::split_connected_components(*item->face_graph(),
+                                                                new_polyhedra);
+      //sort polyhedra by number of faces
+      std::sort(new_polyhedra.begin(), new_polyhedra.end(), Compare());
+
 
       if (new_polyhedra.size()==1)
       {
-        delete new_polyhedra.front();
-        msg_interface->information( tr("%1 has only one connected component").arg(item->name()) );
+        CGAL::Three::Three::information( tr("%1 has only one connected component").arg(item->name()) );
         QApplication::restoreOverrideCursor();
         continue;
       }
 
       int cc=0;
-      compute_color_map(item->color(), item->isItemMulticolor() ? static_cast<unsigned int>(new_polyhedra.size()) : 1,
-                        std::back_inserter(colors_));
+      std::vector<QColor> color_map;
+      if(item->hasPatchIds())
+        color_map = item->color_vector();
+      else
+        compute_color_map(item->color(), new_polyhedra.size(), std::back_inserter(color_map));
       Scene_group_item *group = new Scene_group_item("CC");
        scene->addItem(group);
-      BOOST_FOREACH(Polyhedron* polyhedron_ptr, new_polyhedra)
+      for(FaceGraph& poly : new_polyhedra)
       {
-        Scene_polyhedron_item* new_item=new Scene_polyhedron_item(polyhedron_ptr);
+        Scene_facegraph_item* new_item=new Scene_facegraph_item(poly);
         new_item->setName(tr("%1 - CC %2").arg(item->name()).arg(cc));
-        new_item->setColor(colors_[item->isItemMulticolor()? cc : 0]);
+        new_item->setColor(color_map[cc]);
         ++cc;
         scene->addItem(new_item);
         scene->changeGroup(new_item, group);
@@ -187,24 +199,25 @@ struct Polyhedron_cc_marker{
 void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionColorConnectedComponents_triggered()
 {
   // wait cursor
+
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  std::set<Scene_polyhedron_item*> to_skip;
+  std::set<Scene_facegraph_item*> to_skip;
 
   Q_FOREACH(int index, scene->selectionIndices())
   {
-    Scene_polyhedron_item* item =
-      qobject_cast<Scene_polyhedron_item*>(scene->item(index));
+    Scene_facegraph_item* item =
+      qobject_cast<Scene_facegraph_item*>(scene->item(index));
     if(item && to_skip.find(item) == to_skip.end())
     {
       item->setItemIsMulticolor(true);
-      Polyhedron_cc_marker marker;
-      CGAL::internal::corefinement::mark_connected_components(
-        *item->polyhedron(),
-        CGAL::internal::corefinement::Dummy_true(),
-        marker
-      );
+      typedef boost::property_map<FaceGraph,CGAL::face_patch_id_t<int> >::type PatchIDMap;
+      PatchIDMap pidmap = get(CGAL::face_patch_id_t<int>(), *item->face_graph());
+      int nb_patch_ids = CGAL::Polygon_mesh_processing::connected_components(*item->face_graph(),
+                                                                             pidmap);
+      item->computeItemColorVectorAutomatically(true);
       item->invalidateOpenGLBuffers();
+      item->setProperty("NbPatchIds", nb_patch_ids);
       scene->itemChanged(item);
     }
     else
@@ -214,33 +227,44 @@ void Polyhedron_demo_join_and_split_polyhedra_plugin::on_actionColorConnectedCom
 
       if (selection_item)
       {
+        if(selection_item->selected_edges.empty())
+        {
+          QApplication::restoreOverrideCursor();
+          QMessageBox::warning(mw, "Empty Edges", "There are no selected edges. Skipping.");
+          continue;
+          QApplication::setOverrideCursor(Qt::WaitCursor);
+        }
         namespace PMP = CGAL::Polygon_mesh_processing;
-        typedef boost::graph_traits<Polyhedron>::face_descriptor   face_descriptor;
+        typedef boost::graph_traits<FaceGraph>::face_descriptor   face_descriptor;
 
         selection_item->polyhedron_item()->setItemIsMulticolor(true);
-        selection_item->polyhedron_item()->set_color_vector_read_only(false);
+        selection_item->polyhedron_item()->computeItemColorVectorAutomatically(true);
+        FaceGraph& pmesh = *(selection_item->polyhedron());
 
-        const Polyhedron& pmesh = *(selection_item->polyhedron());
-
-        boost::property_map<Polyhedron, boost::face_external_index_t>::type fim
-          = get(boost::face_external_index, pmesh);
+        boost::property_map<FaceGraph, boost::face_index_t>::type fim
+          = get(boost::face_index, pmesh);
         boost::vector_property_map<int,
-          boost::property_map<Polyhedron, boost::face_external_index_t>::type>
-          fccmap(fim);
+          boost::property_map<FaceGraph, boost::face_index_t>::type>
+          fccmap(static_cast<unsigned>(num_faces(pmesh)),fim);
+        boost::property_map<FaceGraph, CGAL::face_patch_id_t<int> >::type pid
+          = get(CGAL::face_patch_id_t<int>(), pmesh);
 
         std::cout << "color CC" << std::endl;
 
-        PMP::connected_components(pmesh
-          , fccmap
-          , PMP::parameters::edge_is_constrained_map(selection_item->constrained_edges_pmap())
-          .face_index_map(fim));
+        int nb_patch_ids = PMP::connected_components(pmesh
+                                                     , fccmap
+                                                     , PMP::parameters::edge_is_constrained_map(selection_item->constrained_edges_pmap())
+                                                     .face_index_map(fim));
 
-        BOOST_FOREACH(face_descriptor f, faces(pmesh))
-          f->set_patch_id(fccmap[f]);
+        for(face_descriptor f : faces(pmesh))
+        {
+          put(pid, f, fccmap[f]);
+        }
 
         to_skip.insert(selection_item->polyhedron_item());
 
         selection_item->changed_with_poly_item();
+        selection_item->polyhedron_item()->setProperty("NbPatchIds", nb_patch_ids);
       }
     }
 

@@ -27,7 +27,7 @@ struct Myitem
   {
     typedef CGAL::Cell_attribute<CMap, int, CGAL::Tag_true,
      Sum_functor, Divide_by_two_functor> Facet_attribute;
-    typedef CGAL::cpp11::tuple<void,void,Facet_attribute> Attributes;
+    typedef std::tuple<void,void,Facet_attribute> Attributes;
   };
 };
 
@@ -47,7 +47,7 @@ int main()
        it=cm.darts().begin(), itend=cm.darts().end();
        it!=itend; ++it)
   {
-    if ( cm.attribute<2>(it)==NULL )
+    if ( cm.attribute<2>(it)==nullptr )
       cm.set_attribute<2>(it, cm.create_attribute<2>());
   }
 

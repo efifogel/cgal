@@ -2,19 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
-// $Id$ $Date$
-//
+// $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 // Author(s)     : Baruch Zukerman <baruchzu@post.tau.ac.il>
 //                 Efi Fogel <efif@post.tau.ac.il>
@@ -24,6 +15,7 @@
 
 #include <CGAL/license/Boolean_set_operations_2.h>
 
+#include <CGAL/disable_warnings.h>
 
 #include <CGAL/basic.h>
 
@@ -58,13 +50,24 @@ public:
   // default costructor
   General_polygon_set_2() : Base() {}
 
-  // constructor with traits object
-  General_polygon_set_2(const Traits_2& tr) : Base(tr) {}
+  // constructor from a traits object
+  General_polygon_set_2(const Traits_2& traits) : Base(traits) {}
 
+  // constructor from a polygon
   explicit General_polygon_set_2(const Polygon_2& pgn) : Base(pgn) {}
 
-  explicit General_polygon_set_2(const Polygon_with_holes_2& pgn_with_holes):
-   Base(pgn_with_holes)
+  // constructor from a polygon with holes
+  explicit General_polygon_set_2(const Polygon_with_holes_2& pwh) : Base(pwh) {}
+
+  // constructor from a polygon and a traits object
+  explicit General_polygon_set_2(const Polygon_2& pgn, const Traits_2& traits) :
+    Base(pgn, traits)
+  {}
+
+  // constructor from a polygon with holes and a traits object
+  explicit General_polygon_set_2(const Polygon_with_holes_2& pwh,
+                                 const Traits_2& traits) :
+    Base(pwh, traits)
   {}
 
   // For some reason the below functions (the ones that we call "using" for)
@@ -100,21 +103,19 @@ public:
    * \return the underlying arrangement.
    */
   const Arrangement_2& arrangement() const
-  {
-    return *(static_cast<const Arrangement_2*>(this->m_arr));
-  }
+  { return *(static_cast<const Arrangement_2*>(this->m_arr)); }
 
   /*! Obtain a reference to the underlying arrangement
    * \return the underlying arrangement.
    */
   Arrangement_2& arrangement()
-  {
-    return *(static_cast<Arrangement_2*>(this->m_arr));
-  }
+  { return *(static_cast<Arrangement_2*>(this->m_arr)); }
 
   //@}
 };
 
 } //namespace CGAL
+
+#include <CGAL/enable_warnings.h>
 
 #endif

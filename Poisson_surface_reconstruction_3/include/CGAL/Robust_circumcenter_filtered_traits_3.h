@@ -2,18 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Stéphane Tayeb
@@ -24,13 +16,9 @@
 
 #include <CGAL/license/Poisson_surface_reconstruction_3.h>
 
-
-
 #include <CGAL/number_utils_classes.h>
 #include <CGAL/Cartesian_converter.h>
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Regular_triangulation_euclidean_traits_3.h>
-
 
 namespace CGAL {
 
@@ -47,7 +35,7 @@ public:
   typedef Point_3                                    result_type;
 
   typedef Exact_predicates_exact_constructions_kernel   EK2;
-  typedef Regular_triangulation_euclidean_traits_3<EK2> EK;
+  typedef EK2                                           EK;
   typedef Cartesian_converter<typename K::Kernel, EK2>  To_exact;
   typedef Cartesian_converter<EK2, typename K::Kernel>  Back_from_exact;
 
@@ -217,10 +205,9 @@ public:
   typedef FT                      result_type;
 
   typedef Exact_predicates_exact_constructions_kernel   EK2;
-  typedef Regular_triangulation_euclidean_traits_3<EK2> EK;
+  typedef EK2                                           EK;
   typedef Cartesian_converter<typename K::Kernel, EK2>  To_exact;
   typedef Cartesian_converter<EK2, typename K::Kernel>  Back_from_exact;
-
 
   FT operator()( const Point_3& p,
                  const Point_3& q,

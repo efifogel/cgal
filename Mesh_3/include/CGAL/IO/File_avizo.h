@@ -2,18 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Laurent Rineau
@@ -32,9 +24,14 @@
 
 namespace CGAL {
 
-namespace Mesh_3 {
+namespace IO {
 
-
+/**
+ * @brief outputs mesh to avizo format
+ * @param os the stream
+ * @param c3t3 the mesh
+ * \see \ref IOStreamAvizo
+ */
 template <class C3T3>
 void
 output_to_avizo(std::ostream& os,
@@ -46,7 +43,7 @@ output_to_avizo(std::ostream& os,
   typedef typename Tr::Finite_vertices_iterator Finite_vertices_iterator;
   typedef typename Tr::Vertex_handle Vertex_handle;
   typedef typename Tr::Cell_handle Cell_handle;
-  typedef typename Tr::Point Point_3;
+  typedef typename Tr::Weighted_point Weighted_point;
 
   const Tr& tr = c3t3.triangulation();
 
@@ -105,7 +102,7 @@ output_to_avizo(std::ostream& os,
         end = tr.finite_vertices_end();
       vit != end; ++vit)
   {
-    const Point_3& p = vit->point();
+    const Weighted_point& p = tr.point(vit);
     const double x = CGAL::to_double(p.x());
     const double y = CGAL::to_double(p.y());
     const double z = CGAL::to_double(p.z());
@@ -145,23 +142,11 @@ output_to_avizo(std::ostream& os,
 
 } // end output_to_avizo(...)
 
-} // end namespace Mesh_3
+} // end namespace IO
 
-
-
-
-/**
- * @brief outputs mesh to avizo format
- * @param os the stream
- * @param c3t3 the mesh
- */
-template <class C3T3>
-void
-output_to_avizo(std::ostream& os,
-                 const C3T3& c3t3)
-{
-  Mesh_3::output_to_avizo(os,c3t3);
-}
+#ifndef CGAL_NO_DEPRECATED_CODE
+using IO::output_to_avizo;
+#endif
 
 } // end namespace CGAL
 

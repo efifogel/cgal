@@ -15,41 +15,48 @@ typedef Kernel::Point_2                   Point_2;
 typedef Kernel::Direction_2               Direction_2;
 /* Note: due to a bug in the boost library, using a directed graph
  * will cause a compilation error with g++ and clang++ when using c++11 standard.
- * See http://lists.boost.org/Archives/boost/2016/05/229458.php.
+ * See https://lists.boost.org/Archives/boost/2016/05/229458.php.
  */
 // define the graph type
 typedef boost::adjacency_list<boost::listS,
                               boost::vecS,
-                              #ifdef CGAL_CXX11
                               boost::undirectedS,
-                              #else
-                              boost::directedS,
-                              #endif
                               Point_2
                              > Graph;
 
 int main(int argc, char ** argv)
 {
-  if (argc < 3) {
+  unsigned int k=4; // By default, no. of cones==4
+  std::string filename="data/n9.cin"; // file used by default
+
+  if (argc > 1 &&
+      (!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help") || !strcmp(argv[1],"-?")))
+  {
     std::cout << "Usage: " << argv[0] << " <no. of cones> <input filename> [<direction-x> <direction-y>]" << std::endl;
     return 1;
   }
 
-  unsigned int k = atoi(argv[1]);
-  if (k<2) {
-    std::cout << "The number of cones should be larger than 1!" << std::endl;
-    return 1;
+  if (argc > 1)
+  {
+    k = atoi(argv[1]);
+    if (k<2) {
+      std::cout << "The number of cones should be larger than 1!" << std::endl;
+      return 1;
+    }
   }
 
+  if (argc > 2)
+  { filename=std::string(argv[2]); }
+
   // open the file containing the vertex list
-  std::ifstream inf(argv[2]);
+  std::ifstream inf(filename);
   if (!inf) {
-    std::cout << "Cannot open file " << argv[2] << "!" << std::endl;
+    std::cout << "Cannot open file " << filename << "!" << std::endl;
     return 1;
   }
 
   Direction_2 initial_direction;
-  if (argc == 3)
+  if (argc == 1 || argc == 3)
     initial_direction = Direction_2(1, 0);  // default initial_direction
   else if (argc == 5)
     initial_direction = Direction_2(atof(argv[3]), atof(argv[4]));
@@ -70,7 +77,7 @@ int main(int argc, char ** argv)
   theta(input_begin, input_end, g);
 
   // obtain the number of vertices in the constructed graph
-  unsigned int n = boost::num_vertices(g);
+  boost::graph_traits<Graph>::vertices_size_type n = boost::num_vertices(g);
   // generate gnuplot files for plotting this graph
   std::string file_prefix = "t" + boost::lexical_cast<std::string>(k) + "n" + boost::lexical_cast<std::string>(n);
   CGAL::gnuplot_output_2(g, file_prefix);

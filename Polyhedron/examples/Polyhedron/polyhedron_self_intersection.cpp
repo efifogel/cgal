@@ -1,13 +1,11 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
 #include <CGAL/box_intersection_d.h>
-#include <CGAL/Bbox_3.h>
-#include <CGAL/intersections.h>
 #include <CGAL/Timer.h>
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <fstream>
 
 using std::cerr;
 using std::endl;
@@ -106,7 +104,7 @@ struct Intersect_facets {
     }
 };
 
-void write_off() {
+void write_OFF() {
     cout << "OFF\n" << (triangles.size() * 3) << ' ' << triangles.size()
          << " 0\n";
     for ( std::vector<Triangle>::iterator i = triangles.begin();
@@ -139,12 +137,13 @@ void intersection( const Polyhedron& P) {
                                    Intersect_facets(), std::ptrdiff_t(2000));
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     CGAL::Timer user_time;
     cerr << "Loading OFF file ... " << endl;
     user_time.start();
     Polyhedron P;
-    cin >> P;
+    std::ifstream in1((argc>1)?argv[1]:CGAL::data_file_path("meshes/tetra_intersected_by_triangle.off"));
+    in1 >> P;
     cerr << "Loading OFF file   : " << user_time.time() << " seconds." << endl;
     if ( ! P.is_pure_triangle()) {
         cerr << "The input object is not triangulated. Cannot intersect."
@@ -155,6 +154,7 @@ int main() {
     cerr << "Intersection ... " << endl;
     intersection( P);
     cerr << "Intersection       : " << user_time.time() << " seconds." << endl;
-    write_off();
+    write_OFF();
+
     return 0;
 }

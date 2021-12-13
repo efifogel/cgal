@@ -7,7 +7,6 @@
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/AABB_face_graph_triangle_primitive.h>
 
 typedef CGAL::Simple_cartesian<double> K;
@@ -81,10 +80,10 @@ int main()
     Plane_intersection plane_intersection = tree.any_intersection(plane_query);
     if(plane_intersection)
     {
-      
+
       if(boost::get<Segment>(&(plane_intersection->first)))
             std::cout << "intersection object is a segment" << std::endl;
     }
-    
+
     return EXIT_SUCCESS;
 }

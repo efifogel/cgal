@@ -4,7 +4,6 @@
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/AABB_face_graph_triangle_primitive.h>
 
 
@@ -37,8 +36,6 @@ int main()
     // constructs AABB tree and computes internal KD-tree
     // data structure to accelerate distance queries
     Tree tree(faces(polyhedron1).first, faces(polyhedron1).second, polyhedron1);
-
-    tree.accelerate_distance_queries();
 
     tree.insert(faces(polyhedron2).first, faces(polyhedron2).second, polyhedron2);
 

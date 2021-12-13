@@ -11,7 +11,7 @@
 #include <boost/property_map/property_map.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/iterator/transform_iterator.hpp>
+#include <CGAL/boost/iterator/transform_iterator.hpp>
 
 #include <Eigen/SparseLU>
 #include <Eigen/Sparse>
@@ -71,7 +71,7 @@ bool is_mesh_valid(Polyhedron& pMesh)
 int main()
 {
   Polyhedron mesh;
-  std::ifstream input("data/elephant.off");
+  std::ifstream input(CGAL::data_file_path("meshes/elephant.off"));
 
   if ( !input || !(input >> mesh) || mesh.empty() ) {
     std::cerr << "Cannot open data/elephant.off" << std::endl;

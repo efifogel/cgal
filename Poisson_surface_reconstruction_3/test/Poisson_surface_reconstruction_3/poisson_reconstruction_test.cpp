@@ -10,19 +10,16 @@
 // CGAL
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Timer.h>
-#include <CGAL/trace.h>
 #include <CGAL/Memory_sizer.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
 #include <CGAL/Surface_mesh_default_triangulation_3.h>
 #include <CGAL/make_surface_mesh.h>
 #include <CGAL/Implicit_surface_3.h>
-#include <CGAL/IO/output_surface_facets_to_polyhedron.h>
+#include <CGAL/IO/facets_in_complex_2_to_triangle_mesh.h>
 #include <CGAL/Poisson_reconstruction_function.h>
 #include <CGAL/Point_with_normal_3.h>
 #include <CGAL/property_map.h>
-#include <CGAL/IO/read_xyz_points.h>
+#include <CGAL/IO/read_points.h>
 #include <CGAL/compute_average_spacing.h>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
 
@@ -31,7 +28,8 @@
 #include <fstream>
 #include <math.h>
 
-#include <boost/foreach.hpp>
+
+#include <CGAL/disable_warnings.h>
 
 // ----------------------------------------------------------------------------
 // Types
@@ -125,7 +123,7 @@ int main(int argc, char * argv[])
 
       // Converts Polyhedron vertices to point set.
       // Computes vertices normal from connectivity.
-      BOOST_FOREACH(boost::graph_traits<Polyhedron>::vertex_descriptor v, 
+      for(boost::graph_traits<Polyhedron>::vertex_descriptor v :
                     vertices(input_mesh)){
         const Point& p = v->point();
         Vector n = CGAL::Polygon_mesh_processing::compute_vertex_normal(v,input_mesh);
@@ -137,16 +135,15 @@ int main(int argc, char * argv[])
              extension == ".pwn" || extension == ".PWN")
     {
       // Reads the point set file in points[].
-      // Note: read_xyz_points_and_normals() requires an iterator over points
+      // Note: read_points() requires an iterator over points
       // + property maps to access each point's position and normal.
       // The position property map can be omitted here as we use iterators over Point_3 elements.
-      std::ifstream stream(input_filename.c_str());
-      if (!stream ||
-          !CGAL::read_xyz_points_and_normals(
-                                stream,
-                                std::back_inserter(points),
-                                CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type())
-                                ))
+      if (!CGAL::IO::read_points(
+            input_filename.c_str(),
+            std::back_inserter(points),
+            CGAL::parameters::normal_map
+            (CGAL::make_normal_of_point_with_normal_map(PointList::value_type()))
+            ))
       {
         std::cerr << "Error: cannot read file " << input_filename << std::endl;
         accumulated_fatal_err = EXIT_FAILURE;
@@ -202,7 +199,7 @@ int main(int argc, char * argv[])
     // The position property map can be omitted here as we use iterators over Point_3 elements.
     Poisson_reconstruction_function function(
                               points.begin(), points.end(),
-                              CGAL::make_normal_of_point_with_normal_pmap(PointList::value_type())
+                              CGAL::make_normal_of_point_with_normal_map(PointList::value_type())
                               );
 
     // Computes the Poisson indicator function f()
@@ -225,8 +222,7 @@ int main(int argc, char * argv[])
     std::cerr << "Surface meshing...\n";
 
     // Computes average spacing
-    FT average_spacing = CGAL::compute_average_spacing<CGAL::Sequential_tag>(points.begin(), points.end(),
-                                                       6 /* knn = 1 ring */);
+    FT average_spacing = CGAL::compute_average_spacing<CGAL::Sequential_tag>(points, 6 /* knn = 1 ring */);
 
     // Gets one point inside the implicit surface
     Point inner_point = function.get_inner_point();
@@ -243,7 +239,7 @@ int main(int argc, char * argv[])
     FT radius = std::sqrt(bsphere.squared_radius());
 
     // Defines the implicit surface: requires defining a
-  	// conservative bounding sphere centered at inner point.
+          // conservative bounding sphere centered at inner point.
     FT sm_sphere_radius = 5.0 * radius;
     FT sm_dichotomy_error = sm_distance*average_spacing/1000.0; // Dichotomy error must be << sm_distance
     Surface_3 surface(function,
@@ -255,7 +251,7 @@ int main(int argc, char * argv[])
                                                         sm_radius*average_spacing,  // Max triangle size
                                                         sm_distance*average_spacing); // Approximation error
 
-    CGAL_TRACE_STREAM << "  make_surface_mesh(sphere center=("<<inner_point << "),\n"
+    std::cerr         << "  make_surface_mesh(sphere center=("<<inner_point << "),\n"
                       << "                    sphere radius="<<sm_sphere_radius<<",\n"
                       << "                    angle="<<sm_angle << " degrees,\n"
                       << "                    triangle size="<<sm_radius<<" * average spacing="<<sm_radius*average_spacing<<",\n"
@@ -286,7 +282,7 @@ int main(int argc, char * argv[])
 
     // Converts to polyhedron
     Polyhedron output_mesh;
-    CGAL::output_surface_facets_to_polyhedron(c2t3, output_mesh);
+    CGAL::facets_in_complex_2_to_triangle_mesh(c2t3, output_mesh);
 
     // Prints total reconstruction duration
     std::cerr << "Total reconstruction (implicit function + meshing): " << reconstruction_timer.time() << " seconds\n";

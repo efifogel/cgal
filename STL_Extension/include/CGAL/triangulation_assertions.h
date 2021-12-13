@@ -1,19 +1,11 @@
 // Copyright (c) 2001  INRIA Sophia-Antipolis (France). All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Geert-Jan Giezeman, Sven Schoenherr
 //
@@ -22,7 +14,7 @@
 
 // Note that this header file is intentionnaly not protected with a
 // macro (as <cassert>). Calling it a second time with another value
-// for NDEBUG for example must make a difference.
+// for CGAL_NO_ASSERTIONS for example must make a difference.
 
 #include <CGAL/assertions.h>
 
@@ -35,8 +27,7 @@
 #undef CGAL_triangulation_assertion_msg
 #undef CGAL_triangulation_assertion_code
 
-#if defined(CGAL_TRIANGULATION_NO_ASSERTIONS) || defined(CGAL_NO_ASSERTIONS) \
-  || defined(NDEBUG)
+#if defined(CGAL_TRIANGULATION_NO_ASSERTIONS) || defined(CGAL_NO_ASSERTIONS)
 #  define CGAL_triangulation_assertion(EX) (static_cast<void>(0))
 
 
@@ -57,8 +48,7 @@
 #undef CGAL_triangulation_exactness_assertion_code
 
 #if defined(CGAL_TRIANGULATION_NO_ASSERTIONS) || defined(CGAL_NO_ASSERTIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))
 #  define CGAL_triangulation_exactness_assertion(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_assertion_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_assertion_code(CODE)
@@ -78,8 +68,7 @@
 
 #if defined(CGAL_TRIANGULATION_NO_ASSERTIONS) \
   || defined(CGAL_NO_ASSERTIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_assertion(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_assertion_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_assertion_code(CODE)
@@ -99,8 +88,7 @@
 
 #if defined(CGAL_TRIANGULATION_NO_ASSERTIONS) || defined(CGAL_NO_ASSERTIONS) \
   || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_exactness_assertion(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_assertion_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_assertion_code(CODE)
@@ -121,8 +109,7 @@
 #undef CGAL_triangulation_precondition_msg
 #undef CGAL_triangulation_precondition_code
 
-#if defined(CGAL_TRIANGULATION_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS) \
-  || defined(NDEBUG)
+#if defined(CGAL_TRIANGULATION_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS)
 #  define CGAL_triangulation_precondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_precondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_precondition_code(CODE)
@@ -141,8 +128,7 @@
 #undef CGAL_triangulation_exactness_precondition_code
 
 #if defined(CGAL_TRIANGULATION_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))
 #  define CGAL_triangulation_exactness_precondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_precondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_precondition_code(CODE)
@@ -161,8 +147,7 @@
 #undef CGAL_triangulation_expensive_precondition_code
 
 #if defined(CGAL_TRIANGULATION_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_precondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_precondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_precondition_code(CODE)
@@ -182,8 +167,7 @@
 
 #if defined(CGAL_TRIANGULATION_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS) \
   || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_exactness_precondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_precondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_precondition_code(CODE)
@@ -204,8 +188,7 @@
 #undef CGAL_triangulation_postcondition_msg
 #undef CGAL_triangulation_postcondition_code
 
-#if defined(CGAL_TRIANGULATION_NO_POSTCONDITIONS) || defined(CGAL_NO_POSTCONDITIONS) \
-  || defined(NDEBUG)
+#if defined(CGAL_TRIANGULATION_NO_POSTCONDITIONS) || defined(CGAL_NO_POSTCONDITIONS)
 #  define CGAL_triangulation_postcondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_postcondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_postcondition_code(CODE)
@@ -224,8 +207,7 @@
 #undef CGAL_triangulation_exactness_postcondition_code
 
 #if defined(CGAL_TRIANGULATION_NO_POSTCONDITIONS) || defined(CGAL_NO_POSTCONDITIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))
 #  define CGAL_triangulation_exactness_postcondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_postcondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_postcondition_code(CODE)
@@ -244,8 +226,7 @@
 #undef CGAL_triangulation_expensive_postcondition_code
 
 #if defined(CGAL_TRIANGULATION_NO_POSTCONDITIONS) || defined(CGAL_NO_POSTCONDITIONS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_postcondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_postcondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_postcondition_code(CODE)
@@ -265,8 +246,7 @@
 
 #if defined(CGAL_TRIANGULATION_NO_POSTCONDITIONS) || defined(CGAL_NO_POSTCONDITIONS) \
   || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_exactness_postcondition(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_postcondition_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_postcondition_code(CODE)
@@ -287,8 +267,7 @@
 #undef CGAL_triangulation_warning_msg
 #undef CGAL_triangulation_warning_code
 
-#if defined(CGAL_TRIANGULATION_NO_WARNINGS) || defined(CGAL_NO_WARNINGS) \
-  || defined(NDEBUG)
+#if defined(CGAL_TRIANGULATION_NO_WARNINGS) || defined(CGAL_NO_WARNINGS)
 #  define CGAL_triangulation_warning(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_warning_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_warning_code(CODE)
@@ -307,8 +286,7 @@
 #undef CGAL_triangulation_exactness_warning_code
 
 #if defined(CGAL_TRIANGULATION_NO_WARNINGS) || defined(CGAL_NO_WARNINGS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))
 #  define CGAL_triangulation_exactness_warning(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_warning_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_exactness_warning_code(CODE)
@@ -327,8 +305,7 @@
 #undef CGAL_triangulation_expensive_warning_code
 
 #if defined(CGAL_TRIANGULATION_NO_WARNINGS) || defined(CGAL_NO_WARNINGS) \
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_warning(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_warning_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_warning_code(CODE)
@@ -348,8 +325,7 @@
 
 #if defined(CGAL_TRIANGULATION_NO_WARNINGS) || defined(CGAL_NO_WARNINGS) \
   || (!defined(CGAL_TRIANGULATION_CHECK_EXACTNESS) && !defined(CGAL_CHECK_EXACTNESS))\
-  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE)) \
-  || defined(NDEBUG)
+  || (!defined(CGAL_TRIANGULATION_CHECK_EXPENSIVE) && !defined(CGAL_CHECK_EXPENSIVE))
 #  define CGAL_triangulation_expensive_exactness_warning(EX) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_warning_msg(EX,MSG) (static_cast<void>(0))
 #  define CGAL_triangulation_expensive_exactness_warning_code(CODE)

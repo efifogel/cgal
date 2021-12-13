@@ -1,26 +1,22 @@
-project( BGL_surface_mesh_Examples )
+cmake_minimum_required(VERSION 3.1...3.22)
+project(BGL_surface_mesh_Examples)
 
-cmake_minimum_required(VERSION 2.8.10)
+find_package(CGAL REQUIRED)
 
-find_package(CGAL QUIET)
+# include for local package
 
-if ( CGAL_FOUND )
+create_single_source_cgal_program("prim.cpp")
+create_single_source_cgal_program("gwdwg.cpp")
+create_single_source_cgal_program("seam_mesh.cpp")
+create_single_source_cgal_program("write_inp.cpp")
+create_single_source_cgal_program("surface_mesh_dual.cpp")
+create_single_source_cgal_program("connected_components.cpp")
 
-  include( ${CGAL_USE_FILE} )
-
-  include( CGAL_CreateSingleSourceCGALProgram )
-
-  include_directories (BEFORE "../../include")
-
-  # create a target per cppfile
-  file(GLOB cppfiles RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
-  foreach(cppfile ${cppfiles})
-    create_single_source_cgal_program( "${cppfile}" )
-  endforeach()
-
+find_package(METIS)
+include(CGAL_METIS_support)
+if( TARGET CGAL::METIS_support )
+  create_single_source_cgal_program( "surface_mesh_partition.cpp" )
+  target_link_libraries( surface_mesh_partition PUBLIC CGAL::METIS_support )
 else()
-  
-    message(STATUS "This program requires the CGAL library, and will not be compiled.")
-  
+  message(STATUS "Examples that use the METIS library will not be compiled.")
 endif()
-

@@ -1,10 +1,9 @@
 #include "Scene_textured_polyhedron_item.h"
-#include "Textured_polyhedron_type.h"
 #include <CGAL/IO/Polyhedron_iostream.h>
 #include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include <QApplication>
-
+#include "Textured_polyhedron_type.h"
 #include <QObject>
 
 typedef EPIC_kernel::Point_3 Point;
@@ -18,6 +17,8 @@ struct Scene_textured_polyhedron_item_priv
     texture.GenerateCheckerBoard(2048,2048,128,0,0,0,250,250,255);
     nb_facets = 0;
     nb_lines = 0;
+    nb_border = 0;
+    positions_border.resize(0);
   }
   Scene_textured_polyhedron_item_priv(const Textured_polyhedron& p, Scene_textured_polyhedron_item* parent)
     : poly(new Textured_polyhedron(p)),textureId(-1),smooth_shading(true)
@@ -47,6 +48,7 @@ struct Scene_textured_polyhedron_item_priv
   enum VAOs {
       Facets=0,
       Edges,
+      Border_edges,
       NbOfVaos
   };
   enum VBOs {
@@ -55,6 +57,7 @@ struct Scene_textured_polyhedron_item_priv
       Facets_Texmap,
       Edges_Vertices,
       Edges_Texmap,
+      Edges_border,
       NbOfVbos
   };
 
@@ -62,11 +65,13 @@ struct Scene_textured_polyhedron_item_priv
   Texture texture;
   mutable std::vector<float> positions_lines;
   mutable std::vector<float> positions_facets;
+  mutable std::vector<float> positions_border;
   mutable std::vector<float> normals;
   mutable std::vector<float> textures_map_facets;
   mutable std::vector<float> textures_map_lines;
   mutable std::size_t nb_facets;
   mutable std::size_t nb_lines;
+  mutable std::size_t nb_border;
 
   mutable GLuint textureId;
   mutable QOpenGLShaderProgram* program;
@@ -132,6 +137,7 @@ void Scene_textured_polyhedron_item_priv::initializeBuffers(CGAL::Three::Viewer_
         program->release();
     }
 
+
     viewer->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     viewer->glActiveTexture(GL_TEXTURE0);
@@ -149,7 +155,7 @@ void Scene_textured_polyhedron_item_priv::initializeBuffers(CGAL::Three::Viewer_
     viewer->glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     viewer->glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     viewer->glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    //viewer->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     nb_facets = positions_facets.size();
     positions_facets.resize(0);
@@ -188,7 +194,7 @@ Scene_textured_polyhedron_item_priv::compute_normals_and_vertices(void) const
     typedef Base::Facet Facet;
     typedef Base::Facet_iterator Facet_iterator;
 
-    const qglviewer::Vec offset = static_cast<CGAL::Three::Viewer_interface*>(QGLViewer::QGLViewerPool().first())->offset();
+    const CGAL::qglviewer::Vec offset = static_cast<CGAL::Three::Viewer_interface*>(CGAL::QGLViewer::QGLViewerPool().first())->offset();
 
     //Facets
     Facet_iterator f = poly->facets_begin();
@@ -231,8 +237,8 @@ Scene_textured_polyhedron_item_priv::compute_normals_and_vertices(void) const
             positions_facets.push_back(p.z() + offset.z);
             positions_facets.push_back(1.0);
 
-            const double u = he->vertex()->u();
-            const double v = he->vertex()->v();
+            const double u = he->u();
+            const double v = he->v();
             textures_map_facets.push_back(u);
             textures_map_facets.push_back(v);
         }
@@ -240,8 +246,8 @@ Scene_textured_polyhedron_item_priv::compute_normals_and_vertices(void) const
 
     }
     //Lines
-    typedef Kernel::Point_3		Point;
-    typedef Base::Edge_iterator	Edge_iterator;
+    typedef Kernel::Point_3                Point;
+    typedef Base::Edge_iterator        Edge_iterator;
 
     Edge_iterator he;
 
@@ -257,8 +263,8 @@ Scene_textured_polyhedron_item_priv::compute_normals_and_vertices(void) const
         positions_lines.push_back(a.z() + offset.z);
         positions_lines.push_back(1.0);
 
-        const double u = he->vertex()->u();
-        const double v = he->vertex()->v();
+        const double u = he->u();
+        const double v = he->v();
         textures_map_lines.push_back(u);
         textures_map_lines.push_back(v);
 
@@ -267,8 +273,8 @@ Scene_textured_polyhedron_item_priv::compute_normals_and_vertices(void) const
         positions_lines.push_back(b.z()+ offset.z);
         positions_lines.push_back(1.0);
 
-        const double ou = he->opposite()->vertex()->u();
-        const double ov = he->opposite()->vertex()->v();
+        const double ou = he->opposite()->u();
+        const double ov = he->opposite()->v();
         textures_map_lines.push_back(ou);
         textures_map_lines.push_back(ov);
 
@@ -308,7 +314,7 @@ Scene_textured_polyhedron_item::~Scene_textured_polyhedron_item()
     delete d;
 }
 
-Scene_textured_polyhedron_item* 
+Scene_textured_polyhedron_item*
 Scene_textured_polyhedron_item::clone() const {
     return new Scene_textured_polyhedron_item(*d->poly);
 }
@@ -324,20 +330,20 @@ Scene_textured_polyhedron_item::load(std::istream& in)
 }
 
 // Write textured_polyhedron to .OFF file
-bool 
+bool
 Scene_textured_polyhedron_item::save(std::ostream& out) const
 {
     out << *d->poly;
     return (bool) out;
 }
 
-QString 
+QString
 Scene_textured_polyhedron_item::toolTip() const
 {
     if(!d->poly)
         return QString();
 
-    return QObject::tr("<p>Textured polyhedron <b>%1</b> (mode: %5, color: %6)</p>"
+    return QObject::tr("<p>Textured Polyhedron_3 <b>%1</b> (mode: %5, color: %6)</p>"
                        "<p>Number of vertices: %2<br />"
                        "Number of edges: %3<br />"
                        "Number of facets: %4</p>")
@@ -381,14 +387,38 @@ void Scene_textured_polyhedron_item::drawEdges(CGAL::Three::Viewer_interface* vi
     d->program=getShaderProgram(PROGRAM_WITH_TEXTURED_EDGES);
     d->program->bind();
     viewer->glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(d->nb_lines/4));
+
+    vaos[Scene_textured_polyhedron_item_priv::Edges]->release();
+    d->program->release();
+
+    vaos[Scene_textured_polyhedron_item_priv::Border_edges]->bind();
+    if(!viewer->isOpenGL_4_3())
+    {
+      attribBuffers(viewer, PROGRAM_NO_SELECTION);
+      d->program=getShaderProgram(PROGRAM_NO_SELECTION);
+      d->program->bind();
+    }
+    else
+    {
+      attribBuffers(viewer, PROGRAM_SOLID_WIREFRAME);
+      d->program=getShaderProgram(PROGRAM_SOLID_WIREFRAME);
+      d->program->bind();
+      QVector2D vp(viewer->width(), viewer->height());
+      d->program->setUniformValue("viewport", vp);
+      d->program->setUniformValue("near",(GLfloat)viewer->camera()->zNear());
+      d->program->setUniformValue("far",(GLfloat)viewer->camera()->zFar());
+      d->program->setUniformValue("width", 4.0f);
+    }
+    d->program->setAttributeValue("colors", QColor(Qt::blue));
+    viewer->glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(d->nb_border/3));
     //Clean-up
     d->program->release();
-    vaos[Scene_textured_polyhedron_item_priv::Edges]->release();
+    vaos[Scene_textured_polyhedron_item_priv::Border_edges]->release();
 }
 
-Textured_polyhedron* 
+Textured_polyhedron*
 Scene_textured_polyhedron_item::textured_polyhedron()       { return d->poly; }
-const Textured_polyhedron* 
+const Textured_polyhedron*
 Scene_textured_polyhedron_item::textured_polyhedron() const { return d->poly; }
 
 bool
@@ -420,7 +450,35 @@ Scene_textured_polyhedron_item::selection_changed(bool p_is_selected)
     if(p_is_selected != is_selected)
     {
         is_selected = p_is_selected;
+        initializeBuffers();
+    //to be replaced by a functor in the d-pointer when the merging is done
+        if(p_is_selected)
+          Q_EMIT selectionChanged();
     }
     else
         is_selected = p_is_selected;
+}
+void Scene_textured_polyhedron_item::add_border_edges(std::vector<float> border_edges,
+                                                      bool is_opengl_4_3)
+{
+  d->positions_border = border_edges;
+  d->nb_border = border_edges.size();
+  d->program=is_opengl_4_3
+      ? getShaderProgram(PROGRAM_SOLID_WIREFRAME)
+      : getShaderProgram(PROGRAM_NO_SELECTION);
+  d->program->bind();
+  vaos[Scene_textured_polyhedron_item_priv::Border_edges]->bind();
+  buffers[Scene_textured_polyhedron_item_priv::Edges_border].bind();
+  buffers[Scene_textured_polyhedron_item_priv::Edges_Vertices].allocate(d->positions_border.data(),
+                      static_cast<int>(d->positions_border.size()*sizeof(float)));
+  d->program->enableAttributeArray("vertex");
+  d->program->setAttributeBuffer("vertex",GL_FLOAT,0,3);
+  buffers[Scene_textured_polyhedron_item_priv::Edges_Vertices].release();
+  vaos[Scene_textured_polyhedron_item_priv::Border_edges]->release();
+
+  d->program->release();
+  d->positions_border.resize(0);
+  std::vector<float>(d->positions_border).swap(d->positions_border);
+  itemChanged();
+
 }

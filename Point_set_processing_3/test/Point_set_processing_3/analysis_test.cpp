@@ -15,7 +15,7 @@
 
 // This package
 #include <CGAL/compute_average_spacing.h>
-#include <CGAL/IO/read_xyz_points.h>
+#include <CGAL/IO/read_points.h>
 
 #include <deque>
 #include <cstdlib>
@@ -33,12 +33,7 @@ typedef Kernel::FT FT;
 typedef Kernel::Point_3 Point;
 
 // Concurrency
-#ifdef CGAL_LINKED_WITH_TBB
-typedef CGAL::Parallel_tag Concurrency_tag;
-#else
-typedef CGAL::Sequential_tag Concurrency_tag;
-#endif
-
+typedef CGAL::Parallel_if_available_tag Concurrency_tag;
 
 // ----------------------------------------------------------------------------
 // Tests
@@ -51,7 +46,7 @@ void test_average_spacing(std::deque<Point>& points, // input point set
   std::cerr << "Computes average spacing to k nearest neighbors (k="<< nb_neighbors << ")... ";
   CGAL::Timer task_timer; task_timer.start();
 
-  FT average_spacing = CGAL::compute_average_spacing<Concurrency_tag>(points.begin(), points.end(), nb_neighbors);
+  FT average_spacing = CGAL::compute_average_spacing<Concurrency_tag>(points, nb_neighbors);
   std::cout << average_spacing << std::endl;
 
   std::size_t memory = CGAL::Memory_sizer().virtual_size();
@@ -99,23 +94,18 @@ int main(int argc, char * argv[])
     // Loads point set
     //***************************************
 
-    // File name is:
-    std::string input_filename  = argv[i];
-
     // Reads the point set file in points[].
     std::deque<Point> points;
-    std::cerr << "Open " << input_filename << " for reading..." << std::endl;
+    std::cerr << "Open " << argv[i] << " for reading..." << std::endl;
 
     // If XYZ file format:
-    std::ifstream stream(input_filename.c_str());
-    if(stream &&
-       CGAL::read_xyz_points(stream, std::back_inserter(points)))
+    if(CGAL::IO::read_points(argv[i], std::back_inserter(points)))
     {
       std::cerr << "ok (" << points.size() << " points)" << std::endl;
     }
     else
     {
-      std::cerr << "Error: cannot read file " << input_filename << std::endl;
+      std::cerr << "Error: cannot read file " << argv[i] << std::endl;
       accumulated_fatal_err = EXIT_FAILURE;
       continue;
     }

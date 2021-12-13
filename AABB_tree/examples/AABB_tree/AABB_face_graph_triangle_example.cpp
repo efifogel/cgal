@@ -6,7 +6,6 @@
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 #include <CGAL/AABB_face_graph_triangle_primitive.h>
 
 typedef CGAL::Simple_cartesian<double> K;
@@ -26,7 +25,6 @@ void run(const FaceGraph& graph){
   // constructs the AABB tree and the internal search tree for
   // efficient distance queries.
   Tree tree( faces(graph).first, faces(graph).second, graph);
-  tree.accelerate_distance_queries();
 
   // counts #intersections with a triangle query
   Segment segment_query(p,q);

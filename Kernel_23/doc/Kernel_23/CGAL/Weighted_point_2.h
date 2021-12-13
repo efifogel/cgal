@@ -14,6 +14,7 @@ to `NT`, and `Kernel::FT` is equal to `Quotient<NT>`.
 \sa `Point_2<Kernel>`
 
 \cgalModels `Kernel::WeightedPoint_2`
+\cgalModels `Hashable` if `Kernel` is a cartesian kernel and if `Kernel::FT` is `Hashable`
 
 */
 template< typename Kernel >
@@ -47,8 +48,11 @@ public:
 
   /*!
   introduces a weighted point from point `p` and weight `0`.
+
+  \warning The `explicit` keyword is used to avoid accidental implicit conversions
+           between Point_2 and Weighted_point_2.
   */
-  Weighted_point_2(const Point_2<Kernel>& p);
+  explicit Weighted_point_2(const Point_2<Kernel>& p);
 
   /*!
   introduces a weighted point from point `p` and weight `w`.
@@ -97,16 +101,6 @@ public:
   Test for inequality. The point can be compared with `ORIGIN`.
   */
   bool operator!=(const Weighted_point_2<Kernel> &q) const;
-
-  /*!
-  translates the point by the vector `v`.
-  */
-  Weighted_point_2<Kernel>& operator+=(const Vector_2<Kernel> &v);
-
-  /*!
-  translates the point by the vector -`v`.
-  */
-  Weighted_point_2<Kernel>& operator-=(const Vector_2<Kernel> &v);
 
   /// @}
 
@@ -187,8 +181,7 @@ public:
   int dimension() const;
 
   /*!
-  returns a bounding box containing `p`. Note that bounding boxes
-  are not parameterized with whatsoever.
+  returns a bounding box containing `p`.
   */
   Bbox_2 bbox() const;
 

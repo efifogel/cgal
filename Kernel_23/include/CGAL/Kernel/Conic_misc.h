@@ -1,24 +1,16 @@
-// Copyright (c) 2000,2001  
+// Copyright (c) 2000,2001
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Bernd Gaertner, Sven Schoenherr <sven@inf.ethz.ch>
 
@@ -28,6 +20,8 @@
 #include <cmath>
 #include <CGAL/number_utils.h>
 #include <CGAL/kernel_assertions.h>
+
+#include <boost/math/special_functions/cbrt.hpp>
 
 namespace CGAL {
 
@@ -62,12 +56,12 @@ NT best_value (NT *values, int nr_values,
         d = (a2*x+a1)*x+a0;
         q = ((b3*x+b2)*x+b1)*x+b0;
         det = d*d*d/(q*q);
-	// if q==0, this root value doesn't qualify for the
-	// best value. Under roundoff errors, q might be very
-	// small but nonzero, so that the value is erroneously 
-	// being considered; however, d should be very small
-	// in this case as well, so that det won't compete
-	// for max_det below.
+        // if q==0, this root value doesn't qualify for the
+        // best value. Under roundoff errors, q might be very
+        // small but nonzero, so that the value is erroneously
+        // being considered; however, d should be very small
+        // in this case as well, so that det won't compete
+        // for max_det below.
         if (CGAL_NTS is_positive(det) && !CGAL_NTS is_zero(q))
             if (!det_positive || (det > max_det)) {
                 max_det = det;
@@ -119,8 +113,8 @@ int solve_cubic (NT c3, NT c2, NT c1, NT c0,
 
     if (a == 0) {
         // one real root
-        /***** r1 = cbrt(-b) - g2/3.0; *****/
-        r1 = exp(log(-b)/3.0) - g2/3.0;
+        r1 = boost::math::cbrt(-b) - g2 / 3.0;
+        // r1 = std::exp(std::log(-b) / 3.0) - g2 / 3.0;
         return 1;
     }
 
@@ -128,8 +122,8 @@ int solve_cubic (NT c3, NT c2, NT c1, NT c0,
     NT D  = a*a*a/27.0 + b*b/4.0;
     if (D >= 0.0) {
         // real case
-        /***** NT u = cbrt(-b/2.0 + CGAL_NTS sqrt(D)), *****/
-        NT u = exp(log(-b/2.0 + CGAL_NTS sqrt(D))),
+        NT u = boost::math::cbrt(-b / 2.0 + CGAL_NTS sqrt(D)),
+        // NT u = std::exp(std::log(-b/2.0 + CGAL_NTS sqrt(D)) / 3.0),
                alpha = 1.0 - a/(3.0*u*u);
         if (D == 0) {
             // two distinct real roots

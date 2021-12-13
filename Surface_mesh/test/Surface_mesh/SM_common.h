@@ -6,7 +6,9 @@
 
 #include <CGAL/Simple_cartesian.h>
 
+#include <CGAL/disable_warnings.h>
 #include <boost/assign.hpp>
+#include <CGAL/enable_warnings.h>
 
 typedef CGAL::Simple_cartesian<double> K;
 typedef CGAL::Surface_mesh<K::Point_3> Sm;
@@ -113,10 +115,9 @@ struct Surface_fixture_3 {
 };
 
 
-struct Cube_fixture {
-  Cube_fixture() {
-    CGAL::read_mesh(m, "cube.off");
-  }
+struct Cube_fixture
+{
+  Cube_fixture() { CGAL::IO::read_polygon_mesh(CGAL::data_file_path("meshes/cube.off"), m); }
 
   Sm m;
 

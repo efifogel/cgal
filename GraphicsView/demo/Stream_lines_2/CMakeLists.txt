@@ -1,51 +1,54 @@
 # Created by the script cgal_create_cmake_script
 # This is the CMake script for compiling a CGAL application.
 
-project (Stream_lines_2_Demo)
+cmake_minimum_required(VERSION 3.1...3.20)
+project(Stream_lines_2_Demo)
 
-cmake_minimum_required(VERSION 2.8.11)
-if(POLICY CMP0043)
-  cmake_policy(SET CMP0043 OLD)
+if(NOT POLICY CMP0070 AND POLICY CMP0053)
+  # Only set CMP0053 to OLD with CMake<3.10, otherwise there is a warning.
+  cmake_policy(SET CMP0053 OLD)
 endif()
 
-find_package(CGAL COMPONENTS Qt5)
+if(POLICY CMP0071)
+  cmake_policy(SET CMP0071 NEW)
+endif()
 
-include(${CGAL_USE_FILE})
+find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt5)
 
+find_package(Qt5 QUIET COMPONENTS Script OpenGL Svg)
 
-find_package(Qt5 QUIET COMPONENTS Xml Script OpenGL Svg)
-include_directories (BEFORE ../../include)
+if(CGAL_Qt5_FOUND AND Qt5_FOUND)
 
+  add_definitions(-DQT_NO_KEYWORDS)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+  set(CMAKE_AUTOMOC ON)
 
-if ( CGAL_FOUND AND CGAL_Qt5_FOUND AND Qt5_FOUND )
+  #--------------------------------
+  # UI files (Qt Designer files)
+  qt5_wrap_ui(DT_UI_FILES Stream_lines_2.ui)
 
-add_definitions(-DQT_NO_KEYWORDS)
+  # qrc files (resources files, that contain icons, at least)
+  qt5_add_resources(CGAL_Qt5_RESOURCE_FILES ./Stream_lines_2.qrc)
 
+  # The executable itself.
+  add_executable(
+    Stream_lines_2 Stream_lines_2.cpp ${DT_UI_FILES} ${CGAL_Qt5_RESOURCE_FILES}
+                   ${CGAL_Qt5_MOC_FILES})
 
-#--------------------------------
-# UI files (Qt Designer files)
-qt5_wrap_ui( DT_UI_FILES Stream_lines_2.ui )
+  add_to_cached_list(CGAL_EXECUTABLE_TARGETS Stream_lines_2)
 
-# qrc files (resources files, that contain icons, at least)
-qt5_add_resources ( CGAL_Qt5_RESOURCE_FILES ./Stream_lines_2.qrc )
+  target_link_libraries(Stream_lines_2 PRIVATE CGAL::CGAL CGAL::CGAL_Qt5
+                                               Qt5::Gui)
 
-# use the Qt MOC preprocessor on classes that derives from QObject
-qt5_generate_moc( Stream_lines_2.cpp Stream_lines_2.moc )
+  include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+  cgal_add_compilation_test(Stream_lines_2)
 
-# The executable itself.
-add_executable  ( Stream_lines_2 Stream_lines_2.cpp Stream_lines_2.moc ${DT_UI_FILES}  ${CGAL_Qt5_RESOURCE_FILES} ${CGAL_Qt5_MOC_FILES} )
-
-qt5_use_modules(Stream_lines_2 Xml Script OpenGL Svg)
-
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS Stream_lines_2 )
-
-# Link with Qt libraries
-target_link_libraries( Stream_lines_2 ${QT_LIBRARIES} )
-# Link with CGAL
-target_link_libraries( Stream_lines_2 ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
+  include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+  cgal_add_compilation_test(Stream_lines_2)
 
 else()
 
-  message(STATUS "NOTICE: This demo requires CGAL and Qt5, and will not be compiled.")
+  message(
+    STATUS "NOTICE: This demo requires CGAL and Qt5, and will not be compiled.")
 
 endif()

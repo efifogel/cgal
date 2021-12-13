@@ -2,18 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Laurent RINEAU
@@ -37,23 +29,28 @@ namespace CGAL {
 namespace Three {
 class Scene_interface;
   /*!
-   * This class gives some virtual functions to help making a plugin
+   * This virtual class provides the basic functions used for making a plugin.
    */
-class Polyhedron_demo_plugin_interface 
+class Polyhedron_demo_plugin_interface
 {
 public:
-  //! Initializes the plugin and gives access to a Message interface, that
-  //! can be used to display messages in the console dock widget.
-  //! @see init(QMainWindow*, CGAL::Three::Scene_interface*)
+  //! \brief initializes the plugin
+  //! This function acts like a constructor. This is where the attributes must be initialized.
+  //! The Message_interface allows to print warnings or errors on the screen and the `Console` widget.
   virtual void init(QMainWindow* , CGAL::Three::Scene_interface* , Messages_interface*) = 0;
 
-  //! Decides if the plugin's actions will be displayed or not.
-  //! @returns \c true, if the plugin is applicable, \c false
+  //! \brief indicates if an action is usable or not.
+  //! This function usually tests the type of the selected item to determine if `action` can be applied to it,
+  //! but not necessarly.
+  //! @returns \c true if `action` can be called in the current state, \c false
   //! otherwise
-  virtual bool applicable(QAction*) const = 0;
-  //!The list of the actions of the plugin.
+  virtual bool applicable(QAction* action) const = 0;
+  //!Contains all the plugin's actions.
   virtual QList<QAction*> actions() const = 0;
-  //!If you need to do something when the plugin is closed, do it here
+  //!\brief is called when the application is closed.
+  //! Override this function if you need to perform a specific action
+  //! when the application is closed, like hide the widgets if you don't want
+  //! their visibility to be saved.
   virtual void closure() {
  }
 protected :

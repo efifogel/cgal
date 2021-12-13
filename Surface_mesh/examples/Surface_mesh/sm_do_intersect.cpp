@@ -1,15 +1,12 @@
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Surface_mesh.h>
+
+#include <CGAL/box_intersection_d.h>
+#include <CGAL/Timer.h>
+
 #include <algorithm>
 #include <vector>
 #include <fstream>
-
-#include <boost/utility/addressof.hpp>
-#include <boost/bind.hpp>
-#include <boost/functional/value_factory.hpp>
-#include <boost/range/algorithm/transform.hpp>
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Surface_mesh.h>
-#include <CGAL/box_intersection_d.h>
-#include <CGAL/Timer.h>
 
 typedef CGAL::Exact_predicates_exact_constructions_kernel K;
 
@@ -44,7 +41,7 @@ private:
 public:
   typedef double                                   NT;
   typedef std::size_t                              ID;
-  
+
   Box(Face_descriptor f, const Mesh& sm) : Base(triangle(sm, f).bbox()), fd(f) {}
   Box(const Bbox_3& b, Face_descriptor fd) : Base(b), fd(fd) {}
   Face_descriptor f() const { return fd; }
@@ -73,6 +70,12 @@ struct Callback {
   unsigned int& count;
 };
 
+const Box*
+address_of_box(const Box& b)
+{
+  return &b;
+}
+
 unsigned int intersect(const Mesh& P, const Mesh& Q) {
   std::vector<Box> P_boxes, Q_boxes;
   std::vector<const Box*> P_box_ptr, Q_box_ptr;
@@ -82,19 +85,15 @@ unsigned int intersect(const Mesh& P, const Mesh& Q) {
   Q_box_ptr.reserve(Q.number_of_faces());
 
   // build boxes and pointers to boxes
-  boost::transform(P.faces(),
-                 std::back_inserter(P_boxes), 
-                 boost::bind(boost::value_factory<Box>(), _1, boost::cref(P)));
-  
-  std::transform(P_boxes.begin(), P_boxes.end(), std::back_inserter(P_box_ptr), 
-                 &boost::addressof<Box>);
-  
-  boost::transform(Q.faces(),
-                 std::back_inserter(Q_boxes), 
-                 boost::bind(boost::value_factory<Box>(), _1, boost::cref(Q)));
+  for(auto f : P.faces())
+    P_boxes.push_back( Box(f, P) );
+  std::transform(P_boxes.begin(), P_boxes.end(), std::back_inserter(P_box_ptr),
+                 &address_of_box);
+  for(auto f : Q.faces())
+    Q_boxes.push_back( Box(f, Q) );
   std::transform(Q_boxes.begin(), Q_boxes.end(), std::back_inserter(Q_box_ptr),
-                 &boost::addressof<Box>);
-  
+                 &address_of_box);
+
   unsigned int i = 0;
   Callback c(P,Q, i);
   CGAL::box_intersection_d(P_box_ptr.begin(), P_box_ptr.end(),
@@ -105,27 +104,26 @@ unsigned int intersect(const Mesh& P, const Mesh& Q) {
 
 int main(int argc, char* argv[])
 {
-  std::cout.precision(17);
-  Mesh P, Q;
-
+  std::string P_name = argc==1?CGAL::data_file_path("meshes/knot1.off") : argv[1];
+  std::string Q_name = argc<3 ?CGAL::data_file_path("meshes/elephant.off") : argv[2];
   if(argc < 3) {
     std::cerr << "Usage: do_intersect <mesh_1.off> <mesh_2.off>" << std::endl;
+    std::cerr << "Running with data/knot1.off and data/elephant.off\n";
+  }
+
+  Mesh P, Q;
+  if(!CGAL::IO::read_polygon_mesh(P_name, P) || !CGAL::IO::read_polygon_mesh(Q_name, Q))
+  {
+    std::cerr << "Invalid input files." << std::endl;
     return EXIT_FAILURE;
   }
-  
-  std::ifstream inP(argv[1]);
-  inP >> P;
-  
-  std::ifstream inQ(argv[2]);
-  inQ >> Q;
+
   Timer timer;
   timer.start();
   unsigned int num_intersections = intersect(P,Q);
   timer.stop();
-  std::cout << "Counted " << num_intersections << " in " 
+  std::cout << "Counted " << num_intersections << " in "
             << timer.time() << " seconds." << std::endl;
 
   return 0;
 }
-
-

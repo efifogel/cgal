@@ -2,18 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Baruch Zukerman <baruchzu@post.tau.ac.il>
@@ -23,6 +15,7 @@
 
 #include <CGAL/license/Boolean_set_operations_2.h>
 
+#include <CGAL/disable_warnings.h>
 
 #include <CGAL/General_polygon_2.h>
 #include <CGAL/General_polygon_with_holes_2.h>
@@ -42,6 +35,8 @@ public:
 
   typedef typename Base::Point_2                        Point_2;
   typedef typename Base::X_monotone_curve_2             X_monotone_curve_2;
+  typedef typename Base::Multiplicity                   Multiplicity;
+
   //Polygon_2 type is required by GeneralPolygonSetTraits Concept
   typedef General_polygon_t                             Polygon_2;
   //Polygon_2 is a model of the GeneralPolygon2 concept
@@ -60,11 +55,9 @@ public:
   typedef typename General_polygon_with_holes_2::Hole_const_iterator
                                                         Hole_const_iterator;
 
-  typedef typename Base::Equal_2                        Equal_2;
   typedef typename Base::Compare_endpoints_xy_2         Compare_endpoints_xy_2;
   typedef typename Base::Construct_min_vertex_2         Construct_min_vertex_2;
   typedef typename Base::Construct_max_vertex_2         Construct_max_vertex_2;
-
 
   /*!
    * A functor for constructing a polygon from a range of x-monotone curves.
@@ -171,8 +164,86 @@ public:
   };
 
   Is_unbounded construct_is_unbounded_object() const { return Is_unbounded(); }
+
+  // Equality operator
+  class Equal_2 {
+  protected:
+
+    /*! The base traits (in case it has state) */
+    const Base& m_traits;
+
+    /*! Construct from base traits.
+     * \param traits the traits (in case it has state)
+     * The constructor is declared protected to allow only the functor
+     * obtaining function, which is a member of the nesting class,
+     * constructing it.
+     */
+    Equal_2(const Base& traits) : m_traits(traits) {}
+
+    friend class Gps_traits_2;
+
+  public:
+    /*! Determine whether the two points are the same.
+     * \param p1 the first point.
+     * \param p2 the second point.
+     * \return (true) if the two point are the same; (false) otherwise.
+     */
+    bool operator()(const Point_2& p1, const Point_2& p2) const
+    { return m_traits.equal_2_object()(p1, p2); }
+
+    /*! Check whether the two x-monotone curves are the same (have the same
+     * graph).
+     * \param cv1 the first curve.
+     * \param cv2 the second curve.
+     * \return (true) if the two curves are the same; (false) otherwise.
+     */
+    bool operator()(const X_monotone_curve_2& cv1,
+                    const X_monotone_curve_2& cv2) const
+    { return m_traits.equal_2_object()(cv1, cv2); }
+
+    //! Compare two general polygons
+    bool operator()(const General_polygon_2& pgn1, const General_polygon_2& pgn2)
+      const
+    {
+      if (pgn1.size() != pgn2.size()) return false;
+      if (pgn1.is_empty() && ! pgn2.is_empty()) return false;
+      if (pgn2.is_empty()) return false;
+
+      auto eql = m_traits.equal_2_object();
+      auto it1 = pgn1.curves_begin();
+      auto it2 = pgn2.curves_begin();
+      for (; it2 != pgn2.curves_end(); ++it2) if (eql(*it1, *it2)) break;
+      if (it2 == pgn2.curves_end()) return false;
+      ++it1;
+      ++it2;
+      while (it1 != pgn1.curves_end()) {
+        if (! eql(*it1++, *it2++)) return false;
+        if (it2 == pgn2.curves_end()) it2 = pgn2.curves_begin();
+      }
+      return true;
+    }
+
+    //! Compare two general polygons
+    bool operator()(const General_polygon_with_holes_2& pgn1,
+                    const General_polygon_with_holes_2& pgn2) const {
+
+      if (! operator()(pgn1.outer_boundary(), pgn2.outer_boundary()))
+        return false;
+      if (pgn1.number_of_holes(), pgn2.number_of_holes()) return false;
+      auto it1 = pgn1.holes_begin();
+      auto it2 = pgn2.holes_begin();
+      while (it1 != pgn1.holes_end())
+        if (! operator()(*it1++, *it2++)) return false;
+      return true;
+    }
+  };
+
+  Equal_2 equal_2_object() const { return Equal_2(*this); }
+
 };
 
 } //namespace CGAL
+
+#include <CGAL/enable_warnings.h>
 
 #endif

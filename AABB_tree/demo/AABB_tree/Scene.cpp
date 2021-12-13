@@ -14,7 +14,7 @@
 
 #include <CGAL/Timer.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
-#include <CGAL/Subdivision_method_3.h>
+#include <CGAL/subdivision_method_3.h>
 
 #include <QOpenGLShader>
 #include <QDebug>
@@ -33,7 +33,7 @@ Scene::Scene()
     , m_grid_size(slow_distance_grid_size)
     , m_cut_plane(NONE)
 {
-    m_pPolyhedron = NULL;
+    m_pPolyhedron = nullptr;
 
     // view options
     m_view_points = true;
@@ -43,10 +43,9 @@ Scene::Scene()
     // distance function
     m_red_ramp.build_red();
     m_blue_ramp.build_blue();
-    m_max_distance_function = (FT)0.0;
+    m_max_distance_function = static_cast<FT>(0.0);
     texture = new Texture(m_grid_size,m_grid_size);
-    startTimer(0);
-    ready_to_cut = false;
+    ready_to_cut = true;
     are_buffers_initialized = false;
     gl_init = false;
 
@@ -92,8 +91,8 @@ void Scene::compile_shaders()
     //Vertex source code
     const char vertex_source[] =
     {
-        "#version 120 \n"
-        "attribute highp vec4 vertex;\n"
+        "#version 150 \n"
+        "in highp vec4 vertex;\n"
         "uniform highp mat4 mvp_matrix;\n"
         "uniform highp mat4 f_matrix;\n"
         "void main(void)\n"
@@ -104,10 +103,11 @@ void Scene::compile_shaders()
     //Vertex source code
     const char fragment_source[] =
     {
-        "#version 120 \n"
+        "#version 150 \n"
         "uniform highp vec4 color; \n"
+        "out highp vec4 out_color; \n"
         "void main(void) { \n"
-        "gl_FragColor = color; \n"
+        "out_color = color; \n"
         "} \n"
         "\n"
     };
@@ -140,26 +140,27 @@ void Scene::compile_shaders()
     //Vertex source code
     const char tex_vertex_source[] =
     {
-        "#version 120 \n"
-        "attribute highp vec4 vertex;\n"
-        "attribute highp vec2 tex_coord; \n"
+        "#version 150 \n"
+        "in highp vec4 vertex;\n"
+        "in highp vec2 tex_coord; \n"
         "uniform highp mat4 mvp_matrix;\n"
         "uniform highp mat4 f_matrix;\n"
-        "varying highp vec2 texc;\n"
+        "out highp vec2 texc;\n"
         "void main(void)\n"
         "{\n"
         "   gl_Position = mvp_matrix * f_matrix * vertex;\n"
-        "    texc = tex_coord;\n"
+        "   texc = tex_coord;\n"
         "}"
     };
     //Vertex source code
     const char tex_fragment_source[] =
     {
-        "#version 120 \n"
-        "uniform sampler2D texture;\n"
-        "varying highp vec2 texc;\n"
+        "#version 150 \n"
+        "uniform sampler2D s_texture;\n"
+        "in highp vec2 texc;\n"
+        "out highp vec4 out_color; \n"
         "void main(void) { \n"
-        "gl_FragColor = texture2D(texture, texc.st);\n"
+        "out_color = vec4(texture(s_texture, texc));\n"
         "} \n"
         "\n"
     };
@@ -480,7 +481,7 @@ void Scene::compute_texture(int i, int j,Color_ramp pos_ramp ,Color_ramp neg_ram
 
     const FT& d00 = m_distance_function[i][j].second;
     // determines grey level
-    unsigned int i00 = 255-(unsigned)(255.0 * (double)std::fabs(d00) / m_max_distance_function);
+    unsigned int i00 = 255-static_cast<unsigned>(255.0 * std::fabs(d00) / m_max_distance_function);
 
     if(d00 > 0.0)
         texture->setData(i,j,pos_ramp.r(i00),pos_ramp.g(i00),pos_ramp.b(i00));
@@ -490,14 +491,14 @@ void Scene::compute_texture(int i, int j,Color_ramp pos_ramp ,Color_ramp neg_ram
 
 }
 
-void Scene::attrib_buffers(QGLViewer* viewer)
+void Scene::attrib_buffers(CGAL::QGLViewer* viewer)
 {
     QMatrix4x4 mvpMatrix;
     double mat[16];
     viewer->camera()->getModelViewProjectionMatrix(mat);
     for(int i=0; i < 16; i++)
     {
-        mvpMatrix.data()[i] = (float)mat[i];
+        mvpMatrix.data()[i] = static_cast<float>(mat[i]);
     }
     rendering_program.bind();
     mvpLocation = rendering_program.uniformLocation("mvp_matrix");
@@ -519,6 +520,7 @@ void Scene::changed()
         compute_elements(_UNSIGNED);
     else
         compute_elements(_SIGNED);
+    ready_to_cut=false;
     are_buffers_initialized = false;
 
 }
@@ -539,7 +541,7 @@ int Scene::open(QString filename)
         return -1;
     }
 
-    if(m_pPolyhedron != NULL)
+    if(m_pPolyhedron != nullptr)
         delete m_pPolyhedron;
 
     // allocate new polyhedron
@@ -551,7 +553,7 @@ int Scene::open(QString filename)
         QApplication::restoreOverrideCursor();
 
         delete m_pPolyhedron;
-        m_pPolyhedron = NULL;
+        m_pPolyhedron = nullptr;
 
         return -1;
     }
@@ -569,7 +571,7 @@ void Scene::update_bbox()
     std::cout << "Compute bbox...";
     m_bbox = Bbox();
 
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "failed (no polyhedron)." << std::endl;
         return;
@@ -589,12 +591,13 @@ void Scene::update_bbox()
               << " facets)" << std::endl;
 }
 
-void Scene::draw(QGLViewer* viewer)
-{       
+void Scene::draw(CGAL::QGLViewer* viewer)
+{
     if(!gl_init)
         initGL();
     if(!are_buffers_initialized)
         initialize_buffers();
+    gl->glEnable(GL_DEPTH_TEST);
     QColor color;
     QMatrix4x4 fMatrix;
     fMatrix.setToIdentity();
@@ -612,7 +615,6 @@ void Scene::draw(QGLViewer* viewer)
     }
     if(m_view_points && pos_points.size()>0)
     {
-        gl->glPointSize(2.0f);
         vao[0].bind();
         attrib_buffers(viewer);
         rendering_program.bind();
@@ -663,7 +665,7 @@ void Scene::draw(QGLViewer* viewer)
 
             //cutting_segments
             fMatrix.setToIdentity();
-            ::glLineWidth(2.0f);
+            gl->glLineWidth(2.0f);
             vao[3].bind();
             attrib_buffers(viewer);
             rendering_program.bind();
@@ -671,7 +673,7 @@ void Scene::draw(QGLViewer* viewer)
             rendering_program.setUniformValue(colorLocation, color);
             rendering_program.setUniformValue(fLocation, fMatrix);
             gl->glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(pos_cut_segments.size()/3));
-            ::glLineWidth(1.0f);
+            gl->glLineWidth(1.0f);
             rendering_program.release();
             vao[3].release();
             //grid
@@ -690,8 +692,8 @@ void Scene::draw(QGLViewer* viewer)
             //cutting_plane
             // for(int i=0; i< 16 ; i++)
             //     fMatrix.data()[i] =  m_frame->matrix()[i];
-            ::glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-            ::glEnable(GL_BLEND);
+            gl->glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+            gl->glEnable(GL_BLEND);
             vao[4].bind();
             attrib_buffers(viewer);
             rendering_program.bind();
@@ -699,7 +701,7 @@ void Scene::draw(QGLViewer* viewer)
             rendering_program.setUniformValue(colorLocation, color);
             rendering_program.setUniformValue(fLocation, fMatrix);
             gl->glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(pos_plane.size()/3));
-            ::glDisable(GL_BLEND);
+            gl->glDisable(GL_BLEND);
             rendering_program.release();
             vao[4].release();
 
@@ -715,8 +717,8 @@ void Scene::draw(QGLViewer* viewer)
 FT Scene::random_in(const double a,
                     const double b)
 {
-    double r = rand() / (double)RAND_MAX;
-    return (FT)(a + (b - a) * r);
+    double r = rand() / static_cast<double>(RAND_MAX);
+    return static_cast<FT>(a + (b - a) * r);
 }
 
 Point Scene::random_point(const CGAL::Bbox_3& bbox)
@@ -765,8 +767,8 @@ Plane Scene::random_plane(const CGAL::Bbox_3& bbox)
 
 Plane Scene::frame_plane() const
 {
-    const qglviewer::Vec& pos = m_frame->position();
-    const qglviewer::Vec& n = m_frame->inverseTransformOf(qglviewer::Vec(0.f, 0.f, 1.f));
+    const CGAL::qglviewer::Vec& pos = m_frame->position();
+    const CGAL::qglviewer::Vec& n = m_frame->inverseTransformOf(CGAL::qglviewer::Vec(0.f, 0.f, 1.f));
 
     return Plane(n[0], n[1],  n[2], - n * pos);
 }
@@ -792,7 +794,7 @@ FT Scene::bbox_diag() const
 
 void Scene::build_facet_tree()
 {
-    if ( NULL == m_pPolyhedron )
+    if ( nullptr == m_pPolyhedron )
     {
         std::cerr << "Build facet tree failed: load polyhedron first." << std::endl;
         return;
@@ -806,13 +808,12 @@ void Scene::build_facet_tree()
     timer.start();
     std::cout << "Construct Facet AABB tree...";
     m_facet_tree.rebuild(faces(*m_pPolyhedron).first, faces(*m_pPolyhedron).second,*m_pPolyhedron);
-    m_facet_tree.accelerate_distance_queries();
     std::cout << "done (" << timer.time() << " s)" << std::endl;
 }
 
 void Scene::build_edge_tree()
 {
-    if ( NULL == m_pPolyhedron )
+    if ( nullptr == m_pPolyhedron )
     {
         std::cerr << "Build edge tree failed: load polyhedron first." << std::endl;
         return;
@@ -826,7 +827,6 @@ void Scene::build_edge_tree()
     timer.start();
     std::cout << "Construct Edge AABB tree...";
     m_edge_tree.rebuild(edges(*m_pPolyhedron).first,edges(*m_pPolyhedron).second,*m_pPolyhedron);
-    m_edge_tree.accelerate_distance_queries();
     std::cout << "done (" << timer.time() << " s)" << std::endl;
 }
 
@@ -857,10 +857,10 @@ void Scene::update_grid_size()
 }
 
 void Scene::generate_points_in(const unsigned int nb_points,
-                               const double min,
-                               const double max)
+                               const double vmin,
+                               const double vmax)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -877,7 +877,7 @@ void Scene::generate_points_in(const unsigned int nb_points,
     CGAL::Timer timer;
     timer.start();
     std::cout << "Generate " << nb_points << " points in interval ["
-              << min << ";" << max << "]";
+              << vmin << ";" << vmax << "]";
 
     unsigned int nb_trials = 0;
     Vector vec = random_vector();
@@ -890,12 +890,12 @@ void Scene::generate_points_in(const unsigned int nb_points,
 
         // measure sign
         Ray ray(p,vec);
-        int nb_intersections = (int)tree.number_of_intersected_primitives(ray);
+        int nb_intersections = static_cast<int>(tree.number_of_intersected_primitives(ray));
         if(nb_intersections % 2 != 0)
             signed_distance *= -1.0;
 
-        if(signed_distance >= min &&
-                signed_distance <= max)
+        if(signed_distance >= vmin &&
+                signed_distance <= vmax)
         {
             m_points.push_back(p);
             if(m_points.size()%(nb_points/10) == 0)
@@ -903,7 +903,7 @@ void Scene::generate_points_in(const unsigned int nb_points,
         }
         nb_trials++;
     }
-    double speed = (double)nb_trials / timer.time();
+    double speed = static_cast<double>(nb_trials) / timer.time();
     std::cout << "done (" << nb_trials << " trials, "
               << timer.time() << " s, "
               << speed << " queries/s)" << std::endl;
@@ -913,7 +913,7 @@ void Scene::generate_points_in(const unsigned int nb_points,
 
 void Scene::generate_inside_points(const unsigned int nb_points)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -937,7 +937,7 @@ void Scene::generate_inside_points(const unsigned int nb_points)
     {
         Point p = random_point(tree.bbox());
         Ray ray(p,vec);
-        int nb_intersections = (int)tree.number_of_intersected_primitives(ray);
+        int nb_intersections = static_cast<int>(tree.number_of_intersected_primitives(ray));
         if(nb_intersections % 2 != 0)
         {
             m_points.push_back(p);
@@ -946,7 +946,7 @@ void Scene::generate_inside_points(const unsigned int nb_points)
         }
         nb_trials++;
     }
-    double speed = (double)nb_trials / timer.time();
+    double speed = static_cast<double>(nb_trials) / timer.time();
     std::cout << "done (" << nb_trials << " trials, "
               << timer.time() << " s, "
               << speed << " queries/s)" << std::endl;
@@ -955,7 +955,7 @@ void Scene::generate_inside_points(const unsigned int nb_points)
 
 void Scene::generate_boundary_segments(const unsigned int nb_slices)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -974,14 +974,14 @@ void Scene::generate_boundary_segments(const unsigned int nb_slices)
     timer.start();
     std::cout << "Generate boundary segments from " << nb_slices << " slices: ";
 
-    Vector normal((FT)0.0,(FT)0.0,(FT)1.0);
+    Vector normal(static_cast<FT>(0.0),static_cast<FT>(0.0),static_cast<FT>(1.0));
     unsigned int i;
 
     const double dz = m_bbox.zmax() - m_bbox.zmin();
     for(i=0;i<nb_slices;i++)
     {
-        FT z = m_bbox.zmin() + (FT)i / (FT)nb_slices * dz;
-        Point p((FT)0.0, (FT)0.0, z);
+        FT z = m_bbox.zmin() + static_cast<FT>(i) / static_cast<FT>(nb_slices) * dz;
+        Point p(static_cast<FT>(0.0), static_cast<FT>(0.0), z);
         Plane plane(p,normal);
 
         std::list<Object_and_primitive_id> intersections;
@@ -1005,7 +1005,7 @@ void Scene::generate_boundary_segments(const unsigned int nb_slices)
 
 void Scene::generate_boundary_points(const unsigned int nb_points)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -1055,7 +1055,7 @@ void Scene::generate_boundary_points(const unsigned int nb_points)
 
 void Scene::generate_edge_points(const unsigned int nb_points)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -1219,7 +1219,7 @@ void Scene::cut_segment_plane()
     {
         const Segment* inter_seg = CGAL::object_cast<Segment>(&(it->first));
 
-        if ( NULL != inter_seg )
+        if ( nullptr != inter_seg )
         {
             m_cut_segments.push_back(*inter_seg);
         }
@@ -1228,12 +1228,16 @@ void Scene::cut_segment_plane()
     m_cut_plane = CUT_SEGMENTS;
     changed();
 }
+void Scene::updateCutPlane()
+{
+  ready_to_cut = true;
+       QTimer::singleShot(0,this,SLOT(cutting_plane()));
+}
 
 void Scene::cutting_plane(bool override)
 {
     if(ready_to_cut || override)
     {
-        ready_to_cut = false;
         switch( m_cut_plane )
         {
         case UNSIGNED_FACETS:
@@ -1276,7 +1280,7 @@ void Scene::toggle_view_plane()
 
 void Scene::refine_bisection(const FT max_sqlen)
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
@@ -1291,13 +1295,13 @@ void Scene::refine_bisection(const FT max_sqlen)
 
 void Scene::refine_loop()
 {
-    if(m_pPolyhedron == NULL)
+    if(m_pPolyhedron == nullptr)
     {
         std::cout << "Load polyhedron first." << std::endl;
         return;
     }
     std::cout << "Loop subdivision...";
-    CGAL::Subdivision_method_3::Loop_subdivision(*m_pPolyhedron, 1);
+    CGAL::Subdivision_method_3::Loop_subdivision(*m_pPolyhedron);
     std::cout << "done (" << m_pPolyhedron->size_of_facets() << " facets)" << std::endl;
 
     clear_internal_data();
@@ -1306,32 +1310,21 @@ void Scene::refine_loop()
 
 void Scene::activate_cutting_plane()
 {
-    connect(m_frame, SIGNAL(modified()), this, SLOT(cutting_plane()));
+    connect(m_frame, SIGNAL(modified()), this, SLOT(updateCutPlane()));
     m_view_plane = true;
 }
 
 void Scene::deactivate_cutting_plane()
 {
-    disconnect(m_frame, SIGNAL(modified()), this, SLOT(cutting_plane()));
+    disconnect(m_frame, SIGNAL(modified()), this, SLOT(updateCutPlane()));
     m_view_plane = false;
 }
 void Scene::initGL()
 {
-    gl = new QOpenGLFunctions_2_1();
-   if(!gl->initializeOpenGLFunctions())
-    {
-        qFatal("ERROR : OpenGL Functions not initialized. Check your OpenGL Verison (should be >=3.3)");
-        exit(1);
-    }
+    gl = new QOpenGLFunctions();
+    gl->initializeOpenGLFunctions();
 
     gl->glGenTextures(1, &textureId);
     compile_shaders();
     gl_init = true;
-}
-
-void Scene::timerEvent(QTimerEvent *)
-{
-    if(manipulatedFrame()->isSpinning())
-        set_fast_distance(true);
-    ready_to_cut = true;
 }
