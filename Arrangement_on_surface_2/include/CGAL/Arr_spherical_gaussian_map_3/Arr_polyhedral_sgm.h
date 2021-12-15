@@ -15,7 +15,6 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-
 /*! \file
  * Polyhedral _sgm is a data dtructure that represents a 3D convex polyhedron.
  * This representation represents the 2D surface boundary of the shape.
@@ -27,6 +26,7 @@
 #include <iostream>
 
 #include <boost/type_traits.hpp>
+#include <boost/graph/graph_traits.hpp>
 
 #include <CGAL/basic.h>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
@@ -364,8 +364,135 @@ private:
    * \param first_time true if the invocation to this function is the first
    * time, and false otherwise
    */
-  void process_vertex(Polyhedron_vertex_iterator src, bool first_time)
-  {
+  template <typename Iterator,
+            typename Vertex_processed_map, typename Halfedge_processed_map,
+            typename Face_vertex_handle_map>
+  void process_vertex(Iterator src,
+                      Vertex_processed_map& vprocessed,
+                      Halfedge_processed_map& hprocessed,
+                      Face_vertex_handle_map& fvertices,
+                      bool first_time) {
+    m_src_vertex = src;
+    // std::cout << "src: " << m_src_vertex->point() << std::endl;
+
+    using Vertex_handle = typename Base::Vertex_handle;
+    using Halfedge_handle = typename Base::Halfedge_handle;
+    using Face_handle = typename Base::Face_handle;
+
+    Vertex_handle invalid_vertex;
+
+    // For each vertex, traverse incident faces:
+    auto hec = src->vertex_begin();
+
+    // If the vertex is not a real vertex of the polyhedron, advance to the
+    // next one:
+    if (circulator_size(hec) == 0) {
+      process_vertex(++src, vprocessed, hprocessed, fvertices, first_time);
+      return;
+    }
+
+    CGAL_assertion(circulator_size(hec) >= 3);
+    auto begin_hec = hec;
+    auto next_hec = hec;
+    ++next_hec;
+
+    /* If this is not the first invocation, advance the halfedge iterator
+     * until its source vertex is processed. It is guaranteed to reach such
+     * a halfedge on consecutive invocations.
+     */
+    if (! first_time) {
+      while (! get(vprocessed, hec->opposite()->vertex())) {
+        hec = next_hec;
+        begin_hec = hec;
+        ++next_hec;
+      }
+    }
+
+    // Traverse the incident halfedges:
+    do {
+      if (! get(hprocessed, next_hec)) {
+        auto normal1 = get_normal(hec->facet(), Polyhedron_has_normal());
+        auto normal2 = get_normal(next_hec->facet(), Polyhedron_has_normal());
+        // std::cout << "normal1: " << normal1 << std::endl;
+        // std::cout << "normal2: " << normal2 << std::endl;
+        m_trg_vertex = next_hec->opposite()->vertex();
+        // std::cout << "trg: " << m_trg_vertex->point() << std::endl;
+
+        m_halfedge = next_hec;
+#if 0
+        Halfedge_handle he = this->insert(normal1, normal2);
+#else
+        auto v1 = get(fvertices, hec->facet());
+        auto v2 = get(fvertices, next_hec->facet());
+        /* The arc might be non-x-monotone. In this case, it is broken into 2
+         * x-monotone curves. The halfedges of both are obtained.
+         */
+        typename std::list<Halfedge_handle> hes;
+        if (first_time) {
+          this->insert(normal1, normal2, std::back_inserter(hes));
+          auto first = hes.begin();
+          auto last = hes.end();
+          --last;
+          put(fvertices, hec->facet(), (*first)->source());
+          put(fvertices, next_hec->facet(), (*last)->target());
+          first_time = false;
+        }
+        else {
+          if (v1 != invalid_vertex && v2 != invalid_vertex) {
+            this->insert(normal1, v1, normal2, v2, std::back_inserter(hes));
+          }
+          else if (v1 != invalid_vertex) {
+            this->insert(normal1, v1, normal2, std::back_inserter(hes));
+            auto last = hes.end();
+            --last;
+            put(fvertices, next_hec->facet(), (*last)->target());
+          }
+          else if (v2 != invalid_vertex) {
+            this->insert(normal1, normal2, v2, std::back_inserter(hes));
+            auto first = hes.begin();
+            put(fvertices, hec->facet(), (*first)->source());
+          }
+          else CGAL_error();
+        }
+#endif
+        put(hprocessed, next_hec, true);
+        put(hprocessed, next_hec->opposite(), true);
+        auto first = hes.begin();
+        if ((v1 != invalid_vertex) && (v2 != invalid_vertex))
+          handle_new_edge(*first);
+
+        /*! \todo use is_valid!
+         * this->m_sgm.is_valid();
+         */
+        if (m_visitor) {
+          m_visitor->update_dual_face(m_halfedge->opposite()->facet(),
+                                      (*first)->source());
+          // m_visitor->update_dual_face(m_halfedge->facet(), (*first)->target());
+        }
+      }
+      hec = next_hec;
+      ++next_hec;
+    } while (hec != begin_hec);
+    put(vprocessed, src, true);
+
+    // Traverse recursively:
+    hec = src->vertex_begin();
+    begin_hec = hec;
+    do {
+      auto opv = hec->opposite()->vertex();
+      if (! get(vprocessed, opv))
+        process_vertex(opv, vprocessed, hprocessed, fvertices, false);
+      ++hec;
+    } while (hec != begin_hec);
+  }
+
+  /*! Process a polyhedron vertex recursively constructing the Gaussian map
+   * of the polyhedron
+   * \param src the polyhedron vertex currently processed
+   * \param first_time true if the invocation to this function is the first
+   * time, and false otherwise
+   */
+  void process_vertex(Polyhedron_vertex_iterator src, bool first_time) {
     m_src_vertex = src;
 
     typedef typename Base::Vertex_handle                Vertex_handle;
@@ -374,7 +501,7 @@ private:
     Vertex_handle invalid_vertex;
 
     // For each vertex, traverse incident faces:
-    Polyhedron_halfedge_around_vertex_circulator hec = src->vertex_begin();
+    auto hec = src->vertex_begin();
 
     // If the vertex is not a real vertex of the polyhedron, advance to the
     // next one:
@@ -384,8 +511,8 @@ private:
     }
 
     CGAL_assertion(circulator_size(hec) >= 3);
-    Polyhedron_halfedge_around_vertex_circulator begin_hec = hec;
-    Polyhedron_halfedge_around_vertex_circulator next_hec = hec;
+    auto begin_hec = hec;
+    auto next_hec = hec;
     ++next_hec;
 
     /* If this is not the first invocation, advance the halfedge iterator
@@ -402,12 +529,9 @@ private:
 
     // Traverse the incident halfedges:
     do {
-      if (!next_hec->processed()) {
-
-        Vector_3 normal1 =
-          get_normal(hec->facet(), Polyhedron_has_normal());
-        Vector_3 normal2 =
-          get_normal(next_hec->facet(), Polyhedron_has_normal());
+      if (! next_hec->processed()) {
+        auto normal1 = get_normal(hec->facet(), Polyhedron_has_normal());
+        auto normal2 = get_normal(next_hec->facet(), Polyhedron_has_normal());
 
         m_trg_vertex = next_hec->opposite()->vertex();
 
@@ -435,30 +559,33 @@ private:
         Halfedge_list hes;
         if (first_time) {
           this->insert(normal1, normal2, std::back_inserter(hes));
-          Halfedge_list_iter first = hes.begin();
-          Halfedge_list_iter last = hes.end();
+          auto first = hes.begin();
+          auto last = hes.end();
           --last;
           hec->facet()->set_vertex((*first)->source());
           next_hec->facet()->set_vertex((*last)->target());
           first_time = false;
-        } else {
+        }
+        else {
           if (v1 != invalid_vertex && v2 != invalid_vertex) {
             this->insert(normal1, v1, normal2, v2, std::back_inserter(hes));
-          } else if (v1 != invalid_vertex) {
+          }
+          else if (v1 != invalid_vertex) {
             this->insert(normal1, v1, normal2, std::back_inserter(hes));
-            Halfedge_list_iter last = hes.end();
+            auto last = hes.end();
             --last;
             next_hec->facet()->set_vertex((*last)->target());
-          } else if (v2 != invalid_vertex) {
+          }
+          else if (v2 != invalid_vertex) {
             this->insert(normal1, normal2, v2, std::back_inserter(hes));
-            Halfedge_list_iter first = hes.begin();
+            auto first = hes.begin();
             hec->facet()->set_vertex((*first)->source());
           } else CGAL_error();
         }
 #endif
         next_hec->set_processed(true);
         next_hec->opposite()->set_processed(true);
-        Halfedge_list_iter first = hes.begin();
+        auto first = hes.begin();
         if (v1 != invalid_vertex && v2 != invalid_vertex)
           handle_new_edge(*first);
 
@@ -489,23 +616,43 @@ private:
   /*! Compute the spherical gaussian map of a convex polyhedron
    * \param polyhedron the input polyhedron
    */
+  template <typename PolygonMesh,
+            typename Vertex_processed_map, typename Halfedge_processed_map,
+            typename Face_vertex_handle_map,
+            typename NamedParameters>
+  void compute_sgm(PolygonMesh& pm,
+                   Vertex_processed_map vprocessed,
+                   Halfedge_processed_map hprocessed,
+                   Face_vertex_handle_map fvertices,
+                   const NamedParameters& np) {
+    typedef PolygonMesh                                 Polygon_mesh;
+    using Graph_traits = boost::graph_traits<Polygon_mesh>;
+    using vertex_descriptor = typename Graph_traits::vertex_descriptor;
+    using halfedge_descriptor = typename Graph_traits::halfedge_descriptor;
+    using face_descriptor = typename Graph_traits::face_descriptor;
+    using Vertex_handle = typename Base::Vertex_handle;
+    for (vertex_descriptor v : vertices(pm)) put(vprocessed, v, false);
+    for (halfedge_descriptor h : halfedges(pm)) put(hprocessed, h, false);
+    for (face_descriptor f : faces(pm)) put(fvertices, f, Vertex_handle());
+    // Traverse all verticess recursively:
+    process_vertex(pm.vertices_begin(), vprocessed, hprocessed, fvertices, true);
+  }
+
   void compute_sgm(Polyhedron& polyhedron)
   {
     typedef typename Base::Vertex_handle                Vertex_handle;
 
     // Clear the polyhedron:
-    Polyhedron_facet_iterator fi;
-    for (fi = polyhedron.facets_begin(); fi != polyhedron.facets_end(); ++fi)
+    for (auto fi = polyhedron.facets_begin();
+         fi != polyhedron.facets_end(); ++fi)
       fi->set_vertex(Vertex_handle());
 
-    Polyhedron_halfedge_iterator hei;
-    for (hei = polyhedron.halfedges_begin(); hei != polyhedron.halfedges_end();
-         ++hei)
+    for (auto hei = polyhedron.halfedges_begin();
+         hei != polyhedron.halfedges_end(); ++hei)
       hei->set_processed(false);
 
-    Polyhedron_vertex_iterator vi;
-    for (vi = polyhedron.vertices_begin(); vi != polyhedron.vertices_end();
-         ++vi)
+    for (auto vi = polyhedron.vertices_begin();
+         vi != polyhedron.vertices_end(); ++vi)
       vi->set_processed(false);
 
     // Traverse all verticess recursively:
@@ -530,6 +677,21 @@ public:
    * \param visitor
    * \pre The polyhedron polyhedron does not have coplanar facets.
    */
+
+  template <typename PolygonMesh,
+            typename Vertex_processed_map, typename Halfedge_processed_map,
+            typename Face_vertex_handle_map,
+            typename NamedParameters>
+  void operator()(PolygonMesh& pm,
+                  Vertex_processed_map vprocessed,
+                  Halfedge_processed_map hprocessed,
+                  Face_vertex_handle_map fvertices,
+                  const NamedParameters& np) {
+    // m_visitor = visitor;
+    compute_planes(pm, Polyhedron_has_normal());
+    compute_sgm(pm, vprocessed, hprocessed, fvertices, np);
+  }
+
   void operator()(Polyhedron& polyhedron, Visitor* visitor = nullptr)
   {
 #if 0
