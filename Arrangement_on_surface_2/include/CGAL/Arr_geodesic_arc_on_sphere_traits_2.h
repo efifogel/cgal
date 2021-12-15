@@ -128,19 +128,19 @@ protected:
    * \param d the direction in space
    * \return the sign of the x-coordinate of d
    */
-  inline static Sign x_sign(Direction_3 d) { return CGAL::sign(d.dx()); }
+  inline static Sign x_sign(const Direction_3& d) { return CGAL::sign(d.dx()); }
 
   /*! Obtain the sign of the y-coordinate of a direction in space
    * \param d the direction in space
    * \return the sign of the y-coordinate of d
    */
-  inline static Sign y_sign(Direction_3 d) { return CGAL::sign(d.dy()); }
+  inline static Sign y_sign(const Direction_3& d) { return CGAL::sign(d.dy()); }
 
   /*! Obtain the sign of the z-coordinate of a direction in space
    * \param d the direction in space
    * \return the sign of the z-coordinate of d
    */
-  inline static Sign z_sign(Direction_3 d) { return CGAL::sign(d.dz()); }
+  inline static Sign z_sign(const Direction_3& d) { return CGAL::sign(d.dz()); }
 
   typedef Direction_2 (*Project)(const Direction_3& d) ;
 
@@ -2999,7 +2999,7 @@ public:
 template <typename Kernel_>
 class Arr_x_monotone_geodesic_arc_on_sphere_3 {
 public:
-  typedef Kernel_                                    Kernel;
+  typedef Kernel_                                     Kernel;
   typedef typename Kernel::Direction_3                Direction_3;
   typedef typename Kernel::Plane_3                    Plane_3;
   typedef typename Kernel::Vector_3                   Vector_3;
@@ -3106,6 +3106,7 @@ public:
     return (*this);
   }
 
+#if 0
   /*! Construct the minor arc from two endpoint directions. The minor arc
    *  is the one with the smaller angle among the two geodesic arcs with
    * the given endpoints.
@@ -3139,6 +3140,7 @@ public:
     m_normal = construct_normal_3(m_source, m_target);
     init();
   }
+#endif
 
   /*! Initialize a spherical_arc given that the two endpoint directions
    * have been set. It is assumed that the arc is the one with the smaller
@@ -3154,8 +3156,7 @@ public:
    * \param target the target point.
    * \pre the source and target cannot be equal.
    */
-  void init()
-  {
+  void init() {
     typedef Arr_geodesic_arc_on_sphere_traits_2<Kernel> Traits;
 
     Kernel kernel;
@@ -3428,8 +3429,7 @@ public:
 #endif
 
   /*! Flip the spherical_arc (swap it source and target) */
-  Arr_x_monotone_geodesic_arc_on_sphere_3 opposite() const
-  {
+  Arr_x_monotone_geodesic_arc_on_sphere_3 opposite() const {
     Arr_x_monotone_geodesic_arc_on_sphere_3 opp;
     opp.m_source = this->m_target;
     opp.m_target = this->m_source;
@@ -3448,8 +3448,7 @@ public:
    * \return true if dir is contained in plane; false otherwise.
    * \pre the plane contains the origin.
    */
-  inline bool has_on(const Direction_3& dir) const
-  {
+  inline bool has_on(const Direction_3& dir) const {
     typename Kernel::FT dot = normal().vector() * dir.vector();
     return CGAL::sign(dot) == ZERO;
   }
@@ -3530,6 +3529,7 @@ public:
     CGAL_precondition(this->has_on(trg));
   }
 
+#if 0
   /*! Construct a spherical_arc from two endpoint directions. It is assumed
    * that the arc is the one with the smaller angle among the two.
    * 1. Find out whether the arc is x-monotone.
@@ -3632,6 +3632,7 @@ public:
     set_is_x_monotone(!kernel.counterclockwise_in_between_2_object()(d, t, s));
     return;
   }
+#endif
 
   /*! Construct a spherical_arc from two endpoint directions contained
    * in a plane.
@@ -3761,8 +3762,7 @@ public:
   /*! Construct a full spherical_arc from a normal to a plane.
    * \param normal the normal to the plane containing the arc.
    */
-  Arr_geodesic_arc_on_sphere_3(const Direction_3& normal)
-  {
+  Arr_geodesic_arc_on_sphere_3(const Direction_3& normal) {
     this->normal(normal);
     this->set_is_vertical(CGAL::sign(normal.dz()) == ZERO);
     this->set_is_directed_right(true);
