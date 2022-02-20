@@ -120,6 +120,7 @@ implemented as peripheral classes or as free (global) functions.
 - `ArrangementBasicTopologyTraits`
 - `ArrangementBasicTraits_2`
 - `ArrangementConstructXMonotoneCurveTraits_2`
+- `ArrangementConstructCurveTraits_2`
 - `ArrangementLandmarkTraits_2`
 - `ArrangementXMonotoneTraits_2`
 - `ArrangementTraits_2`
@@ -193,6 +194,7 @@ implemented as peripheral classes or as free (global) functions.
 - `ArrTraits::MakeXMonotone_2`
 - `ArrTraits::Approximate_2`
 - `ArrTraits::ConstructXMonotoneCurve_2`
+- `ArrTraits::ConstructCurve_2`
 
 \cgalCRPSection{Classes}
 
