@@ -46,8 +46,7 @@ public:
   //@{
 
   typedef typename Subcurve_traits_2::Has_left_category    Has_left_category;
-  typedef typename Subcurve_traits_2::Has_do_intersect_category
-    Has_do_intersect_category;
+  typedef Tag_false                                        Has_do_intersect_category;
 
   typedef typename Subcurve_traits_2::Left_side_category   Left_side_category;
   typedef typename Subcurve_traits_2::Bottom_side_category Bottom_side_category;

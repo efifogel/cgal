@@ -59,8 +59,8 @@ public:
   //@{
 
   // Traits types:
-  typedef typename Base::Has_left_category           Has_left_category;
-  typedef typename Base::Has_do_intersect_category   Has_do_intersect_category;
+  typedef typename Base::Has_left_category       Has_left_category;
+  typedef Tag_true                               Has_do_intersect_category;
 
   typedef typename Base::Left_side_category      Left_side_category;
   typedef typename Base::Bottom_side_category    Bottom_side_category;
@@ -186,6 +186,36 @@ public:
         c1 = construct_segment(p, left);
         c2 = construct_segment(right, p);
       }
+    }
+  };
+
+  /*! \class
+   * A functor that tests whether two x-monotone curves intersect.
+   */
+  class Do_intersect_2 {
+  protected:
+    using Traits = Arr_non_caching_segment_traits_2<Kernel>;
+
+    /*! The traits (in case it has state) */
+    const Traits& m_traits;
+
+    /*! Constructor
+     * \param traits the traits (in case it has state)
+     */
+    Do_intersect_2(const Traits& traits) : m_traits(traits) {}
+
+    friend class Arr_non_caching_segment_traits_2<Kernel>;
+
+  public:
+    /*! Determine whether two given segments interset.
+     * \param cv1 The first curve.
+     * \param cv2 The second curve.
+     * \return true if xcv1 intersect xcv2 and fales otherwise.
+     */
+    bool operator()(const X_monotone_curve_2& cv1,
+                    const X_monotone_curve_2& cv2) const {
+      const Kernel& kernel = m_traits;
+      return kernel.do_intersect_2_object()(cv1, cv2);
     }
   };
 

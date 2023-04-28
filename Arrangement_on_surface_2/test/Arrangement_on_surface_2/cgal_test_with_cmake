@@ -100,6 +100,7 @@ ARE_MERGEABLE=10
 MERGE=11
 ASSERTIONS=12
 CONSTRUCTOR=13
+DO_INTERSECT=14
 COMPARE_X_ON_BOUNDARY=16
 COMPARE_X_NEAR_BOUNDARY=17
 COMPARE_Y_NEAR_BOUNDARY=18
@@ -403,6 +404,7 @@ execute_commands_old_structure()
     commands_indicator[COMPARE_Y_AT_X_RIGHT]=1
     commands_indicator[MAKE_X_MONOTONE]=1
     commands_indicator[INTERSECT]=1
+    commands_indicator[DO_INTERSECT]=1
     commands_indicator[SPLIT]=1
     commands_indicator[ARE_MERGEABLE]=1
     commands_indicator[MERGE]=1
@@ -457,6 +459,11 @@ execute_commands_old_structure()
 	    data/$1/intersect.pt data/$1/intersect.xcv \
 	    data/empty.zero data/$1/intersect $2
     fi
+    if [ ${commands_indicator[$DO_INTERSECT]} -ne 0 ] ; then
+	run_trapped_test test_traits \
+	    data/$1/intersect.pt data/$1/intersect.xcv \
+	    data/empty.zero data/$1/do_intersect $2
+    fi
     if [ ${commands_indicator[$SPLIT]} -ne 0 ] ; then
 	run_trapped_test test_traits \
 	    data/$1/split.pt data/$1/split.xcv \
@@ -502,6 +509,7 @@ execute_commands_new_structure()
     commands_indicator[COMPARE_Y_AT_X_RIGHT]=0
     commands_indicator[MAKE_X_MONOTONE]=0
     commands_indicator[INTERSECT]=0
+    commands_indicator[DO_INTERSECT]=0
     commands_indicator[SPLIT]=0
     commands_indicator[ARE_MERGEABLE]=0
     commands_indicator[MERGE]=0
@@ -579,6 +587,10 @@ execute_commands_new_structure()
     if [ ${commands_indicator[$INTERSECT]} -ne 0 ] ; then
 	run_trapped_test test_traits data/$1/points \
 	    data/$1/xcurves data/$1/curves data/$1/intersect $2
+    fi
+    if [ ${commands_indicator[$DO_INTERSECT]} -ne 0 ] ; then
+	run_trapped_test test_traits data/$1/points \
+	    data/$1/xcurves data/$1/curves data/$1/do_intersect $2
     fi
     if [ ${commands_indicator[$SPLIT]} -ne 0 ] ; then
 	run_trapped_test test_traits data/$1/points \
@@ -1123,6 +1135,7 @@ test_polycurve_conic_traits()
     execute_commands_new_structure polycurves_conics polycurve_conic_traits \
       COMPARE_Y_AT_X \
       INTERSECT \
+      DO_INTERSECT \
       EQUAL \
       IS_VERTICAL \
       SPLIT \
@@ -1173,7 +1186,8 @@ test_polycurve_circular_arc_traits()
     CONSTRUCT_OPPOSITE \
     MERGE \
     COMPARE_ENDPOINTS_XY \
-    INTERSECT
+    INTERSECT \
+    DO_INTERSECT
 
   else
    echo "   ERROR:    not executed   test_traits polyline_traits" >> $ERRORFILE
@@ -1216,6 +1230,7 @@ test_polycurve_bezier_traits()
     # CONSTRUCT_OPPOSITE \
 
     # INTERSECT
+    # DO_INTERSECT
 
   else
    echo "   ERROR:    not executed   test_traits polyline_traits" >> $ERRORFILE

@@ -87,7 +87,7 @@ public:
   //Category tags:
   typedef Tag_true Has_left_category;
   typedef Tag_true Has_merge_category;
-  typedef Tag_true Has_do_intersect_category;
+  typedef Tag_false Has_do_intersect_category;
 
   typedef Tag_true Has_vertical_segment_category;
 

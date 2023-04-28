@@ -62,7 +62,7 @@ public:
   // Category tags:
   typedef Tag_true                        Has_left_category;
   typedef Tag_true                        Has_merge_category;
-  typedef Tag_false                       Has_do_intersect_category;
+  typedef Tag_true                        Has_do_intersect_category;
 
   typedef Arr_oblivious_side_tag          Left_side_category;
   typedef Arr_oblivious_side_tag          Bottom_side_category;
@@ -621,6 +621,95 @@ public:
   /*! Obtain a Split_2 functor object. */
   Split_2 split_2_object() const { return Split_2(*this); }
 
+  /*! Determine whether the bounding boxes of two segments overlap
+   */
+  bool do_bboxes_overlap(const X_monotone_curve_2& cv1,
+                         const X_monotone_curve_2& cv2) const {
+    const Kernel& kernel = *this;
+    auto construct_bbox = kernel.construct_bbox_2_object();
+    auto bbox1 = construct_bbox(cv1.source()) + construct_bbox(cv1.target());
+    auto bbox2 = construct_bbox(cv2.source()) + construct_bbox(cv2.target());
+    return CGAL::do_overlap(bbox1, bbox2);
+  }
+
+  // Specialized do_intersect with many tests skipped because at
+  // this point, we already know which point is left / right for
+  // both segments
+  bool do_intersect(const Point_2& A1, const Point_2& A2,
+                    const Point_2& B1, const Point_2& B2) const
+  {
+    const Kernel& kernel = *this;
+    auto compare_xy = kernel.compare_xy_2_object();
+    namespace interx = CGAL::Intersections::internal;
+
+    switch(make_certain(compare_xy(A1,B1))) {
+     case SMALLER:
+      switch(make_certain(compare_xy(A2,B1))) {
+       case SMALLER: return false;
+       case EQUAL: return true;
+       default: // LARGER
+        switch(make_certain(compare_xy(A2,B2))) {
+         case SMALLER:
+          return interx::seg_seg_do_intersect_crossing(A1,A2,B1,B2, kernel);
+         case EQUAL: return true;
+         default: // LARGER
+          return interx::seg_seg_do_intersect_contained(A1,A2,B1,B2, kernel);
+        }
+      }
+     case EQUAL: return true;
+     default: // LARGER
+      switch(make_certain(compare_xy(B2,A1))) {
+       case SMALLER: return false;
+       case EQUAL: return true;
+       default: // LARGER
+        switch(make_certain(compare_xy(B2,A2))) {
+         case SMALLER:
+          return interx::seg_seg_do_intersect_crossing(B1,B2,A1,A2, kernel);
+         case EQUAL: return true;
+         default: // LARGER
+          return interx::seg_seg_do_intersect_contained(B1,B2,A1,A2, kernel);
+        }
+      }
+    }
+    CGAL_error();     // never reached
+    return false;
+  }
+
+  class Do_intersect_2 {
+  protected:
+    typedef Arr_segment_traits_2<Kernel>        Traits;
+
+    /*! The traits (in case it has state) */
+    const Traits& m_traits;
+
+    /*! Construct
+     * \param traits the traits (in case it has state)
+     */
+    Do_intersect_2(const Traits& traits) : m_traits(traits) {}
+
+    friend class Arr_segment_traits_2<Kernel>;
+
+  public:
+    /*! Determine whether two given segments interset.
+     * \param cv1 The first curve.
+     * \param cv2 The second curve.
+     * \return true if xcv1 intersect xcv2 and fales otherwise.
+     */
+    bool operator()(const X_monotone_curve_2& cv1,
+                    const X_monotone_curve_2& cv2) const {
+      // Early ending with Bbox overlapping test
+      if (! m_traits.do_bboxes_overlap(cv1, cv2)) return false;
+
+      // Early ending with specialized do_intersect
+      const Kernel& kernel = m_traits;
+      return m_traits.do_intersect(cv1.left(), cv1.right(),
+                                   cv2.left(), cv2.right());
+    }
+  };
+
+  /*! Obtain a Do_intersect_2 functor object. */
+  Do_intersect_2 do_intersect_2_object() const { return Do_intersect_2(*this); }
+
   class Intersect_2 {
   protected:
     typedef Arr_segment_traits_2<Kernel>        Traits;
@@ -634,61 +723,6 @@ public:
     Intersect_2(const Traits& traits) : m_traits(traits) {}
 
     friend class Arr_segment_traits_2<Kernel>;
-
-    // Specialized do_intersect with many tests skipped because at
-    // this point, we already know which point is left / right for
-    // both segments
-    bool do_intersect(const Point_2& A1, const Point_2& A2,
-                      const Point_2& B1, const Point_2& B2) const
-    {
-      const Kernel& kernel = m_traits;
-      auto compare_xy = kernel.compare_xy_2_object();
-      namespace interx = CGAL::Intersections::internal;
-
-      switch(make_certain(compare_xy(A1,B1))) {
-       case SMALLER:
-        switch(make_certain(compare_xy(A2,B1))) {
-         case SMALLER: return false;
-         case EQUAL: return true;
-         default: // LARGER
-          switch(make_certain(compare_xy(A2,B2))) {
-           case SMALLER:
-            return interx::seg_seg_do_intersect_crossing(A1,A2,B1,B2, kernel);
-           case EQUAL: return true;
-           default: // LARGER
-            return interx::seg_seg_do_intersect_contained(A1,A2,B1,B2, kernel);
-          }
-        }
-       case EQUAL: return true;
-       default: // LARGER
-        switch(make_certain(compare_xy(B2,A1))) {
-         case SMALLER: return false;
-         case EQUAL: return true;
-         default: // LARGER
-          switch(make_certain(compare_xy(B2,A2))) {
-           case SMALLER:
-            return interx::seg_seg_do_intersect_crossing(B1,B2,A1,A2, kernel);
-           case EQUAL: return true;
-           default: // LARGER
-            return interx::seg_seg_do_intersect_contained(B1,B2,A1,A2, kernel);
-          }
-        }
-      }
-      CGAL_error();     // never reached
-      return false;
-    }
-
-    /*! Determine whether the bounding boxes of two segments overlap
-     */
-    bool do_bboxes_overlap(const X_monotone_curve_2& cv1,
-                           const X_monotone_curve_2& cv2) const
-    {
-      const Kernel& kernel = m_traits;
-      auto construct_bbox = kernel.construct_bbox_2_object();
-      auto bbox1 = construct_bbox(cv1.source()) + construct_bbox(cv1.target());
-      auto bbox2 = construct_bbox(cv2.source()) + construct_bbox(cv2.target());
-      return CGAL::do_overlap(bbox1, bbox2);
-    }
 
   public:
     /*! Find the intersections of the two given curves and insert them into the
@@ -709,11 +743,12 @@ public:
                                                         Intersection_result;
 
       // Early ending with Bbox overlapping test
-      if (! do_bboxes_overlap(cv1, cv2)) return oi;
+      if (! m_traits.do_bboxes_overlap(cv1, cv2)) return oi;
 
       // Early ending with specialized do_intersect
       const Kernel& kernel = m_traits;
-      if (! do_intersect(cv1.left(), cv1.right(), cv2.left(), cv2.right()))
+      if (! m_traits.do_intersect(cv1.left(), cv1.right(),
+                                  cv2.left(), cv2.right()))
         return oi;
 
       // An intersection is guaranteed.

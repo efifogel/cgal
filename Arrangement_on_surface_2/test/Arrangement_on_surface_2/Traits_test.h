@@ -146,6 +146,13 @@ private:
    */
   bool intersect_wrapper(std::istringstream& line);
 
+  /*! Tests Do_intersect_2.
+   * Determine whether two given curves intersect.
+   */
+  bool do_intersect_wrapper(std::istringstream& line);
+  bool do_intersect_wrapper_imp(std::istringstream& line, CGAL::Tag_false);
+  bool do_intersect_wrapper_imp(std::istringstream& line, CGAL::Tag_true);
+
   /*! Tests Split_2.
    * Split a given x-monotone curve at a given point into two sub-curves.
    * Degenerate cases for polylines: the point and a polyline internal point
@@ -290,6 +297,8 @@ Base(traits)
     &Traits_test<Traits>::make_x_monotone_wrapper;
   m_wrappers[std::string("intersect")] =
     &Traits_test<Traits>::intersect_wrapper;
+  m_wrappers[std::string("do_intersect")] =
+    &Traits_test<Traits>::do_intersect_wrapper;
   m_wrappers[std::string("split")] =
     &Traits_test<Traits>::split_wrapper;
   m_wrappers[std::string("are_mergeable")] =
@@ -948,6 +957,37 @@ make_x_monotone_wrapper(std::istringstream& str_stream)
   }
   objs.clear();
   return true;
+}
+
+/*! Test Do_intersect_2
+ * Determine whether two x-onotone curves intersect.
+ */
+template <typename GeomTraits_2>
+bool Traits_test<GeomTraits_2>::
+do_intersect_wrapper(std::istringstream& str_stream) {
+  using Gt = GeomTraits_2;
+  using Has_do_intersect_category = typename Gt::Has_do_intersect_category;
+  return do_intersect_wrapper_imp(str_stream, Has_do_intersect_category());
+}
+
+template <typename GeomTraits_2>
+bool Traits_test<GeomTraits_2>::do_intersect_wrapper_imp(std::istringstream&,
+                                                         CGAL::Tag_false) {
+  CGAL_error();
+  return false;
+}
+
+template <typename GeomTraits_2>
+bool Traits_test<GeomTraits_2>::
+do_intersect_wrapper_imp(std::istringstream& str_stream, CGAL::Tag_true) {
+  unsigned int id1, id2;
+  str_stream >> id1 >> id2;
+  std::cout << "Test: intersect( " << this->m_xcurves[id1] << ","
+            << this->m_xcurves[id2] << " ) ? ";
+  bool res = this->m_geom_traits.do_intersect_2_object()(this->m_xcurves[id1],
+                                                         this->m_xcurves[id2]);
+  bool expected_res = this->get_expected_boolean(str_stream);
+  return this->compare(expected_res, res);
 }
 
 /*! Tests Intersect_2.

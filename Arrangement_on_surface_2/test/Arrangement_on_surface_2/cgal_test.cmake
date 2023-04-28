@@ -94,6 +94,7 @@ set(ARE_MERGEABLE 10)
 set(MERGE 11)
 set(ASSERTIONS 12)
 set(CONSTRUCTOR 13)
+set(DO_INTERSECT 14)
 set(COMPARE_X_ON_BOUNDARY 16)
 set(COMPARE_X_NEAR_BOUNDARY 17)
 set(COMPARE_Y_NEAR_BOUNDARY 18)
@@ -238,6 +239,7 @@ function(execute_commands_old_structure data_dir traits_type_name)
   set(commands_indicator_COMPARE_Y_AT_X_RIGHT 1)
   set(commands_indicator_MAKE_X_MONOTONE 1)
   set(commands_indicator_INTERSECT 1)
+  set(commands_indicator_DO_INTERSECT 1)
   set(commands_indicator_SPLIT 1)
   set(commands_indicator_ARE_MERGEABLE 1)
   set(commands_indicator_MERGE 1)
@@ -285,6 +287,11 @@ function(execute_commands_old_structure data_dir traits_type_name)
     run_trapped_test(test_traits
       data/${data_dir}/intersect.pt data/${data_dir}/intersect.xcv
       data/empty.zero data/${data_dir}/intersect ${traits_type_name})
+  endif()
+  if(commands_indicator_DO_INTERSECT)
+    run_trapped_test(test_traits
+      data/${data_dir}/intersect.pt data/${data_dir}/intersect.xcv
+      data/empty.zero data/${data_dir}/do_intersect ${traits_type_name})
   endif()
   if(commands_indicator_SPLIT)
     run_trapped_test(test_traits
@@ -335,6 +342,7 @@ function(execute_commands_new_structure data_dir traits_type_name)
   set(commands_indicator_COMPARE_Y_AT_X_RIGHT 0)
   set(commands_indicator_MAKE_X_MONOTONE 0)
   set(commands_indicator_INTERSECT 0)
+  set(commands_indicator_DO_INTERSECT 0)
   set(commands_indicator_SPLIT 0)
   set(commands_indicator_ARE_MERGEABLE 0)
   set(commands_indicator_MERGE 0)
@@ -401,6 +409,10 @@ function(execute_commands_new_structure data_dir traits_type_name)
   if(commands_indicator_INTERSECT)
     run_trapped_test(test_traits data/${data_dir}/points
       data/${data_dir}/xcurves data/${data_dir}/curves data/${data_dir}/intersect ${traits_type_name})
+  endif()
+  if(commands_indicator_DO_INTERSECT)
+    run_trapped_test(test_traits data/${data_dir}/points
+      data/${data_dir}/xcurves data/${data_dir}/curves data/${data_dir}/do_intersect ${traits_type_name})
   endif()
   if(commands_indicator_SPLIT)
     run_trapped_test(test_traits data/${data_dir}/points
@@ -841,7 +853,7 @@ function(test_segment_traits)
     COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE)
 
   execute_commands_new_structure( segments segment_traits
-    IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT ARE_MERGEABLE)
+    IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT ARE_MERGEABLE DO_INTERSECT)
 
   run_trapped_test( test_traits
     data/segments/vertex.pt data/segments/xcurves
@@ -977,6 +989,7 @@ function(test_polycurve_bezier_traits)
     # CONSTRUCT_OPPOSITE
 
     # INTERSECT
+    # DO_INTERSECT
     )
 endfunction()
 
@@ -993,7 +1006,8 @@ function(test_polyline_traits)
 
   execute_commands_old_structure(polylines polyline_traits
     CONSTRUCTOR COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE
+    DO_INTERSECT)
 endfunction()
 
 #---------------------------------------------------------------------#
@@ -1009,7 +1023,8 @@ function(test_non_caching_polyline_traits)
 
   execute_commands_old_structure(polylines non_caching_polyline_traits
     CONSTRUCTOR COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE
+    DO_INTERSECT)
 endfunction()
 
 #---------------------------------------------------------------------#
@@ -1025,7 +1040,7 @@ function(test_linear_traits)
 
   execute_commands_old_structure(linear/segments linear_traits.segments
     VERTEX IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE DO_INTERSECT)
 
   execute_commands_new_structure(linear/segments linear_traits.segments
     IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT)
@@ -1036,7 +1051,7 @@ function(test_linear_traits)
 
   execute_commands_old_structure(linear/rays linear_traits.rays
     VERTEX IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE DO_INTERSECT)
 
   execute_commands_new_structure(linear/rays linear_traits.rays
     IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT)
@@ -1069,7 +1084,7 @@ function(test_conic_traits)
 
   execute_commands_old_structure(conics conic_traits
     INTERSECT SPLIT MERGE COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT ARE_MERGEABLE DO_INTERSECT)
 
   execute_commands_new_structure(conics conic_traits
     INTERSECT SPLIT MERGE)
@@ -1092,7 +1107,7 @@ function(test_line_arc_traits)
 
   execute_commands_old_structure(circular_lines line_arc_traits
     VERTEX IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE)
+    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE DO_INTERSECT)
 
   execute_commands_new_structure(circular_lines line_arc_traits
     IS_VERTICAL COMPARE_Y_AT_X)
@@ -1119,7 +1134,8 @@ function(test_circular_arc_traits)
 
   execute_commands_old_structure(circular_arcs circular_arc_traits
     VERTEX IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE)
+    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE
+    DO_INTERSECT)
 
   execute_commands_new_structure(circular_arcs circular_arc_traits
     VERTEX IS_VERTICAL COMPARE_Y_AT_X)
@@ -1138,7 +1154,7 @@ function(test_circular_line_arc_traits)
 
   execute_commands_old_structure(circular_line_arcs circular_line_arc_traits
     VERTEX IS_VERTICAL CONSTRUCTOR COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE)
+    ASSERTIONS COMPARE_Y_AT_X_RIGHT MERGE ARE_MERGEABLE DO_INTERSECT)
 
   execute_commands_new_structure(circular_line_arcs circular_line_arc_traits
     IS_VERTICAL COMPARE_Y_AT_X)
@@ -1161,7 +1177,7 @@ function(test_circle_segments_traits)
 
   execute_commands_old_structure(circle_segments circle_segments_traits
     VERTEX IS_VERTICAL COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
-    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE)
+    COMPARE_Y_AT_X_RIGHT CONSTRUCTOR ARE_MERGEABLE DO_INTERSECT)
 
   run_trapped_test(test_traits
     data/circle_segments/points data/circle_segments/xcurves.8
@@ -1200,7 +1216,7 @@ function(test_bezier_traits)
 
   execute_commands_old_structure(bezier bezier_traits
     COMPARE_Y_AT_X_LEFT COMPARE_Y_AT_X_RIGHT SPLIT
-    CONSTRUCTOR ASSERTIONS ARE_MERGEABLE)
+    CONSTRUCTOR ASSERTIONS ARE_MERGEABLE DO_INTERSECT)
 endfunction()
 
 #---------------------------------------------------------------------#
@@ -1216,7 +1232,7 @@ function(test_spherical_arc_traits)
   compile_test_with_flags(test_traits geodesic_arcs_on_sphere "${flags}")
 
   execute_commands_old_structure(spherical_arcs spherical_arc_traits
-    COMPARE_Y_AT_X_LEFT COMPARE_Y_AT_X_RIGHT INTERSECT
+    COMPARE_Y_AT_X_LEFT COMPARE_Y_AT_X_RIGHT INTERSECT DO_INTERSECT
     CONSTRUCTOR
     COMPARE MAKE_X_MONOTONE SPLIT MERGE ASSERTIONS ARE_MERGEABLE)
 
