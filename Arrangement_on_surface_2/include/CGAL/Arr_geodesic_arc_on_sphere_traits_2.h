@@ -29,6 +29,7 @@
 #include <boost/variant.hpp>
 
 #include <CGAL/config.h>
+#include <CGAL/Cartesian.h>
 #include <CGAL/tags.h>
 #include <CGAL/tss.h>
 #include <CGAL/intersections.h>
@@ -38,9 +39,87 @@
 
 namespace CGAL {
 
+/*! Represent an extended 3D direction that is used in turn to represent a
+ * spherical-arc endpoint. The extended data consists of two flags that
+ * indicate whether the point is on the x and on a y boundaries,
+ * respectively.
+ */
+template <typename Kernel>
+class Arr_extended_direction_3 : public Kernel::Direction_3 {
+public:
+  typedef typename Kernel::FT                           FT;
+  typedef typename Kernel::Direction_3                  Direction_3;
+
+  /*! Enumeration of discontinuity type */
+  enum Location_type {
+    NO_BOUNDARY_LOC = 0,
+    MIN_BOUNDARY_LOC,
+    MID_BOUNDARY_LOC,
+    MAX_BOUNDARY_LOC
+  };
+
+private:
+  typedef typename Kernel::Direction_2                  Direction_2;
+
+  /*! The point discontinuity type */
+  Location_type m_location;
+
+  inline Sign x_sign(Direction_3 d) const { return CGAL::sign(d.dx()); }
+
+  inline Sign y_sign(Direction_3 d) const { return CGAL::sign(d.dy()); }
+
+  inline Sign z_sign(Direction_3 d) const { return CGAL::sign(d.dz()); }
+
+public:
+  /*! Default constructor */
+  Arr_extended_direction_3() :
+    Direction_3(0, 0, 1),
+    m_location(MAX_BOUNDARY_LOC)
+  {}
+
+  /*! Constructor */
+  Arr_extended_direction_3(const Direction_3& dir, Location_type location) :
+    Direction_3(dir),
+    m_location(location)
+  {}
+
+  /*! Copy constructor */
+  Arr_extended_direction_3(const Arr_extended_direction_3& other) :
+    Direction_3(static_cast<const Direction_3&>(other))
+  { m_location = other.discontinuity_type(); }
+
+  /*! Assignment operator */
+  Arr_extended_direction_3& operator=(const Arr_extended_direction_3& other)
+  {
+    *(static_cast<Direction_3*>(this)) = static_cast<const Direction_3&>(other);
+    m_location = other.discontinuity_type();
+    return (*this);
+  }
+
+  /*! Set the location of the point.
+   */
+  void set_location(Location_type location) { m_location = location; }
+
+  /*! Obtain the location of the point.
+   */
+  Location_type location() const { return m_location; }
+
+  /*! Obtain the discontinuity type of the point.
+   * \todo deprecate this one; use the above instead.
+   */
+  Location_type discontinuity_type() const { return m_location; }
+
+  bool is_no_boundary() const { return (m_location == NO_BOUNDARY_LOC); }
+
+  bool is_min_boundary() const { return (m_location == MIN_BOUNDARY_LOC); }
+
+  bool is_mid_boundary() const { return (m_location == MID_BOUNDARY_LOC); }
+
+  bool is_max_boundary() const { return (m_location == MAX_BOUNDARY_LOC); }
+};
+
 template <typename Kernel> class Arr_x_monotone_geodesic_arc_on_sphere_3;
 template <typename Kernel> class Arr_geodesic_arc_on_sphere_3;
-template <typename Kernel> class Arr_extended_direction_3;
 
 /*! A traits class-template for constructing and maintaining arcs of great
  * circles embedded on spheres. It is parameterized from a (linear) geometry
@@ -231,7 +310,7 @@ protected:
 
 public:
   /*! Compare two endpoint directions by v.
-   * \param d1 the first enpoint direction.
+   * \param d1 the first endpoint direction.
    * \param d2 the second endpoint direction.
    * \return SMALLER - v(d1) < v(d2);
    *         EQUAL   - v(d1) = v(d2);
@@ -283,7 +362,7 @@ public:
   }
 
   /*! Compare two endpoint directions by u.
-   * \param d1 the first enpoint direction.
+   * \param d1 the first endpoint direction.
    * \param d2 the second endpoint direction.
    * \return SMALLER - u(d1) < u(d2);
    *         EQUAL   - u(d1) = u(d2);
@@ -301,7 +380,7 @@ public:
   }
 
   /*! Compare two endpoint directions lexigoraphically: by u, then by v.
-   * \param d1 the first enpoint direction.
+   * \param d1 the first endpoint direction.
    * \param d2 the second endpoint direction.
    * \return SMALLER - u(d1) < u(d2);
    *         SMALLER - u(d1) = u(d2) and v(d1) < v(d2);
@@ -640,7 +719,7 @@ public:
         return;
       }
 
-      // None of the enpoints coincide with a pole:
+      // None of the endpoints coincide with a pole:
       Direction_2 s = Traits::project_xy(source);
       Direction_2 t = Traits::project_xy(target);
 
@@ -763,7 +842,7 @@ public:
         return cv;
       }
 
-      // None of the enpoints coincide with a pole:
+      // None of the endpoints coincide with a pole:
       if (z_sign(normal) == ZERO) {
         // The arc is vertical
         cv.set_is_vertical(true);
@@ -992,8 +1071,8 @@ public:
   };
 
 protected:
-  /*! Obtain the possitive (north) pole
-   * \return the possitive (north) pole
+  /*! Obtain the positive (north) pole
+   * \return the positive (north) pole
    */
   inline static const Point_2& pos_pole()
   {
@@ -1033,7 +1112,7 @@ public:
 
   public:
     /*! Compare two directional points lexigoraphically: by x, then by y.
-     * \param p1 the first enpoint directional point.
+     * \param p1 the first endpoint directional point.
      * \param p2 the second endpoint directional point.
      * \return SMALLER - x(p1) < x(p2);
      *         SMALLER - x(p1) = x(p2) and y(p1) < y(p2);
@@ -2140,7 +2219,7 @@ public:
           return oi;
         }
 
-        // None of the enpoints coincide with a pole.
+        // None of the endpoints coincide with a pole.
         bool s_is_positive, t_is_positive, plane_is_positive;
         CGAL::Sign xsign = Traits::x_sign(normal);
         if (xsign == ZERO) {
@@ -2172,7 +2251,7 @@ public:
         return oi;
       }
 
-      // The curve is not vertical, (none of the enpoints coincide with a pole)
+      // The curve is not vertical, (none of the endpoints coincide with a pole)
       Direction_3 dp;
       m_traits.intersection_with_identification(c, dp, Zero_atan_y());
       Point_2 p(dp, Point_2::MID_BOUNDARY_LOC);
@@ -2589,7 +2668,7 @@ public:
             return oi;
           }
 
-          /*! If the endpoints of one arc coinside with the 2 poles resp,
+          /*! If the endpoints of one arc coincide with the 2 poles resp,
            * the other arc is completely overlapping.
            */
           if (xc1.left().is_min_boundary() && xc1.right().is_max_boundary()) {
@@ -2834,11 +2913,12 @@ public:
 
   /// \name Functor definitions for the landmarks point-location strategy.
   //@{
-  typedef double                          Approximate_number_type;
+  typedef double                                        Approximate_number_type;
+  typedef CGAL::Cartesian<Approximate_number_type>      Approximate_kernel;
+  typedef Arr_extended_direction_3<Approximate_kernel>  Approximate_point_2;
 
   class Approximate_2 {
   public:
-
     /*! Return an approximation of a point coordinate.
      * \param p the exact point.
      * \param i the coordinate index (either 0 or 1).
@@ -2846,10 +2926,27 @@ public:
      * \return an approximation of p's x-coordinate (if i == 0), or an
      *         approximation of p's y-coordinate (if i == 1).
      */
-    Approximate_number_type operator()(const Point_2& p, int i) const
-    {
-      CGAL_precondition(i == 0 || i == 1);
-      return (i == 0) ? CGAL::to_double(p.x()) : CGAL::to_double(p.y());
+    Approximate_number_type operator()(const Point_2& p, int i) const {
+      CGAL_precondition((i == 0) || (i == 1) || (i == 2));
+      return (i == 0) ? CGAL::to_double(p.dx()) :
+        ((i == 1) ? CGAL::to_double(p.dy()) : CGAL::to_double(p.dz()));
+    }
+
+    /*! Obtain an approximation of a point.
+     */
+    Approximate_point_2 operator()(const Point_2& p) const {
+      Approximate_kernel::Direction_3 dir(operator()(p, 0), operator()(p, 1),
+                                          operator()(p, 2));
+      auto loc = static_cast<Approximate_point_2::Location_type>(p.location());
+      return Approximate_point_2(dir, loc);
+    }
+
+    /*! Obtain an approximation of an \f$x\f$-monotone curve.
+     */
+    template <typename OutputIterator>
+    OutputIterator operator()(const X_monotone_curve_2& /* xcv */, double /* error */,
+                              OutputIterator /* oi */, bool /* l2r */ = true) const {
+      CGAL_error_msg("Not implemented yet!");
     }
   };
 
@@ -2923,85 +3020,6 @@ public:
     return is;
   }
 #endif
-};
-
-/*! Represent an extended 3D direction that is used in turn to represent a
- * spherical-arc endpoint. The extended data consists of two flags that
- * indicate whether the point is on the x and on a y boundaries,
- * respectively.
- */
-template <typename Kernel>
-class Arr_extended_direction_3 : public Kernel::Direction_3 {
-public:
-  typedef typename Kernel::FT                           FT;
-  typedef typename Kernel::Direction_3                  Direction_3;
-
-  /*! Enumeration of discontinuity type */
-  enum Location_type {
-    NO_BOUNDARY_LOC = 0,
-    MIN_BOUNDARY_LOC,
-    MID_BOUNDARY_LOC,
-    MAX_BOUNDARY_LOC
-  };
-
-private:
-  typedef typename Kernel::Direction_2                  Direction_2;
-
-  /*! The point discontinuity type */
-  Location_type m_location;
-
-  inline Sign x_sign(Direction_3 d) const { return CGAL::sign(d.dx()); }
-
-  inline Sign y_sign(Direction_3 d) const { return CGAL::sign(d.dy()); }
-
-  inline Sign z_sign(Direction_3 d) const { return CGAL::sign(d.dz()); }
-
-public:
-  /*! Default constructor */
-  Arr_extended_direction_3() :
-    Direction_3(0, 0, 1),
-    m_location(MAX_BOUNDARY_LOC)
-  {}
-
-  /*! Constructor */
-  Arr_extended_direction_3(const Direction_3& dir, Location_type location) :
-    Direction_3(dir),
-    m_location(location)
-  {}
-
-  /*! Copy constructor */
-  Arr_extended_direction_3(const Arr_extended_direction_3& other) :
-    Direction_3(static_cast<const Direction_3&>(other))
-  { m_location = other.discontinuity_type(); }
-
-  /*! Assignment operator */
-  Arr_extended_direction_3& operator=(const Arr_extended_direction_3& other)
-  {
-    *(static_cast<Direction_3*>(this)) = static_cast<const Direction_3&>(other);
-    m_location = other.discontinuity_type();
-    return (*this);
-  }
-
-  /*! Set the location of the point.
-   */
-  void set_location(Location_type location) { m_location = location; }
-
-  /*! Obtain the location of the point.
-   */
-  Location_type location() const { return m_location; }
-
-  /*! Obtain the discontinuity type of the point.
-   * \todo deprecate this one; use the above instead.
-   */
-  Location_type discontinuity_type() const { return m_location; }
-
-  bool is_no_boundary() const { return (m_location == NO_BOUNDARY_LOC); }
-
-  bool is_min_boundary() const { return (m_location == MIN_BOUNDARY_LOC); }
-
-  bool is_mid_boundary() const { return (m_location == MID_BOUNDARY_LOC); }
-
-  bool is_max_boundary() const { return (m_location == MAX_BOUNDARY_LOC); }
 };
 
 /*! A Representation of an x-monotone great circular arc embedded on a sphere,
@@ -3166,7 +3184,7 @@ public:
       return;
     }
 
-    // None of the enpoints coincide with a pole:
+    // None of the endpoints coincide with a pole:
     Direction_2 s = Traits::project_xy(m_source);
     Direction_2 t = Traits::project_xy(m_target);
 
