@@ -231,7 +231,7 @@ protected:
 
     if (begin == end) {
       // only one surface is in the collection. insert it the result
-      Xy_monotone_surface_3& surf = *first;
+      const Xy_monotone_surface_3& surf = *first;
 
       deal_with_one_surface(surf, result);
       return;
@@ -260,7 +260,7 @@ protected:
     CGAL_assertion(is_envelope_valid(result));
   }
 
-  void deal_with_one_surface(Xy_monotone_surface_3& surf,
+  void deal_with_one_surface(const Xy_monotone_surface_3& surf,
                              Minimization_diagram_2& result) {
     using Boundary_xcurve = std::pair<X_monotone_curve_2, Oriented_side>;
     using Boundary_list = std::list<std::variant<Boundary_xcurve,Point_2>>;
