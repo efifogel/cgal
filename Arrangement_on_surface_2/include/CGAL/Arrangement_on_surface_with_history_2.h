@@ -820,49 +820,40 @@ public:
 // Global insertion, removal and overlay functions.
 //-----------------------------------------------------------------------------
 
-/*!
- * Insert a curve into the arrangement (incremental insertion).
+/*! Insert a curve into the arrangement (incremental insertion).
  * The inserted curve may not necessarily be x-monotone and may intersect the
  * existing arrangement.
  * \param arr The arrangement-with-history object.
  * \param cv The curve to be inserted.
  * \param pl A point-location object associated with the arrangement.
  */
-template <class GeomTraits, class TopTraits, class PointLocation>
-typename Arrangement_on_surface_with_history_2<GeomTraits,
-                                               TopTraits>::Curve_handle
-insert (Arrangement_on_surface_with_history_2<GeomTraits,TopTraits>& arr,
-        const typename GeomTraits::Curve_2& c,
-        const PointLocation& pl)
-{
+template <typename GeomTraits, typename TopTraits, typename PointLocation>
+typename Arrangement_on_surface_with_history_2<GeomTraits, TopTraits>::
+  Curve_handle
+insert(Arrangement_on_surface_with_history_2<GeomTraits,TopTraits>& arr,
+       const typename GeomTraits::Curve_2& c, const PointLocation& pl) {
   // Obtain an arrangement accessor and perform the insertion.
-  typedef Arrangement_on_surface_with_history_2<GeomTraits,
-                                                TopTraits>     Arr_with_hist_2;
-  Arr_with_history_accessor<Arr_with_hist_2>   arr_access (arr);
-
-  return (arr_access.insert_curve (c, pl));
+  using Awh = Arrangement_on_surface_with_history_2<GeomTraits, TopTraits>;
+  Arr_with_history_accessor<Awh> arr_access(arr);
+  return arr_access.insert_curve(c, pl);
 }
 
-/*!
- * Insert a curve into the arrangement (incremental insertion).
+/*! Insert a curve into the arrangement (incremental insertion).
  * The inserted curve may not necessarily be x-monotone and may intersect the
  * existing arrangement. The default "walk" point-location strategy is used
  * for inserting the curve.
  * \param arr The arrangement-with-history object.
  * \param cv The curve to be inserted.
  */
-template <class GeomTraits, class TopTraits>
-typename Arrangement_on_surface_with_history_2<GeomTraits,
-                                               TopTraits>::Curve_handle
-insert (Arrangement_on_surface_with_history_2<GeomTraits,TopTraits>& arr,
-        const typename GeomTraits::Curve_2& c)
-{
+template <typename GeomTraits, typename TopTraits>
+typename Arrangement_on_surface_with_history_2<GeomTraits, TopTraits>::
+  Curve_handle
+insert(Arrangement_on_surface_with_history_2<GeomTraits,TopTraits>& arr,
+       const typename GeomTraits::Curve_2& c) {
   // Obtain an arrangement accessor and perform the insertion.
-  typedef Arrangement_on_surface_with_history_2<GeomTraits,
-                                                TopTraits>     Arr_with_hist_2;
-  Arr_with_history_accessor<Arr_with_hist_2>   arr_access (arr);
-
-  return (arr_access.insert_curve (c));
+  using Awh = Arrangement_on_surface_with_history_2<GeomTraits,TopTraits>;
+  Arr_with_history_accessor<Awh> arr_access(arr);
+  return arr_access.insert_curve(c);
 }
 
 
