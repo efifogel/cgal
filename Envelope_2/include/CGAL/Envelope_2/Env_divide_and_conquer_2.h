@@ -156,12 +156,11 @@ public:
     env_type = (type ? LOWER : UPPER);
 
     // Separate the regular curves from the vertical ones.
-    typename Traits_2::Is_vertical_2  is_vertical =
-                                              traits->is_vertical_2_object();
+    auto is_vertical = traits->is_vertical_2_object();
 
-    Curve_pointer_vector  reg_vec;
-    Curve_pointer_vector  vert_vec;
-    XCurvesIterator       iter;
+    Curve_pointer_vector reg_vec;
+    Curve_pointer_vector vert_vec;
+    XCurvesIterator iter;
 
     for (iter = begin; iter != end; ++iter)
     {
@@ -172,13 +171,11 @@ public:
     }
 
     // Construct the envelope for the non-vertical curves.
-    _construct_envelope_non_vertical (reg_vec.begin(), reg_vec.end(),
-                                      diagram);
+    _construct_envelope_non_vertical(reg_vec.begin(), reg_vec.end(), diagram);
 
     // Merge the vertical segments.
     if (vert_vec.size() > 0)
-      _merge_vertical_segments (vert_vec,
-                                diagram);
+      _merge_vertical_segments(vert_vec, diagram);
 
     return;
   }
