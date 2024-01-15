@@ -19,8 +19,6 @@
 #include <CGAL/property_map.h>
 
 #include <memory>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/mpl/if.hpp>
 
 #include <unordered_map>
 
@@ -128,9 +126,9 @@ struct Dynamic_with_index
 {
   typedef Key key_type;
   typedef Value value_type;
-  typedef typename boost::mpl::if_<  boost::is_same<bool, Value>,
-                                     value_type,
-                                     value_type&>::type  reference;
+  typedef std::conditional_t<  std::is_same_v<bool, Value>,
+                               value_type,
+                               value_type&> reference;
   typedef boost::read_write_property_map_tag category;
 
   Dynamic_with_index()

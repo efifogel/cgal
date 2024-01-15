@@ -34,13 +34,11 @@
 #include <CGAL/Arrangement_2/Arrangement_2_iterators.h>
 #include <CGAL/assertions.h>
 
-#include <boost/pool/pool_alloc.hpp>
-
 namespace CGAL {
 
 inline void* _clean_pointer(const void* p)
 {
-  CGAL_static_assertion(sizeof(void*) == sizeof(size_t));
+  static_assert(sizeof(void*) == sizeof(size_t));
   const size_t  mask = ~1;
   const size_t  val = (reinterpret_cast<size_t>(p) & mask);
 
@@ -964,7 +962,7 @@ public:
  * The arrangement DCEL class.
  */
 template <class V, class H, class F,
-          class Allocator = boost::fast_pool_allocator<int> >
+          class Allocator = CGAL_ALLOCATOR(int) >
 class Arr_dcel_base {
 public:
   // Define the vertex, halfedge and face types.

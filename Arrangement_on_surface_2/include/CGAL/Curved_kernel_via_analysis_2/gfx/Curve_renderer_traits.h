@@ -5,7 +5,7 @@
 //
 // $URL$
 // $Id$
-// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 // Author(s)     : Pavel Emeliyanenko <asm@mpi-sb.mpg.de>
 //
@@ -13,6 +13,9 @@
 
 #ifndef CGAL_CKVA_CURVE_RENDERER_TRAITS_H
 #define CGAL_CKVA_CURVE_RENDERER_TRAITS_H
+
+#include <CGAL/license/Arrangement_on_surface_2.h>
+
 
 #include <CGAL/basic.h>
 #include <CGAL/function_objects.h>
@@ -67,7 +70,7 @@ struct Max_coeff
 };
 
 /*!\brief
- * divides an input value by a contant
+ * divides an input value by a constant
  *
  * provided that there is a coercion between \c Input and \c Result types
  */

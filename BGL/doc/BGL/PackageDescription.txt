@@ -706,6 +706,7 @@ user might encounter.
 - `CGAL::Halfedge_around_target_circulator`
 - `CGAL::Halfedge_around_face_circulator`
 - `CGAL::Vertex_around_target_circulator`
+- `CGAL::Vertex_around_face_circulator`
 - `CGAL::Face_around_target_circulator`
 - `CGAL::Face_around_face_circulator`
 
@@ -758,7 +759,7 @@ user might encounter.
 - `CGAL::alpha_expansion_graphcut()`
 
 \cgalCRPSection{I/O Functions}
-- `CGAL::IO::read_polygon_mesh()`
+- \link PkgBGLIOFct `CGAL::IO::read_polygon_mesh()` \endlink
 - `CGAL::IO::write_polygon_mesh()`
 - \link PkgBGLIoFuncsSTL I/O for STL files \endlink
 - \link PkgBGLIoFuncsPLY I/O for PLY files \endlink

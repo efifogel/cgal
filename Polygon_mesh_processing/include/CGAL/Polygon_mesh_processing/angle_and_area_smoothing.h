@@ -31,9 +31,9 @@ namespace Polygon_mesh_processing {
 /*!
 * \ingroup PMP_meshing_grp
 *
-* \short smooths a triangulated region of a polygon mesh.
+* \brief smooths a triangulated region of a polygon mesh.
 *
-* This function attempts to make the triangle angle and area distributions as uniform as possible
+* This function aims to make the triangle angle and area distributions as uniform as possible
 * by moving (non-constrained) vertices.
 *
 * Angle-based smoothing does not change the combinatorial information of the mesh. Area-based smoothing
@@ -189,13 +189,19 @@ void angle_and_area_smoothing(const FaceRange& faces,
   bool use_area_smoothing = choose_parameter(get_parameter(np, internal_np::use_area_smoothing), true);
 
 #ifndef CGAL_PMP_USE_CERES_SOLVER
-  std::cerr << "Area-based smoothing requires the Ceres Library, which is not available." << std::endl;
-  std::cerr << "No such smoothing will be performed!" << std::endl;
-  use_area_smoothing = false;
+  if (use_area_smoothing)
+  {
+    std::cerr << "Area-based smoothing requires the Ceres Library, which is not available." << std::endl;
+    std::cerr << "No such smoothing will be performed!" << std::endl;
+    use_area_smoothing = false;
+  }
 #endif
 
   if(!use_angle_smoothing && !use_area_smoothing)
+  {
     std::cerr << "Called PMP::angle_and_area_smoothing() without any smoothing method selected or available" << std::endl;
+    return;
+  }
 
   unsigned int nb_iterations = choose_parameter(get_parameter(np, internal_np::number_of_iterations), 1);
   const bool do_project = choose_parameter(get_parameter(np, internal_np::do_project), true);
@@ -323,13 +329,33 @@ void angle_and_area_smoothing(const FaceRange& faces,
   }
 }
 
-///\cond SKIP_IN_MANUAL
+/*!
+* \ingroup PMP_meshing_grp
+*
+* \brief smooths a polygon mesh.
+*
+* This function aims to make the triangle angle and area distributions as uniform as possible
+* by moving (non-constrained) vertices.
+*
+* Angle-based smoothing does not change the combinatorial information of the mesh. Area-based smoothing
+* might change the combinatorial information, unless specified otherwise. It is also possible
+* to make the smoothing algorithm "safer" by rejecting moves that, when applied, would worsen the
+* quality of the mesh, e.g. that would decrease the value of the smallest angle around a vertex or
+* create self-intersections.
+*
+* Optionally, the points are reprojected after each iteration.
+*
+* See the overload which takes a face range as additonal parameter for a comprehensive description
+* of the parameters.
+*/
 template <typename TriangleMesh, typename CGAL_NP_TEMPLATE_PARAMETERS>
 void angle_and_area_smoothing(TriangleMesh& tmesh, const CGAL_NP_CLASS& np = parameters::default_values())
 {
   angle_and_area_smoothing(faces(tmesh), tmesh, np);
 }
 
+
+///\cond SKIP_IN_MANUAL
 template<typename TriangleMesh, typename GeomTraits, typename Stream>
 void angles_evaluation(TriangleMesh& tmesh, GeomTraits traits, Stream& output)
 {
