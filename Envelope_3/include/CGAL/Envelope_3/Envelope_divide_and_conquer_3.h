@@ -28,7 +28,6 @@
 #include <time.h>
 
 #include <CGAL/enum.h>
-#include <CGAL/Arr_observer.h>
 #include <CGAL/Envelope_3/Envelope_base.h>
 #include <CGAL/Envelope_3/Envelope_overlay_2.h>
 #include <CGAL/Envelope_3/Envelope_element_visitor_3.h>
@@ -37,7 +36,7 @@
 #ifdef CGAL_ENVELOPE_USE_BFS_FACE_ORDER
 #include <CGAL/Arr_face_index_map.h>
 #include <CGAL/graph_traits_dual_arrangement_on_surface_2.h>
-#include <CGAL/boost/graph/dijkstra_shortest_paths.h>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 #endif
 
 // this base divide & conquer algorithm splits the input into 2 groups,
@@ -106,9 +105,9 @@ public:
                                              Envelope_resolver, Overlay_2>;
 
 protected:
+  using Vertex_handle = typename Minimization_diagram_2::Vertex_handle;
   using Halfedge_handle = typename Minimization_diagram_2::Halfedge_handle;
   using Face_handle = typename Minimization_diagram_2::Face_handle;
-  using Vertex_handle = typename Minimization_diagram_2::Vertex_handle;
   using Ccb_halfedge_circulator =
     typename Minimization_diagram_2::Ccb_halfedge_circulator;
   using Halfedge_around_vertex_circulator =
@@ -1390,12 +1389,14 @@ protected:
   // keeps the relevant data in the new faces
   class Keep_face_data_observer : public Md_observer {
   public:
-    using Face_handle = typename Minimization_diagram_2::Face_handle;
+    using Base_aos = typename Minimization_diagram_2::Base_aos;
+    using Face_handle = typename Base_aos::Face_handle;
 
-    Keep_face_data_observer(Minimization_diagram_2& arr) : Md_observer(arr) {}
+    Keep_face_data_observer(Base_aos& arr) : Md_observer(arr) {}
 
-    virtual void after_split_face(Face_handle org_f, Face_handle new_f,
-                                  bool /* is_hole*/) {
+    virtual void after_split_face(Face_handle org_f,
+                                  Face_handle new_f,
+                                  bool /* is_hole*/) override {
       // update data in the new face from the original face
       if (org_f->get_aux_is_set(0))
         new_f->set_aux_source(0, org_f->get_aux_source(0));
@@ -1411,27 +1412,28 @@ protected:
   // keeps the relevant data in the new edges & vertices
   class Keep_edge_data_observer : public Md_observer {
   public:
-    using Halfedge_handle = typename Minimization_diagram_2::Halfedge_handle;
-    using Vertex_handle = typename Minimization_diagram_2::Vertex_handle;
-    using X_monotone_curve_2 =
-      typename Minimization_diagram_2::X_monotone_curve_2;
+    using Base_aos = typename Minimization_diagram_2::Base_aos;
+    using Vertex_handle = typename Base_aos::Vertex_handle;
+    using Halfedge_handle = typename Base_aos::Halfedge_handle;
+    using X_monotone_curve_2 = typename Base_aos::X_monotone_curve_2;
 
     using Self = typename Envelope_divide_and_conquer_3<Traits,
                                                         Minimization_diagram_2,
                                                         EnvelopeResolver_3,
                                                         Overlay_2>::Self;
-    Keep_edge_data_observer(Minimization_diagram_2& arr, Self* b) :
+    Keep_edge_data_observer(Base_aos& arr, Self* b) :
       Md_observer(arr), base(b)
     { CGAL_assertion(base != nullptr); }
 
-    /* virtual void before_split_edge (Halfedge_handle e,
-     *                                 Vertex_handle v,
-     *                                 const X_monotone_curve_2& c1,
-     *                                 const X_monotone_curve_2& c2)
+    /* virtual void before_split_edge(Halfedge_handle e,
+     *                                Vertex_handle v,
+     *                                const X_monotone_curve_2& c1,
+     *                                const X_monotone_curve_2& c2)
      * {}
      */
 
-    virtual void after_split_edge(Halfedge_handle he1, Halfedge_handle he2) {
+    virtual void after_split_edge(Halfedge_handle he1, Halfedge_handle he2)
+      override {
       // update data of the new vertex, which is the common vertex of he1 and
       // he2, and of the new edge according to the data in the original edge
       CGAL_assertion(he2->source() == he1->target());

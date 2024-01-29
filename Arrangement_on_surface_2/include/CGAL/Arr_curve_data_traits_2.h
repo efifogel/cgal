@@ -249,6 +249,7 @@ public:
 
     template <typename T>
     bool are_mergeable_data(const T& cv1, const T& cv2, long) const {
+    bool are_mergeable_data(const T& /* cv1 */, const T& /* cv2 */, long) const {
       CGAL_error_msg("Equality operator is not supported.");
       return false;
     }

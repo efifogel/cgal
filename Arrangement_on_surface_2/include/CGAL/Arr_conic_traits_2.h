@@ -141,7 +141,7 @@ public:
 
   /*! Obtain the rational kernel.
    */
-  Shared_rat_kernel rat_kernel() { return m_rat_kernel; }
+  Shared_rat_kernel rat_kernel() const { return m_rat_kernel; }
 
   /*! Obtain the algebraic kernel.
    */
