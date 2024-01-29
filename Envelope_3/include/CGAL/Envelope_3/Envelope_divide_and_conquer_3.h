@@ -113,8 +113,7 @@ protected:
   using Halfedge_around_vertex_circulator =
     typename Minimization_diagram_2::Halfedge_around_vertex_circulator;
 
-  using Md_observer = Arr_observer<Minimization_diagram_2>;
-
+  using Md_observer = typename Minimization_diagram_2::Observer;
   using Face = typename Minimization_diagram_2::Face;
   using Envelope_data_iterator = typename Face::Data_iterator;
 
