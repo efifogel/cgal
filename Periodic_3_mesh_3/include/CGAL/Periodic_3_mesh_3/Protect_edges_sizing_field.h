@@ -10,10 +10,6 @@
 //
 // Author(s)     : Stephane Tayeb, Laurent Rineau, Mael Rouxel-Labbé
 //
-//******************************************************************************
-// File Description :
-//******************************************************************************
-
 #ifndef CGAL_PERIODIC_3_MESH_3_PROTECT_EDGES_SIZING_FIELD_H
 #define CGAL_PERIODIC_3_MESH_3_PROTECT_EDGES_SIZING_FIELD_H
 
@@ -38,6 +34,9 @@
 #include <CGAL/Mesh_3/Protect_edges_sizing_field.h>
 #include <CGAL/SMDS_3/utilities.h>
 #include <CGAL/Mesh_3/Triangulation_helpers.h>
+#if CGAL_MESH_3_PROTECTION_DEBUG
+#  include <CGAL/Mesh_3/Dump_c3t3.h>
+#endif
 
 #include <CGAL/enum.h>
 #include <CGAL/STL_Extension/internal/Has_member_visited.h>
@@ -53,8 +52,7 @@
 #ifndef CGAL_NO_ASSERTIONS
 #  include <boost/math/special_functions/next.hpp> // for float_prior
 #endif
-#include <boost/optional.hpp>
-#include <boost/tuple/tuple.hpp>
+
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
@@ -63,10 +61,12 @@
 #include <fstream>
 #include <iterator>
 #include <list>
+#include <optional>
 #include <sstream>
 #include <set>
 #include <stack>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -394,7 +394,7 @@ private:
                       const Curve_index& curve_index, const CGAL::Orientation orientation) const
   {
     Bare_point pa, pb;
-    boost::tie(pa, pb) = get_positions(va, vb, curve_index, orientation);
+    std::tie(pa, pb) = get_positions(va, vb, curve_index, orientation);
     return compute_distance(pa, pb);
   }
 
@@ -463,7 +463,16 @@ private:
       if(dim == 0) msg << "corner (";
       else msg << "point (";
       msg << p << ")";
+#if CGAL_MESH_3_PROTECTION_DEBUG & 4
+      CGAL_error_msg(([this, str = msg.str()]()
+                      {
+                        CGAL_USE(this);
+                        dump_c3t3(this->c3t3_, "dump-bug");
+                        return str.c_str();
+                      }()));
+#else
       CGAL_error_msg(msg.str().c_str());
+#endif
     }
     return s;
   }
@@ -503,11 +512,11 @@ private:
                                                                            const Vertex_handle v2,
                                                                            const Curve_index& curve_index) const;
 
-  boost::tuple<Bare_point, Bare_point, Bare_point> get_positions(const Vertex_handle v1,
-                                                                 const Vertex_handle v2,
-                                                                 const Vertex_handle v3,
-                                                                 const Curve_index& curve_index,
-                                                                 const CGAL::Orientation orientation) const;
+  std::tuple<Bare_point, Bare_point, Bare_point> get_positions(const Vertex_handle v1,
+                                                               const Vertex_handle v2,
+                                                               const Vertex_handle v3,
+                                                               const Curve_index& curve_index,
+                                                               const CGAL::Orientation orientation) const;
 
 private:
   C3T3& c3t3_;
@@ -945,9 +954,9 @@ get_positions_with_unknown_orientation(const Vertex_handle v1,
 
 
 template <typename C3T3, typename MD, typename Sf>
-boost::tuple<typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point,
-             typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point,
-             typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point>
+std::tuple<typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point,
+           typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point,
+           typename Protect_edges_sizing_field<C3T3, MD, Sf>::Bare_point>
 Protect_edges_sizing_field<C3T3, MD, Sf>::
 get_positions(const Vertex_handle v1,
               const Vertex_handle v2,
@@ -957,11 +966,11 @@ get_positions(const Vertex_handle v1,
 {
   Bare_point p1, p2_check, p2, p3;
 
-  boost::tie(p1, p2) = get_positions(v1, v2, curve_index, orientation);
-  boost::tie(p2_check, p3) = get_positions(v2, v3, curve_index, orientation);
+  std::tie(p1, p2) = get_positions(v1, v2, curve_index, orientation);
+  std::tie(p2_check, p3) = get_positions(v2, v3, curve_index, orientation);
   CGAL_assertion(p2_check == p2);
 
-  return boost::make_tuple(p1, p2, p3);
+  return std::make_tuple(p1, p2, p3);
 }
 
 
@@ -980,7 +989,7 @@ dump_dummy_points(const std::string filename) const
   for(; vit!=vend; ++vit)
   {
     Index index = c3t3_.index(vit);
-    const int* i = boost::get<int>(&index);
+    const int* i = std::get_if<int>(&index);
     if(i && *i == 0)
       dummy_out << cp(c3t3_.triangulation().point(vit)) << std::endl;
   }
@@ -994,7 +1003,7 @@ try_to_remove_dummy_vertex(const Vertex_handle dummy_vertex) const
 {
   // 'dummy_vertex' must correspond to a dummy point
   CGAL_precondition_code(Index index = c3t3_.index(dummy_vertex);)
-  CGAL_precondition_code(if(const int* i = boost::get<int>(&index)) {)
+  CGAL_precondition_code(if(const int* i = std::get_if<int>(&index)) {)
   CGAL_precondition(*i == 0);
   CGAL_precondition_code(})
 
@@ -1029,9 +1038,8 @@ get_maximum_weight(const Vertex_handle protection_vertex, const FT intended_weig
   if(max_possible_weight < minimal_weight_)
     max_possible_weight = minimal_weight_;
 
-  CGAL_assertion_code(const Weighted_point& pvwp = c3t3_.triangulation().point(protection_vertex);)
-  CGAL_assertion_code(const Bare_point& pvp =
-    c3t3_.triangulation().geom_traits().construct_point_3_object()(pvwp);)
+  CGAL_assertion_code(const Weighted_point pvwp = c3t3_.triangulation().point(protection_vertex);)
+  CGAL_assertion_code(const Bare_point pvp = c3t3_.triangulation().geom_traits().construct_point_3_object()(pvwp);)
   CGAL_assertion_code(const int dim = get_dimension(protection_vertex);)
   CGAL_assertion_code(const Index index = c3t3_.index(protection_vertex);)
   CGAL_assertion_code(const FT w_max = CGAL::square(query_size(pvp, dim, index));)
@@ -1183,7 +1191,7 @@ Protect_edges_sizing_field<C3T3, MD, Sf>::
 try_to_move_dummy_vertex(const Vertex_handle dummy_vertex,
                          const Weighted_point& new_position)
 {
-  // Insert first to maximise likeliness of success
+  // Insert first to maximize likeliness of success
   Vertex_handle new_dummy = insert_dummy_point(new_position);
 
   if(!try_to_remove_dummy_vertex(dummy_vertex))
@@ -1340,7 +1348,7 @@ try_to_solve_close_dummy_point(Vertex_handle& protection_vertex,
 {
   // dummy_vertex must be a dummy point
   CGAL_precondition_code(Index index = c3t3_.index(dummy_vertex);)
-  CGAL_precondition_code(if(const int* i = boost::get<int>(&index)) {)
+  CGAL_precondition_code(if(const int* i = std::get_if<int>(&index)) {)
   CGAL_precondition(*i == 0);
   CGAL_precondition_code(})
 
@@ -1608,7 +1616,7 @@ smart_insert_point(const Bare_point& p, Weight w, int dim, const Index& index,
     Vertex_handle v = ch->vertex(li);
 
     Index existing_vertex_index = c3t3_.index(v);
-    const int* i = boost::get<int>(&existing_vertex_index);
+    const int* i = std::get_if<int>(&existing_vertex_index);
 
     if(i && *i == 0)
     {
@@ -1667,24 +1675,24 @@ smart_insert_point(const Bare_point& p, Weight w, int dim, const Index& index,
 
   Vertex_handle nearest_vh;
   FT sq_d;
-  boost::tie(nearest_vh, sq_d) = tr.nearest_power_vertex_with_sq_distance(p, ch);
+  std::tie(nearest_vh, sq_d) = tr.nearest_power_vertex_with_sq_distance(p, ch);
   CGAL_assertion(nearest_vh != Vertex_handle());
   CGAL_assertion(tr.point(nearest_vh) != cwp(tr.canonicalize_point(p)));
 
-#if CGAL_MESH_3_PROTECTION_DEBUG & 2
+#if CGAL_MESH_3_PROTECTION_DEBUG & 16
   std::cerr << "Nearest power vertex of (" << p << ") is "
             << &*nearest_vh << " (" << c3t3_.triangulation().point(nearest_vh) << ") "
             << "at distance: " << sq_d << std::endl;
 
   Index nearest_vh_index = c3t3_.index(nearest_vh);
-  int* i = boost::get<int>(&nearest_vh_index);
+  int* i = std::get_if<int>(&nearest_vh_index);
   if(i && *i == 0)
     std::cerr << "Nearest power vertex is a dummy point" << std::endl;
 #endif
 
   // This will never happen for a dummy point
-  while(cwsr(c3t3_.triangulation().point(nearest_vh), - sq_d) == CGAL::SMALLER &&
-        ! is_special(nearest_vh))
+  while(! is_special(nearest_vh) &&
+        cwsr(c3t3_.triangulation().point(nearest_vh), - sq_d) == CGAL::SMALLER)
   {
     CGAL_assertion(minimal_size_ > 0 || sq_d > 0);
 
@@ -1703,7 +1711,7 @@ smart_insert_point(const Bare_point& p, Weight w, int dim, const Index& index,
 
     // Iterate
     ch = tr.locate(wp0, lt, li, lj, nearest_vh);
-    boost::tie(nearest_vh, sq_d) = tr.nearest_power_vertex_with_sq_distance(p, ch);
+    std::tie(nearest_vh, sq_d) = tr.nearest_power_vertex_with_sq_distance(p, ch);
     CGAL_assertion(nearest_vh != Vertex_handle());
   }
 
@@ -1745,7 +1753,7 @@ smart_insert_point(const Bare_point& p, Weight w, int dim, const Index& index,
 
 #ifdef CGAL_PERIODIC_PROTECTION_ATTEMPT_TO_REMOVE_DUMMY_PTS
       Index v_index = c3t3_.index(v);
-      const int* id = boost::get<int>(&v_index);
+      const int* id = std::get_if<int>(&v_index);
       bool is_v_dummy_vertex(id && *id == 0);
 #endif
 
@@ -1792,7 +1800,7 @@ smart_insert_point(const Bare_point& p, Weight w, int dim, const Index& index,
               << c3t3_.triangulation().point(nearest_vertex) << ")\n";
 
     Index nearest_vertex_index = c3t3_.index(nearest_vertex);
-    i = boost::get<int>(&nearest_vertex_index);
+    i = std::get_if<int>(&nearest_vertex_index);
     if(i && *i == 0)
       std::cerr << "reduced due to dummy" << std::endl;
 #endif
@@ -1993,7 +2001,7 @@ insert_balls(const Vertex_handle& vp,
 {
   // Get size of p & q
   Bare_point vpp, vqp;
-  boost::tie(vpp, vqp) = get_positions(vp, vq, curve_index, orientation);
+  std::tie(vpp, vqp) = get_positions(vp, vq, curve_index, orientation);
 
   const FT sp = get_radius(vp);
   const FT sq = get_radius(vq);
@@ -2042,7 +2050,7 @@ insert_balls(const Vertex_handle& vp,
   CGAL_precondition(sp <= sq);
 
   Bare_point vpp, vqp;
-  boost::tie(vpp, vqp) = get_positions(vp, vq, curve_index, d_sign);
+  std::tie(vpp, vqp) = get_positions(vp, vq, curve_index, d_sign);
 
 #if ! defined(CGAL_NO_PRECONDITIONS)
   if(sp <= 0)
@@ -2091,6 +2099,7 @@ insert_balls(const Vertex_handle& vp,
   //   n = 2(d-sq) / (sp+sq)
   // =======================
 
+  const FT d_signF = static_cast<FT>(d_sign);
   int n = static_cast<int>(std::floor(FT(2)*(d-sq) / (sp+sq))+.5);
   // if(minimal_weight_ != 0 && n == 0) return;
 
@@ -2113,10 +2122,8 @@ insert_balls(const Vertex_handle& vp,
                                                 curve_index, d_sign)
                 << ")\n";
 #endif
-      const FT sgn = (d_sign == CGAL::POSITIVE) ? 1.
-                   : (d_sign == CGAL::NEGATIVE ? -1. : 0.);
       const Bare_point new_point =
-        domain_.construct_point_on_curve(vpp, curve_index, sgn * d / 2);
+        domain_.construct_point_on_curve(vpp, curve_index, d_signF * d / 2);
       const int dim = 1; // new_point is on edge
       const Index index = domain_.index_from_curve_index(curve_index);
       const FT point_weight = CGAL::square(size_(new_point, dim, index));
@@ -2162,7 +2169,6 @@ insert_balls(const Vertex_handle& vp,
   FT norm_step_size = dleft_frac * step_size;
 
   // Initial distance
-  FT d_signF = static_cast<FT>(d_sign);
   FT pt_dist = d_signF * norm_step_size;
   Vertex_handle prev = vp;
 
@@ -2189,8 +2195,18 @@ insert_balls(const Vertex_handle& vp,
   else
   {
     CGAL_assertion_code(using boost::math::float_prior);
-    CGAL_assertion(n==0 ||
-                   dleft_frac >= float_prior(float_prior(1.)));
+#if CGAL_MESH_3_PROTECTION_DEBUG & 4
+    CGAL_assertion_msg(n==0 ||
+                       dleft_frac >= float_prior(float_prior(1.)),
+                       ([this]()
+                        {
+                          CGAL_USE(this);
+                          dump_c3t3(this->c3t3_, "dump-bug");
+                          return "the sampling of protecting balls is not possible";
+                        }()));
+#else
+    CGAL_assertion(n==0 || dleft_frac >= float_prior(float_prior(1.)));
+#endif
   }
 
   // Launch balls
@@ -2248,7 +2264,7 @@ void
 Protect_edges_sizing_field<C3T3, MD, Sf>::
 refine_balls()
 {
-#if CGAL_MESH_3_PROTECTION_DEBUG & 4
+#if CGAL_MESH_3_PROTECTION_DEBUG & 8
   dump_c3t3(c3t3_, "dump-before-refine_balls");
   dump_c3t3_edges(c3t3_, "dump-before-refine_balls");
 #endif
@@ -2384,7 +2400,7 @@ refine_balls()
       }
     }
 
-#if CGAL_MESH_3_PROTECTION_DEBUG & 4
+#if CGAL_MESH_3_PROTECTION_DEBUG & 8
     dump_c3t3(c3t3_, "dump-before-check_and_repopulate_edges");
     dump_c3t3_edges(c3t3_, "dump-before-check_and_repopulate_edges");
 #endif
@@ -2479,7 +2495,7 @@ change_ball_size(Vertex_handle& v, const FT squared_size, const bool special_bal
   const Bare_point p = cp(c3t3_.triangulation().point(v)); // intentional copy
 
   // Remove v from the set of corners
-  boost::optional<Corner_index> corner_index = boost::make_optional(false, Corner_index());
+  std::optional<Corner_index> corner_index;
   if(c3t3_.is_in_complex(v))
   {
     corner_index = c3t3_.corner_index(v);
@@ -2734,7 +2750,7 @@ is_sampling_dense_enough(const Vertex_handle& v1, const Vertex_handle& v2,
                  curve_index == domain_.curve_index(v2->index()));
 
   Bare_point v1p, v2p;
-  boost::tie(v1p, v2p) = get_positions(v1, v2, curve_index, orientation);
+  std::tie(v1p, v2p) = get_positions(v1, v2, curve_index, orientation);
 
   FT arc_length = domain_.curve_segment_length(v1p,
                                                v2p,
@@ -2801,7 +2817,7 @@ orientation_of_walk(const Vertex_handle& start,
 #endif
 
   Bare_point start_p, next_p;
-  boost::tie(start_p, next_p) = get_positions_with_unknown_orientation(start, next, curve_index);
+  std::tie(start_p, next_p) = get_positions_with_unknown_orientation(start, next, curve_index);
 #if CGAL_MESH_3_PROTECTION_DEBUG & 4
   std::cerr << "positions to determine orientation: " << start_p << " " << next_p << std::endl;
 #endif
@@ -3076,7 +3092,7 @@ is_sizing_field_correct(const Vertex_handle& v1,
   FT s3 = get_radius(v3);
 
   Bare_point p1, p2, p3;
-  boost::tie(p1, p2, p3) = get_positions(v1, v2, v3, curve_index, orientation);
+  std::tie(p1, p2, p3) = get_positions(v1, v2, v3, curve_index, orientation);
 
   FT D = domain_.curve_segment_length(p1, p3, curve_index, orientation);
   FT d = domain_.curve_segment_length(p1, p2, curve_index, orientation);
@@ -3126,7 +3142,7 @@ repopulate_edges_around_corner(const Vertex_handle& v, ErasedVeOutIt out)
     // `check_and_repopulate_edges()::vertices` before it is passed itself
     // to `repopulate_edges_around_corner()`.
     if(c3t3_.is_in_complex(to_repopulate.back()))
-      std::copy(to_repopulate.begin(), boost::prior(to_repopulate.end()), out);
+      std::copy(to_repopulate.begin(), std::prev(to_repopulate.end()), out);
     else
       std::copy(to_repopulate.begin(), to_repopulate.end(), out);
 

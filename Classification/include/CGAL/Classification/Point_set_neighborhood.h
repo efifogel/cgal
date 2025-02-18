@@ -96,7 +96,7 @@ public:
     Functor that computes the neighborhood of an input point with a
     fixed number of neighbors.
 
-    \cgalModels CGAL::Classification::NeighborQuery
+    \cgalModels{CGAL::Classification::NeighborQuery}
 
     \sa Point_set_neighborhood
   */
@@ -131,7 +131,7 @@ public:
     as the points lying in a sphere of fixed radius centered at the
     input point.
 
-    \cgalModels CGAL::Classification::NeighborQuery
+    \cgalModels{CGAL::Classification::NeighborQuery}
 
     \sa Point_set_neighborhood
   */
@@ -317,9 +317,8 @@ private:
       Point ref (std::floor(p.x() / voxel_size),
                  std::floor(p.y() / voxel_size),
                  std::floor(p.z() / voxel_size));
-      typename std::map<Point, std::vector<std::uint32_t> >::iterator it;
-      boost::tie (it, boost::tuples::ignore)
-        = grid.insert (std::make_pair (ref, std::vector<std::uint32_t>()));
+      typename std::map<Point, std::vector<std::uint32_t> >::iterator it
+        = grid.insert (std::make_pair (ref, std::vector<std::uint32_t>())).first;
       it->second.push_back (i);
     }
 

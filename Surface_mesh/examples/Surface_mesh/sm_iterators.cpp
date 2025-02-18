@@ -41,11 +41,11 @@ int main()
     vb = r.begin();
     ve = r.end();
     // or the boost Range API
-    vb = boost::begin(r);
-    ve = boost::end(r);
+    vb = std::begin(r);
+    ve = std::end(r);
 
-    // or with boost::tie, as the CGAL range derives from std::pair
-    for(boost::tie(vb, ve) = m.vertices(); vb != ve; ++vb){
+    // or with std::tie, as the CGAL range derives from std::pair
+    for(std::tie(vb, ve) = m.vertices(); vb != ve; ++vb){
             // Print vertex index and vertex coordinates
             std::cout << *vb << " " << m.point(*vb) << std::endl;
     }

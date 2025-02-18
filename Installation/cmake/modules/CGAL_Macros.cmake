@@ -16,11 +16,9 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
   macro( cache_set var )
     set ( ${var} ${ARGN} CACHE INTERNAL "" )
-    set ( ${var} ${ARGN} CACHE INTERNAL "" )
   endmacro()
 
   macro( typed_cache_set type doc var )
-    set ( ${var} ${ARGN} CACHE ${type} ${doc} FORCE )
     set ( ${var} ${ARGN} CACHE ${type} ${doc} FORCE )
   endmacro()
 
@@ -208,127 +206,6 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
       message( STATUS "USING ${LIB}_VERSION = '${${LIB}_VERSION}'" )
 
     endif()
-
-  endmacro()
-
-  macro( use_lib )
-
-    set (lib "${ARGV0}")
-
-    set (vlib ${CGAL_EXT_LIB_${lib}_PREFIX} )
-
-    if ( ${vlib}_FOUND AND (NOT TARGET CGAL OR WITH_${lib}))
-
-      if ( NOT ${vlib}_SETUP ) # avoid double usage
-
-        if ( "${ARGC}" EQUAL "2" )
-
-          set (usefile "${ARGV1}")
-
-          include( ${usefile} )
-          message (STATUS "Configured ${lib} from UseLIB-file: ${usefile}")
-
-          # UseLIB-file has to set ${vlib}_SETUP to TRUE
-          # TODO EBEB what about Qt5, zlib?
-
-        else()
-
-          ####message( STATUS "${lib} include:     ${${vlib}_INCLUDE_DIR}" )
-          include_directories ( SYSTEM ${${vlib}_INCLUDE_DIR} )
-
-          # TODO EBEB remove definitions?
-          ####message( STATUS "${lib} definitions: ${${vlib}_DEFINITIONS}" )
-          add_definitions( ${${vlib}_DEFINITIONS} "-DCGAL_USE_${vlib}" )
-
-          if ( ${vlib}_LIBRARIES )
-            ####message( STATUS "${lib} libraries:   ${${vlib}_LIBRARIES}" )
-            link_libraries( ${${vlib}_LIBRARIES} )
-          endif()
-
-          ####message (STATUS "Configured ${lib} in standard way")
-
-          set( ${vlib}_SETUP TRUE )
-
-        endif()
-
-      endif()
-
-      if (NOT ${vlib}_SETUP )
-
-         message( WARNING "${vlib} has not been set up" )
-
-      endif()
-
-    else()
-
-      if ( WITH_${lib} )
-        message( SEND_ERROR "Try to use ${lib} that is not found")
-      endif()
-
-    endif()
-
-  endmacro()
-
-
-  macro( use_component component)
-
-    message (STATUS "Requested component: ${component}")
-
-    if(WITH_CGAL_${component})
-      if(TARGET CGAL::CGAL_${component})
-        add_to_list( CGAL_LIBRARIES CGAL::CGAL_${component} )
-      elseif(TARGET CGAL_${component})
-        add_to_list( CGAL_LIBRARIES CGAL_${component} )
-      else()
-        add_to_list( CGAL_LIBRARIES ${CGAL_${component}_LIBRARY} )
-      endif()
-      add_to_list( CGAL_3RD_PARTY_LIBRARIES  ${CGAL_${component}_3RD_PARTY_LIBRARIES}  )
-
-      add_to_list( CGAL_3RD_PARTY_INCLUDE_DIRS   ${CGAL_${component}_3RD_PARTY_INCLUDE_DIRS}   )
-      add_to_list( CGAL_3RD_PARTY_DEFINITIONS    ${CGAL_${component}_3RD_PARTY_DEFINITIONS}    )
-      add_to_list( CGAL_3RD_PARTY_LIBRARIES_DIRS ${CGAL_${component}_3RD_PARTY_LIBRARIES_DIRS} )
-
-      # To deal with imported targets of Qt5 and Boost, when CGAL
-      # targets are themselves imported by another project.
-
-      if (${component} STREQUAL "Qt5")
-        find_package(Qt5 COMPONENTS OpenGL Gui Core Script ScriptTools QUIET)
-      endif()
-
-    else(WITH_CGAL_${component})
-
-      # now we are talking about 3rd party libs
-      list( FIND CGAL_CONFIGURED_LIBRARIES "CGAL_${component}" POSITION )
-      if ( "${POSITION}" EQUAL "-1" ) # if component is not a CGAL_<lib>
-
-        if (NOT DEFINED CGAL_EXT_LIB_${component}_PREFIX)
-          set(CGAL_EXT_LIB_${component}_PREFIX ${component})
-        endif()
-
-        set( vlib "${CGAL_EXT_LIB_${component}_PREFIX}" )
-
-        if (${vlib}_FOUND)
-
-          use_lib( ${component} ${${vlib}_USE_FILE})
-
-        else()
-
-          ####message( STATUS "External library ${vlib} after find")
-          if (${vlib}_FOUND)
-            ####message( STATUS "External library ${vlib} about to be used")
-            use_lib( ${component} ${${vlib}_USE_FILE})
-          endif()
-
-        endif()
-      else()
-
-        if (NOT WITH_CGAL_${component})
-          message(STATUS "NOTICE: The CGAL_${component} library seems to be required but is not build. Thus, it is expected that some executables will not be compiled.")
-        endif()
-
-      endif()
-
-    endif(WITH_CGAL_${component})
 
   endmacro()
 
@@ -579,57 +456,4 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
 endif()
 
-
-function(process_CGAL_subdirectory entry subdir type_name)
-  # For example, subdir can be "examples", type_name "example", and entry "Mesh_2"
-
-  if ( CGAL_BRANCH_BUILD )
-    string( REGEX REPLACE "${CMAKE_SOURCE_DIR}/.*/${subdir}/" "" ENTRY_DIR_NAME "${entry}" )
-  else()
-    string( REGEX REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" ENTRY_DIR_NAME "${entry}" )
-  endif()
-
-  if( NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}") # out-of-source
-    make_directory("${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-  endif()
-
-  set(ADD_SUBDIR TRUE)
-
-  if(EXISTS ${entry}/../../dont_submit)
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${ENTRY_DIR_NAME}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${subdir}/${ENTRY_DIR_NAME}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${subdir}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-  endif()
-
-  if(ADD_SUBDIR)
-    message("\n-- Configuring ${subdir} in ${subdir}/${ENTRY_DIR_NAME}")
-    if(EXISTS ${entry}/CMakeLists.txt)
-      set(source_dir ${entry})
-      add_subdirectory( ${entry} ${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME} )
-    else()
-      if(CGAL_CREATE_CMAKE_SCRIPT)
-#        message("bah ${CGAL_CREATE_CMAKE_SCRIPT} ${type_name} --source_dir ${entry}")
-        execute_process(
-          COMMAND bash ${CGAL_CREATE_CMAKE_SCRIPT} ${type_name} --source_dir "${entry}"
-          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}"
-          RESULT_VARIABLE RESULT_VAR OUTPUT_QUIET)
-        if(NOT RESULT_VAR)
-#          message("Subdir ${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-          set(source_dir "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-          add_subdirectory( "${source_dir}" "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-        endif()
-      endif()
-    endif()
-  else()
-    message(STATUS "${subdir}/${ENTRY_DIR_NAME} is in dont_submit")
-  endif()
-endfunction()
+include(${CMAKE_CURRENT_LIST_DIR}/CGALHelpers.cmake)

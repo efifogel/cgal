@@ -1,4 +1,4 @@
-// Copyright(c) 2006 Fernando Luis Cacciola Carballal. All rights reserved.
+// Copyright (c) 2006 Fernando Luis Cacciola Carballal. All rights reserved.
 //
 // This file is part of CGAL(www.cgal.org).
 //
@@ -22,19 +22,19 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Kernel_traits.h>
 
-#include <boost/optional/optional.hpp>
-#include <boost/shared_ptr.hpp>
-
+#include <optional>
+#include <memory>
 #include <algorithm>
 #include <iterator>
+#include <type_traits>
 #include <vector>
 
 namespace CGAL {
 
 template <typename PointIterator, typename HoleIterator,
           typename WeightIterator, typename HoleWeightsIterator,
-          typename K>
-boost::shared_ptr<Straight_skeleton_2<K> >
+          typename K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr<Straight_skeleton_2<K> >
 create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertices_begin,
                                              PointIterator outer_contour_vertices_end,
                                              HoleIterator holes_begin,
@@ -43,7 +43,7 @@ create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertice
                                              WeightIterator outer_contour_weights_end,
                                              HoleWeightsIterator holes_weights_begin,
                                              HoleWeightsIterator holes_weights_end,
-                                             const K&)
+                                             const K& = K())
 {
   using Skeleton = Straight_skeleton_2<K>;
 
@@ -77,37 +77,16 @@ create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertice
   return ssb.construct_skeleton();
 }
 
-template <typename PointIterator, typename HoleIterator,
-          typename WeightIterator, typename HoleWeightsIterator,
-          typename Weights>
-boost::shared_ptr<Straight_skeleton_2<Exact_predicates_inexact_constructions_kernel> >
-inline
-create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertices_begin,
-                                             PointIterator outer_contour_vertices_end,
-                                             HoleIterator holes_begin,
-                                             HoleIterator holes_end,
-                                             WeightIterator outer_contour_weights_begin,
-                                             WeightIterator outer_contour_weights_end,
-                                             HoleWeightsIterator holes_weights_begin,
-                                             HoleWeightsIterator holes_weights_end)
-{
-  return create_interior_weighted_straight_skeleton_2(outer_contour_vertices_begin, outer_contour_vertices_end,
-                                                      holes_begin, holes_end,
-                                                      outer_contour_weights_begin, outer_contour_weights_end,
-                                                      holes_weights_begin, holes_weights_end,
-                                                      Exact_predicates_inexact_constructions_kernel());
-}
-
 template <typename PointIterator,
           typename WeightIterator,
-          typename K>
-boost::shared_ptr<Straight_skeleton_2<K> >
+          typename K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr<Straight_skeleton_2<K> >
 inline
 create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertices_begin,
                                              PointIterator outer_contour_vertices_end,
                                              WeightIterator outer_contour_weights_begin,
                                              WeightIterator outer_contour_weights_end,
-                                             const K& k)
+                                             const K& k = K())
 {
   using InputPoint = typename std::iterator_traits<PointIterator>::value_type;
   using InputKernel = typename Kernel_traits<InputPoint>::Kernel;
@@ -127,49 +106,21 @@ create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertice
                                                       k);
 }
 
-template <typename PointIterator,
-          typename WeightIterator>
-boost::shared_ptr<Straight_skeleton_2<Exact_predicates_inexact_constructions_kernel> >
-inline
-create_interior_weighted_straight_skeleton_2(PointIterator outer_contour_vertices_begin,
-                                             PointIterator outer_contour_vertices_end,
-                                             WeightIterator outer_contour_weights_begin,
-                                             WeightIterator outer_contour_weights_end)
-{
-  return create_interior_weighted_straight_skeleton_2(outer_contour_vertices_begin,
-                                                      outer_contour_vertices_end,
-                                                      outer_contour_weights_begin,
-                                                      outer_contour_weights_end,
-                                                      Exact_predicates_inexact_constructions_kernel());
-}
-
 template <typename Polygon,
           typename Weights,
-          typename K>
-boost::shared_ptr<Straight_skeleton_2<K> >
+          typename K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr<Straight_skeleton_2<K> >
 inline
 create_interior_weighted_straight_skeleton_2(const Polygon& out_contour,
                                              const Weights& weights,
-                                             const K& k,
+                                             const K& k = K(),
                                              std::enable_if_t<! CGAL_SS_i::has_Hole_const_iterator<Polygon>::value>* = nullptr)
 {
   return create_interior_weighted_straight_skeleton_2(CGAL_SS_i::vertices_begin(out_contour),
                                                       CGAL_SS_i::vertices_end(out_contour),
-                                                      weights.begin(),
-                                                      weights.end(),
+                                                      weights[0].begin(),
+                                                      weights[0].end(),
                                                       k);
-}
-
-template <typename Polygon,
-          typename Weights>
-boost::shared_ptr<Straight_skeleton_2<Exact_predicates_inexact_constructions_kernel> >
-inline
-create_interior_weighted_straight_skeleton_2(const Polygon& out_contour,
-                                             const Weights& weights)
-{
-  return create_interior_weighted_straight_skeleton_2(out_contour,
-                                                      weights,
-                                                      Exact_predicates_inexact_constructions_kernel());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,14 +131,14 @@ create_interior_weighted_straight_skeleton_2(const Polygon& out_contour,
 template <typename FT,
           typename PointIterator,
           typename WeightIterator,
-          typename K>
-boost::shared_ptr<Straight_skeleton_2<K> >
+          typename K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr<Straight_skeleton_2<K> >
 create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
                                              PointIterator vertices_begin,
                                              PointIterator vertices_end,
                                              WeightIterator weights_begin,
                                              WeightIterator weights_end,
-                                             const K& k)
+                                             const K& k = K())
 {
   CGAL_precondition(max_offset > 0);
   CGAL_precondition(std::distance(weights_begin, weights_end) == std::distance(vertices_begin, vertices_end));
@@ -196,7 +147,9 @@ create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
   using IK = typename Kernel_traits<Point_2>::Kernel;
   using IFT = typename IK::FT;
 
-  boost::shared_ptr<Straight_skeleton_2<K> > skeleton;
+  static_assert((std::is_same<typename std::iterator_traits<WeightIterator>::value_type, IFT>::value));
+
+  std::shared_ptr<Straight_skeleton_2<K> > skeleton;
 
   // That's because we might not have FT == IK::FT (e.g. `double` and `Core`)
   // Note that we can also have IK != K (e.g. `Simple_cartesian<Core>` and `EPICK`)
@@ -204,7 +157,7 @@ create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
 
   // @todo This likely should be done in the kernel K rather than the input kernel(i.e. the same
   // converter stuff that is done in `create_partial_exterior_straight_skeleton_2`?).
-  boost::optional<IFT> margin = compute_outer_frame_margin(vertices_begin,
+  std::optional<IFT> margin = compute_outer_frame_margin(vertices_begin,
                                                            vertices_end,
                                                            weights_begin,
                                                            weights_end,
@@ -237,11 +190,11 @@ create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
     holes.push_back(poly);
 
     // put a weight large enough such that frame edges are not relevant
-    const FT frame_weight = FT(10) * *(std::max_element(weights_begin, weights_end));
+    const IFT frame_weight = IFT(10) * *(std::max_element(weights_begin, weights_end));
     CGAL_STSKEL_BUILDER_TRACE(4, "Frame weight = " << frame_weight);
 
-    std::vector<FT> lFrameWeights(4, frame_weight);
-    std::vector<std::vector<FT> > lHoleWeights;
+    std::vector<IFT> lFrameWeights(4, frame_weight);
+    std::vector<std::vector<IFT> > lHoleWeights;
     lHoleWeights.emplace_back(weights_begin, weights_end);
 
     // If w[0] pointed to v_0, then when we reverse the polygon, the last polygon is pointing to v_{n-1}
@@ -260,56 +213,22 @@ create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
 }
 
 template <typename FT,
-          typename PointIterator,
-          typename WeightIterator>
-boost::shared_ptr<Straight_skeleton_2<Exact_predicates_inexact_constructions_kernel> >
-inline
-create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
-                                             PointIterator vertices_begin,
-                                             PointIterator vertices_end,
-                                             WeightIterator weights_begin,
-                                             WeightIterator weights_end)
-{
-  return create_exterior_weighted_straight_skeleton_2(max_offset,
-                                                      vertices_begin,
-                                                      vertices_end,
-                                                      weights_begin,
-                                                      weights_end,
-                                                      Exact_predicates_inexact_constructions_kernel());
-}
-
-template <typename FT,
           typename Polygon,
           typename Weights,
-          typename K>
-boost::shared_ptr<Straight_skeleton_2<K> >
+          typename K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr<Straight_skeleton_2<K> >
 inline
 create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
                                              const Polygon& aPoly,
                                              Weights& weights,
-                                             const K& k)
+                                             const K& k = K())
 {
   return create_exterior_weighted_straight_skeleton_2(max_offset,
                                                       CGAL_SS_i::vertices_begin(aPoly),
                                                       CGAL_SS_i::vertices_end(aPoly),
-                                                      weights.begin(),
-                                                      weights.end(),
+                                                      weights[0].begin(),
+                                                      weights[0].end(),
                                                       k);
-}
-
-template <typename FT,
-          typename Weights,
-          typename Polygon>
-boost::shared_ptr<Straight_skeleton_2<Exact_predicates_inexact_constructions_kernel> >
-inline
-create_exterior_weighted_straight_skeleton_2(const FT& max_offset,
-                                             Weights& weights,
-                                             const Polygon& aPoly)
-{
-  return create_exterior_weighted_straight_skeleton_2(max_offset,
-                                                      aPoly,
-                                                      weights,
-                                                      Exact_predicates_inexact_constructions_kernel());
 }
 
 } // namespace CGAL

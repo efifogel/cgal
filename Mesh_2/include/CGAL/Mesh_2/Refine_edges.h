@@ -344,14 +344,8 @@ protected:
 
   void scan_triangulation_impl(Tag_true)
   {
-    // with constraint hierarchy
-
-    for(typename Tr::Subconstraint_iterator it = tr.subconstraints_begin();
-        it != tr.subconstraints_end(); ++it)
+    for(const auto& [v1, v2] : tr.subconstraints())
     {
-      const Vertex_handle& v1 = it->first.first;
-      const Vertex_handle& v2 = it->first.second;
-
       if(!is_locally_conform(tr, v1, v2) ){
         add_constrained_edge_to_be_conformed(v1, v2);
       }
@@ -569,7 +563,7 @@ public:
     std::cerr << "E";
 #endif
     // @todo Perhaps we should remove destroyed edges too.
-    // @warning This code has been rewroten!
+    // @warning This code has been rewritten!
 
     Face_circulator fc = tr.incident_faces(v), fcbegin(fc);
     if( fc == 0 ) return;
@@ -586,7 +580,7 @@ public:
     Face_handle fh;
     int index = 0; // Avoids a warning.
                    // We know that is_edge must return true, and is_edge will assign something to index
-                   // but the compiler does not so it will issue a maybe uninitialized warning
+                   // but the compiler does not so it will issue a maybe-uninitialized warning
 
     CGAL_assume_code(bool is_edge = )
     tr.is_edge(va, v, fh, index);

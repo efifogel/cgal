@@ -431,7 +431,7 @@ public:
   template < class InputIterator >
   std::ptrdiff_t insert(InputIterator first, InputIterator last,
                         std::enable_if_t<
-                          boost::is_base_of<Point, typename std::iterator_traits<InputIterator>::value_type>::value
+                          std::is_base_of<Point, typename std::iterator_traits<InputIterator>::value_type>::value
                         >* = nullptr)
 #else
   template < class InputIterator >
@@ -740,6 +740,32 @@ public:
   Hyperbolic_segment segment(const Edge& e) const { return hyperbolic_segment(e); }
   Hyperbolic_segment segment(const Edge_circulator& e) const { return hyperbolic_segment(e); }
 
+  const Point& point(const Vertex_handle vh) const
+  {
+    CGAL_precondition(!is_infinite(vh));
+    return vh->point();
+  }
+
+  const Point& point(const Face_handle fh, const int i) const
+  {
+    CGAL_precondition(!is_infinite(fh->vertex(i)));
+    CGAL_precondition(0 <= i && i <= 2);
+    return fh->vertex(i)->point();
+  }
+
+  Point& point(const Vertex_handle vh)
+  {
+    CGAL_precondition(!is_infinite(vh));
+    return vh->point();
+  }
+
+  Point& point(const Face_handle fh, const int i)
+  {
+    CGAL_precondition(!is_infinite(fh->vertex(i)));
+    CGAL_precondition(0 <= i && i <= 2);
+    return fh->vertex(i)->point();
+  }
+
   size_type number_of_vertices() const { return Base::number_of_vertices(); }
   Vertex_circulator adjacent_vertices(Vertex_handle v) const { return Vertex_circulator(v, *this); }
 
@@ -825,32 +851,6 @@ public:
   }
 
 public:
-  const Point& point(const Vertex_handle vh) const
-  {
-    CGAL_precondition(!is_infinite(vh));
-    return vh->point();
-  }
-
-  const Point& point(const Face_handle fh, const int i) const
-  {
-    CGAL_precondition(!is_infinite(fh->vertex(i)));
-    CGAL_precondition(0 <= i && i <= 2);
-    return fh->vertex(i)->point();
-  }
-
-  Point& point(const Vertex_handle vh)
-  {
-    CGAL_precondition(!is_infinite(vh));
-    return vh->point();
-  }
-
-  Point& point(const Face_handle fh, const int i)
-  {
-    CGAL_precondition(!is_infinite(fh->vertex(i)));
-    CGAL_precondition(0 <= i && i <= 2);
-    return fh->vertex(i)->point();
-  }
-
   bool is_valid()
   {
     if (!Base::is_valid())
@@ -880,7 +880,7 @@ public:
 
   Face_handle locate(const Point& query, Locate_type& lt, int &li, Face_handle hint = Face_handle()) const
   {
-    // Perform an Euclidean location first and get close to the hyperbolic face containing the query point
+    // Perform a Euclidean location first and get close to the hyperbolic face containing the query point
     typename Base::Locate_type blt;
     Face_handle fh = Base::locate(query, blt, li, hint);
 
@@ -901,7 +901,7 @@ public:
 
     CGAL_assertion(!is_infinite(fh));
 
-    // This case corresponds to when the point is located on an Euclidean edge.
+    // This case corresponds to when the point is located on a Euclidean edge.
     if(lt == EDGE)
     {
       // Here because the call to `side_of_hyperbolic_triangle` might change `li`

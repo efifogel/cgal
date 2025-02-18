@@ -22,9 +22,6 @@
 #include <CGAL/HalfedgeDS_const_decorator.h>
 #include <CGAL/enum.h>
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/mpl/bool.hpp>
 
 #include <algorithm>
@@ -111,7 +108,7 @@ public:
   typedef SSkel_   SSkel ;
   typedef Visitor_ Visitor ;
 
-  typedef boost::shared_ptr<SSkel> SSkelPtr ;
+  typedef std::shared_ptr<SSkel> SSkelPtr ;
 
 private :
 
@@ -220,7 +217,7 @@ private :
 
 public:
 
-  Straight_skeleton_builder_2 ( boost::optional<FT> aMaxTime = boost::none, Traits const& = Traits(), Visitor const& aVisitor = Visitor() ) ;
+  Straight_skeleton_builder_2 ( std::optional<FT> aMaxTime = std::nullopt, Traits const& = Traits(), Visitor const& aVisitor = Visitor() ) ;
 
   SSkelPtr construct_skeleton(  bool aNull_if_failed = true ) ;
 
@@ -1067,9 +1064,9 @@ private :
     }
   }
 
-  boost::tuple<FT,Point_2> ConstructEventTimeAndPoint( Trisegment_2_ptr const& aS ) const
+  std::tuple<FT,Point_2> ConstructEventTimeAndPoint( Trisegment_2_ptr const& aS ) const
   {
-    boost::optional< boost::tuple<FT,Point_2> > r = mTraits.construct_ss_event_time_and_point_2_object()( aS ) ;
+    std::optional< std::tuple<FT,Point_2> > r = mTraits.construct_ss_event_time_and_point_2_object()( aS ) ;
     CGAL_postcondition_msg(!!r, "Unable to compute skeleton node coordinates");
     return *r ;
   }
@@ -1078,7 +1075,7 @@ private :
   {
     FT      lTime ;
     Point_2 lP ;
-    boost::tie(lTime,lP) = ConstructEventTimeAndPoint(aE.trisegment());
+    std::tie(lTime,lP) = ConstructEventTimeAndPoint(aE.trisegment());
 
     aE.SetTimeAndPoint(lTime,lP);
   }
@@ -1237,7 +1234,7 @@ private:
   int mEventID  ;
   int mStepID   ;
 
-  boost::optional<FT> mMaxTime ;
+  std::optional<FT> mMaxTime ;
 
   PQ mPQ ;
 
@@ -1457,10 +1454,10 @@ public:
       CGAL_assertion(fit != mSSkel->SSkel::Base::faces_end());
 
       Halfedge_handle lBorder = fit->halfedge();
-      FT lWeight = *aWeightsBegin;
       CGAL_assertion(lBorder->opposite()->is_border());
-      CGAL_STSKEL_BUILDER_TRACE(4, "Assign " << lWeight << " cvt to " << cvt(lWeight) << " to E" << lBorder->id());
-      lBorder->set_weight(cvt(lWeight));
+      FT lWeight = cvt(*aWeightsBegin);
+      CGAL_STSKEL_BUILDER_TRACE(4, "Assign " << *aWeightsBegin << " (converted to " << cvt(lWeight) << ") to E" << lBorder->id());
+      lBorder->set_weight(lWeight);
     }
 
     return *this;

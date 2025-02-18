@@ -234,6 +234,10 @@ public:
   typedef typename boost::graph_traits<mTriangleMesh>::edge_descriptor         edge_descriptor;
   typedef typename boost::graph_traits<mTriangleMesh>::edge_iterator           edge_iterator;
 
+  struct Less_id {
+    bool operator()(const edge_descriptor& x, const edge_descriptor& y) const { return x.id() < y.id(); }
+  };
+
   // Get weight from the weight interface.
   typedef CGAL::Weights::Cotangent_weight<mTriangleMesh, mVertexPointMap, Traits> Weight_calculator;
 
@@ -340,7 +344,7 @@ double diagonal_length(const Bbox_3& bbox)
 double init_min_edge_length()
 {
   vertex_iterator vb, ve;
-  boost::tie(vb, ve) = vertices(m_tmesh);
+  std::tie(vb, ve) = vertices(m_tmesh);
   Vertex_to_point v_to_p(m_tmesh_point_pmap);
   Bbox_3 bbox = CGAL::bbox_3(boost::make_transform_iterator(vb, v_to_p),
                              boost::make_transform_iterator(ve, v_to_p));
@@ -524,6 +528,7 @@ public:
   /// after a number of `contract_geometry()`, keeping the specified
   /// vertices fixed in place.
   /// \tparam InputIterator a model of `InputIterator` with `boost::graph_traits<TriangleMesh>::%vertex_descriptor` as value type.
+  ///
   /// \cgalAdvancedEnd
   template<class InputIterator>
   void set_fixed_vertices(InputIterator begin, InputIterator end)
@@ -1425,7 +1430,7 @@ std::size_t Mean_curvature_flow_skeletonization<TriangleMesh, Traits_, VertexPoi
 {
   std::size_t cnt=0, prev_cnt=0;
 
-  std::set<edge_descriptor> edges_to_collapse, non_topologically_valid_collapses;
+  std::set<edge_descriptor,Less_id> edges_to_collapse, non_topologically_valid_collapses;
 
   for(edge_descriptor ed : edges(m_tmesh))
     if ( edge_should_be_collapsed(ed) )

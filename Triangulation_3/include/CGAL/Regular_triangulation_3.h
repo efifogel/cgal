@@ -54,7 +54,6 @@
 #include <CGAL/point_generators_3.h>
 #endif
 
-#include <boost/mpl/if.hpp>
 #include <boost/mpl/identity.hpp>
 #include <boost/property_map/function_property_map.hpp>
 #include <boost/utility/result_of.hpp>
@@ -356,7 +355,7 @@ public:
   template < class InputIterator >
   std::ptrdiff_t insert(InputIterator first, InputIterator last,
                         std::enable_if_t<
-                          boost::is_convertible<
+                          std::is_convertible<
                           typename std::iterator_traits<InputIterator>::value_type,
                           Weighted_point>::value >* = nullptr)
 #else
@@ -595,7 +594,7 @@ public:
   std::ptrdiff_t insert(InputIterator first,
                         InputIterator last,
                         std::enable_if_t<
-                        boost::is_convertible<
+                        std::is_convertible<
                         typename std::iterator_traits<InputIterator>::value_type,
                         std::pair<Weighted_point,typename internal::Info_check<typename Triangulation_data_structure::Vertex>::type>
                         >::value
@@ -613,10 +612,9 @@ public:
   insert(boost::zip_iterator< boost::tuple<InputIterator_1,InputIterator_2> > first,
          boost::zip_iterator< boost::tuple<InputIterator_1,InputIterator_2> > last,
          std::enable_if_t<
-           boost::mpl::and_<
-           typename boost::is_convertible< typename std::iterator_traits<InputIterator_1>::value_type, Weighted_point >,
-           typename boost::is_convertible< typename std::iterator_traits<InputIterator_2>::value_type, typename internal::Info_check<typename Triangulation_data_structure::Vertex>::type >
-         >::value >* =nullptr)
+           std::is_convertible_v< typename std::iterator_traits<InputIterator_1>::value_type, Weighted_point > &&
+           std::is_convertible_v< typename std::iterator_traits<InputIterator_2>::value_type, typename internal::Info_check<typename Triangulation_data_structure::Vertex>::type >
+         >* =nullptr)
   {
     return insert_with_info<
              boost::tuple<Weighted_point,
@@ -2037,7 +2035,7 @@ Regular_triangulation_3<Gt,Tds,Lds>::
 side_of_power_sphere(Cell_handle c, const Weighted_point& p, bool perturb) const
 {
   CGAL_precondition(dimension() == 3);
-  int i3;
+  int i3=3;
   if(! c->has_vertex(infinite_vertex(), i3))
   {
     return Bounded_side(side_of_oriented_power_sphere(c->vertex(0)->point(),
@@ -2146,7 +2144,7 @@ side_of_power_circle(Cell_handle c, int i, const Weighted_point& p,
                      bool perturb) const
 {
   CGAL_precondition(dimension() >= 2);
-  int i3 = 5;
+  int i3 = 3;
   if(dimension() == 2)
   {
     CGAL_precondition(i == 3);
@@ -2584,8 +2582,17 @@ remove(Vertex_handle v, bool *could_lock_zone)
     if(!vertex_validity_check(v, tds()))
       return true; // vertex is already gone from the TDS, nothing to do
 
-    Vertex_handle hint = v->cell()->vertex(0) == v ? v->cell()->vertex(1) : v->cell()->vertex(0);
-
+#ifndef CGAL_LINKED_WITH_TBB
+    using Vertex_handle_and_point = Vertex_handle;
+#endif // not CGAL_LINKED_WITH_TBB
+    Vertex_handle_and_point hint_and_point{v->cell()->vertex(0) == v ? v->cell()->vertex(1) : v->cell()->vertex(0)};
+#ifdef CGAL_LINKED_WITH_TBB
+    const Vertex_handle& hint = hint_and_point.vh;
+    const Weighted_point& hint_point_mem = hint_and_point.wpt;
+#else // not CGAL_LINKED_WITH_TBB
+    const Vertex_handle& hint = hint_and_point;
+    const Weighted_point& hint_point_mem = hint_and_point->point();
+#endif // not CGAL_LINKED_WITH_TBB
     Self tmp;
     Vertex_remover<Self> remover(tmp);
     removed = Tr_Base::remove(v, remover, could_lock_zone);
@@ -2612,13 +2619,12 @@ remove(Vertex_handle v, bool *could_lock_zone)
           // the hint.
           if(!vertex_validity_check(hint, tds()))
           {
-            hint = finite_vertices_begin();
+            hint_and_point = finite_vertices_begin();
             continue;
           }
 
           // We need to make sure that while are locking the position P1 := hint->point(), 'hint'
           // does not get its position changed to P2 != P1.
-          const Weighted_point hint_point_mem = hint->point();
 
           if(this->try_lock_point(hint_point_mem) && this->try_lock_point(wp))
           {
@@ -2628,7 +2634,7 @@ remove(Vertex_handle v, bool *could_lock_zone)
             if(!vertex_validity_check(hint, tds()) ||
                hint->point() != hint_point_mem)
             {
-              hint = finite_vertices_begin();
+              hint_and_point = finite_vertices_begin();
               this->unlock_all_elements();
               continue;
             }
@@ -2639,7 +2645,7 @@ remove(Vertex_handle v, bool *could_lock_zone)
             {
               success = true;
               if(hv != Vertex_handle())
-                hint = hv;
+                hint_and_point = hv;
             }
           }
 

@@ -20,17 +20,18 @@
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 #include <type_traits>
 
 namespace CGAL {
 
-template<class K, class Polygon>
-boost::shared_ptr< Straight_skeleton_2<K> >
+template<class Polygon,
+         class K = Exact_predicates_inexact_constructions_kernel>
+std::shared_ptr< Straight_skeleton_2<K> >
 inline
-create_interior_straight_skeleton_2 ( Polygon const& aPolyWithHoles,
-                                      K const& k,
+create_interior_straight_skeleton_2 ( const Polygon& aPolyWithHoles,
+                                      const K& k = K(),
                                       std::enable_if_t<
                                         CGAL_SS_i::has_Hole_const_iterator<Polygon>::value>* = nullptr)
 {
