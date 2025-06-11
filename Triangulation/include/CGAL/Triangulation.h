@@ -30,6 +30,7 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/iterator/filter_iterator.hpp>
 #include <CGAL/boost/iterator/transform_iterator.hpp>
+#include <CGAL/iterator.h>
 
 namespace CGAL {
 
@@ -165,15 +166,25 @@ public:
     // Finite elements iterators
 
     class Finiteness_predicate;
+    class Infiniteness_predicate;
 
     typedef boost::filter_iterator<Finiteness_predicate, Vertex_iterator>
         Finite_vertex_iterator;
     typedef boost::filter_iterator<Finiteness_predicate, Vertex_const_iterator>
         Finite_vertex_const_iterator;
+#if 0
     typedef boost::filter_iterator<Finiteness_predicate, Full_cell_iterator>
         Finite_full_cell_iterator;
     typedef boost::filter_iterator<Finiteness_predicate, Full_cell_const_iterator>
         Finite_full_cell_const_iterator;
+#else
+
+    typedef CGAL::Filter_iterator<Full_cell_iterator, Infiniteness_predicate>
+        Finite_full_cell_iterator;
+    typedef CGAL::Filter_iterator<Full_cell_const_iterator, Infiniteness_predicate>
+        Finite_full_cell_const_iterator;
+#endif
+
     typedef boost::filter_iterator<Finiteness_predicate, Facet_iterator>
         Finite_facet_iterator;
 
@@ -437,15 +448,28 @@ public:
 
     Full_cell_const_iterator full_cells_begin() const { return tds().full_cells_begin(); }
     Full_cell_const_iterator full_cells_end()   const { return tds().full_cells_end(); }
-
+#if 0
     Finite_full_cell_iterator finite_full_cells_begin()
     { return Finite_full_cell_iterator(Finiteness_predicate(*this), full_cells_begin(), full_cells_end()); }
     Finite_full_cell_iterator finite_full_cells_end()
     { return Finite_full_cell_iterator(Finiteness_predicate(*this), full_cells_end(), full_cells_end()); }
+
     Finite_full_cell_const_iterator finite_full_cells_begin() const
     { return Finite_full_cell_const_iterator(Finiteness_predicate(*this), full_cells_begin(), full_cells_end()); }
     Finite_full_cell_const_iterator finite_full_cells_end() const
     { return Finite_full_cell_const_iterator(Finiteness_predicate(*this), full_cells_end(), full_cells_end()); }
+#else
+
+    Finite_full_cell_iterator finite_full_cells_begin()
+    { return CGAL::filter_iterator(full_cells_end(), Infiniteness_predicate(*this), full_cells_begin()); }
+    Finite_full_cell_iterator finite_full_cells_end()
+    { return CGAL::filter_iterator(full_cells_end(), Infiniteness_predicate(*this) ); }
+
+    Finite_full_cell_const_iterator finite_full_cells_begin() const
+    { return CGAL::filter_iterator(full_cells_end(), Infiniteness_predicate(*this), full_cells_begin()); }
+    Finite_full_cell_const_iterator finite_full_cells_end() const
+    { return CGAL::filter_iterator(full_cells_end(), Infiniteness_predicate(*this)); }
+#endif
 
     Facet_iterator facets_begin() { return tds().facets_begin(); }
     Facet_iterator facets_end() { return tds().facets_end(); }
@@ -467,6 +491,20 @@ public:
             return ! t_.is_infinite(t);
         }
     };
+
+    class Infiniteness_predicate
+    {
+        const Self & t_;
+    public:
+
+    Infiniteness_predicate(const Self & t) : t_(t) {}
+        template < class T >
+        bool operator()(const T & t) const
+        {
+            return t_.is_infinite(t);
+        }
+    };
+
 
     class Point_equality_predicate
     {
@@ -843,7 +881,6 @@ Triangulation<TT, TDS>
             return insert_in_face(p, f);
             break;
         case ON_VERTEX:
-            s->vertex(f.index(0))->set_point(p);
             return s->vertex(f.index(0));
             break;
     }
@@ -993,7 +1030,7 @@ Triangulation<TT, TDS>
             // Otherwise, let's find the right infinite cell
             else
             {
-                inf_v_cell = inf_v_cell->neighbor((inf_v_index + 1) % 2);
+                inf_v_cell = inf_v_cell->neighbor((inf_v_index + 1) & 1);
                 inf_v_index = inf_v_cell->index(infinite_vertex());
                 // Is "inf_v_cell" the right infinite cell?
                 // Then inf_v_index should be 1
@@ -1096,9 +1133,14 @@ Triangulation<TT, TDS>
         // For the remembering stochastic walk, we need to start trying
         // with a random index:
         int j, i = rng_.get_int(0, cur_dim);
-        // we check |p| against all the full_cell's hyperplanes in turn
 
-        for(j = 0; j <= cur_dim; ++j, i = (i + 1) % (cur_dim + 1) )
+        // i = (i + 1) % m where 0 <= i < m
+        auto incr_mod = [] (int&i, int m) {
+          if( ++i >= m ) i = 0; // >= or ==
+        };
+
+        // we check |p| against all the full_cell's hyperplanes in turn
+        for(j = 0; j <= cur_dim; ++j, incr_mod(i, cur_dim + 1))
         {
             Full_cell_handle next = s->neighbor(i);
             if( previous == next )
@@ -1127,6 +1169,9 @@ Triangulation<TT, TDS>
             // full_cell because orientation_[i] == NEGATIVE
             previous = s;
             s = next;
+            // We only need to test is_infinite(next->vertex(next->index(previous)))
+            // or equivalently is_infinite(next->vertex(previous->mirror_index(i)))
+            // but it does not seem to help, even when storing mirror indices.
             if( is_infinite(next) )
             {   // we have arrived OUTSIDE the convex hull of the triangulation,
                 // so we stop the search

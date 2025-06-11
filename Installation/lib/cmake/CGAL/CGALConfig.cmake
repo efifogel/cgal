@@ -127,12 +127,18 @@ if( CGAL_DEV_MODE OR RUNNING_CGAL_AUTO_TEST OR CGAL_TEST_SUITE )
   endif()
 endif()
 
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0.3)
+  message(STATUS "Apple Clang version ${CMAKE_CXX_COMPILER_VERSION} compiler detected")
+  message(STATUS "Boost MP is turned off for all Apple Clang versions below 11.0.3!")
+  set(CGAL_DO_NOT_USE_BOOST_MP TRUE)
+endif()
+
 foreach(comp ${CGAL_FIND_COMPONENTS})
   if(NOT comp MATCHES "Core|ImageIO|Qt6")
     message(FATAL_ERROR "The requested CGAL component ${comp} does not exist!")
   endif()
-  if(comp MATCHES "Core" AND CGAL_DISABLE_GMP)
-    message("CGAL_Core needs GMP and won't be used.")
+  if(comp MATCHES "Core" AND CGAL_DO_NOT_USE_BOOST_MP)
+    message(STATUS "CGAL_Core needs Boost multiprecision support and won't be used.")
   else()
     list(APPEND CGAL_LIBRARIES CGAL_${comp})
   endif()
@@ -190,11 +196,12 @@ endforeach()
 #
 # Define a specific target for basic viewer
 #
-if (NOT TARGET CGAL::CGAL_Basic_viewer)
-  add_library(CGAL::CGAL_Basic_viewer INTERFACE IMPORTED GLOBAL)
-    set_target_properties(CGAL::CGAL_Basic_viewer PROPERTIES
-      INTERFACE_COMPILE_DEFINITIONS "CGAL_USE_BASIC_VIEWER;QT_NO_KEYWORDS"
+if (NOT TARGET CGAL::CGAL_Basic_viewer_Qt)
+  add_library(CGAL::CGAL_Basic_viewer_Qt INTERFACE IMPORTED GLOBAL)
+    set_target_properties(CGAL::CGAL_Basic_viewer_Qt PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS "CGAL_USE_BASIC_VIEWER"
       INTERFACE_LINK_LIBRARIES CGAL::CGAL_Qt6)
+  add_library(CGAL::CGAL_Basic_viewer ALIAS CGAL::CGAL_Basic_viewer_Qt)
 endif()
 
 #warning: the order in this list has to match the enum in Exact_type_selector
@@ -208,6 +215,6 @@ if ( NOT "${CGAL_CMAKE_EXACT_NT_BACKEND}" STREQUAL "Default" )
       TARGET CGAL
       APPEND PROPERTY
           INTERFACE_COMPILE_DEFINITIONS "CMAKE_OVERRIDDEN_DEFAULT_ENT_BACKEND=${DEB_VAL}"
-  ) # do not use set_target_properties to avoid overwritting
+  ) # do not use set_target_properties to avoid overwriting
 endif()
 

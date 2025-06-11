@@ -1,22 +1,21 @@
 //#define POLY
 
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Polygon_mesh_processing/internal/Hole_filling/do_not_use_DT3.h>
+#include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
+
 #ifdef POLY
 #include <CGAL/Polyhedron_3.h>
 #else
 #include <CGAL/Surface_mesh.h>
 #endif
+
 #include <CGAL/boost/graph/helpers.h>
-
-#include <CGAL/Polygon_mesh_processing/triangulate_hole.h>
-
-#include <CGAL/assertions.h>
-
 #include <CGAL/boost/graph/Euler_operations.h>
 
 #include <CGAL/Weights/uniform_weights.h>
+
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 
 #include <cassert>
 #include <vector>
@@ -242,11 +241,11 @@ void test_triangulate_refine_and_fair_hole(const std::string file_name) {
 }
 
 template <class Polyhedron>
-void test_ouput_iterators_triangulate_hole(const std::string file_name) {
+void test_output_iterators_triangulate_hole(const std::string file_name) {
   typedef typename boost::graph_traits<Polyhedron>::halfedge_descriptor Halfedge_handle;
   typedef typename boost::graph_traits<Polyhedron>::face_descriptor Facet_handle;
 
-  std::cout << "test_ouput_iterators_triangulate_hole:" << std::endl;
+  std::cout << "test_output_iterators_triangulate_hole:" << std::endl;
   std::cout << "  File: "<< file_name  << std::endl;
 
   Polyhedron poly, poly_2;
@@ -274,11 +273,11 @@ void test_ouput_iterators_triangulate_hole(const std::string file_name) {
 }
 
 template <class Polyhedron>
-void test_ouput_iterators_triangulate_and_refine_hole(const std::string file_name) {
+void test_output_iterators_triangulate_and_refine_hole(const std::string file_name) {
   typedef typename boost::graph_traits<Polyhedron>::halfedge_descriptor Halfedge_handle;
   typedef typename boost::graph_traits<Polyhedron>::face_descriptor Facet_handle;
   typedef typename boost::graph_traits<Polyhedron>::vertex_descriptor        Vertex_handle;
-  std::cout << "test_ouput_iterators_triangulate_and_refine_hole:" << std::endl;
+  std::cout << "test_output_iterators_triangulate_and_refine_hole:" << std::endl;
   std::cout << "  File: "<< file_name  << std::endl;
 
   Polyhedron poly, poly_2;
@@ -404,8 +403,8 @@ typedef CGAL::Surface_mesh<typename Kernel::Point_3> Polyhedron;
     test_triangulate_hole<Polyhedron>(it->c_str());
     test_triangulate_and_refine_hole<Polyhedron>(it->c_str());
     test_triangulate_refine_and_fair_hole<Polyhedron>(it->c_str());
-    test_ouput_iterators_triangulate_and_refine_hole<Polyhedron>(it->c_str());
-    test_ouput_iterators_triangulate_hole<Polyhedron>(it->c_str());
+    test_output_iterators_triangulate_and_refine_hole<Polyhedron>(it->c_str());
+    test_output_iterators_triangulate_hole<Polyhedron>(it->c_str());
     test_triangulate_hole_weight<Polyhedron>(it->c_str(), 0);
     std::cout << std::endl;
   }
