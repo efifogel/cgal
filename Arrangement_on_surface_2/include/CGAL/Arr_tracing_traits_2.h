@@ -21,13 +21,154 @@
 
 #include <iostream>
 #include <list>
+#include <type_traits>
 #include <variant>
 
 #include <CGAL/basic.h>
 #include <CGAL/Arr_enums.h>
 #include <CGAL/Arr_tags.h>
+#include "CGAL/Arr_has.h"
 
 namespace CGAL {
+namespace internal {
+
+template<typename BaseTraits, typename Derived, typename = void>
+class Arr_trace_parameter_space_in_x_2;
+
+template<typename BaseTraits, typename Derived>
+class Arr_trace_parameter_space_in_x_2<BaseTraits,
+                                       Derived,
+                                       std::enable_if_t<has_parameter_space_in_x_2<BaseTraits>::value>> :
+    virtual public BaseTraits {
+  using Base = BaseTraits;
+
+public:
+  /*! A functor that determines whether an endpoint of an \f$x\f$-monotone curve
+  * lies on a boundary of the parameter space along the \f$x\f$-axis.
+  */
+  class Parameter_space_in_x_2 {
+  private:
+    typename Base::Parameter_space_in_x_2 m_object;
+    bool m_enabled;
+
+  public:
+    /*! constructs */
+    Parameter_space_in_x_2(const Base& base, bool enabled = true) :
+      m_object(base.parameter_space_in_x_2_object()), m_enabled(enabled)
+    {}
+
+    /*! operates
+    * \param xcv the curve the end of which is tested.
+    * \param ce the curve-end identifier.
+    * \return the boundary type.
+    */
+    Arr_parameter_space operator()(const typename Base::X_monotone_curve_2& xcv, Arr_curve_end ce) const {
+      if (! m_enabled) return m_object(xcv, ce);
+      std::cout << "parameter_space_in_x" << std::endl
+                << "  xcv: " << xcv << ", ce: " << ce << std::endl;
+      Arr_parameter_space bt = m_object(xcv, ce);
+      std::cout << "  result: " << bt << std::endl;
+      return bt;
+    }
+
+    /*! A functor that obtains the parameter space at a point along the
+    * \f$x\f$-axis. Every non-interior point is assumed to lie on the
+    * left-right identification. Points at the poles additionally lie on the
+    * bottom or top boundary.
+    * \param p the point.
+    * \return the parameter space at `p`.
+    */
+    Arr_parameter_space operator()(const typename Base::Point_2& p) const {
+      if (! m_enabled) return m_object(p);
+      std::cout << "parameter_space_in_x" << std::endl
+                << "  p: " << p << std::endl;
+      Arr_parameter_space bt = m_object(p);
+      std::cout << "  result: " << bt << std::endl;
+      return bt;
+    }
+  };
+
+  Parameter_space_in_x_2 parameter_space_in_x_2_object() const { 
+    return Parameter_space_in_x_2(*this, static_cast<const Derived*>(this)->parameter_space_in_x_op());
+  }
+
+protected:
+  using Base::parameter_space_in_x_2_object;
+};
+
+template<typename BaseTraits, typename Derived>
+class Arr_trace_parameter_space_in_x_2<BaseTraits,
+                                       Derived,
+                                       std::enable_if_t<! has_parameter_space_in_x_2<BaseTraits>::value>>
+{};
+
+template<typename BaseTraits, typename Derived, typename = void>
+class Arr_trace_parameter_space_in_y_2;
+
+template<typename BaseTraits, typename Derived>
+class Arr_trace_parameter_space_in_y_2<BaseTraits,
+                                       Derived,
+                                       std::enable_if_t<has_parameter_space_in_y_2<BaseTraits>::value>> :
+    virtual public BaseTraits {
+  using Base = BaseTraits;
+
+public:
+  /*! A functor that determines whether an endpoint of an \f$x\f$-monotone arc
+   * lies on a boundary of the parameter space along the \f$y\f$-axis.
+   */
+  class Parameter_space_in_y_2 {
+  private:
+    typename Base::Parameter_space_in_y_2 m_object;
+    bool m_enabled;
+
+  public:
+    /*! constructs */
+    Parameter_space_in_y_2(const Base& base, bool enabled = true) :
+      m_object(base.parameter_space_in_y_2_object()), m_enabled(enabled) {}
+
+    /*! operates
+     * \param xcv the curve the end of which is tested.
+     * \param ce the curve-end identifier.
+     * \return the boundary type.
+     */
+    Arr_parameter_space operator()(const typename Base::X_monotone_curve_2& xcv, Arr_curve_end ce) const {
+      if (! m_enabled) return m_object(xcv, ce);
+      std::cout << "parameter_space_in_y" << std::endl
+                << "  ce: " << ce << ", xcv: " << xcv << std::endl;
+      Arr_parameter_space bt = m_object(xcv, ce);
+      std::cout << "  result: " << bt << std::endl;
+      return bt;
+    }
+
+    /*! operates
+     * \param p the point.
+     * \return the boundary type.
+     */
+    Arr_parameter_space operator()(const typename Base::Point_2& p) const {
+      if (! m_enabled) return m_object(p);
+      std::cout << "parameter_space_in_y" << std::endl
+                << "  point: " << p << std::endl;
+      Arr_parameter_space bt = m_object(p);
+      std::cout << "  result: " << bt << std::endl;
+      return bt;
+    }
+  };
+
+  Parameter_space_in_y_2 parameter_space_in_y_2_object() const { 
+    return Parameter_space_in_y_2(*this, static_cast<const Derived*>(this)->parameter_space_in_y_op());
+  }
+
+protected:
+  using Base::parameter_space_in_y_2_object;
+};
+
+template<typename BaseTraits, typename Derived>
+class Arr_trace_parameter_space_in_y_2<BaseTraits,
+                                       Derived,
+                                       std::enable_if_t<! has_parameter_space_in_y_2<BaseTraits>::value>>
+{};
+
+} // namespace internal
 
 /*! \class
  * A metadata traits-class decorator for the arrangement package. It traces the
@@ -38,7 +179,10 @@ namespace CGAL {
  * It models all the concepts that the original traits models.
  */
 template <typename BaseTraits>
-class Arr_tracing_traits_2 : public BaseTraits {
+class Arr_tracing_traits_2 :
+    virtual public BaseTraits,
+    public internal::Arr_trace_parameter_space_in_x_2<BaseTraits, Arr_tracing_traits_2<BaseTraits>>,
+    public internal::Arr_trace_parameter_space_in_y_2<BaseTraits, Arr_tracing_traits_2<BaseTraits>> {
 public:
   enum Operation_id {
     COMPARE_X_2_OP = 0,
@@ -82,6 +226,7 @@ private:
   //! A set of bits that indicate whether operations should be traced.
   unsigned long long m_flags;
 
+public:
   bool compare_x_op() const
   { return (0 != (m_flags & (0x1ull << COMPARE_X_2_OP))); }
 
@@ -846,54 +991,6 @@ public:
     }
   };
 
-  // left-right
-
-  /*! A functor that determines whether an endpoint of an \f$x\f$-monotone curve
-   * lies on a boundary of the parameter space along the \f$x\f$-axis.
-   */
-  class Parameter_space_in_x_2 {
-  private:
-    typename Base::Parameter_space_in_x_2 m_object;
-    bool m_enabled;
-
-  public:
-    /*! constructs */
-    Parameter_space_in_x_2(const Base& base, bool enabled = true) :
-      m_object(base.parameter_space_in_x_2_object()), m_enabled(enabled)
-    {}
-
-    /*! operates
-     * \param xcv the curve the end of which is tested.
-     * \param ce the curve-end identifier.
-     * \return the boundary type.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2& xcv,
-                                   Arr_curve_end ce) const {
-      if (! m_enabled) return m_object(xcv, ce);
-      std::cout << "parameter_space_in_x" << std::endl
-                << "  xcv: " << xcv << ", ce: " << ce << std::endl;
-      Arr_parameter_space bt = m_object(xcv, ce);
-      std::cout << "  result: " << bt << std::endl;
-      return bt;
-    }
-
-    /*! A functor that obtains the parameter space at a point along the
-     * \f$x\f$-axis. Every non-interior point is assumed to lie on the
-     * left-right identification. Points at the poles additionally lie on the
-     * bottom or top boundary.
-     * \param p the point.
-     * \return the parameter space at `p`.
-     */
-    Arr_parameter_space operator()(const Point_2& p) const {
-      if (! m_enabled) return m_object(p);
-      std::cout << "parameter_space_in_x" << std::endl
-                << "  p: " << p << std::endl;
-      Arr_parameter_space bt = m_object(p);
-      std::cout << "  result: " << bt << std::endl;
-      return bt;
-    }
-  };
-
   /*! A functor that determines whether a point or curve is on
    * \f$x\f$-identification.
    */
@@ -996,48 +1093,6 @@ public:
   };
 
   // bottom-top
-
-  /*! A functor that determines whether an endpoint of an \f$x\f$-monotone arc
-   * lies on a boundary of the parameter space along the \f$y\f$-axis.
-   */
-  class Parameter_space_in_y_2 {
-  private:
-    typename Base::Parameter_space_in_y_2 m_object;
-    bool m_enabled;
-
-  public:
-    /*! constructs */
-    Parameter_space_in_y_2(const Base& base, bool enabled = true) :
-      m_object(base.parameter_space_in_y_2_object()), m_enabled(enabled) {}
-
-    /*! operates
-     * \param xcv the curve the end of which is tested.
-     * \param ce the curve-end identifier.
-     * \return the boundary type.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2& xcv,
-                             Arr_curve_end ce) const {
-      if (! m_enabled) return m_object(xcv, ce);
-        std::cout << "parameter_space_in_y" << std::endl
-                  << "  ce: " << ce << ", xcv: " << xcv << std::endl;
-      Arr_parameter_space bt = m_object(xcv, ce);
-      std::cout << "  result: " << bt << std::endl;
-      return bt;
-    }
-
-    /*! operates
-     * \param p the point.
-     * \return the boundary type.
-     */
-    Arr_parameter_space operator()(const Point_2& p) const {
-      if (! m_enabled) return m_object(p);
-        std::cout << "parameter_space_in_y" << std::endl
-                  << "  point: " << p << std::endl;
-      Arr_parameter_space bt = m_object(p);
-      std::cout << "  result: " << bt << std::endl;
-      return bt;
-    }
-  };
 
   /*! A functor that determines whether a point or curve is on
    * \f$y\f$-identification.
@@ -1236,9 +1291,6 @@ public:
 
   // left-right
 
-  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
-  { return Parameter_space_in_x_2(*this, parameter_space_in_x_op()); }
-
   Is_on_x_identification_2 is_on_x_identification_2_object() const
   { return Is_on_x_identification_2(*this, is_on_x_identification_op()); }
 
@@ -1249,9 +1301,6 @@ public:
   { return Compare_y_near_boundary_2(*this, compare_y_near_boundary_op()); }
 
   // bottom-top
-
-  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
-  { return Parameter_space_in_y_2(*this, parameter_space_in_y_op()); }
 
   Is_on_y_identification_2 is_on_y_identification_2_object() const
   { return Is_on_y_identification_2(*this, is_on_y_identification_op()); }
