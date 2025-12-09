@@ -642,12 +642,9 @@ public:
 
       X_monotone_curve_2 opp_xcv;
 
-      if (xcv.is_segment()) opp_xcv = Segment_2(xcv.target(), xcv.source());
-      if (xcv.is_line()) opp_xcv = Line_2(xcv.get_pt(), xcv.get_ps());
-      if (xcv.is_ray()) {
-        Point_2 opp_tgt = Point_2( -(xcv.get_pt().x()), -(xcv.get_pt().y()));
-        opp_xcv = Ray_2( xcv.source(),  opp_tgt);
-      }
+      if (xcv.is_segment()) opp_xcv = xcv.segment().opposite();
+      if (xcv.is_line()) opp_xcv = xcv.line().opposite();
+      if (xcv.is_ray()) opp_xcv = xcv.ray().opposite();
 
       return opp_xcv;
     }
