@@ -53,8 +53,8 @@ inline bool s_do_intersect(const Pgn1& pgn1, const Pgn2& pgn2) {
 template <typename InputIterator, typename Traits>
 inline bool r_do_polygon_intersect(InputIterator begin, InputIterator end, Traits& traits) {
   if (begin == end) return false;
-  General_polygon_set_2<Traits> gps(*begin, traits);
-  return gps.do_polygon_intersect(std::next(begin), end, traits);
+  General_polygon_set_2<Traits> gps;
+  return gps.do_polygon_intersect(begin, end, traits);
 }
 
 // General Polygon
