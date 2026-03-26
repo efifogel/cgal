@@ -49,27 +49,34 @@ inline bool s_do_intersect(const Pgn1& pgn1, const Pgn2& pgn2) {
 }
 
 // Single Range
-// With Traits
+// Polygon
 template <typename InputIterator, typename Traits>
-inline bool r_do_intersect(InputIterator begin, InputIterator end,
-                           Traits& traits, std::size_t k = 5) {
+inline bool r_do_polygon_intersect(InputIterator begin, InputIterator end, Traits& traits) {
+  if (begin == end) return false;
+  General_polygon_set_2<Traits> gps(*begin, traits);
+  return gps.do_polygon_intersect(std::next(begin), end, traits);
+}
+
+// General Polygon
+template <typename InputIterator, typename Traits>
+inline bool r_do_intersect(InputIterator begin, InputIterator end, Traits& traits, std::size_t k = 5) {
   if (begin == end) return false;
   General_polygon_set_2<Traits> gps(*begin, traits);
   return gps.do_intersect(std::next(begin), end, k);
 }
 
-// Without Traits
-template <typename InputIterator>
-inline bool r_do_intersect(InputIterator begin, InputIterator end,
-                           std::size_t k = 5) {
-  using Pgn = typename std::iterator_traits<InputIterator>::value_type;
-  typename Gps_polyline_traits<Pgn>::Traits traits;
-  const typename Gps_polyline_traits<Pgn>::Polyline_traits& ptraits(traits);
-  return r_do_intersect(convert_polygon_iterator(begin, ptraits),
-                        convert_polygon_iterator(end, ptraits), traits, k);
-}
+// // Without Traits
+// template <typename InputIterator>
+// inline bool r_do_intersect(InputIterator begin, InputIterator end, std::size_t k = 5) {
+//   std::cout << "XXXXXXX without\n";
+//   using Pgn = typename std::iterator_traits<InputIterator>::value_type;
+//   typename Gps_polyline_traits<Pgn>::Traits traits;
+//   const typename Gps_polyline_traits<Pgn>::Polyline_traits& ptraits(traits);
+//   return r_do_intersect(convert_polygon_iterator(begin, ptraits),
+//                         convert_polygon_iterator(end, ptraits), traits, k);
+// }
 
-// Souble Range
+// Double Range
 // With Traits
 template <typename InputIterator1, typename InputIterator2, typename Traits>
 inline bool r_do_intersect(InputIterator1 begin1, InputIterator1 end1,
@@ -182,7 +189,7 @@ inline OutputIterator r_intersection(InputIterator begin, InputIterator end,
                         convert_polygon_back(oi, *begin), traits, k);
 }
 
-// Souble Range
+// Double Range
 // With Traits
 template <typename InputIterator1, typename InputIterator2,
           typename OutputIterator, typename Traits>

@@ -15,9 +15,13 @@
 #ifndef CGAL_GPS_ON_SURFACE_BASE_2_H
 #define CGAL_GPS_ON_SURFACE_BASE_2_H
 
-#include <algorithm>
-
 #include <CGAL/license/Boolean_set_operations_2.h>
+
+/*! \file
+ */
+
+#include <algorithm>
+#include <unordered_map>
 
 #include <CGAL/disable_warnings.h>
 
@@ -38,7 +42,10 @@
 #include <CGAL/Boolean_set_operations_2/Gps_merge.h>
 #include <CGAL/Boolean_set_operations_2/Gps_polygon_simplifier.h>
 #include <CGAL/Boolean_set_operations_2/Ccb_curve_iterator.h>
+#include <CGAL/Boolean_set_operations_2/Do_polygon_intersect_visitor.h>
+#include <CGAL/Boolean_set_operations_2/Do_polygon_intersect_surface_sweep_2.h>
 #include <CGAL/Union_find.h>
+#include <CGAL/Surface_sweep_2/Surface_sweep_2_utils.h>
 
 /*! \file Gps_on_surface_base_2.h
  * \brief  A class that allows Boolean set operations.
@@ -486,21 +493,107 @@ protected:
   }
 
 public:
-  //
+  //!
   bool is_valid() { return _is_valid(*this->m_arr); }
 
-  // obtains the simple polygons, takes O(n)
+  //! obtains the simple polygons, takes O(n)
   template <typename OutputIterator>
   OutputIterator polygons_with_holes(OutputIterator out) const;
 
-  // tests for intersection of a range of polygons
+// Helper for Simple Polygons
+  template <typename Polygon, typename XCurve, typename Map, typename Traits>
+  void _append_curves_with_status(const Polygon& p, std::vector<XCurve>& xcvs, Map& is_upper_map,
+                                  const Traits& traits) {
+    auto comp_xy = traits.compare_endpoints_xy_2_object();
+    for (auto cit = p.curves_begin(); cit != p.curves_end(); ++cit) {
+      const XCurve& xcv = *cit;
+      xcvs.push_back(xcv);
+
+      // If source > target, it is Right-to-Left.
+      // Since the interior is to the left, 'below' is contained.
+      // CGAL::LARGER indicates the first point (source) is lexicographically greater.
+      is_upper_map[xcv] = (comp_xy(xcv) == CGAL::LARGER);
+    }
+  }
+
+  // Helper for Polygons with Holes
+  template <typename PolygonWithHoles, typename XCurve, typename Map, typename Traits>
+  void _append_curves_with_status(const PolygonWithHoles& pwh, std::vector<XCurve>& xcvs, Map& is_upper_map,
+                                  const Traits& traits) {
+    // 1. Process the outer boundary
+    if (!pwh.is_unbounded()) {
+      _append_curves_with_status(pwh.outer_boundary(), xcvs, is_upper_map, traits);
+    }
+
+    // 2. Process each hole
+    // Note: In CGAL, hole boundaries are oriented such that the interior
+    // (the polygon area) is still to the left of the curve.
+    for (auto hit = pwh.holes_begin(); hit != pwh.holes_end(); ++hit) {
+      _append_curves_with_status(*hit, xcvs, is_upper_map, traits);
+    }
+  }
+
+  //! tests for intersection of a range of polygons
+  template <typename InputIterator, typename Traits>
+  bool do_polygon_intersect(InputIterator begin, InputIterator end, const Traits& traits) {
+    //XXXX
+    using Visitor = Do_polygon_intersect_visitor<Traits>;
+    using Surface_sweep = Do_polygon_intersect_surface_sweep_2<Visitor>;
+    Visitor visitor;
+    Surface_sweep surface_sweep(&traits, &visitor);
+    using X_monotone_curve_2 = typename Traits::X_monotone_curve_2;
+    std::vector<X_monotone_curve_2> xcvs;
+    std::unordered_map<X_monotone_curve_2, bool> is_upper_map;
+    // 1. Collect x-monotone curves from the current object's arrangement
+    // Iterate over the edges of the underlying arrangement (m_arr)
+    for (auto eit = this->m_arr.edges_begin(); eit != this->m_arr.edges_end(); ++eit) {
+      // Access one of the halfedges of the current edge
+      auto he = eit;
+
+      bool left_contained = he->face()->contained();
+      bool right_contained = he->twin()->face()->contained();
+
+      // Only consider curves that actually bound the interior
+      if (left_contained == right_contained) continue; // \todo replace with assertion?
+
+      const X_monotone_curve_2& xcv = he->curve();
+      xcvs.push_back(xcv);
+
+      bool below_is_contained = false;
+
+      // Direct check of halfedge orientation
+      if (he->direction() == CGAL::ARR_LEFT_TO_RIGHT) {
+        // Left of a L-to-R halfedge is ABOVE.
+        // Therefore, the face BELOW is the twin's incident face.
+        below_is_contained = right_contained;
+      }
+      else {
+        // he->direction() == CGAL::ARR_RIGHT_TO_LEFT
+        // Left of a R-to-L halfedge is BELOW.
+        below_is_contained = left_contained;
+      }
+
+      // A curve is an upper boundary if the contained area is BELOW it.
+      is_upper_map[cv] = below_is_contained;
+    }
+
+    // 2. Collect x-monotone curves from the input range [begin, end)
+    for (auto it = begin; it != end; ++it) {
+      _append_curves_with_status(*it, xcvs, is_upper_map, traits);
+    }
+
+    surface_sweep.do_intersect_sweep(xcvs.begin(), xcvs.end());
+    return visitor.do_intersect();
+  }
+
+  //! tests for intersection of a range of general polygons
   template <typename InputIterator>
   bool do_intersect(InputIterator begin, InputIterator end, std::size_t k = 5) {
     Self other(*this);
     return other._do_intersect(begin, end, k);
   }
 
-  // intersects a range of polygons
+  //! tests for intersection of a range of general polygons
   template <typename InputIterator>
   inline bool _do_intersect(InputIterator begin, InputIterator end, std::size_t k) {
     // m_vertices = new Vertices;

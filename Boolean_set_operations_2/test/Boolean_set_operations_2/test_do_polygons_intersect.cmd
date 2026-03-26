@@ -1,0 +1,11 @@
+data/do_intersect/polygons/test01.txt
+data/do_intersect/polygons/test02.txt
+data/do_intersect/polygons/test03.txt
+data/do_intersect/polygons/test04.txt
+data/do_intersect/polygons/test05.txt
+data/do_intersect/polygons/test06.txt
+data/do_intersect/polygons/test07.txt
+data/do_intersect/polygons/test08.txt
+data/do_intersect/polygons/test09.txt
+data/do_intersect/polygons/test10.txt
+data/do_intersect/polygons/test11.txt
