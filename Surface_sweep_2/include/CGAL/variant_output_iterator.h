@@ -21,7 +21,7 @@
  * Designed to replace `boost::function_output_iterator` when the algorithm emits
  * heterogeneous output (e.g., `Point_2` or `X_monotone_curve_2`).
  *
- * Many \cgal concepts (e.g., `AosTraits::MakeXMonotone_2`) require an operation that writes
+ * Several \cgal concepts (e.g., `AosTraits::MakeXMonotone_2`) require an operation that writes
  * results to an `OutputIterator` whose value type is:
  *
  * `std::variant<T1, T2, ...>`
@@ -31,22 +31,27 @@
  * 2. Visitors (operator()) are invoked after assignment
  * 3. \cgal freely copies, assigns, and default-constructs output iterators
  * `variant_output_iterator` bridges this gap.
+ *
+ * The callables passed to `make_variant_output_iterator` must appear in the
+ * same order as the alternatives of `Variant`.
  */
 
 #include <variant>
 #include <iterator>
 #include <utility>
 
+#include <CGAL/assertions.h>
+
 namespace CGAL {
-namespace detail {
 
-template <class... Fs> struct overloaded : Fs... { using Fs::operator()...; };
+/* A compatible output iterator that accepts a `std::variant` and dispatches
+ * its alternatives to different sinks via per-index callables.
+ *
+ * The callables passed to `make_variant_output_iterator` must appear in the
+ * same order as the alternatives of `Variant`.
+ */
 
-template <class... Fs> overloaded(Fs...) -> overloaded<Fs...>;
-
-} // namespace detail
-
-template <typename Variant, typename Visitor>
+template <typename Variant, typename F0, typename F1>
 class variant_output_iterator {
 public:
   using value_type        = void;
@@ -55,46 +60,40 @@ public:
   using pointer           = void;
   using reference         = void;
 
-  /// Required by CGAL
   variant_output_iterator() = default;
 
-  explicit variant_output_iterator(Visitor visitor) : visitor_(std::move(visitor)) {}
+  variant_output_iterator(F0 f0, F1 f1) : m_f0(std::move(f0)), m_f1(std::move(f1)) {}
 
-  // Now ALWAYS copyable & assignable
   variant_output_iterator(const variant_output_iterator&) = default;
   variant_output_iterator& operator=(const variant_output_iterator&) = default;
 
-  variant_output_iterator& operator*()     { return *this; }
-  variant_output_iterator& operator++()    { return *this; }
+  variant_output_iterator& operator*() { return *this; }
+  variant_output_iterator& operator++() { return *this; }
   variant_output_iterator& operator++(int) { return *this; }
 
-  // Manual dispatch is often 1-2% faster for 2-3 types
-  // because it avoids the function pointer overhead of std::visit.
-
-  // Efficient assignment for L-values
   variant_output_iterator& operator=(const Variant& v) {
-    if (v.index() == 0) visitor_(std::get<0>(v));
-    else if (v.index() == 1) visitor_(std::get<1>(v));
-    else std::visit(visitor_, v); // Fallback for safety/more types
+    if (v.index() == 0) [[likely]] m_f0(std::get<0>(v));
+    else if (v.index() == 1) m_f1(std::get<1>(v));
+    else CGAL_error();
     return *this;
   }
 
-  // Efficient assignment for R-values (Moves)
   variant_output_iterator& operator=(Variant&& v) {
-    if (v.index() == 0) visitor_(std::get<0>(std::move(v)));
-    else if (v.index() == 1) visitor_(std::get<1>(std::move(v)));
-    else std::visit(visitor_, std::move(v));
+    if (v.index() == 0) [[likely]] m_f0(std::get<0>(std::move(v)));
+    else if (v.index() == 1) m_f1(std::get<1>(std::move(v)));
+    else CGAL_error();
     return *this;
   }
 
 private:
-  Visitor visitor_;
+  F0 m_f0;
+  F1 m_f1;
 };
 
-template <typename Variant, typename... Fs>
-auto make_variant_output_iterator(Fs&&... fs) {
-  auto visitor = detail::overloaded{std::forward<Fs>(fs)...};
-  return variant_output_iterator<Variant, decltype(visitor)>(std::move(visitor));
+template <typename Variant, typename F0, typename F1>
+auto make_variant_output_iterator(F0&& f0, F1&& f1) {
+  return variant_output_iterator<Variant, std::decay_t<F0>, std::decay_t<F1>>(std::forward<F0>(f0),
+                                                                              std::forward<F1>(f1));
 }
 
 } // namespace CGAL

@@ -49,9 +49,20 @@ void make_x_monotone(CurveInputIterator begin, CurveInputIterator end,
   using Point_2 = typename Traits::Point_2;
   using X_monotone_curve_2 = typename Traits::X_monotone_curve_2;
   using Variant = std::variant<Point_2, X_monotone_curve_2>;
-  auto out =
-    CGAL::make_variant_output_iterator<Variant>(std::function([it_pt](const Point_2& pt) mutable { *it_pt++ = pt; }),
-                                                std::function([it_xcv](const X_monotone_curve_2& xcv) mutable { *it_xcv++ = xcv; }));
+
+  /* In case you wonder, the `std::forward<decltype(pt)>`, which precedes the arguments in the statement below,
+   * saves the need to doemploy the much more verbose call:
+   * `auto out = CGAL::make_variant_output_iterator<Variant>
+   *    ([&it_pt] (const Point_2& pt){ *it_pt++  = pt; },
+   *     [&it_pt] (Point_2&& pt){ *it_pt++  = std::move(pt); },
+   *     [&it_xcv](const X_monotone_curve_2& xcv){ *it_xcv++ = xcv; },
+   *     [&it_xcv](X_monotone_curve_2&& xcv){ *it_xcv++ = std::move(xcv); });
+   * and, naturally, the corresponding changes requires to `make_variant_output_iterator`
+   * to accept 4 callables, and to `variant_output_iterator` to store 4 of them.
+   */
+  auto out = CGAL::make_variant_output_iterator<Variant>
+    ([&it_pt] (auto&& pt) { *it_pt++ = std::forward<decltype(pt)>(pt); },
+     [&it_xcv](auto&& xcv) { *it_xcv++ = std::forward<decltype(xcv)>(xcv); });
   auto mk_x_monotone = traits.make_x_monotone_2_object();
   for (auto it = begin; it != end; ++it) mk_x_monotone(*it, out);
 }
