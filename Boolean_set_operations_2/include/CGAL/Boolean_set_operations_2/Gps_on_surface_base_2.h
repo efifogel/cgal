@@ -297,10 +297,7 @@ public:
   bool do_intersect(const Self& other) const {
     if (this->is_empty() || other.is_empty()) return false;
     if (this->is_plane() || other.is_plane()) return true;
-    Aos_2 res_arr;
-    Gps_do_intersect_functor<Aos_2> func;
-    if (do_intersect_overlay(*m_arr, *(other.m_arr), res_arr, func)) return true;
-    return func.found_reg_intersection();
+    return do_intersect_overlay(*m_arr, *(other.m_arr));
   }
 
   // intersects with a simple polygon

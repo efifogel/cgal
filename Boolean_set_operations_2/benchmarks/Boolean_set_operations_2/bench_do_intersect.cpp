@@ -27,22 +27,22 @@
 // Type Definitions
 // -----------------------------------------------------------------------------
 
-using Exact_kernel   = CGAL::Exact_predicates_exact_constructions_kernel;
+using Exact_kernel = CGAL::Exact_predicates_exact_constructions_kernel;
 using Inexact_Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
-using Kernel         = Exact_kernel;
-using Point_2        = Kernel::Point_2;
-using Polygon_2      = CGAL::Polygon_2<Kernel>;
-using Polygon_wh_2   = CGAL::Polygon_with_holes_2<Kernel>;
+using Kernel = Exact_kernel;
+using Point_2 = Kernel::Point_2;
+using Polygon_2 = CGAL::Polygon_2<Kernel>;
+using Polygon_wh_2 = CGAL::Polygon_with_holes_2<Kernel>;
 
-using Circ_Kernel          = CGAL::Exact_circular_kernel_2;
-using Gps_Traits           = CGAL::Gps_circle_segment_traits_2<Circ_Kernel>;
-using General_Polygon_2    = Gps_Traits::Polygon_2;
+using Circ_Kernel = CGAL::Exact_circular_kernel_2;
+using Gps_Traits = CGAL::Gps_circle_segment_traits_2<Circ_Kernel>;
+using General_Polygon_2 = Gps_Traits::Polygon_2;
 using General_Polygon_wh_2 = Gps_Traits::Polygon_with_holes_2;
-using X_monotone_curve_2   = Gps_Traits::X_monotone_curve_2;
-using Traits_Point_2       = Gps_Traits::Point_2;
-using CoordNT              = Traits_Point_2::CoordNT;
-using Kernel_Point_2       = Circ_Kernel::Point_2;
-using Circle_2             = Circ_Kernel::Circle_2;
+using X_monotone_curve_2 = Gps_Traits::X_monotone_curve_2;
+using Traits_Point_2 = Gps_Traits::Point_2;
+using CoordNT = Traits_Point_2::CoordNT;
+using Kernel_Point_2 = Circ_Kernel::Point_2;
+using Circle_2 = Circ_Kernel::Circle_2;
 
 // -----------------------------------------------------------------------------
 // Benchmark Statistics and Chrono Harness
@@ -371,12 +371,14 @@ int main(int argc, char* argv[]) {
     pwh_pwh_pairs.insert(pwh_pwh_pairs.end(), batch.begin(), batch.end());
   }
 
-  std::size_t i = 0;
-  for (const auto& pair : pwh_pwh_pairs) {
-    CGAL::Graphics_scene scene_pwh;
-    CGAL::add_to_graphics_scene(pair.first, scene_pwh);
-    CGAL::add_to_graphics_scene(pair.second, scene_pwh);
-    CGAL::draw_graphics_scene(scene_pwh, std::to_string(i++).c_str());
+  if (false) {
+    std::size_t i = 0;
+    for (const auto& pair : pwh_pwh_pairs) {
+      CGAL::Graphics_scene scene_pwh;
+      CGAL::add_to_graphics_scene(pair.first, scene_pwh);
+      CGAL::add_to_graphics_scene(pair.second, scene_pwh);
+      CGAL::draw_graphics_scene(scene_pwh, std::to_string(i++).c_str());
+    }
   }
 
   // 4-6. Linear Sets (Mix of concentric, overlapping, and disjoint polygons)
