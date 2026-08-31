@@ -52,7 +52,7 @@ inline bool do_regularized_overlap(const Bbox& b1, const Bbox& b2)
 template <typename GeometryTraitsA_2, typename GeometryTraitsB_2, typename TopologyTraitsA, typename TopologyTraitsB>
 bool do_intersect_overlay(const Arrangement_on_surface_2<GeometryTraitsA_2, TopologyTraitsA>& arr1,
                           const Arrangement_on_surface_2<GeometryTraitsB_2, TopologyTraitsB>& arr2) {
-  // // Quick bounding box rejection check
+  // // Quick bounding box rejection check. Can be (easily) applied only to (linear) polygons
   // if (! arr1.is_empty() && ! arr2.is_empty()) {
   //   auto bbox1 = arr1.bbox();
   //   auto bbox2 = arr2.bbox();
