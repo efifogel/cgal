@@ -187,8 +187,12 @@ public:
   static bool is_null(Point pt) { return std::isnan(pt.x()) || std::isnan(pt.y()); }
 };
 
-/*!
- * \brief Functor to construct a Point_2 from an Approximate_point_2.
+/*! \brief Functor to construct a Point_2 from an Approximate_point_2.
+ *
+ * \todo EF: This construct should be eliminated. Instead, a new concept that
+ * requires the construction of a point from an approximate point should be
+ * introduced and implemented accordingly. Observe that this is needed only for
+ * traits that supports unbounded curves (I think).
  *
  * \tparam Gt Geometry traits
  */
