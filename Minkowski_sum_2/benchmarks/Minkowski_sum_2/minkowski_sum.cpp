@@ -88,14 +88,14 @@ BenchmarkResult measure_method(const std::string& name, const Polygon_2& pgn1, c
 
 // --- Run all methods for a given test case and print as a matrix table ---
 void run_test_case(const std::string& case_name, const Polygon_2& pgn1, const Polygon_2& pgn2, int iterations) {
-  std::cout << "========================================================================================\n";
+  std::cout << "================================================================================\n";
   std::cout << "Test Case: " << case_name << " (Pgn1 Vertices: " << pgn1.size() << ", Pgn2 Vertices: " << pgn2.size() << ")\n";
-  std::cout << "========================================================================================\n";
+  std::cout << "================================================================================\n";
   std::cout << std::left << std::setw(38) << "Method"
             << std::right << std::setw(12) << "Outer Verts"
             << std::setw(10) << "Holes"
             << std::setw(16) << "Avg Time (ms)" << "\n";
-  std::cout << "----------------------------------------------------------------------------------------\n";
+  std::cout << "--------------------------------------------------------------------------------\n";
 
   std::vector<BenchmarkResult> results;
 
