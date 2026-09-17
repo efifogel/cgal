@@ -28,14 +28,14 @@ namespace CGAL {
 template <typename Traits_>
 class Arr_labeled_traits_2 : public Traits_ {
 private:
-  typedef Traits_                                       Base_traits_2;
-  typedef Arr_labeled_traits_2<Base_traits_2>           Traits;
+  using Base_traits_2 = Traits_;
+  using Traits = Arr_labeled_traits_2<Base_traits_2>;
 
-  typedef typename Base_traits_2::Point_2               Base_point_2;
-  typedef typename Base_traits_2::X_monotone_curve_2    Base_x_monotone_curve_2;
+  using Base_point_2 = typename Base_traits_2::Point_2;
+  using Base_x_monotone_curve_2 = typename Base_traits_2::X_monotone_curve_2;
 
 public:
-  typedef typename Base_traits_2::Multiplicity          Multiplicity;
+  using Multiplicity = typename Base_traits_2::Multiplicity;
 
   /*! \class
    * A point extended by a label.
@@ -60,7 +60,16 @@ public:
       m_label(label)
     {}
 
-    /*! Get the label. */
+    /*! Perfect forwarding.
+     */
+    template <typename... Args>
+    Point_2(Args... args) :
+      Base_point_2(std::forward<Args>(args)...),
+      m_label()
+    {}
+
+    /*! obtains the label.
+     */
     const Point_label& label() const { return (m_label); }
   };
 
@@ -82,8 +91,7 @@ public:
     {}
 
     /*! Constructor from an x-monotone curve an a label. */
-    X_monotone_curve_2(const Base_x_monotone_curve_2& p,
-                       const X_curve_label& label) :
+    X_monotone_curve_2(const Base_x_monotone_curve_2& p, const X_curve_label& label) :
       Base_x_monotone_curve_2(p),
       m_label(label)
     {}
@@ -95,25 +103,20 @@ public:
     X_curve_label& label() { return m_label; }
 
     /*! Set the label. */
-    void set_label(const X_curve_label& label)
-    {
-      m_label = label;
-      return;
-    }
+    void set_label(const X_curve_label& label) { m_label = label; }
   };
 
-  typedef typename Base_traits_2::Has_left_category      Has_left_category;
-  typedef Tag_false                                      Has_merge_category;
+  using Has_left_category = typename Base_traits_2::Has_left_category;
+  using Has_merge_category = Tag_false;
 
   /*! Default constructor. */
   Arr_labeled_traits_2() {}
 
   // Inherited functors:
-  typedef typename Base_traits_2::Is_vertical_2         Is_vertical_2;
-  typedef typename Base_traits_2::Compare_y_at_x_2      Compare_y_at_x_2;
-  typedef typename Base_traits_2::Compare_y_at_x_right_2
-                                                        Compare_y_at_x_right_2;
-  typedef typename Base_traits_2::Equal_2               Equal_2;
+  using Is_vertical_2 = typename Base_traits_2::Is_vertical_2;
+  using Compare_y_at_x_2 = typename Base_traits_2::Compare_y_at_x_2;
+  using Compare_y_at_x_right_2 = typename Base_traits_2::Compare_y_at_x_right_2;
+  using Equal_2 = typename Base_traits_2::Equal_2;
 
   /// \name Overridden functors.
   //@{
@@ -129,8 +132,7 @@ public:
   public:
     /*! Compare the x-coordinates of two points.
      */
-    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const
-    {
+    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const {
       // If two points have the same label, they are equal.
       if (p1.label() == p2.label()) return (EQUAL);
 
@@ -153,8 +155,7 @@ public:
   public:
     /*! Compare two points lexigoraphically: by x, then by y.
      */
-    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const
-    {
+    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const {
       // If two points have the same label, they are equal.
       if (p1.label() == p2.label()) return (EQUAL);
 
@@ -170,17 +171,14 @@ public:
     const Base_traits_2& m_base_traits;
 
     /*! Constructor. */
-    Construct_min_vertex_2(const Base_traits_2& base_tr) :
-      m_base_traits(base_tr)
-    {}
+    Construct_min_vertex_2(const Base_traits_2& base_tr) : m_base_traits(base_tr) {}
 
     friend Traits;
 
   public:
     /*! Obtain the left endpoint of the x-monotone curve.
      */
-    Point_2 operator()(const X_monotone_curve_2& cv) const
-    {
+    Point_2 operator()(const X_monotone_curve_2& cv) const {
       auto base_ctr_min_vertex = m_base_traits.construct_min_vertex_2_object();
       const Base_point_2& pt = base_ctr_min_vertex(cv);
 
@@ -190,12 +188,9 @@ public:
 
         return (Point_2 (pt, label));
       }
-      else if ((cv.label().right_count() == 0) &&
-               (cv.label().left_count() == 1))
-      {
+      else if ((cv.label().right_count() == 0) && (cv.label().left_count() == 1)) {
         // A curve directed from right to left:
-        Point_label label(cv.label().component(),
-                           cv.label().is_last() ? 0 : cv.label().index()+1);
+        Point_label label(cv.label().component(), cv.label().is_last() ? 0 : cv.label().index()+1);
 
         return (Point_2(pt, label));
       }
@@ -206,41 +201,32 @@ public:
   };
 
   /*! Get a Construct_min_vertex_2 functor object. */
-  Construct_min_vertex_2 construct_min_vertex_2_object () const
-  { return Construct_min_vertex_2(*this); }
+  Construct_min_vertex_2 construct_min_vertex_2_object () const { return Construct_min_vertex_2(*this); }
 
   class Construct_max_vertex_2 {
   private:
     const Base_traits_2& m_base_traits;
 
     /*! Constructor. */
-    Construct_max_vertex_2(const Base_traits_2& base_tr) :
-      m_base_traits(base_tr)
-    {}
+    Construct_max_vertex_2(const Base_traits_2& base_tr) : m_base_traits(base_tr) {}
 
     friend Traits;
 
   public:
-    /*! Obtain the right endpoint of the x-monotone curve.
+    /*! obtains the right endpoint of the x-monotone curve.
      */
-    Point_2 operator()(const X_monotone_curve_2& cv) const
-    {
+    Point_2 operator()(const X_monotone_curve_2& cv) const {
       auto base_ctr_max_vertex = m_base_traits.construct_max_vertex_2_object();
       const Base_point_2& pt = base_ctr_max_vertex(cv);
 
       if ((cv.label().right_count() == 1) && (cv.label().left_count() == 0)) {
         // A curve directed from left to right:
-        Point_label label(cv.label().component(),
-                          cv.label().is_last() ? 0 : cv.label().index()+1);
-
+        Point_label label(cv.label().component(), cv.label().is_last() ? 0 : cv.label().index()+1);
         return Point_2(pt, label);
       }
-      else if ((cv.label().right_count() == 0) &&
-               (cv.label().left_count() == 1))
-      {
+      else if ((cv.label().right_count() == 0) && (cv.label().left_count() == 1)) {
         // A curve directed from right to left:
         Point_label label(cv.label().component(), cv.label().index());
-
         return Point_2(pt, label);
       }
 
@@ -249,9 +235,8 @@ public:
     }
   };
 
-  /*! Get a Construct_max_vertex_2 functor object. */
-  Construct_max_vertex_2 construct_max_vertex_2_object () const
-  { return Construct_max_vertex_2(*this); }
+  /*! obtains a Construct_max_vertex_2 functor object. */
+  Construct_max_vertex_2 construct_max_vertex_2_object () const { return Construct_max_vertex_2(*this); }
 
   class Split_2 {
   private:
@@ -266,8 +251,7 @@ public:
     /*! Split a given x-monotone curve at a given point into two sub-curves.
      */
     void operator()(const X_monotone_curve_2& cv, const Point_2& p,
-                    X_monotone_curve_2& c1, X_monotone_curve_2& c2) const
-    {
+                    X_monotone_curve_2& c1, X_monotone_curve_2& c2) const {
       // Split the base curve into two.
       m_base_traits.split_2_object()(cv, p, c1, c2);
 
@@ -292,13 +276,9 @@ public:
      * given output iterator.
      */
     template <typename OutputIterator>
-    OutputIterator operator()(const X_monotone_curve_2& cv1,
-                              const X_monotone_curve_2& cv2,
-                              OutputIterator oi) const
-    {
-      typedef std::pair<Base_point_2, Multiplicity>     Intersection_base_point;
-      typedef std::variant<Intersection_base_point, Base_x_monotone_curve_2>
-                                                        Intersection_base_result;
+    OutputIterator operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, OutputIterator oi) const {
+      using Intersection_base_point = std::pair<Base_point_2, Multiplicity>;
+      using Intersection_base_result = std::variant<Intersection_base_point, Base_x_monotone_curve_2>;
 
       // In case the curves are adjacent in their curve sequence, we do
       // not have to compute their intersection (we already know that they
@@ -313,8 +293,7 @@ public:
 
       // Attach labels to the intersection objects.
       for (const auto& xection : xections) {
-        const Intersection_base_point* base_pt =
-          std::get_if<Intersection_base_point>(&xection);
+        const Intersection_base_point* base_pt = std::get_if<Intersection_base_point>(&xection);
 
         if (base_pt != nullptr) {
           // Attach an invalid label to an itersection point.
@@ -322,22 +301,20 @@ public:
           continue;
         }
 
-        const Base_x_monotone_curve_2* base_xcv =
-          std::get_if<Base_x_monotone_curve_2>(&xection);
+        const Base_x_monotone_curve_2* base_xcv = std::get_if<Base_x_monotone_curve_2>(&xection);
         CGAL_assertion(base_xcv != nullptr);
 
         // Attach a merged label to the overlapping curve.
-        *oi++ = X_monotone_curve_2(*base_xcv,
-                                   X_curve_label(cv1.label(),
-                                   cv2.label()));
+        *oi++ = X_monotone_curve_2(*base_xcv, X_curve_label(cv1.label(), cv2.label()));
       }
 
       return oi;
     }
   };
 
-  /*! Get an Intersect_2 functor object. */
+  /*! obtains an Intersect_2 functor object. */
   Intersect_2 intersect_2_object() const { return Intersect_2(*this); }
+
   //@}
 };
 

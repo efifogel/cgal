@@ -30,57 +30,53 @@ namespace CGAL {
 template <typename Kernel_, typename Container_>
 class Minkowski_sum_by_convolution_2 {
 public:
-  typedef Kernel_                                        Kernel;
-  typedef CGAL::Polygon_2<Kernel, Container_>            Polygon_2;
+  using Kernel = Kernel_;
+  using Polygon_2 = CGAL::Polygon_2<Kernel, Container_>;
 
 private:
   // Kernel types:
-  typedef typename Kernel::Point_2                       Point_2;
-  typedef typename Kernel::Vector_2                      Vector_2;
-  typedef typename Kernel::Direction_2                   Direction_2;
+  using Point_2 = typename Kernel::Point_2;
+  using Vector_2 = typename Kernel::Vector_2;
+  using Direction_2 = typename Kernel::Direction_2;
 
   // Kernel functors:
-  typedef typename Kernel::Equal_2                       Equal_2;
-  typedef typename Kernel::Construct_translated_point_2  Translate_point_2;
-  typedef typename Kernel::Construct_vector_2            Construct_vector_2;
-  typedef typename Kernel::Construct_direction_2         Construct_direction_2;
-  typedef typename Kernel::Construct_opposite_line_2     Opposite_line_2;
-  typedef typename Kernel::Orientation_2                 Compute_orientation_2;
-  typedef typename Kernel::Compare_xy_2                  Compare_xy_2;
-  typedef typename Kernel::Counterclockwise_in_between_2 Ccw_in_between_2;
+  using Equal_2 = typename Kernel::Equal_2;
+  using Translate_point_2 = typename Kernel::Construct_translated_point_2;
+  using Construct_vector_2 = typename Kernel::Construct_vector_2;
+  using Construct_direction_2 = typename Kernel::Construct_direction_2;
+  using Opposite_line_2 = typename Kernel::Construct_opposite_line_2;
+  using Compute_orientation_2 = typename Kernel::Orientation_2;
+  using Compare_xy_2 = typename Kernel::Compare_xy_2;
+  using Ccw_in_between_2 = typename Kernel::Counterclockwise_in_between_2;
 
   // Polygon-related types:
-  typedef typename Polygon_2::Vertex_circulator          Vertex_circulator;
-  typedef std::pair<Vertex_circulator, unsigned int>     Vertex_ref;
-  typedef std::pair<Vertex_ref, Vertex_ref>              Anchor;
-  typedef std::list<Anchor>                              Anchors_queue;
+  using Vertex_circulator = typename Polygon_2::Vertex_circulator;
+  using Vertex_ref = std::pair<Vertex_circulator, std::size_t>;
+  using Anchor = std::pair<Vertex_ref, Vertex_ref>;
+  using Anchors_queue = std::list<Anchor>;
 
   /*! \class
    * An auxiliary class for representing labels of convolved vertex pairs.
    */
   class Convolution_label {
   private:
-    unsigned int index1;       // Vertex index of the first polygon.
-    unsigned int index2;       // Vertex index of the second polygon.
-    unsigned int move_on;      // On which polygon do we move.
+    std::size_t index1;       // Vertex index of the first polygon.
+    std::size_t index2;       // Vertex index of the second polygon.
+    std::size_t move_on;      // On which polygon do we move.
 
   public:
     /*! Default constructor. */
     Convolution_label() : move_on(0) {}
 
     /*! Constructor with parameters. */
-    Convolution_label(unsigned int ind1, unsigned int ind2,
-                      unsigned int move) :
+    Convolution_label(std::size_t ind1, std::size_t ind2, std::size_t move) :
       index1(ind1),
       index2(ind2),
       move_on(move)
-    {
-      CGAL_precondition(move_on == 1 || move_on == 2);
-    }
+    { CGAL_precondition(move_on == 1 || move_on == 2); }
 
     /*! Less-then operator (for the usage of std::set). */
-    bool operator<(const Convolution_label& label) const
-    {
+    bool operator<(const Convolution_label& label) const {
       if (index1 < label.index1) return (true);
       else if (index1 > label.index1) return (false);
 
@@ -91,30 +87,30 @@ private:
     }
   };
 
-  typedef std::set<Convolution_label>                     Labels_set;
+  using Labels_set = std::set<Convolution_label>;
 
   // Traits-related types:
-  typedef Arr_segment_traits_2<Kernel>                    Segment_traits_2;
-  typedef Arr_labeled_traits_2<Segment_traits_2>          Traits_2;
+  using Segment_traits_2 = Arr_segment_traits_2<Kernel>;
+  using Traits_2 = Arr_labeled_traits_2<Segment_traits_2>;
 
-  typedef typename Segment_traits_2::X_monotone_curve_2   Segment_2;
-  typedef typename Traits_2::X_monotone_curve_2           Labeled_segment_2;
-  typedef std::list<Labeled_segment_2>                    Segments_list;
+  using Segment_2 = typename Segment_traits_2::X_monotone_curve_2;
+  using Labeled_segment_2 = typename Traits_2::X_monotone_curve_2;
+  using Segments_list = std::list<Labeled_segment_2>;
 
-  typedef Union_of_segment_cycles_2<Traits_2, Polygon_2>  Union_2;
+  using Union_2 = Union_of_segment_cycles_2<Traits_2, Polygon_2>;
 
   const Kernel* m_kernel;
   bool m_own_kernel;    // indicates whether the kernel should be freed up.
 
   // Data members:
-  Equal_2                 f_equal;
-  Translate_point_2       f_add;
-  Construct_vector_2      f_vector;
-  Construct_direction_2   f_direction;
-  Opposite_line_2         f_opp_line;
-  Compute_orientation_2   f_orientation;
-  Compare_xy_2            f_compare_xy;
-  Ccw_in_between_2        f_ccw_in_between;
+  Equal_2 f_equal;
+  Translate_point_2 f_add;
+  Construct_vector_2 f_vector;
+  Construct_direction_2 f_direction;
+  Opposite_line_2 f_opp_line;
+  Compute_orientation_2 f_orientation;
+  Compare_xy_2 f_compare_xy;
+  Ccw_in_between_2 f_ccw_in_between;
 
 public:
   // The pointer to the kernel and the flag that indicate ownership should be
@@ -152,8 +148,7 @@ public:
   { init(); }
 
   /*! Destructor */
-  ~Minkowski_sum_by_convolution_2()
-  {
+  ~Minkowski_sum_by_convolution_2() {
     if (m_own_kernel) {
       if (m_kernel != nullptr) {
         delete m_kernel;
@@ -164,8 +159,7 @@ public:
   }
 
   /*! Initialize. */
-  void init()
-  {
+  void init() {
     // Obtain kernel functors.
     f_equal = m_kernel->equal_2_object();
     f_add = m_kernel->construct_translated_point_2_object();
@@ -177,14 +171,12 @@ public:
     f_ccw_in_between = m_kernel->counterclockwise_in_between_2_object();
   }
 
-  /*!
-   * Obtain the kernel
+  /*! obtains the kernel
    * \return the kernel
    */
   const Kernel* kernel() const { return m_kernel; }
 
-  /*!
-   * Compute the Minkowski sum of two simple polygons.
+  /*! computes the Minkowski sum of two simple polygons.
    * Note that as the input polygons may not be convex, the Minkowski sum may
    * not be a simple polygon. The result is therefore represented as
    * the outer boundary of the Minkowski sum (which is always a simple polygon)
@@ -201,18 +193,16 @@ public:
    */
   template <typename OutputIterator>
   OutputIterator operator()(const Polygon_2& pgn1, const Polygon_2& pgn2,
-                            Polygon_2& sum_bound, OutputIterator sum_holes)
-    const
-  {
+                            Polygon_2& sum_bound, OutputIterator sum_holes) const {
     CGAL_precondition(pgn1.is_simple());
     CGAL_precondition(pgn2.is_simple());
 
     // Prepare the vector of directions for the first polygon.
-    const unsigned int n1 = static_cast<unsigned int>(pgn1.size());
+    const std::size_t n1 = static_cast<std::size_t>(pgn1.size());
     const bool forward1 = (pgn1.orientation() == COUNTERCLOCKWISE);
     std::vector<Direction_2> dirs1(n1);
     Vertex_circulator curr1, next1;
-    unsigned int k1;
+    std::size_t k1;
 
     next1 = curr1 = pgn1.vertices_circulator();
     for (k1 = 0; k1 < n1; ++k1) {
@@ -225,14 +215,14 @@ public:
 
     // Prepare the vector of directions for the second polygon.
     // Also prepare a list containing all reflex vertices of this polygon.
-    const unsigned int n2 = static_cast<unsigned int>(pgn2.size());
+    const std::size_t n2 = static_cast<std::size_t>(pgn2.size());
     const bool forward2 = (pgn2.orientation() == COUNTERCLOCKWISE);
     std::vector<Direction_2> dirs2(n2);
     Vertex_circulator prev2, curr2, next2;
     Vertex_ref bottom_left;
     // bool                      is_convex2 = true;
     std::list<Vertex_ref> reflex_vertices;
-    unsigned int k2;
+    std::size_t k2;
 
     prev2 = next2 = curr2 = pgn2.vertices_circulator();
 
@@ -243,10 +233,8 @@ public:
       if (forward2) ++next2;
       else --next2;
 
-      if (k2 == 0)
-        bottom_left = Vertex_ref(curr2, 0);
-      else if (f_compare_xy(*curr2, *(bottom_left.first)) == SMALLER)
-        bottom_left = Vertex_ref(curr2, k2);
+      if (k2 == 0) bottom_left = Vertex_ref(curr2, 0);
+      else if (f_compare_xy(*curr2, *(bottom_left.first)) == SMALLER) bottom_left = Vertex_ref(curr2, k2);
 
       if (f_orientation(*prev2, *curr2, *next2) == RIGHT_TURN) {
         // We found a reflex vertex.
@@ -260,22 +248,18 @@ public:
     }
 
     // Add the bottom-left vertex of the second polygon to the reflex vertices.
-    typename std::list<Vertex_ref>::iterator  reflex_it;
-
     reflex_vertices.push_front(bottom_left);
 
     // Construct the segments of the convolution cycles.
-    unsigned int curr_id = 0;
+    std::size_t curr_id = 0;
     Segments_list conv_segments;
     Segments_list cycle;
     Labels_set used_labels;
     Anchor anchor;
     Anchors_queue queue;
-    unsigned int loops;
+    std::size_t loops;
 
-    for (reflex_it = reflex_vertices.begin();
-         reflex_it != reflex_vertices.end(); ++reflex_it)
-    {
+    for (auto reflex_it = reflex_vertices.begin(); reflex_it != reflex_vertices.end(); ++reflex_it) {
       // Get the current reflex vertex (or the bottom-left vertex).
       next2 = curr2 = reflex_it->first;
       k2 = reflex_it->second;
@@ -291,33 +275,27 @@ public:
         else --next1;
 
         if ((used_labels.count(Convolution_label(k1, k2, 1)) == 0 &&
-             (f_ccw_in_between(dirs1[k1], dirs2[(n2 + k2 - 1) % n2],
-                               dirs2[k2]) ||
+             (f_ccw_in_between(dirs1[k1], dirs2[(n2 + k2 - 1) % n2], dirs2[k2]) ||
               f_equal(dirs1[k1], dirs2[k2]))) ||
             (used_labels.count(Convolution_label(k1, k2, 2)) == 0 &&
-             f_ccw_in_between(dirs2[k2], dirs1[(n1 + k1 - 1) % n1],
-                              dirs1[k1])))
-        {
+             f_ccw_in_between(dirs2[k2], dirs1[(n1 + k1 - 1) % n1], dirs1[k1]))) {
           // Construct the current convolution cycle.
+
           queue.clear();
-          queue.push_back(Anchor(Vertex_ref(curr1, k1),
-                                 Vertex_ref(curr2, k2)));
+          queue.push_back(Anchor(Vertex_ref(curr1, k1), Vertex_ref(curr2, k2)));
           loops = 0;
 
           while (! queue.empty()) {
             // Pop the first pair of anchor vertices from the queue.
             anchor = queue.front();
             queue.pop_front();
-            loops++;
+            ++loops;
 
             const Vertex_ref& vert1 = anchor.first;
             const Vertex_ref& vert2 = anchor.second;
 
-            if (loops > 0 &&
-                used_labels.count(Convolution_label(vert1.second,
-                                                    vert2.second, 2)) != 0)
-            {
-              loops--;
+            if (loops > 0 && used_labels.count(Convolution_label(vert1.second, vert2.second, 2)) != 0) {
+              --loops;
               continue;
             }
 
@@ -326,14 +304,10 @@ public:
             _convolution_cycle(curr_id,
                                n1, forward1, dirs1, vert1.first, vert1.second,
                                n2, forward2, dirs2, vert2.first, vert2.second,
-                               used_labels, queue,
-                               cycle);
-
+                               used_labels, queue, cycle);
             // Catenate the segments of the current loop to the convolution
             // list.
-            if (cycle.empty()) {
-              --loops;
-            }
+            if (cycle.empty()) --loops;
             else {
               conv_segments.splice(conv_segments.end(), cycle);
               CGAL_assertion(cycle.empty());
@@ -346,17 +320,13 @@ public:
     }
 
     // Compute the union of the cycles that represent the Minkowski sum.
-    Union_2     unite;
-
-    sum_holes = unite(conv_segments.begin(), conv_segments.end(),
-                      sum_bound, sum_holes);
-
+    Union_2 unite;
+    sum_holes = unite(conv_segments.begin(), conv_segments.end(), sum_bound, sum_holes);
     return (sum_holes);
   }
 
 private:
-  /*!
-   * Compute a convolution cycle starting from tow given vertices.
+  /*! computes a convolution cycle starting from two given vertices.
    * \param cycle_id The index of the current cycle.
    * \param n1 The size of the first polygon.
    * \param forward1 Whether we move forward or backward on this polygon.
@@ -370,26 +340,24 @@ private:
    * \param k2 The index of this vertex (between 0 and n2 - 1).
    * \param used_labels Input/output: The segment labels used so far.
    * \param queue A queue of anchor vertices for loops in the cycle.
-   * \param cycle Output: An list of labeled segments that constitute the
+   * \param cycle Output: A list of labeled segments that constitute the
    *                      convolution cycle.
    * \return A past-the-end iterator for the output segments.
    */
-  void _convolution_cycle(unsigned int cycle_id,
-                          unsigned int n1, bool forward1,
+  void _convolution_cycle(std::size_t cycle_id,
+                          std::size_t n1, bool forward1,
                           const std::vector<Direction_2>& dirs1,
-                          Vertex_circulator curr1, unsigned int k1,
-                          unsigned int n2, bool forward2,
+                          Vertex_circulator curr1, std::size_t k1,
+                          std::size_t n2, bool forward2,
                           const std::vector<Direction_2>& dirs2,
-                          Vertex_circulator curr2, unsigned int k2,
+                          Vertex_circulator curr2, std::size_t k2,
                           Labels_set& used_labels,
                           Anchors_queue& queue,
-                          Segments_list& cycle) const
-
-  {
+                          Segments_list& cycle) const {
     // Update the circulator pointing to the next vertices in both polygons.
-    unsigned int seg_index = 0;
-    const unsigned int first1 = k1;
-    const unsigned int first2 = k2;
+    std::size_t seg_index = 0;
+    const std::size_t first1 = k1;
+    const std::size_t first2 = k2;
     Vertex_circulator next1 = curr1;
     Vertex_circulator next2 = curr2;
     Convolution_label label;
@@ -415,8 +383,7 @@ private:
         inc1 = true;
 
         label = Convolution_label(k1, k2, 1);
-        if (used_labels.count(label) != 0)
-          inc1 = false;
+        if (used_labels.count(label) != 0) inc1 = false;
       }
 
       if (f_ccw_in_between(dirs2[k2], dirs1[(n1 + k1 - 1) % n1], dirs1[k1])) {
@@ -426,17 +393,13 @@ private:
           // second polygon (and proceed until reaching this point again and
           // closing the loop).
           label = Convolution_label(k1, k2, 2);
-          if (used_labels.count(label) == 0) {
-            queue.push_back(Anchor(Vertex_ref(curr1, k1),
-                                   Vertex_ref(curr2, k2)));
-          }
+          if (used_labels.count(label) == 0) queue.push_back(Anchor(Vertex_ref(curr1, k1), Vertex_ref(curr2, k2)));
         }
         else {
           inc2 = true;
 
           label = Convolution_label(k1, k2, 2);
-          if (used_labels.count(label) != 0)
-            inc2 = false;
+          if (used_labels.count(label) != 0) inc2 = false;
         }
       }
 
@@ -463,11 +426,9 @@ private:
         res = f_compare_xy(curr_pt, next_pt);
         CGAL_assertion(res != EQUAL);
 
-        cycle.push_back(Labeled_segment_2(Segment_2(curr_pt, next_pt),
-                                          X_curve_label((res == SMALLER),
-                                                        cycle_id,
-                                                        seg_index,
-                                                        MOVE_ON_1)));
+        Labeled_segment_2 labeled_seg(Segment_2(curr_pt, next_pt),
+                                      X_curve_label((res == SMALLER), cycle_id, seg_index, MOVE_ON_1));
+        cycle.push_back(labeled_seg);
         used_labels.insert(Convolution_label(k1, k2, 1));
         ++seg_index;
 
@@ -488,13 +449,11 @@ private:
         res = f_compare_xy(curr_pt, next_pt);
         CGAL_assertion(res != EQUAL);
 
-        cycle.push_back(Labeled_segment_2(Segment_2(curr_pt, next_pt),
-                                          X_curve_label((res == SMALLER),
-                                                        cycle_id,
-                                                        seg_index,
-                                                        MOVE_ON_2)));
+        Labeled_segment_2 labeled_seg(Segment_2(curr_pt, next_pt),
+                                      X_curve_label((res == SMALLER), cycle_id, seg_index, MOVE_ON_2));
+        cycle.push_back(labeled_seg);
         used_labels.insert(Convolution_label(k1, k2, 2));
-        seg_index++;
+        ++seg_index;
 
         // Proceed to the next vertex of the second polygon.
         curr2 = next2;
@@ -516,12 +475,10 @@ private:
     // different polygons.
     int steps = static_cast<int>(cycle.size());
 
-    while ((steps > 0) &&
-           cycle.front().label().get_flag() == cycle.back().label().get_flag())
-    {
+    while ((steps > 0) && cycle.front().label().get_flag() == cycle.back().label().get_flag()) {
       cycle.push_back(cycle.front());
       cycle.pop_front();
-      steps--;
+      --steps;
     }
 
     if (steps == 0) {
@@ -535,7 +492,7 @@ private:
     // polygon, we can safely remove it from the convolution cycle.
     typename std::list<Labeled_segment_2>::iterator  first, curr;
     bool move_on;
-    unsigned int count = 1;
+    std::size_t count = 1;
     bool reduced_cycle = false;
 
     curr = first = cycle.begin();
@@ -544,9 +501,7 @@ private:
     curr->label().set_flag(false);
     ++curr;
     while (curr != cycle.end()) {
-      if ((move_on == MOVE_ON_1 && count == n1) ||
-          (move_on == MOVE_ON_2 && count == n2))
-      {
+      if ((move_on == MOVE_ON_1 && count == n1) || (move_on == MOVE_ON_2 && count == n2)) {
         // We have discovered a sequence of moves on one of the polygon that
         // equals the polygon size, so we can remove this sequence.
         cycle.erase(first, curr);
@@ -570,9 +525,7 @@ private:
       ++curr;
     }
 
-    if ((move_on == MOVE_ON_1 && count == n1) ||
-        (move_on == MOVE_ON_2 && count == n2))
-    {
+    if ((move_on == MOVE_ON_1 && count == n1) || (move_on == MOVE_ON_2 && count == n2)) {
       cycle.erase(first, curr);
       reduced_cycle = true;
     }
@@ -611,12 +564,9 @@ private:
         res = f_compare_xy(curr_pt, next_pt);
 
         if (res != EQUAL) {
-          after_next = cycle.insert(curr,
-                       Labeled_segment_2(Segment_2(curr_pt, next_pt),
-                                         X_curve_label((res == SMALLER),
-                                                       cycle_id,
-                                                       curr->label().index(),
-                                                       false)));
+          Labeled_segment_2 labeled_seg(Segment_2(curr_pt, next_pt),
+                                        X_curve_label((res == SMALLER), cycle_id, curr->label().index(), false));
+          after_next = cycle.insert(curr, labeled_seg);
         }
 
         cycle.erase(curr);
@@ -633,24 +583,19 @@ private:
       }
       else {
         curr = next;
-        if (next != cycle.end()) {
-          ++next;
-        }
+        if (next != cycle.end()) ++next;
       }
-
     } while (! is_last);
 
     // In case we have reduced the cycle, re-number the segments in it.
     if (reduced_cycle) {
       seg_index = 0;
-      for (curr = cycle.begin(); curr != cycle.end(); ++curr)
-        curr->label().set_index(seg_index++);
+      for (curr = cycle.begin(); curr != cycle.end(); ++curr) curr->label().set_index(seg_index++);
     }
     cycle.back().label().set_flag(true);
-    return;
   }
 };
 
-} //namespace CGAL
+} // namespace CGAL
 
 #endif
