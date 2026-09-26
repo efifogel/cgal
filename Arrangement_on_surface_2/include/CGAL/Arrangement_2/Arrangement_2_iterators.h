@@ -15,7 +15,6 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-
 #include <functional>
 
 /*! \file
@@ -24,89 +23,72 @@
 
 namespace CGAL {
 
-/*!
- * \class
+// Arrangement handle types derive from the DCEL records but the DCEL
+// allocates the base records; the downcast below is formally UB but
+// layout-identical. See https://github.com/CGAL/cgal/issues/9140
+#if defined(__has_attribute)
+#  if __has_attribute(no_sanitize)
+#    define CGAL_AOS2_NO_SANITIZE_VPTR __attribute__((no_sanitize("vptr")))
+#  endif
+#endif
+#ifndef CGAL_AOS2_NO_SANITIZE_VPTR
+#  define CGAL_AOS2_NO_SANITIZE_VPTR
+#endif
+
+/*! \class
  * An iterator adaptor for dereferencing the value-type of the iterator class
  * (given as Iterator_), which is supposed to be a pointer, and handle it as
  * the value-type given by Value_.
  */
-template <class Iterator_, class Value_, class Diff_, class Category_>
-class I_Dereference_iterator
-{
+template <typename Iterator_, typename Value_, typename Diff_, typename Category_>
+class I_Dereference_iterator {
 public:
-
   // Type definitions:
-  typedef Iterator_                               Iterator;
-  typedef I_Dereference_iterator<Iterator_,
-                                 Value_,
-                                 Diff_,
-                                 Category_>       Self;
+  using Iterator = Iterator_;
 
-  typedef Category_                               iterator_category;
-  typedef Value_                                  value_type;
-  typedef value_type&                             reference;
-  typedef value_type*                             pointer;
-  typedef Diff_                                   difference_type;
+  using iterator_category = Category_;
+  using value_type = Value_;
+  using reference = value_type&;
+  using pointer = value_type*;
+  using difference_type = Diff_;
+
+  using Self = I_Dereference_iterator<Iterator, value_type, difference_type, iterator_category>;
 
 protected:
 
-  Iterator        iter;           // The internal iterator.
+  Iterator iter;           // The internal iterator.
 
 public:
-
   /// \name Construction
   //@{
-  I_Dereference_iterator ()
-  {}
+  I_Dereference_iterator() {}
 
-  I_Dereference_iterator (Iterator it) :
-    iter(it)
-  {}
+  I_Dereference_iterator(Iterator it) : iter(it) {}
   //@}
 
   /// \name Basic operations.
   //@{
-  bool operator== (const Self& it) const
-  {
-    return (iter == it.iter);
-  }
+  bool operator==(const Self& it) const { return (iter == it.iter); }
 
-  bool operator!= (const Self& it) const
-  {
-    return (!(iter == it.iter));
-  }
+  bool operator!=(const Self& it) const { return (!(iter == it.iter)); }
 
-  Iterator current_iterator () const
-  {
-    return (iter);
-  }
+  Iterator current_iterator() const { return (iter); }
 
-  pointer ptr () const
-  {
-    return (static_cast<value_type *> (*iter));
-  }
+  pointer ptr() const { return (static_cast<value_type*>(*iter)); }
 
-  reference operator* () const
-  {
-    return (*(ptr()));
-  }
+  reference operator*() const { return (*(ptr())); }
 
-  pointer operator-> () const
-  {
-    return (ptr());
-  }
+  pointer operator->() const { return (ptr()); }
   //@}
 
   /// \name Incremernt operations (forward category).
   //@{
-  Self& operator++()
-  {
+  Self& operator++() {
     ++iter;
     return (*this);
   }
 
-  Self operator++ (int )
-  {
+  Self operator++(int) {
     Self tmp = *this;
     ++iter;
     return (tmp);
@@ -115,14 +97,12 @@ public:
 
   /// \name Decremernt operations (bidirectional category).
   //@{
-  Self& operator-- ()
-  {
+  Self& operator--() {
     --iter;
     return (*this);
   }
 
-  Self operator-- (int )
-  {
+  Self operator--(int) {
     Self tmp = *this;
     --iter;
     return (tmp);
@@ -130,97 +110,62 @@ public:
   //@}
 };
 
-/*!
- * \class
+/*! \class
  * An iterator adaptor for dereferencing the value-type of the const iterator
  * class (given as CIterator_), which is supposed to be a pointer, and handle
  * it as the value-type given by Value_.
  */
-template <class CIterator_, class MIterator_,
-          class Value_, class Diff_, class Category_>
-class I_Dereference_const_iterator
-{
+template <typename CIterator_, typename MIterator_, typename Value_, typename Diff_, typename Category_>
+class I_Dereference_const_iterator {
 public:
-
   // Type definitions:
-  typedef CIterator_                              Const_iterator;
-  typedef MIterator_                              Mutable_iterator;
-  typedef I_Dereference_const_iterator<CIterator_,
-                                       MIterator_,
-                                       Value_,
-                                       Diff_,
-                                       Category_> Self;
+  using Const_iterator = CIterator_;
+  using Mutable_iterator = MIterator_;
+  using Self = I_Dereference_const_iterator<CIterator_, MIterator_, Value_, Diff_, Category_>;
 
-  typedef Category_                               iterator_category;
-  typedef Value_                                  value_type;
-  typedef const value_type&                       reference;
-  typedef const value_type*                       pointer;
-  typedef Diff_                                   difference_type;
+  using iterator_category = Category_;
+  using value_type = Value_;
+  using reference = const value_type&;
+  using pointer = const value_type*;
+  using difference_type = Diff_;
 
 protected:
-
-  Const_iterator        iter;           // The internal iterator.
+  Const_iterator iter;           // The internal iterator.
 
 public:
-
   /// \name Construction
   //@{
-  I_Dereference_const_iterator ()
-  {}
+  I_Dereference_const_iterator() {}
 
-  I_Dereference_const_iterator (Const_iterator it) :
-    iter(it)
-  {}
+  I_Dereference_const_iterator(Const_iterator it) : iter(it) {}
 
-  I_Dereference_const_iterator (Mutable_iterator it) :
-    iter (Const_iterator (&(*it)))
-  {}
+  I_Dereference_const_iterator(Mutable_iterator it) : iter(Const_iterator(&(*it))) {}
 
   //@}
 
   /// \name Basic operations.
   //@{
-  bool operator== (const Self& it) const
-  {
-    return (iter == it.iter);
-  }
+  bool operator==(const Self& it) const { return (iter == it.iter); }
 
-  bool operator!= (const Self& it) const
-  {
-    return (!(iter == it.iter));
-  }
+  bool operator!=(const Self& it) const { return (iter != it.iter); }
 
-  Const_iterator current_iterator () const
-  {
-    return (iter);
-  }
+  Const_iterator current_iterator() const { return (iter); }
 
-  pointer ptr () const
-  {
-    return (static_cast<const value_type *> (*iter));
-  }
+  pointer ptr() const { return (static_cast<const value_type*>(*iter)); }
 
-  reference operator* () const
-  {
-    return (*(ptr()));
-  }
+  reference operator*() const { return (*(ptr())); }
 
-  pointer operator-> () const
-  {
-    return (ptr());
-  }
+  pointer operator->() const { return (ptr()); }
   //@}
 
   /// \name Incremernt operations (forward category).
   //@{
-  Self& operator++()
-  {
+  Self& operator++() {
     ++iter;
     return (*this);
   }
 
-  Self operator++ (int )
-  {
+  Self operator++(int) {
     Self tmp = *this;
     ++iter;
     return (tmp);
@@ -229,14 +174,12 @@ public:
 
   /// \name Decremernt operations (bidirectional category).
   //@{
-  Self& operator-- ()
-  {
+  Self& operator--() {
     --iter;
     return (*this);
   }
 
-  Self operator-- (int )
-  {
+  Self operator--(int) {
     Self tmp = *this;
     --iter;
     return (tmp);
@@ -244,334 +187,209 @@ public:
   //@}
 };
 
-/*!
- * \class
+/*! \class
  * An iterator adaptor for the filtering a DCEL iterator (given as Iterator_)
  * using a given filter functor (Filter_).
  */
-template <class Iterator_, class Filter_,
-          class Value_, class Diff_, class Category_>
-class I_Filtered_iterator
-{
+template <typename Iterator_, typename Filter_, typename Value_, typename Diff_, typename Category_>
+class I_Filtered_iterator {
 public:
+  using Iterator = Iterator_;
+  using Filter = Filter_;
 
-  typedef Iterator_                       Iterator;
-  typedef Filter_                         Filter;
-  typedef I_Filtered_iterator<Iterator_,
-                              Filter_,
-                              Value_,
-                              Diff_,
-                              Category_>  Self;
+  using iterator_category = Category_;
+  using value_type = Value_;
+  using reference = value_type&;
+  using pointer = value_type*;
+  using difference_type = Diff_;
 
-  typedef Category_                       iterator_category;
-  typedef Value_                          value_type;
-  typedef value_type&                     reference;
-  typedef value_type*                     pointer;
-  typedef Diff_                           difference_type;
+  using Self = I_Filtered_iterator<Iterator, Filter, value_type, difference_type, iterator_category>;
 
 protected:
-
-  Iterator        nt;       // The internal iterator (this member should not
-                            // be renamed in order to comply with the
-                            // HalfedgeDS circulators that refer to it).
-  Iterator        iend;     // A past-the-end iterator.
-  Filter          filt;     // The filter functor.
+  Iterator nt;          // The internal iterator (this member should not
+                        // be renamed in order to comply with the
+                        // HalfedgeDS circulators that refer to it).
+  Iterator iend;        // A past-the-end iterator.
+  Filter filt;          // The filter functor.
 
 public:
-
   /*! Constructors. */
-  I_Filtered_iterator()
-  {}
+  I_Filtered_iterator() {}
 
-  I_Filtered_iterator (Iterator it) :
-    nt (it),
-    iend (nt)
-  {}
+  I_Filtered_iterator(Iterator it) : nt(it), iend(nt) {}
 
   template <typename T>
-  I_Filtered_iterator (T* p) :
-    nt (pointer(p)),
-    iend (nt)
-  {}
+  I_Filtered_iterator(T* p) : nt(p), iend(nt) {}
 
-  I_Filtered_iterator (Iterator it, Iterator end) :
-    nt (it),
-    iend (end)
-  {
-    while (nt != iend && ! filt (*nt))
-      ++nt;
-  }
+  I_Filtered_iterator(Iterator it, Iterator end) :
+    nt(it),
+    iend(end)
+  { while (nt != iend && ! filt(*nt)) ++nt; }
 
-  I_Filtered_iterator (Iterator it, Iterator end, Filter f) :
-    nt (it),
-    iend (end),
-    filt (f)
-  {
-    while (nt != iend && ! filt (*nt))
-      ++nt;
-  }
+  I_Filtered_iterator(Iterator it, Iterator end, Filter f) :
+    nt(it),
+    iend(end),
+    filt(f)
+  { while (nt != iend && ! filt(*nt)) ++nt; }
 
   template <typename P>
-  I_Filtered_iterator& operator= (const P* p)
-  {
+  I_Filtered_iterator& operator=(const P* p) {
     nt = pointer(p);
     iend =nt;
     return *this;
   }
 
   /*! Access operations. */
-  Iterator current_iterator() const
-  {
-    return (nt);
-  }
+  Iterator current_iterator() const { return (nt); }
 
-  Iterator past_the_end () const
-  {
-    return (iend);
-  }
+  Iterator past_the_end() const { return (iend); }
 
-  Filter filter () const
-  {
-    return (filt);
-  }
+  Filter filter() const { return (filt); }
 
-  pointer ptr() const
-  {
-    return static_cast<pointer>(&(*nt));
-  }
+  CGAL_AOS2_NO_SANITIZE_VPTR
+  pointer ptr() const { return static_cast<pointer>(&(*nt)); }
 
   /*! Equality operators. */
-  bool operator== (const Self& it) const
-  {
-    return (nt == it.nt);
-  }
+  bool operator==(const Self& it) const { return (nt == it.nt); }
 
-  bool operator!= (const Self& it) const
-  {
-    return !(*this == it);
-  }
+  bool operator!=(const Self& it) const { return !(*this == it); }
 
-  bool operator< (const Self& it) const
-  {
-    return &(**this) < (&*it);
-  }
+  bool operator<(const Self& it) const { return &(**this) < (&*it); }
 
   /*! Dereferencing operators. */
-  reference operator*() const
-  {
-    return (*(ptr()));
-  }
+  reference operator*() const { return (*(ptr())); }
 
-  pointer operator->() const
-  {
-    return ptr();
-  }
+  pointer operator->() const { return ptr(); }
 
   /*! Increment operators. */
-  Self& operator++ ()
-  {
-    do
-    {
-      ++nt;
-    } while (!(nt == iend) && ! filt (*nt));
-
+  Self& operator++() {
+    do ++nt;
+    while (!(nt == iend) && ! filt(*nt));
     return (*this);
   }
 
-  Self operator++ (int)
-  {
+  Self operator++(int) {
     Self tmp = *this;
     ++(*this);
     return tmp;
   }
 
   /*! Decrement operators. */
-  Self& operator-- ()
-  {
-    do
-    {
-      --nt;
-    } while (!(nt == iend) && ! filt (*nt));
-
+  Self& operator--() {
+    do --nt;
+    while (!(nt == iend) && ! filt(*nt));
     return (*this);
   }
 
-  Self operator-- (int)
-  {
+  Self operator--(int) {
     Self tmp = *this;
     --(*this);
     return tmp;
   }
 };
 
-/*!
- * \class
+/*! \class
  * An iterator adaptor for the filtering a DCEL const iterator (given as
  * CIterator_) using a given filter functor (Filter_).
  */
-template <class CIterator_, class Filter_, class MIterator_,
-          class Value_, class Diff_, class Category_>
-class I_Filtered_const_iterator
-{
+template <typename CIterator_, typename Filter_, typename MIterator_, typename Value_, typename Diff_,
+          typename Category_>
+class I_Filtered_const_iterator {
 public:
+  using Iterator = CIterator_;
+  using Filter = Filter_;
 
-  typedef CIterator_                             Iterator;
-  typedef Filter_                                Filter;
-  typedef I_Filtered_const_iterator<CIterator_,
-                                    Filter_,
-                                    MIterator_,
-                                    Value_,
-                                    Diff_,
-                                    Category_>   Self;
+  using iterator_category = Category_;
+  using value_type = Value_;
+  using reference = const value_type&;
+  using pointer = const value_type*;
+  using difference_type = Diff_;
 
-  typedef Category_                              iterator_category;
-  typedef Value_                                 value_type;
-  typedef const value_type&                      reference;
-  typedef const value_type*                      pointer;
-  typedef Diff_                                  difference_type;
-
-  typedef I_Filtered_iterator<MIterator_, Filter_,
-                              Value_, Diff_,
-                              Category_>         mutable_iterator;
+  using Self = I_Filtered_const_iterator<Iterator, Filter, MIterator_, value_type, difference_type, iterator_category>;
+  using mutable_iterator = I_Filtered_iterator<MIterator_, Filter, value_type, difference_type, iterator_category>;
 
 protected:
-
-  Iterator       nt;       // The internal iterator (this member should not
-                           // be renamed in order to comply with the
-                           // HalfedgeDS circulators that refer to it).
-  Iterator       iend;     // A past-the-end iterator.
-  Filter         filt;     // The filter functor.
+  Iterator nt;          // The internal iterator (this member should not
+                        // be renamed in order to comply with the
+                        // HalfedgeDS circulators that refer to it).
+  Iterator iend;        // A past-the-end iterator.
+  Filter filt;          // The filter functor.
 
 public:
-
   /*! Constructors. */
-  I_Filtered_const_iterator()
-  {}
+  I_Filtered_const_iterator() {}
 
-  I_Filtered_const_iterator (Iterator it) :
-    nt (it),
-    iend (it)
-  {}
+  I_Filtered_const_iterator(Iterator it) : nt(it), iend(it) {}
 
   template <typename T>
-  I_Filtered_const_iterator (T* p) :
-    nt (pointer(p)),
-    iend (nt)
-  {}
+  I_Filtered_const_iterator(T* p) : nt(pointer(p)), iend(nt) {}
 
-  I_Filtered_const_iterator (Iterator it, Iterator end) :
-    nt (it),
-    iend (end)
-  {
-    while (nt != iend && ! filt (*nt))
-      ++nt;
-  }
+  I_Filtered_const_iterator(Iterator it, Iterator end) :
+    nt(it),
+    iend(end)
+  { while (nt != iend && ! filt(*nt)) ++nt; }
 
-  I_Filtered_const_iterator (Iterator it, Iterator end, Filter f) :
-    nt (it),
-    iend (end),
-    filt (f)
-  {
-    while (nt != iend && ! filt (*nt))
-      ++nt;
-  }
+  I_Filtered_const_iterator(Iterator it, Iterator end, Filter f) :
+    nt(it),
+    iend(end),
+    filt(f)
+  { while (nt != iend && ! filt(*nt)) ++nt; }
 
-  I_Filtered_const_iterator (mutable_iterator it) :
-    nt (it.current_iterator()),
-    iend (it.past_the_end()),
-    filt (it.filter())
-  {
-    //    while (nt != iend && ! filt (*nt))
-    //      ++nt;
-  }
+  I_Filtered_const_iterator(mutable_iterator it) :
+    nt(it.current_iterator()),
+    iend(it.past_the_end()),
+    filt(it.filter())
+  { /* while (nt != iend && ! filt (*nt)) ++nt; */ }
 
   template <typename P>
-  I_Filtered_const_iterator& operator= (const P* p)
-  {
+  I_Filtered_const_iterator& operator=(const P* p) {
     nt = pointer(p);
     iend =nt;
     return *this;
   }
 
   /*! Access operations. */
-  Iterator current_iterator() const
-  {
-    return (nt);
-  }
+  Iterator current_iterator() const { return (nt); }
 
-  Iterator past_the_end () const
-  {
-    return (iend);
-  }
+  Iterator past_the_end() const { return (iend); }
 
-  Filter filter () const
-  {
-    return (filt);
-  }
+  Filter filter() const { return (filt); }
 
-  pointer ptr() const
-  {
-    return static_cast<pointer>(&(*nt));
-  }
+  pointer ptr() const { return static_cast<pointer>(&(*nt)); }
 
   /*! Equality operators. */
-  bool operator== (const Self& it) const
-  {
-    return (nt == it.nt);
-  }
+  bool operator==(const Self& it) const { return (nt == it.nt); }
 
-  bool operator!= (const Self& it) const
-  {
-    return !(*this == it);
-  }
+  bool operator!=(const Self& it) const { return !(*this == it); }
 
-  bool operator< (const Self& it) const
-  {
-    return &(**this) < (&*it);
-  }
+  bool operator<(const Self& it) const { return &(**this) < (&*it); }
 
   /*! Dereferencing operators. */
-  reference operator*() const
-  {
-    return (*(ptr()));
-  }
+  reference operator*() const { return (*(ptr())); }
 
-  pointer operator->() const
-  {
-    return ptr();
-  }
+  pointer operator->() const { return ptr(); }
 
   /*! Increment operators. */
-  Self& operator++ ()
-  {
-    do
-    {
-      ++nt;
-    } while (!(nt == iend) && ! filt (*nt));
-
+  Self& operator++() {
+    do ++nt;
+    while (!(nt == iend) && ! filt(*nt));
     return (*this);
   }
 
-  Self operator++ (int)
-  {
+  Self operator++(int) {
     Self tmp = *this;
     ++(*this);
     return tmp;
   }
 
   /*! Decrement operators. */
-  Self& operator-- ()
-  {
-    do
-    {
-      --nt;
-    } while (!(nt == iend) && ! filt (*nt));
-
+  Self& operator--() {
+    do --nt;
+    while (!(nt == iend) && ! filt (*nt));
     return (*this);
   }
 
-  Self operator-- (int)
-  {
+  Self operator--(int) {
     Self tmp = *this;
     --(*this);
     return tmp;
@@ -583,104 +401,57 @@ public:
 namespace std {
 
 #if defined(BOOST_MSVC)
-#  pragma warning(push)
-#  pragma warning(disable:4099) // For VC10 it is class hash
+#pragma warning(push)
+#pragma warning(disable:4099) // For VC10 it is class hash
 #endif
 
 #ifndef CGAL_CFG_NO_STD_HASH
 
-template <class CIterator_, class Filter_, class MIterator_,
-          class Value_, class Diff_, class Category_>
-struct hash<CGAL::I_Filtered_const_iterator<CIterator_,
-                                            Filter_,
-                                            MIterator_,
-                                            Value_,
-                                            Diff_,
-                                            Category_> > {
+template <typename CIterator_, typename Filter_, typename MIterator_, typename Value_, typename Diff_,
+          typename Category_>
+struct hash<CGAL::I_Filtered_const_iterator<CIterator_, Filter_, MIterator_, Value_, Diff_, Category_>> {
+  using I = CGAL::I_Filtered_const_iterator<CIterator_, Filter_, MIterator_, Value_, Diff_, Category_>;
 
-  typedef CGAL::I_Filtered_const_iterator<CIterator_,
-                                          Filter_,
-                                          MIterator_,
-                                          Value_,
-                                          Diff_,
-                                          Category_>  I;
+  std::size_t operator()(const I& i) const { return reinterpret_cast<std::size_t>(&*i) / sizeof(Value_); }
+};
 
-    std::size_t operator()(const I& i) const
-    {
-      return reinterpret_cast<std::size_t>(&*i) / sizeof(Value_);
-    }
-  };
+template <typename Iterator_, typename Filter_, typename Value_, typename Diff_, typename Category_>
+struct hash<CGAL::I_Filtered_iterator<Iterator_, Filter_, Value_, Diff_, Category_>> {
+  using I = CGAL::I_Filtered_iterator<Iterator_, Filter_, Value_, Diff_, Category_>;
 
-  template <class Iterator_, class Filter_,
-          class Value_, class Diff_, class Category_>
-  struct hash<CGAL::I_Filtered_iterator<Iterator_,
-                                        Filter_,
-                                        Value_,
-                                        Diff_,
-                                        Category_> > {
-  typedef CGAL::I_Filtered_iterator<Iterator_,
-                                    Filter_,
-                                    Value_,
-                                    Diff_,
-                                    Category_>  I;
+  std::size_t operator()(const I& i) const
+  { return reinterpret_cast<std::size_t>(&*i) / sizeof(typename I::value_type); }
+};
 
-    std::size_t operator()(const I& i) const
-    {
-      return reinterpret_cast<std::size_t>(&*i) / sizeof(typename I::value_type);
-    }
-  };
-
-#endif // CGAL_CFG_NO_STD_HASH
+#endif
 
 #if defined(BOOST_MSVC)
-#  pragma warning(pop)
+#pragma warning(pop)
 #endif
 
 } // namespace std
 
 namespace  boost {
-  template <typename T> struct hash;
 
-template <class CIterator_, class Filter_, class MIterator_,
-          class Value_, class Diff_, class Category_>
-struct hash<CGAL::I_Filtered_const_iterator<CIterator_,
-                                            Filter_,
-                                            MIterator_,
-                                            Value_,
-                                            Diff_,
-                                            Category_> > {
+template <typename T> struct hash;
 
-  typedef CGAL::I_Filtered_const_iterator<CIterator_,
-                                          Filter_,
-                                          MIterator_,
-                                          Value_,
-                                          Diff_,
-                                          Category_>  I;
+template <typename CIterator_, typename Filter_, typename MIterator_, typename Value_, typename Diff_,
+          typename Category_>
+struct hash<CGAL::I_Filtered_const_iterator<CIterator_, Filter_, MIterator_, Value_, Diff_, Category_>> {
 
-    std::size_t operator()(const I& i) const
-    {
-      return reinterpret_cast<std::size_t>(&*i) / sizeof(Value_);
-    }
-  };
+  using I = CGAL::I_Filtered_const_iterator<CIterator_, Filter_, MIterator_, Value_, Diff_, Category_>;
 
-  template <class Iterator_, class Filter_,
-          class Value_, class Diff_, class Category_>
-  struct hash<CGAL::I_Filtered_iterator<Iterator_,
-                                        Filter_,
-                                        Value_,
-                                        Diff_,
-                                        Category_> > {
-  typedef CGAL::I_Filtered_iterator<Iterator_,
-                                    Filter_,
-                                    Value_,
-                                    Diff_,
-                                    Category_>  I;
+  std::size_t operator()(const I& i) const { return reinterpret_cast<std::size_t>(&*i) / sizeof(Value_); }
+};
 
-    std::size_t operator()(const I& i) const
-    {
-      return reinterpret_cast<std::size_t>(&*i) / sizeof(typename I::value_type);
-    }
-  };
+template <typename Iterator_, typename Filter_, typename Value_, typename Diff_, typename Category_>
+struct hash<CGAL::I_Filtered_iterator<Iterator_, Filter_, Value_, Diff_, Category_>> {
+  using I = CGAL::I_Filtered_iterator<Iterator_, Filter_, Value_, Diff_, Category_>;
+
+  std::size_t operator()(const I& i) const
+  { return reinterpret_cast<std::size_t>(&*i) / sizeof(typename I::value_type); }
+};
 
 } // namespace boost
+
 #endif
