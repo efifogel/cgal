@@ -4,11 +4,23 @@
 
 Release date: December 2026
 
+### 1D Arrangements on Curves, new
+- This package is designed to construct, manipulate, and query one-dimensional arrangements embedded along continuous curves.
+
+### 3D Mesh smoothing (new package)
+- This package implements a tetrahedral mesh smoother. It improves the quality of a tetrahedral mesh without changing it connectivity.
+  At the core of this package is a nonlinear optimization of the mesh vertex positions. Element quality is measured using a conformal distortion energy,
+  designed to favor well-shaped tetrahedra and improve their dihedral angles. The API is compatible with the `Mesh_complex_3_in_triangulation_3` data structure
+  and can be applied on the output of the 3D Mesh Generation Package.
+
 ### [Linear Cell Complex](https://doc.cgal.org/6.3/Manual/packages.html#PkgLinearCellComplex)
-- added `tetrahedron_soup_to_lcc()` to import a tetrahedron soup into a linear cell complex.
+- Added `tetrahedron_soup_to_lcc()` to import a tetrahedron soup into a linear cell complex.
+- Added `generate_hexahedral_mesh_using_two_refinement()` to generate a pure hexahedral mesh from a surface triangle mesh using the two-refinement algorithm described in the paper "A template-based approach for parallel hexahedral two-refinement" of Steven J. Owen, Ryan M. Shih and Corey D. Ernst.
+- The following function have been deprecated and renamed for better naming clarity and consistency:
+  - `(polyhedron_3_to_lcc())` → [`import_face_graph_in_lcc()`](https://doc.cgal.org/6.3/Linear_cell_complex/group__PkgLinearCellComplexConstructions.html#gaf2fa5a468b97eb3358d25b2f147c2a72)
 
 ### [2D and 3D Fast Intersection and Distance Computation (AABB Tree)](https://doc.cgal.org/6.3/Manual/packages.html#PkgAABBTree)
-- `CGAL::AABB_tree::build()` now accepts an optional `Concurrency_tag` template parameter (`CGAL::Sequential_tag` by default).
+- `CGAL::AABB_tree::build()` now accepts an optional `ConcurrencyTag` template parameter (`CGAL::Sequential_tag` by default).
    When `CGAL::Parallel_tag` is specified, the tree construction is performed in parallel.
 - Added the functions `CGAL::AABB_trees::do_intersect()` and `CGAL::AABB_trees::all_pairs_of_intersecting_primitives()`.
   These functions respectively determine whether two AABB trees intersect and compute all pairs of intersecting primitives
@@ -18,9 +30,26 @@ Release date: December 2026
 
 - **Breaking change**: Enhanced the metadata traits-class decorators `Arr_counting_traits_2` and `Arr_tracing_traits_2`. Each is (still) parameterized with another traits class being decorated, but it does not inherit from it. In addition one can get and set a smart pointer to the class being decorated.
 
+### [2D Envelopes](https://doc.cgal.org/6.3/Manual/packages.html#PkgEnvelope2)
+
+- **Breaking change**: The envelope diagram `CGAL::Envelope_2::Envelope_diagram_1` is now a 1D arrangement; it derives from
+  `CGAL::Arrangement_on_curve_1::Arrangement_on_curve_1`, and its vertices and edges are accessed through descriptors.
+  The handle-based interface, the concepts `EnvelopeDiagramVertex` and `EnvelopeDiagramEdge`, and the header `<CGAL/Envelope_diagram_1.h>` were removed.
+- Moved the envelope functions and `Envelope_diagram_1` into the namespace `CGAL::Envelope_2`, declared in `<CGAL/Envelope_2/envelope_2.h>`
+  and `<CGAL/Envelope_2/Envelope_diagram_1.h>`. The functions in the namespace `CGAL`, the header `<CGAL/envelope_2.h>`,
+  and the class template `Env_default_diagram_1` are deprecated.
+- The geometry traits are passed and shared through `std::shared_ptr`; by default, the envelope functions use the traits of the diagram.
+- Deprecated `set_leftmost()` and `set_rightmost()`; the diagram maintains its leftmost and rightmost edges.
+- Fixed the handling of degenerate input, such as overlapping curves, vertical segments, and intersections at the x-coordinates of endpoints.
+
 ### [2D and 3D Linear Geometry Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernel23)
 
-- Add operator to functor `Orientation_3` that takes 5 points as argument, with the last two getting tested against the first three points
+- Added operator to functor `Orientation_3` that takes 5 points as argument, with the last two getting tested against the first three points
+- Added the function `pad(double offset)` to the classes `Bbox_2` and `Bbox_3`
+
+### [dD Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernelD)
+
+- Added the function `pad(double offset)` to the class `Bbox_d`
 
 ### [2D Snap Rounding](https://doc.cgal.org/6.3/Manual/packages.html#PkgSnapRounding2) (major changes)
 
@@ -31,8 +60,16 @@ Release date: December 2026
 - Deprecated the existing overload of `snap_rounding_2()`.
 - Added a new overload of `snap_rounding_2()` that automatically dispatch to either `vertical_slab_snap_rounding_2()` or `hot_pixel_snap_rounding_2()`, depending on the provided traits class.
 
-### [Polygon Mesh Processing](https://doc.cgal.org/6.3/Manual/packages.html#PkgPMPRemeshing)
+### [3D Triangulations](https://doc.cgal.org/6.3/Manual/packages.html#PkgTriangulation3)
+- **Breaking change** Removed the class template `Regular_triangulation_euclidean_traits_3` which was deprecated  since CGAL-4.10
+- **Breaking change** Removed the member function `vertices_in_conflict()` of the Delaunay and the regular triangulation  which were deprecated  since CGAL-3.8
+- Removed the concept `WeightedPoint`
 
+### [Polygon Mesh Processing - Mesh Repair](https://doc.cgal.org/6.3/Manual/packages.html#PkgPMPMeshRepair)
+- **Breaking change**: Removed the function `CGAL::Polygon_mesh_processing::smooth_mesh()` which was deprecated since CGAL-5.5.
+- **Breaking change**: Removed the overload of the functions `CGAL::Polygon_mesh_processing::triangulate_hole()`, `CGAL::Polygon_mesh_processing::triangulate_and_refine_hole()`, and `CGAL::Polygon_mesh_processing::triangulate_refine_and_fair_hole()` having output iterators for vertices and faces as parameter, which were deprecated since CGAL-6.0.
+
+### [Polygon Mesh Processing - Remeshing](https://doc.cgal.org/6.3/Manual/packages.html#PkgPMPRemeshing)
 - Added a new parameter `edge_is_protected_map` to
 [`void CGAL::Polygon_mesh_processing::isotropic_remeshing()`](https://doc.cgal.org/6.3/PMP_Remeshing/group__PMP__local__remeshing__grp.html),
  to distinguish between "constrained" edges that can be resampled while the constrained edges polyline graph remains topologically unchanged,
@@ -40,9 +77,40 @@ Release date: December 2026
 
 ### [Boolean Operations On Meshes](https://doc.cgal.org/6.3/Manual/packages.html#PkgPMPBooleanOperations)
 
+### Polygon Mesh Processing - Boolean Operations
+- **Breaking change** Added to the corefinement based functions a new named parameter `edge_is_marked_map()` that will specifically collect new intersection edges.
+    Previously, `edge_is_constrained_map()` was storing both input constrained edges (updated when split) as well as new intersection edges.
+    The previous behavior can be reproduced, by passing the property map to both named parameters.
+- Added a new named parameter `edge_is_constrained_map()` to the `clip()` functions in order to preserve constrained edges when clipping a triangle mesh.
 - The corefinement based operations (including Boolean operations) has been optimized to better
   handle cases when some identical faces are shared between the input meshes. This leads to a significant speed up
   in those cases.
+- Added new multithreading compatible functions operating directly on triangle soups, enabling the handling of non-manifold input and output volumes:
+  `CGAL::Polygon_mesh_processing::compute_union()`, `CGAL::Polygon_mesh_processing::compute_intersection()`, and
+  `CGAL::Polygon_mesh_processing::compute_difference()`.
+
+### [Stream Support](https://doc.cgal.org/6.3/Manual/packages.html#PkgStreamSupport)
+
+- **Breaking change** The return type as well as type of the parameter for the file name passed to IO functions is changed from
+  `std::string`  to `std::filesystem::path`, which enables to use non latin languages like Chinese for directory and file names.
+- Added overloaded versions of the functions `CGAL::IO::read_MEDIT()` and `CGAL::IO::write_MEDIT()`, for indexed tetrahedron soups.
+
+### [Basic Viewer](https://doc.cgal.org/6.3/Manual/packages.html#PkgBasicViewer)
+
+- Added the possibility to color the faces by a value mapped to a color palette: the
+  distance to the clipping plane, the cell size, or a scalar value provided by the drawer.
+  A drawer can attach a value to each face through the new `Graphics_scene_options` functions
+  `is_face_valued` and `face_value` (with `face_value_name` for the legend). As an example, the
+  surface mesh drawer exposes the aspect ratio of each face.
+
+### [STL Extension](https://doc.cgal.org/6.3/Manual/packages.html#PkgSTLExtension)
+
+- **Breaking change**:  Removed the class templates `Twotuple`,`Threetuple`, `Fourtuple`, `Sixtuple` which were deprecated since CGAL-3.4
+
+
+### [Stream Support](https://doc.cgal.org/6.3/Manual/packages.html#PkgStreamSupport)
+
+- **Breaking change**:  `CGAL::IO::Color`  is no longer imported into `namespace CGAL`.
 
 
 ## [Release 6.2](https://github.com/CGAL/cgal/releases/tag/v6.2)
@@ -3126,7 +3194,7 @@ Release date: April 2016
 
 ### Point Set Processing
 
-- **Breaking change:** new template parameter `Concurrency_tag` for
+- **Breaking change:** new template parameter `ConcurrencyTag` for
     the functions `compute_average_spacing()`,
     `edge_aware_upsample_point_set()`, `jet_estimate_normals()`,
     `jet_smooth_point_set()`, and `pca_estimate_normals()`. To update
