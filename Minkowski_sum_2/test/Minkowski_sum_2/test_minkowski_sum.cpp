@@ -1,4 +1,5 @@
 #include <CGAL/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 #include <CGAL/Small_side_angle_bisector_decomposition_2.h>
 #include <CGAL/Polygon_triangulation_decomposition_2.h>
 #include <CGAL/Polygon_vertical_decomposition_2.h>
@@ -53,7 +54,7 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_2& p, Polygon_2& q,
     return minkowski_sum_by_reduced_convolution_2(p, q);
 
    case FULL_CONVOLUTION:
-    return minkowski_sum_by_full_convolution_2(p, q);
+    return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
 
    case SSAB_DECOMP:
     {

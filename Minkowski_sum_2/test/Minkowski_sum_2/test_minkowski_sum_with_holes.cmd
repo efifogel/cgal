@@ -1,4 +1,4 @@
--rvtwud
+-rfvtwud
 data/pwh1.dat data/pwh1.dat
 data/pwh2.dat data/pwh2.dat
 data/pwh1.dat data/pwh2.dat
@@ -20,3 +20,8 @@ data/pwh11.dat data/pwh10.dat
 data/pwh10.dat data/pwh11.dat
 data/pwh9.dat data/pwh12.dat
 data/pwh12.dat data/pwh9.dat
+-rf
+data/pwh10.dat data/pwh12.dat
+data/pwh12.dat data/pwh10.dat
+data/pwh12.dat data/pwh12.dat
+data/pwh5.dat data/pwh12.dat

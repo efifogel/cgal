@@ -3,6 +3,7 @@
 #include <CGAL/Polygon_triangulation_decomposition_2.h>
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/Small_side_angle_bisector_decomposition_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 
 #include "read_polygon.h"
 
@@ -24,6 +25,7 @@ bool are_equal(const Polygon_with_holes_2& ph1,
 
 typedef enum {
   REDUCED_CONVOLUTION,
+  FULL_CONVOLUTION,
   VERTICAL_DECOMPOSITION,
   TRIANGULATION_DECOMPOSITION,
   VERTICAL_AND_ANGLE_BISECTOR_DECOMPOSITION,
@@ -33,6 +35,7 @@ typedef enum {
 
 static const char* strategy_names[] = {
   "reduced convolution",
+  "full convolution",
   "vertical decomposition",
   "constrained triangulation decomposition",
   "vertical and angle bisector decomposition",
@@ -47,6 +50,9 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
   switch (strategy) {
    case REDUCED_CONVOLUTION:
      return CGAL::minkowski_sum_by_reduced_convolution_2(p, q);
+
+   case FULL_CONVOLUTION:
+     return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
 
    case VERTICAL_DECOMPOSITION:
     {
@@ -137,7 +143,7 @@ int main(int argc, char* argv[])
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " [-method flag] [polygon files]..."
               << std::endl;
-    std::cerr << "For the method flag, use a subset of the letters 'rfsohg'."
+    std::cerr << "For the method flag, use a subset of the letters 'rfvtwud'."
               << std::endl;
     std::cerr << "The program will compute the Minkowski sum of the first "
               << "and second polygon, of the third and fourth, and so on."
@@ -158,6 +164,7 @@ int main(int argc, char* argv[])
       for (std::size_t j = 1; j < strlen(argv[i]); ++j) {
         switch (argv[i][j]) {
          case 'r': strategies.push_back(REDUCED_CONVOLUTION); break;
+         case 'f': strategies.push_back(FULL_CONVOLUTION); break;
          case 'v': strategies.push_back(VERTICAL_DECOMPOSITION); break;
          case 't': strategies.push_back(TRIANGULATION_DECOMPOSITION); break;
          case 'w':
