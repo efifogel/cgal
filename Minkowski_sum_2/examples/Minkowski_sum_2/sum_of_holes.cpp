@@ -1,14 +1,18 @@
-//! \file examples/Minkowski_sum_2/sum_by_decomposition.cpp
-// Computing the Minkowski sum of two non-convex polygons read from a file
-// using the small-side angle-bisector decomposition strategy.
+//! \file examples/Minkowski_sum_2/sum_of_holes.cpp
+// Computing the Minkowski sum of two polygons with holes read from a file
+// using the vertical decomposition strategy and the full convolution method.
 
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/minkowski_sum_2.h>
 #include <CGAL/Polygon_vertical_decomposition_2.h>
+#include <CGAL/Boolean_set_operations_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 #include <CGAL/draw_polygon_2.h>
 #include <CGAL/draw_polygon_with_holes_2.h>
 
 #include <iostream>
+#include <iterator>
+#include <vector>
 #include <fstream>
 
 #include "print_utils.h"
@@ -44,10 +48,18 @@ int main(int argc, char* argv[]) {
   CGAL::Polygon_vertical_decomposition_2<Kernel>::Traits_2 traits;
   CGAL::Polygon_vertical_decomposition_2<Kernel> vertical_decomp(traits);
   Polygon_with_holes_2 sum = minkowski_sum_2(P, Q, vertical_decomp, traits);
-  // Polygon_with_holes_2 sum = minkowski_sum_by_full_convolution_2(P, Q);
   CGAL::draw(sum, "P + Q");
   std::cout << "P (+) Q = ";
   print_polygon_with_holes(sum);
 
-  return 0;
+  // Compute the Minkowski sum using the full convolution method, which
+  // requires the outer boundaries to be oriented counterclockwise and the
+  // holes to be oriented clockwise, and compare the two sums.
+  Polygon_with_holes_2 conv_sum = CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(P, Q);
+  std::vector<Polygon_with_holes_2> sym_diff;
+  CGAL::symmetric_difference(sum, conv_sum, std::back_inserter(sym_diff));
+  std::cout << "The full convolution method computes "
+            << (sym_diff.empty() ? "the same sum." : "a different sum!") << std::endl;
+
+  return sym_diff.empty() ? 0 : 1;
 }
