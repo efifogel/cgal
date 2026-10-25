@@ -12,7 +12,7 @@ Computes the Minkowski sum \f$ P \oplus Q\f$ of two given polygons
 This method defaults to the reduced convolution method, see below.
 
 \sa `CGAL::minkowski_sum_by_reduced_convolution_2()`
-\sa `CGAL::minkowski_sum_by_full_convolution_2()`
+\sa `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`
  */
 template <typename Kernel, typename Container>
 Polygon_with_holes_2<Kernel, Container>
@@ -40,25 +40,6 @@ template <typename Kernel, typename Container>
 Polygon_with_holes_2<Kernel, Container>
 minkowski_sum_by_reduced_convolution_2(const PolygonType1<Kernel, Container>& P,
                                        const PolygonType2<Kernel, Container>& Q);
-
-/*!
-\ingroup PkgMinkowskiSum2Ref
-
-Computes the Minkowski sum \f$ P \oplus Q\f$ of the two given polygons.
-The function computes the (full) convolution cycles of the two polygons and
-extract the regions having positive winding number with respect to these
-cycles. This method work very efficiently, regardless of whether `P`
-and `Q` are convex or non-convex.
-
-`PolygonType1` and `PolygonType2` can be any combination of:
-
-- `Polygon_2`
-- `Polygon_with_holes_2`
-*/
-template <typename Kernel, typename Container>
-Polygon_with_holes_2<Kernel, Container>
-minkowski_sum_by_full_convolution_2(const Polygon_2<Kernel, Container>& P,
-                                    const Polygon_2<Kernel, Container>& Q);
 
 /*!
 \ingroup PkgMinkowskiSum2Ref
