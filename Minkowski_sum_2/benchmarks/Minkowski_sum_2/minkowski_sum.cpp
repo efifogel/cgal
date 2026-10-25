@@ -4,6 +4,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,15 +61,51 @@ Polygon_2 create_convex_polygon(std::size_t num_vertices, double size, CGAL::Ran
 }
 
 // --- Helper: Generate a random simple (typically highly concave) polygon with the given number of vertices ---
-Polygon_2 create_concave_polygon(std::size_t num_vertices, double size, CGAL::Random& rnd) {
+// The polygon is obtained by untangling a random closed polygonal chain
+// through random points (see CGAL::random_polygon_2()). By default, the points
+// are drawn uniformly from the square, which yields a highly concave polygon.
+// If a reflex ratio is given, most points are drawn from the circle inscribed
+// in the square and the rest from the interior of the disc. The points on the
+// circle are in convex position, so they become convex vertices of every
+// simple polygon through the points; only interior points can become reflex
+// vertices. The number of interior points is chosen such that their ratio to
+// the points on the circle is the given ratio, which thus bounds the ratio
+// between the numbers of reflex and convex vertices from above.
+Polygon_2 create_concave_polygon(std::size_t num_vertices, double size, std::optional<double> reflex_ratio,
+                                 CGAL::Random& rnd) {
   std::vector<Gen_point_2> points;
-  CGAL::Random_points_in_square_2<Gen_point_2> g(size, rnd);
-  CGAL::random_polygon_2(num_vertices, std::back_inserter(points), g);
+  if (! reflex_ratio) {
+    CGAL::Random_points_in_square_2<Gen_point_2> g(size, rnd);
+    CGAL::random_polygon_2(num_vertices, std::back_inserter(points), g);
+  }
+  else {
+    auto num_on_circle = static_cast<std::size_t>(std::lround(double(num_vertices) / (1.0 + *reflex_ratio)));
+    num_on_circle = std::clamp<std::size_t>(num_on_circle, 3, num_vertices);
+    std::vector<Gen_point_2> candidates;
+    CGAL::Random_points_on_circle_2<Gen_point_2> on_circle(size, rnd);
+    std::copy_n(on_circle, num_on_circle, std::back_inserter(candidates));
+    // Keep the interior points off the circle.
+    CGAL::Random_points_in_disc_2<Gen_point_2> in_disc(0.95 * size, rnd);
+    std::copy_n(in_disc, num_vertices - num_on_circle, std::back_inserter(candidates));
+    std::sort(candidates.begin(), candidates.end());
+    candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+    CGAL::random_polygon_2(candidates.size(), std::back_inserter(points), candidates.begin());
+  }
 
   auto exact_points = to_exact(points.begin(), points.end());
   Polygon_2 pgn(exact_points.begin(), exact_points.end());
   if (pgn.orientation() == CGAL::CLOCKWISE) pgn.reverse_orientation();
   return pgn;
+}
+
+// Counts the reflex vertices of a counterclockwise-oriented polygon.
+std::size_t number_of_reflex_vertices(const Polygon_2& pgn, const Kernel& kernel) {
+  const auto orientation = kernel.orientation_2_object();
+  const std::size_t n = pgn.size();
+  std::size_t num_reflex = 0;
+  for (std::size_t i = 0; i < n; ++i)
+    if (orientation(pgn[(i + n - 1) % n], pgn[i], pgn[(i + 1) % n]) == CGAL::RIGHT_TURN) ++num_reflex;
+  return num_reflex;
 }
 
 // Struct to store benchmark metrics for tabular display
@@ -165,6 +202,16 @@ std::vector<Method> all_methods() {
     {"new-full", "New Full Convolution",
      [](const Polygon_2& p1, const Polygon_2& p2)
      { return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2(p1, p2); }},
+    {"new-full-poly", "New Full Convolution (polylines)",
+     [](const Polygon_2& p1, const Polygon_2& p2) {
+       return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2
+         (p1, p2, CGAL::Minkowski_sum_2::Convolution_curves::POLYLINES);
+     }},
+    {"new-full-seg", "New Full Convolution (segments)",
+     [](const Polygon_2& p1, const Polygon_2& p2) {
+       return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2
+         (p1, p2, CGAL::Minkowski_sum_2::Convolution_curves::SEGMENTS);
+     }},
     {"reduced", "Reduced Convolution",
      [](const Polygon_2& p1, const Polygon_2& p2) { return CGAL::minkowski_sum_by_reduced_convolution_2(p1, p2); }},
     {"ssab", "Decomp: Small Side Angle Bisector",
@@ -187,7 +234,10 @@ std::vector<Method> all_methods() {
 bool run_test_case(const std::string& case_name, const Polygon_2& pgn1, const Polygon_2& pgn2,
                    const std::vector<Method>& methods, int iterations, bool draw, const Kernel& kernel) {
   std::cout << "================================================================================\n";
-  std::cout << "Test Case: " << case_name << " (Pgn1 Vertices: " << pgn1.size() << ", Pgn2 Vertices: " << pgn2.size() << ")\n";
+  std::cout << "Test Case: " << case_name
+            << " (Pgn1 Vertices: " << pgn1.size() << ", " << number_of_reflex_vertices(pgn1, kernel) << " reflex"
+            << "; Pgn2 Vertices: " << pgn2.size() << ", " << number_of_reflex_vertices(pgn2, kernel) << " reflex"
+            << ")\n";
   std::cout << "================================================================================\n";
   std::cout << std::left << std::setw(38) << "Method"
             << std::right << std::setw(12) << "Outer Verts"
@@ -252,6 +302,10 @@ int main(int argc, char* argv[]) {
     ("concave-vertices", po::value<std::vector<std::size_t>>()->multitoken()->
      default_value(std::vector<std::size_t>{15, 30}, "15 30"),
      "the number of vertices of a concave polygon, N or a range MIN MAX to draw from uniformly")
+    ("reflex-ratio", po::value<double>(),
+     "the approximate ratio between the numbers of reflex and convex vertices of a concave polygon "
+     "(an upper bound, as only the vertices drawn from the interior of a disc may become reflex); "
+     "by default, the vertices are drawn uniformly from a square, which yields a highly concave polygon")
     ("size", po::value<double>()->default_value(10.0),
      "the half-side of the axis-parallel square centered at the origin that contains the polygons")
     ("methods,m", po::value<std::vector<std::string>>()->multitoken(),
@@ -279,6 +333,8 @@ int main(int argc, char* argv[]) {
     if (vm["size"].as<double>() <= 0) throw po::error("--size must be positive");
     convex_range = vertex_range(vm, "convex-vertices");
     concave_range = vertex_range(vm, "concave-vertices");
+    if (vm.count("reflex-ratio") && (vm["reflex-ratio"].as<double>() < 0))
+      throw po::error("--reflex-ratio must be non-negative");
 
     auto available = all_methods();
     if (vm.count("methods")) {
@@ -309,6 +365,8 @@ int main(int argc, char* argv[]) {
   const int iterations = vm["iterations"].as<int>();
   const double size = vm["size"].as<double>();
   const bool draw = vm.count("draw") > 0;
+  std::optional<double> reflex_ratio;
+  if (vm.count("reflex-ratio")) reflex_ratio = vm["reflex-ratio"].as<double>();
 
   std::cout << "Starting CGAL Minkowski Sum Matrix Benchmark...\n"
             << "  Random Seed: " << seed << "\n"
@@ -316,7 +374,9 @@ int main(int argc, char* argv[]) {
             << "  Convex     : " << vm["convex"].as<std::size_t>() << " polygons with "
             << convex_range.first << "-" << convex_range.second << " vertices\n"
             << "  Concave    : " << vm["concave"].as<std::size_t>() << " polygons with "
-            << concave_range.first << "-" << concave_range.second << " vertices\n\n";
+            << concave_range.first << "-" << concave_range.second << " vertices";
+  if (reflex_ratio) std::cout << " and a reflex ratio of about " << *reflex_ratio;
+  std::cout << "\n\n";
 
   // Generate the polygons.
   CGAL::Random rnd(seed);
@@ -327,7 +387,7 @@ int main(int argc, char* argv[]) {
   for (std::size_t i = 0; i < vm["convex"].as<std::size_t>(); ++i)
     pgns.emplace_back("Convex " + std::to_string(i + 1), create_convex_polygon(draw_count(convex_range), size, rnd));
   for (std::size_t i = 0; i < vm["concave"].as<std::size_t>(); ++i)
-    pgns.emplace_back("Concave " + std::to_string(i + 1), create_concave_polygon(draw_count(concave_range), size, rnd));
+    pgns.emplace_back("Concave " + std::to_string(i + 1), create_concave_polygon(draw_count(concave_range), size, reflex_ratio, rnd));
 
   // Run every pair of distinct polygons of the selected kinds; the convex
   // polygons precede the concave ones.
