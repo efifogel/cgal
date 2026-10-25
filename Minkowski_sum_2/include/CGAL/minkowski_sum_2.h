@@ -155,6 +155,7 @@ minkowski_sum_by_reduced_convolution_2
  const Polygon_2<Kernel_, Container_>& pgn2)
 { return minkowski_sum_by_reduced_convolution_2(pgn2, pgn1); }
 
+#ifndef CGAL_NO_DEPRECATED_CODE
 /*!
  * Compute the Minkowski sum of two simple polygons using the (full)
  * convolution method.
@@ -164,8 +165,14 @@ minkowski_sum_by_reduced_convolution_2
  * \param[in] pgn1 The first polygon.
  * \param[in] pgn2 The second polygon.
  * \return The resulting polygon with holes, representing the sum.
+ *
+ * \deprecated This function is deprecated since \cgal 6.3; use
+ * `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`, declared in
+ * `<CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>`, instead.
  */
 template <typename Kernel_, typename Container_>
+CGAL_DEPRECATED_MSG("use CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(), declared in "
+                    "<CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>")
 Polygon_with_holes_2<Kernel_, Container_>
 minkowski_sum_by_full_convolution_2(const Polygon_2<Kernel_, Container_>& pgn1,
                                     const Polygon_2<Kernel_, Container_>& pgn2)
@@ -184,6 +191,7 @@ minkowski_sum_by_full_convolution_2(const Polygon_2<Kernel_, Container_>& pgn1,
                                                   sum_holes.begin(),
                                                   sum_holes.end()));
 }
+#endif // CGAL_NO_DEPRECATED_CODE
 
 /*!
  * Compute the Minkowski sum of two simple polygons using the convolution
@@ -197,7 +205,7 @@ minkowski_sum_by_full_convolution_2(const Polygon_2<Kernel_, Container_>& pgn1,
  * \return The resulting polygon with holes, representing the sum.
  *
  * \sa `CGAL::minkowski_sum_by_reduced_convolution_2()`
- * \sa `CGAL::minkowski_sum_by_full_convolution_2()`
+ * \sa `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`
  */
 template <typename Kernel_, typename Container_>
 Polygon_with_holes_2<Kernel_, Container_>
@@ -216,7 +224,7 @@ minkowski_sum_2(const Polygon_2<Kernel_, Container_>& pgn1,
  * \return The resulting polygon with holes, representing the sum.
  *
  * \sa `CGAL::minkowski_sum_by_reduced_convolution_2()`
- * \sa `CGAL::minkowski_sum_by_full_convolution_2()`
+ * \sa `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`
  */
 template <typename Kernel_, typename Container_>
 Polygon_with_holes_2<Kernel_, Container_>
@@ -235,7 +243,7 @@ minkowski_sum_2(const Polygon_with_holes_2<Kernel_, Container_>& pgn1,
  * \return The resulting polygon with holes, representing the sum.
  *
  * \sa `CGAL::minkowski_sum_by_reduced_convolution_2()`
- * \sa `CGAL::minkowski_sum_by_full_convolution_2()`
+ * \sa `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`
  */
 template <typename Kernel_, typename Container_>
 Polygon_with_holes_2<Kernel_, Container_>
@@ -254,7 +262,7 @@ minkowski_sum_2(const Polygon_2<Kernel_, Container_>& pgn1,
  * \return The resulting polygon with holes, representing the sum.
  *
  * \sa `CGAL::minkowski_sum_by_reduced_convolution_2()`
- * \sa `CGAL::minkowski_sum_by_full_convolution_2()`
+ * \sa `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`
  */
 template <typename Kernel_, typename Container_>
 Polygon_with_holes_2<Kernel_, Container_>
