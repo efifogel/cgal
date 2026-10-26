@@ -19,6 +19,10 @@
 #include <CGAL/disable_warnings.h>
 
 #include <CGAL/config.h>
+#include <CGAL/tags.h>
+
+#include <type_traits>
+
 #include <boost/type_traits.hpp>
 #include <boost/mpl/bool.hpp>
 #include <boost/mpl/and.hpp>
@@ -550,6 +554,21 @@ public:
  */
 template <typename ArrSideOneCategory, typename ArrSideTwoCategory>
 struct Arr_all_sides_category {};
+
+namespace internal {
+
+/*! Determines whether a geometry traits class attaches data to points and
+ * provides the functor `Merge_point_data_2`, that is, whether it has a nested
+ * type `Has_point_data_category` that is `Tag_true`.
+ */
+template <typename GeometryTraits_2, typename = void>
+struct Arr_has_point_data : std::false_type {};
+
+template <typename GeometryTraits_2>
+struct Arr_has_point_data<GeometryTraits_2, std::void_t<typename GeometryTraits_2::Has_point_data_category>> :
+    std::is_same<typename GeometryTraits_2::Has_point_data_category, Tag_true> {};
+
+} // namespace internal
 
 } // namespace CGAL
 

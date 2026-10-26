@@ -1432,6 +1432,7 @@ test_algebraic_traits_gmp()
 test_algebraic_traits_leda()
 
 compile_and_run(test_data_traits)
+compile_and_run(test_arr_data_traits)
 
 compile_and_run(test_insertion)
 compile_and_run(test_unbounded_rational_insertion)
