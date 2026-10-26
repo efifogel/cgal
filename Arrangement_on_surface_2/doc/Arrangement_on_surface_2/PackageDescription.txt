@@ -127,6 +127,7 @@ implemented as peripheral classes or as free (global) functions.
 - `AosContractedLeftTraits_2`
 - `AosContractedRightTraits_2`
 - `AosContractedTopTraits_2`
+- `AosDataPolicy_2`
 - `AosDcel`
 - `AosDcelFace`
 - `AosDcelHalfedge`
@@ -217,6 +218,9 @@ implemented as peripheral classes or as free (global) functions.
 - `CGAL::Arr_consolidated_curve_data_traits_2<Traits,Data>`
 - `CGAL::Arr_counting_traits_2<BaseTraits>`
 - `CGAL::Arr_curve_data_traits_2<Tr,XData,Mrg,CData,Cnv>`
+- `CGAL::Arr_data_policy_2<PointData,XMonotoneCurveData,CurveData>`
+- `CGAL::Arr_data_traits_2<GeometryTraits_2,DataPolicy_2>`
+- `CGAL::Arr_label_policy_2<XMonotoneCurveData,LinearCurvesTag,Merge,CurveData,Convert,Label,MultipleLabelsTag>`
 - `CGAL::Arr_dcel_base<V,H,F>`
 - `CGAL::Arr_dcel<Traits,V,H,F>`
 - `CGAL::Arr_default_dcel<Traits>`

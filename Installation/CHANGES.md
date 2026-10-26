@@ -26,6 +26,12 @@ Release date: December 2026
 ### [2D Arrangements](https://doc.cgal.org/6.3/Manual/packages.html#PkgArrangementOnSurface2)
 
 - **Breaking change**: Enhanced the metadata traits-class decorators `Arr_counting_traits_2` and `Arr_tracing_traits_2`. Each is (still) parameterized with another traits class being decorated, but it does not inherit from it. In addition one can get and set a smart pointer to the class being decorated.
+- Added the traits-class decorator `CGAL::Arr_data_traits_2`, which attaches data to points, curves, and x-monotone curves, as
+  determined by a data policy, a model of the new concept `AosDataPolicy_2`, such as `CGAL::Arr_data_policy_2` or
+  `CGAL::Arr_label_policy_2`, which labels points. The data of
+  coinciding points are merged during the aggregated construction of arrangements and the aggregated insertion of curves.
+  The data may guarantee that points are equal or that curves are interior disjoint, in which case the corresponding predicates
+  and constructions are not evaluated geometrically.
 
 ### [2D and 3D Linear Geometry Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernel23)
 
