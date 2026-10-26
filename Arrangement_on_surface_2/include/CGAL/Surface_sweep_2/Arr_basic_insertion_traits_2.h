@@ -25,6 +25,8 @@
 
 #include <CGAL/Arr_tags.h>
 
+#include <type_traits>
+
 #include <list>
 #include <iterator>
 
@@ -791,6 +793,57 @@ public:
    */
   Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
   { return Compare_x_near_boundary_2(m_base_traits); }
+
+  /*! Indicates whether the base traits attaches data to points. */
+  typedef std::conditional_t<internal::Arr_has_point_data<Gt2>::value,
+                             Tag_true, Tag_false> Has_point_data_category;
+
+  /*! A functor that merges the data of coinciding points. */
+  class Merge_point_data_2 {
+  protected:
+    //! The base traits.
+    const Gt2* m_base;
+
+    /*! constructs.
+     * \param base The base traits class. It must be passed, to handle non
+     *             stateless traits objects, (which stores data).
+     * The constructor is declared private to allow only the functor
+     * obtaining function, which is a member of the nesting class,
+     * constructing it.
+     */
+    Merge_point_data_2(const Gt2* base) : m_base(base) {}
+
+    //! Allow its functor obtaining function calling the private constructor.
+    friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
+
+  public:
+    /*! merges the data of two equal points. The resulting point is associated
+     * with the vertex of `p` if it is valid, and with the vertex of `q`
+     * otherwise.
+     */
+    Point_2 operator()(const Point_2& p, const Point_2& q) const
+    {
+      Vertex_handle v = (p.vertex_handle() != Vertex_handle()) ?
+        p.vertex_handle() : q.vertex_handle();
+      return Point_2(m_base->merge_point_data_2_object()(p.base(), q.base()), v);
+    }
+
+    /*! merges the data of a point with the data of an intersection point of
+     * two x-monotone curves that coincides with it.
+     */
+    Point_2 operator()(const Point_2& p, const X_monotone_curve_2& xcv1,
+                       const X_monotone_curve_2& xcv2) const
+    {
+      return Point_2(m_base->merge_point_data_2_object()(p.base(), xcv1.base(),
+                                                         xcv2.base()),
+                     p.vertex_handle());
+    }
+  };
+
+  /*! obtains a Merge_point_data_2 object
+   */
+  Merge_point_data_2 merge_point_data_2_object() const
+  { return Merge_point_data_2(m_base_traits); }
 };
 
 } // namespace CGAL

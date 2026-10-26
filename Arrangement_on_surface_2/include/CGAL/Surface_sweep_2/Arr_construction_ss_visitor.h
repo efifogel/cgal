@@ -169,6 +169,44 @@ public:
 
   /*! A notification invoked when a new subcurve is created. */
   void add_subcurve(const X_monotone_curve_2& cv, Subcurve* sc);
+
+  using Base::update_event;
+
+  /*! updates an event with a curve endpoint that coincides with it. */
+  void update_event(Event* e, const Point_2& end_point, const X_monotone_curve_2& /* cv */,
+                    Arr_curve_end /* cv_end */, bool is_new)
+  { if (! is_new) merge_point_data(e, end_point); }
+
+  /*! updates an event with an isolated point that coincides with it. */
+  void update_event(Event* e, const Point_2& pt, bool is_new) { if (! is_new) merge_point_data(e, pt); }
+
+  /*! updates an event with an intersection point of two subcurves that
+   * coincides with it.
+   */
+  void update_event(Event* e, Subcurve* sc1, Subcurve* sc2, bool is_new,
+                    typename Gt2::Multiplicity /* multiplicity */)
+  { if (! is_new) merge_point_data(e, sc1, sc2); }
+  //@}
+
+  /// \name Point-data merging.
+  //@{
+
+  /*! merges the data of a point that coincides with an event into the point
+   * of the event, if the geometry traits attaches data to points.
+   */
+  void merge_point_data(Event* e, const Point_2& pt) {
+    if constexpr (internal::Arr_has_point_data<Gt2>::value)
+      e->point() = this->traits()->merge_point_data_2_object()(e->point(), pt);
+  }
+
+  /*! merges the data of an intersection point of two subcurves that coincides
+   * with an event into the point of the event, if the geometry traits
+   * attaches data to points.
+   */
+  void merge_point_data(Event* e, Subcurve* sc1, Subcurve* sc2) {
+    if constexpr (internal::Arr_has_point_data<Gt2>::value)
+      e->point() = this->traits()->merge_point_data_2_object()(e->point(), sc1->last_curve(), sc2->last_curve());
+  }
   //@}
 
   /// \name Insertion functions.
