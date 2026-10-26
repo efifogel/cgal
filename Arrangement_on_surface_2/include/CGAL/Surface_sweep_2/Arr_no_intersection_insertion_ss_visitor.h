@@ -91,25 +91,58 @@ public:
   /*! Update the event information. */
   void update_event() {}
 
-  void update_event(Event* /* e */, const Point_2& /* end_point */,
+  void update_event(Event* e, const Point_2& end_point,
                     const X_monotone_curve_2& /* cv */,
-                    Arr_curve_end /* cv_end */, bool /* is_new */)
-  {}
+                    Arr_curve_end /* cv_end */, bool is_new)
+  { if (! is_new) merge_point_data(e, end_point); }
 
   void update_event(Event* /* e */, const X_monotone_curve_2& /* cv */,
                     Arr_curve_end /* cv_end */, bool /* is_new */)
   {}
 
-  void update_event(Event* /* e */, Subcurve* /* sc1 */, Subcurve* /* sc2 */,
-                    bool /* is_new */, Multiplicity /* multiplicity */)
-  {}
+  void update_event(Event* e, Subcurve* sc1, Subcurve* sc2,
+                    bool is_new, Multiplicity /* multiplicity */)
+  { if (! is_new) merge_point_data(e, sc1, sc2); }
 
   void update_event(Event* /* e */, Subcurve* /* sc1 */) {}
 
-  void update_event(Event* e, const Point_2& pt, bool /* is_new */) {
+  void update_event(Event* e, const Point_2& pt, bool is_new) {
     Vertex_handle invalid_v;
     if (e->point().vertex_handle() == invalid_v)
       e->point().set_vertex_handle(pt.vertex_handle());
+    if (! is_new) merge_point_data(e, pt);
+  }
+  //@}
+
+  /// \name Point-data merging.
+  //@{
+
+  /*! merges the data of a point that coincides with an event into the point
+   * of the event, and into the point of its arrangement vertex if exists.
+   */
+  void merge_point_data(Event* e, const Point_2& pt) {
+    Base::merge_point_data(e, pt);
+    update_vertex_point(e);
+  }
+
+  /*! merges the data of an intersection point of two subcurves that coincides
+   * with an event into the point of the event, and into the point of its
+   * arrangement vertex if exists.
+   */
+  void merge_point_data(Event* e, Subcurve* sc1, Subcurve* sc2) {
+    Base::merge_point_data(e, sc1, sc2);
+    update_vertex_point(e);
+  }
+
+  /*! updates the point of the arrangement vertex associated with an event,
+   * if exists, with the point of the event, if the geometry traits attaches
+   * data to points.
+   */
+  void update_vertex_point(Event* e) {
+    if constexpr (internal::Arr_has_point_data<Gt2>::value) {
+      Vertex_handle v = e->point().vertex_handle();
+      if (v != Vertex_handle()) this->m_arr_access.modify_vertex_ex(v, e->point().base());
+    }
   }
   //@}
 
