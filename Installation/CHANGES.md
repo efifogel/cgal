@@ -35,6 +35,9 @@ Release date: December 2026
   coinciding points are merged during the aggregated construction of arrangements and the aggregated insertion of curves.
   The data may guarantee that points are equal or that curves are interior disjoint, in which case the corresponding predicates
   and constructions are not evaluated geometrically.
+- The functor `Equal_2` of `CGAL::Arr_segment_traits_2`, which hides the functor `Equal_2` of the kernel it derives from, also
+  determines whether two objects of any other type that `Kernel::Equal_2` accepts (e.g., two directions) are equal; that is,
+  it models the concept `Kernel::Equal_2` as well.
 
 ### [2D Envelopes](https://doc.cgal.org/6.3/Manual/packages.html#PkgEnvelope2)
 
