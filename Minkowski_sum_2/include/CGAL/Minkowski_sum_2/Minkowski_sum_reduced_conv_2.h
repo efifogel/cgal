@@ -9,21 +9,27 @@
 //
 // Author(s): Sebastian Morr    <sebastian@morr.cc>
 
-#ifndef CGAL_MINKOWSKI_SUM_BY_REDUCED_CONVOLUTION_2_H
-#define CGAL_MINKOWSKI_SUM_BY_REDUCED_CONVOLUTION_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_REDUCED_CONV_2_H
+#define CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_REDUCED_CONV_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
 
-#include <CGAL/basic.h>
-#include <CGAL/Arrangement_with_history_2.h>
-#include <CGAL/Arr_segment_traits_2.h>
-
-#include <CGAL/Minkowski_sum_2/AABB_collision_detector_2.h>
-#include <boost/functional/hash.hpp>
-
+#include <cstddef>
+#include <list>
 #include <queue>
 #include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include <boost/functional/hash.hpp>
+
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
+#include <CGAL/Origin.h>
+#include <CGAL/Arrangement_with_history_2.h>
+#include <CGAL/Arr_segment_traits_2.h>
+#include <CGAL/Minkowski_sum_2/AABB_collision_detector_2.h>
 
 namespace CGAL {
 
@@ -34,35 +40,31 @@ namespace CGAL {
 template <typename Kernel_, typename Container_>
 class Minkowski_sum_by_reduced_convolution_2 {
 private:
-  typedef Kernel_ Kernel;
-  typedef Container_ Container;
+  using Kernel = Kernel_;
+  using Container = Container_;
 
   // Basic types:
-  typedef CGAL::Polygon_2<Kernel, Container> Polygon_2;
-  typedef CGAL::Polygon_with_holes_2<Kernel, Container> Polygon_with_holes_2;
-  typedef typename Kernel::Point_2                      Point_2;
-  typedef typename Kernel::Vector_2                     Vector_2;
-  typedef typename Kernel::Direction_2                  Direction_2;
-  typedef typename Kernel::Triangle_2                   Triangle_2;
-  typedef typename Kernel::FT                           FT;
+  using Polygon_2 = CGAL::Polygon_2<Kernel, Container>;
+  using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel, Container>;
+  using Point_2 = typename Kernel::Point_2;
+  using Vector_2 = typename Kernel::Vector_2;
+  using Direction_2 = typename Kernel::Direction_2;
+  using Triangle_2 = typename Kernel::Triangle_2;
+  using FT = typename Kernel::FT;
 
   // Segment-related types:
-  typedef Arr_segment_traits_2<Kernel>                  Traits_2;
-  typedef typename Traits_2::X_monotone_curve_2         Segment_2;
-  typedef std::list<Segment_2>                          Segment_list;
-  typedef Arr_default_dcel<Traits_2>                    Dcel;
-  typedef std::pair<int, int>                           State;
+  using Traits_2 = Arr_segment_traits_2<Kernel>;
+  using Segment_2 = typename Traits_2::X_monotone_curve_2;
+  using Segment_list = std::list<Segment_2>;
+  using Dcel = Arr_default_dcel<Traits_2>;
+  using State = std::pair<int, int>;
 
   // Arrangement-related types:
-  typedef Arrangement_with_history_2<Traits_2, Dcel>    Arrangement_history_2;
-  typedef typename Arrangement_history_2::Halfedge_const_handle
-    Halfedge_const_handle;
-  typedef typename Arrangement_history_2::Face_const_handle
-    Face_const_handle;
-  typedef typename Arrangement_history_2::Ccb_halfedge_const_circulator
-    Ccb_halfedge_const_circulator;
-  typedef typename Arrangement_history_2::Inner_ccb_const_iterator
-    Inner_ccb_const_iterator;
+  using Arrangement_history_2 = Arrangement_with_history_2<Traits_2, Dcel>;
+  using Halfedge_const_handle = typename Arrangement_history_2::Halfedge_const_handle;
+  using Face_const_handle = typename Arrangement_history_2::Face_const_handle;
+  using Ccb_halfedge_const_circulator = typename Arrangement_history_2::Ccb_halfedge_const_circulator;
+  using Inner_ccb_const_iterator = typename Arrangement_history_2::Inner_ccb_const_iterator;
 
   // Function object types:
   typename Kernel::Construct_translated_point_2 f_add;
@@ -73,7 +75,7 @@ private:
   typename Kernel::Counterclockwise_in_between_2 f_ccw_in_between;
 
 public:
-  //! \brief constructs.
+  //! constructs.
   Minkowski_sum_by_reduced_convolution_2() {
     // Obtain kernel functors
     Kernel ker;
@@ -87,8 +89,7 @@ public:
 
   //! \brief applies the Minkowski sum reduced-convolution operator.
   template <typename OutputIterator>
-  void operator()(const Polygon_2& pgn1, const Polygon_2& pgn2,
-                  Polygon_2& outer_boundary, OutputIterator holes) const {
+  void operator()(const Polygon_2& pgn1, const Polygon_2& pgn2, Polygon_2& outer_boundary, OutputIterator holes) const {
     CGAL_precondition(pgn1.is_simple());
     CGAL_precondition(pgn2.is_simple());
     CGAL_precondition(pgn1.orientation() == COUNTERCLOCKWISE);
@@ -96,14 +97,12 @@ public:
 
     const Polygon_with_holes_2 pwh1(pgn1);
     const Polygon_with_holes_2 pwh2(pgn2);
-
     common_operator(pwh1, pwh2, outer_boundary, holes);
   }
 
   //! \brief applies the Minkowski sum reduced-convolution operator.
   template <typename OutputIterator>
-  void operator()(const Polygon_with_holes_2& pgn1,
-                  const Polygon_with_holes_2& pgn2,
+  void operator()(const Polygon_with_holes_2& pgn1, const Polygon_with_holes_2& pgn2,
                   Polygon_2& outer_boundary, OutputIterator holes) const
   { common_operator(pgn1, pgn2, outer_boundary, holes); }
 
@@ -120,20 +119,16 @@ public:
 private:
   //! \brief applies the Minkowski sum reduced-convolution operator.
   template <typename OutputIterator>
-  void common_operator(const Polygon_with_holes_2& pgn1,
-                       const Polygon_with_holes_2& pgn2,
+  void common_operator(const Polygon_with_holes_2& pgn1, const Polygon_with_holes_2& pgn2,
                        Polygon_2& outer_boundary, OutputIterator holes) const {
     // If the outer boundaries of both summands are empty the Minkowski sum is
     // the entire plane.
-    if (pgn1.outer_boundary().is_empty() && pgn2.outer_boundary().is_empty())
-      return;
+    if (pgn1.outer_boundary().is_empty() && pgn2.outer_boundary().is_empty()) return;
 
     // Initialize collision detector. It operates on pgn2 and on the inversed
     // pgn1:
-    const Polygon_with_holes_2 inversed_pgn1 =
-      transform(Aff_transformation_2<Kernel>(SCALING, -1), pgn1);
-    AABB_collision_detector_2<Kernel, Container>
-      collision_detector(pgn2, inversed_pgn1);
+    const Polygon_with_holes_2 inversed_pgn1 = transform(Aff_transformation_2<Kernel>(SCALING, -1), pgn1);
+    AABB_collision_detector_2<Kernel, Container> collision_detector(pgn2, inversed_pgn1);
 
     // Compute the reduced convolution (see section 4.1 of Alon's master's
     // thesis)
@@ -178,8 +173,7 @@ private:
   /*! \brief builds the reduced convolution for each pair of loops in the two
    * polygons-with-holes.
    */
-  void build_reduced_convolution(const Polygon_with_holes_2& pgnwh1,
-                                 const Polygon_with_holes_2& pgnwh2,
+  void build_reduced_convolution(const Polygon_with_holes_2& pgnwh1, const Polygon_with_holes_2& pgnwh2,
                                  Segment_list& reduced_convolution) const {
     for (std::size_t x = 0; x < 1+pgnwh1.number_of_holes(); ++x) {
       for (std::size_t y = 0; y < 1+pgnwh2.number_of_holes(); ++y) {
@@ -309,13 +303,11 @@ private:
     }
   }
 
-  // Returns a vector of the polygon's vertices, in case that Container
+  // returns a vector of the polygon's vertices, in case that Container
   // is std::list and we cannot use vertex(i).
   std::vector<Point_2> vertices_of_polygon(const Polygon_2& p) const {
     std::vector<Point_2> vertices;
-
-    for (auto it = p.vertices_begin(); it != p.vertices_end(); it++)
-      vertices.push_back(*it);
+    for (auto it = p.vertices_begin(); it != p.vertices_end(); it++) vertices.push_back(*it);
     return vertices;
   }
 
@@ -336,18 +328,15 @@ private:
   /*! \brief determines whether three vertices on the outer CCB of a face are
    * locally convex.
    */
-  bool is_convex(const Point_2& prev, const Point_2& curr,
-                 const Point_2& next) const
+  bool is_convex(const Point_2& prev, const Point_2& curr, const Point_2& next) const
   { return f_orientation(prev, curr, next) == LEFT_TURN; }
 
   //! \brief obtains the point corresponding to a state (i,j).
-  Point_2 get_point(int i1, int i2, const std::vector<Point_2>& pgn1,
-                    const std::vector<Point_2>& pgn2) const
+  Point_2 get_point(int i1, int i2, const std::vector<Point_2>& pgn1, const std::vector<Point_2>& pgn2) const
   { return f_add(pgn1[i1], Vector_2(Point_2(ORIGIN), pgn2[i2])); }
 
   //! \brief puts the outer loop of the arrangement in 'outer_boundary'
-  void get_outer_loop(const Arrangement_history_2& arr,
-                      Polygon_2& outer_boundary) const {
+  void get_outer_loop(const Arrangement_history_2& arr, Polygon_2& outer_boundary) const {
     Inner_ccb_const_iterator icit = arr.unbounded_face()->inner_ccbs_begin();
     Ccb_halfedge_const_circulator circ_start = *icit;
     Ccb_halfedge_const_circulator circ = circ_start;
@@ -357,8 +346,7 @@ private:
   }
 
   //! \brief determines whether the face orientation is consistent.
-  bool test_face_orientation(const Arrangement_history_2& arr,
-                             const Face_const_handle face) const {
+  bool test_face_orientation(const Arrangement_history_2& arr, const Face_const_handle face) const {
     // The face needs to be orientable
     Ccb_halfedge_const_circulator start = face->outer_ccb();
     Ccb_halfedge_const_circulator circ = start;
@@ -383,16 +371,11 @@ private:
   /*! \brief checks whether the convolution's original edge(s) had the same
    * direction as the arrangement's half edge.
    */
-  bool do_original_edges_have_same_direction(const Arrangement_history_2& arr,
-                                             Halfedge_const_handle he) const {
+  bool do_original_edges_have_same_direction(const Arrangement_history_2& arr, Halfedge_const_handle he) const {
     for (auto segment_itr = arr.originating_curves_begin(he);
-         segment_itr != arr.originating_curves_end(he); ++segment_itr)
-    {
-      if (f_compare_xy(segment_itr->source(), segment_itr->target()) ==
-          (Comparison_result)he->direction())
-      {
+         segment_itr != arr.originating_curves_end(he); ++segment_itr) {
+      if (f_compare_xy(segment_itr->source(), segment_itr->target()) == (Comparison_result)he->direction())
         return false;
-      }
     }
 
     return true;
@@ -405,9 +388,7 @@ private:
 
     // Move over the face's vertices until a convex corner is encountered.
     // Observe that the outer ccb of a hole is clockwise oriented.
-    while (! is_convex(curr->source()->point(),
-                       curr->target()->point(),
-                       next->target()->point())) {
+    while (! is_convex(curr->source()->point(), curr->target()->point(), next->target()->point())) {
       curr = next;
       ++next;
     }
@@ -439,8 +420,7 @@ private:
 
   //! \brief transforms a polygon with holes.
   template <typename Transformation>
-  Polygon_with_holes_2 transform(const Transformation& t,
-                                 const Polygon_with_holes_2& p) const {
+  Polygon_with_holes_2 transform(const Transformation& t, const Polygon_with_holes_2& p) const {
     Polygon_with_holes_2 result(CGAL::transform(t, p.outer_boundary()));
 
     auto it = p.holes_begin();

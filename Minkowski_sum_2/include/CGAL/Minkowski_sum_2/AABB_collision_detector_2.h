@@ -9,8 +9,8 @@
 //
 // Author(s): Sebastian Morr    <sebastian@morr.cc>
 
-#ifndef CGAL_AABB_COLLISION_DETECTOR_2_H
-#define CGAL_AABB_COLLISION_DETECTOR_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_AABB_COLLISION_DETECTOR_2_H
+#define CGAL_MINKOWSKI_SUM_2_AABB_COLLISION_DETECTOR_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
@@ -19,6 +19,9 @@
 #include <CGAL/AABB_traits_2.h>
 #include <CGAL/AABB_segment_primitive_2.h>
 #include <CGAL/AABB_trees/intersection.h>
+#include <CGAL/Origin.h>
+#include <CGAL/Polygon_2.h>
+#include <CGAL/Polygon_with_holes_2.h>
 
 namespace CGAL {
 

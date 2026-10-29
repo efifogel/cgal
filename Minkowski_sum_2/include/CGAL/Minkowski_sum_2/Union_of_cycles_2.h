@@ -9,8 +9,8 @@
 //
 // Author(s)     : Ron Wein   <wein_r@yahoo.com>
 
-#ifndef CGAL_UNION_OF_CYCLES_2_H
-#define CGAL_UNION_OF_CYCLES_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_UNION_OF_CYCLES_2_H
+#define CGAL_MINKOWSKI_SUM_2_UNION_OF_CYCLES_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 

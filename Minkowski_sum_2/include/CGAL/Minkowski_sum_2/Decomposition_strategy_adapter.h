@@ -10,13 +10,16 @@
 // Author(s) : Ron Wein   <wein_r@yahoo.com>
 //             Efi Fogel  <efifogel@gmail.com>
 
-#ifndef CGAL_POLYGON_DECOMPOSITION_STRATEGY_ADAPTER_H
-#define CGAL_POLYGON_DECOMPOSITION_STRATEGY_ADAPTER_H
+#ifndef CGAL_MINKOWSKI_SUM_2_DECOMPOSITION_STRATEGY_ADAPTER_H
+#define CGAL_MINKOWSKI_SUM_2_DECOMPOSITION_STRATEGY_ADAPTER_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
 
-#include <CGAL/basic.h>
+#include <iterator>
+#include <list>
+
+#include <CGAL/enum.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Partition_traits_2.h>
 #include <CGAL/partition_2.h>
@@ -34,17 +37,18 @@ struct Tag_Greene_convex_parition { bool dummy; };
  * An adapter of the global planar polygonal partitioning functions
  * to a decomposition strategy-class.
  */
-template <typename Kernel_, typename Container_, typename StrategyTag_>
+template <typename Kernel_, typename Container_, typename StrategyTag>
 class Polygon_decomposition_strategy_adapter {
 public:
-  typedef Kernel_                                  Kernel;
-  typedef CGAL::Polygon_2<Kernel, Container_>      Polygon_2;
-  typedef typename Kernel::Point_2                 Point_2;
-  typedef StrategyTag_                             Strategy_tag;
+  using Kernel = Kernel_;
+  using Container = Container_;
+  using Polygon_2 = CGAL::Polygon_2<Kernel, Container>;
+  using Point_2 = typename Kernel::Point_2;
+  using Strategy_tag = StrategyTag;
 
 protected:
-  typedef Partition_traits_2<Kernel>               Traits_2;
-  typedef typename Traits_2::Polygon_2             Traits_polygon_2;
+  using Traits_2 = Partition_traits_2<Kernel>;
+  using Traits_polygon_2 = typename Traits_2::Polygon_2;
 
   // Data members:
   const Traits_2* m_traits;
@@ -57,37 +61,39 @@ public:
   // constructor (assignment) is present, the move constructor (assignment)
   // is implicitly not generated anyway.
 
-  /*! Default constructor. */
+  /*! default constructs.
+   */
   Polygon_decomposition_strategy_adapter() :
     m_traits(nullptr),
     m_own_traits(false)
   { init(); }
 
-  /*! Copy constructor. */
-  Polygon_decomposition_strategy_adapter
-  (const Polygon_decomposition_strategy_adapter& other) :
+  /*! constructs copy.
+   */
+  Polygon_decomposition_strategy_adapter(const Polygon_decomposition_strategy_adapter& other) :
     m_traits((other.m_own_traits) ? new Traits_2 : other.m_traits),
     m_own_traits(other.m_own_traits)
   { init(); }
 
-  /*! Copy assignment. */
-  Polygon_decomposition_strategy_adapter&
-  operator=(const Polygon_decomposition_strategy_adapter& other) {
+  /*! assigns copy.
+   */
+  Polygon_decomposition_strategy_adapter& operator=(const Polygon_decomposition_strategy_adapter& other) {
     m_traits = (other.m_own_traits) ? new Traits_2 : other.m_traits;
     m_own_traits = other.m_own_traits;
     init();
     return *this;
   }
 
-  /*! Constructor. */
+  /*! constructs.
+   */
   Polygon_decomposition_strategy_adapter(const Traits_2& traits) :
     m_traits(traits),
     m_own_traits(false)
   { init(); }
 
-  /*! Destructor */
-  ~Polygon_decomposition_strategy_adapter()
-  {
+  /*! destructs.
+   */
+  ~Polygon_decomposition_strategy_adapter() {
     if (m_own_traits) {
       if (m_traits != nullptr) {
         delete m_traits;
@@ -97,9 +103,8 @@ public:
     }
   }
 
-  //! Initialize
-  void init()
-  {
+  //! initializes
+  void init() {
     // Allocate the traits if not provided.
     if (m_traits == nullptr) {
       m_traits = new Traits_2;
@@ -107,28 +112,25 @@ public:
     }
   }
 
-  /*!
-   * Obtain the traits
+  /*! obtains the traits
    * \return the traits
    */
   const Traits_2* traits() const { return m_traits; }
 
-  /*!
-   * Decompose a simple polygon to convex sub-polygons.
+  /*! decomposes a simple polygon to convex sub-polygons.
    * \param pgn The input polygon.
    * \param oi An output iterator of convex polygons.
    * \return A past-the-end iterator for the sub-polygons.
    */
   template <typename OutputIterator>
-  OutputIterator operator()(const Polygon_2& pgn, OutputIterator oi) const
-  {
+  OutputIterator operator()(const Polygon_2& pgn, OutputIterator oi) const {
     std::list<Traits_polygon_2> pgns;
     typename std::list<Traits_polygon_2>::const_iterator pgn_it;
 
     if (pgn.orientation() == CLOCKWISE) {
       // Make a local copy of the polygon, and reverse the order of its
       // vertices to make it counterclockwise oriented.
-      Polygon_2        my_pgn = pgn;
+      Polygon_2 my_pgn = pgn;
 
       my_pgn.reverse_orientation();
 
@@ -148,47 +150,26 @@ public:
   }
 
 private:
-  /*!
-   * Decompose the given counter clockwise-oriented polygon using the optimal
+  /*! decomposes the given counter clockwise-oriented polygon using the optimal
    * convex-partition method.
    */
   template <typename OutputIterator>
-  OutputIterator _decompose(const Polygon_2& pgn,
-                            Tag_optimal_convex_parition ,
-                            OutputIterator oi) const
-  {
-    return (optimal_convex_partition_2(pgn.vertices_begin(),
-                                       pgn.vertices_end(),
-                                       oi, *m_traits));
-  }
+  OutputIterator _decompose(const Polygon_2& pgn, Tag_optimal_convex_parition, OutputIterator oi) const
+  { return (optimal_convex_partition_2(pgn.vertices_begin(), pgn.vertices_end(), oi, *m_traits)); }
 
-  /*!
-   * Decompose the given counter clockwise-oriented polygon using the
+  /*! decomposes the given counter clockwise-oriented polygon using the
    * approximated convex-partition method.
    */
   template <typename OutputIterator>
-  OutputIterator _decompose(const Polygon_2& pgn,
-                            Tag_approx_convex_parition ,
-                            OutputIterator oi) const
-  {
-    return (approx_convex_partition_2(pgn.vertices_begin(),
-                                      pgn.vertices_end(),
-                                      oi, *m_traits));
-  }
+  OutputIterator _decompose(const Polygon_2& pgn, Tag_approx_convex_parition, OutputIterator oi) const
+  { return (approx_convex_partition_2(pgn.vertices_begin(), pgn.vertices_end(), oi, *m_traits)); }
 
-  /*!
-   * Decompose the given counter clockwise-oriented polygon using Greene's
+  /*! decomposes the given counter clockwise-oriented polygon using Greene's
    * approximated convex-partition method.
    */
   template <typename OutputIterator>
-  OutputIterator _decompose(const Polygon_2& pgn,
-                            Tag_Greene_convex_parition ,
-                            OutputIterator oi) const
-  {
-    return (greene_approx_convex_partition_2(pgn.vertices_begin(),
-                                             pgn.vertices_end(),
-                                             oi, *m_traits));
-  }
+  OutputIterator _decompose(const Polygon_2& pgn, Tag_Greene_convex_parition, OutputIterator oi) const
+  { return (greene_approx_convex_partition_2(pgn.vertices_begin(), pgn.vertices_end(), oi, *m_traits)); }
 };
 
 } //namespace CGAL

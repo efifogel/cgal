@@ -9,14 +9,20 @@
 //
 // Author(s): Ron Wein   <wein_r@yahoo.com>
 
-#ifndef CGAL_ARR_LABELED_TRAITS_2_H
-#define CGAL_ARR_LABELED_TRAITS_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_ARR_LABELED_TRAITS_2_H
+#define CGAL_MINKOWSKI_SUM_2_ARR_LABELED_TRAITS_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
 
-#include <CGAL/Minkowski_sum_2/Labels.h>
+#include <iterator>
 #include <list>
+#include <utility>
+#include <variant>
+
+#include <CGAL/assertions.h>
+#include <CGAL/tags.h>
+#include <CGAL/Minkowski_sum_2/Labels.h>
 
 namespace CGAL {
 

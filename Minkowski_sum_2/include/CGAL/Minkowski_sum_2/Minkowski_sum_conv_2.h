@@ -10,8 +10,8 @@
 // Author(s) : Ron Wein   <wein_r@yahoo.com>
 //             Efi Fogel  <efifogel@gmail.com>
 
-#ifndef CGAL_MINKOWSKI_SUM_CONV_H
-#define CGAL_MINKOWSKI_SUM_CONV_H
+#ifndef CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_CONV_2_H
+#define CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_CONV_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
@@ -65,10 +65,10 @@ private:
     std::size_t move_on;      // On which polygon do we move.
 
   public:
-    /*! Default constructor. */
+    /*! constructs default. */
     Convolution_label() : move_on(0) {}
 
-    /*! Constructor with parameters. */
+    /*! constructs with parameters. */
     Convolution_label(std::size_t ind1, std::size_t ind2, std::size_t move) :
       index1(ind1),
       index2(ind2),
@@ -119,20 +119,20 @@ public:
   // constructor (assignment) is present, the move constructor (assignment)
   // is implicitly not generated anyway.
 
-  /*! Default constructor. */
+  /*! construct default. */
   Minkowski_sum_by_convolution_2() :
     m_kernel(new Kernel),
     m_own_kernel(true)
   { init(); }
 
-  /*! Copy constructor. */
+  /*! constructs copy. */
   Minkowski_sum_by_convolution_2
   (const Minkowski_sum_by_convolution_2& other) :
     m_kernel((other.m_own_kernel) ? new Kernel : other.m_kernel),
     m_own_kernel(other.m_own_kernel)
   { init(); }
 
-  /*! Copy assignment. */
+  /*! assigns copy. */
   Minkowski_sum_by_convolution_2&
   operator=(const Minkowski_sum_by_convolution_2& other) {
     m_kernel = (other.m_own_kernel) ? new Kernel : other.m_kernel;
@@ -141,13 +141,13 @@ public:
     return *this;
   }
 
-  /*! Constructor. */
+  /*! constructs. */
   Minkowski_sum_by_convolution_2(const Kernel& kernel) :
     m_kernel(&kernel),
     m_own_kernel(false)
   { init(); }
 
-  /*! Destructor */
+  /*! destructs */
   ~Minkowski_sum_by_convolution_2() {
     if (m_own_kernel) {
       if (m_kernel != nullptr) {
@@ -158,7 +158,7 @@ public:
     }
   }
 
-  /*! Initialize. */
+  /*! initializes. */
   void init() {
     // Obtain kernel functors.
     f_equal = m_kernel->equal_2_object();
