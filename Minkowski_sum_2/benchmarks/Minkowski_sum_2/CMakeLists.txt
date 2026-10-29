@@ -6,6 +6,10 @@ project(Minkowski_sum_2_Examples)
 
 find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt6)
 
+# The calibration programs of the automatic choices (see their headers).
+create_single_source_cgal_program("calibrate_convolution_curves.cpp")
+create_single_source_cgal_program("calibrate_method.cpp")
+
 find_package(Boost COMPONENTS program_options)
 if(NOT Boost_PROGRAM_OPTIONS_FOUND)
   message(STATUS "NOTICE: The benchmark requires Boost Program Options, and will not be compiled.")
