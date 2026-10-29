@@ -1,3 +1,7 @@
+// The method "full" runs the deprecated CGAL::minkowski_sum_by_full_convolution_2()
+// to compare the new implementation with it.
+#define CGAL_NO_DEPRECATION_WARNINGS
+
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -195,37 +199,48 @@ struct Method {
   std::function<Polygon_with_holes_2(const Polygon_2&, const Polygon_2&)> m_func;
 };
 
+// computes the Minkowski sum of two polygons by decomposition, where both
+// polygons are decomposed by the given strategy.
+template <typename Decomposition>
+Polygon_with_holes_2 decomposition_sum(const Polygon_2& p1, const Polygon_2& p2, const Decomposition& decomp) {
+  auto np = CGAL::parameters::decomposition_strategy(decomp);
+  return CGAL::Minkowski_sum_2::minkowski_sum_by_decomposition_2(p1, p2, np, np);
+}
+
 std::vector<Method> all_methods() {
+  namespace ms2 = CGAL::Minkowski_sum_2;
   return {
-    {"full", "Full Convolution",
+    {"full", "Old Full Convolution",
      [](const Polygon_2& p1, const Polygon_2& p2) { return CGAL::minkowski_sum_by_full_convolution_2(p1, p2); }},
-    {"new-full", "New Full Convolution",
+    {"new-full", "Full Convolution",
      [](const Polygon_2& p1, const Polygon_2& p2)
-     { return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2(p1, p2); }},
-    {"new-full-poly", "New Full Convolution (polylines)",
+     { return ms2::minkowski_sum_by_full_convolution_2(p1, p2); }},
+    {"new-full-poly", "Full Convolution (polylines)",
      [](const Polygon_2& p1, const Polygon_2& p2) {
-       return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2
-         (p1, p2, CGAL::Minkowski_sum_2::Convolution_curves::POLYLINES);
+       namespace params = CGAL::parameters;
+       return ms2::minkowski_sum_by_full_convolution_2(p1, p2, params::default_values(), params::default_values(),
+                                                       params::convolution_curves(ms2::Convolution_curves::POLYLINES));
      }},
-    {"new-full-seg", "New Full Convolution (segments)",
+    {"new-full-seg", "Full Convolution (segments)",
      [](const Polygon_2& p1, const Polygon_2& p2) {
-       return CGAL::Minkowski_sum_2::new_minkowski_sum_by_full_convolution_2
-         (p1, p2, CGAL::Minkowski_sum_2::Convolution_curves::SEGMENTS);
+       namespace params = CGAL::parameters;
+       return ms2::minkowski_sum_by_full_convolution_2(p1, p2, params::default_values(), params::default_values(),
+                                                       params::convolution_curves(ms2::Convolution_curves::SEGMENTS));
      }},
     {"reduced", "Reduced Convolution",
-     [](const Polygon_2& p1, const Polygon_2& p2) { return CGAL::minkowski_sum_by_reduced_convolution_2(p1, p2); }},
+     [](const Polygon_2& p1, const Polygon_2& p2) { return ms2::minkowski_sum_by_reduced_convolution_2(p1, p2); }},
     {"ssab", "Decomp: Small Side Angle Bisector",
      [](const Polygon_2& p1, const Polygon_2& p2)
-     { return CGAL::minkowski_sum_2(p1, p2, CGAL::Small_side_angle_bisector_decomposition_2<Kernel>()); }},
+     { return decomposition_sum(p1, p2, CGAL::Small_side_angle_bisector_decomposition_2<Kernel>()); }},
     {"optimal", "Decomp: Optimal Convex",
      [](const Polygon_2& p1, const Polygon_2& p2)
-     { return CGAL::minkowski_sum_2(p1, p2, CGAL::Optimal_convex_decomposition_2<Kernel>()); }},
+     { return decomposition_sum(p1, p2, CGAL::Optimal_convex_decomposition_2<Kernel>()); }},
     {"hertel-mehlhorn", "Decomp: Hertel-Mehlhorn",
      [](const Polygon_2& p1, const Polygon_2& p2)
-     { return CGAL::minkowski_sum_2(p1, p2, CGAL::Hertel_Mehlhorn_convex_decomposition_2<Kernel>()); }},
+     { return decomposition_sum(p1, p2, CGAL::Hertel_Mehlhorn_convex_decomposition_2<Kernel>()); }},
     {"greene", "Decomp: Greene Convex",
      [](const Polygon_2& p1, const Polygon_2& p2)
-     { return CGAL::minkowski_sum_2(p1, p2, CGAL::Greene_convex_decomposition_2<Kernel>()); }}
+     { return decomposition_sum(p1, p2, CGAL::Greene_convex_decomposition_2<Kernel>()); }}
   };
 }
 
@@ -352,7 +367,8 @@ int main(int argc, char* argv[]) {
         if (kind == "convex-convex") run_convex_convex = true;
         else if (kind == "convex-concave") run_convex_concave = true;
         else if (kind == "concave-concave") run_concave_concave = true;
-        else throw po::error("unknown pair kind '" + kind + "'; use one of convex-convex, convex-concave, concave-concave");
+        else throw po::error("unknown pair kind '" + kind +
+                             "'; use one of convex-convex, convex-concave, concave-concave");
       }
     }
   }
@@ -387,7 +403,8 @@ int main(int argc, char* argv[]) {
   for (std::size_t i = 0; i < vm["convex"].as<std::size_t>(); ++i)
     pgns.emplace_back("Convex " + std::to_string(i + 1), create_convex_polygon(draw_count(convex_range), size, rnd));
   for (std::size_t i = 0; i < vm["concave"].as<std::size_t>(); ++i)
-    pgns.emplace_back("Concave " + std::to_string(i + 1), create_concave_polygon(draw_count(concave_range), size, reflex_ratio, rnd));
+    pgns.emplace_back("Concave " + std::to_string(i + 1),
+                      create_concave_polygon(draw_count(concave_range), size, reflex_ratio, rnd));
 
   // Run every pair of distinct polygons of the selected kinds; the convex
   // polygons precede the concave ones.
