@@ -1,3 +1,8 @@
+// Tests the deprecated functions of the namespace CGAL that compute Minkowski
+// sums; see test_minkowski_sum_named_parameters.cpp for the functions of the
+// namespace CGAL::Minkowski_sum_2 that replace them.
+#define CGAL_NO_DEPRECATION_WARNINGS
+
 #include <CGAL/minkowski_sum_2.h>
 #include <CGAL/Polygon_vertical_decomposition_2.h>
 #include <CGAL/Polygon_triangulation_decomposition_2.h>
@@ -11,13 +16,13 @@
 #include <list>
 #include <CGAL/Timer.h>
 
+#ifndef CGAL_NO_DEPRECATED_CODE
+
 typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
 typedef CGAL::Polygon_2<Kernel> Polygon_2;
 typedef CGAL::Polygon_with_holes_2<Kernel> Polygon_with_holes_2;
 
-bool are_equal(const Polygon_with_holes_2& ph1,
-               const Polygon_with_holes_2& ph2)
-{
+bool are_equal(const Polygon_with_holes_2& ph1, const Polygon_with_holes_2& ph2) {
   std::list<Polygon_with_holes_2> sym_diff;
   CGAL::symmetric_difference(ph1, ph2, std::back_inserter(sym_diff));
   return sym_diff.empty();
@@ -43,16 +48,10 @@ static const char* strategy_names[] = {
   "optimal decomposition"
 };
 
-Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
-                                             Polygon_with_holes_2& q,
-                                             Strategy strategy)
-{
+Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p, Polygon_with_holes_2& q, Strategy strategy) {
   switch (strategy) {
-   case REDUCED_CONVOLUTION:
-     return CGAL::minkowski_sum_by_reduced_convolution_2(p, q);
-
-   case FULL_CONVOLUTION:
-     return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
+   case REDUCED_CONVOLUTION: return CGAL::minkowski_sum_by_reduced_convolution_2(p, q);
+   case FULL_CONVOLUTION: return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
 
    case VERTICAL_DECOMPOSITION:
     {
@@ -68,10 +67,8 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
 
    case VERTICAL_AND_ANGLE_BISECTOR_DECOMPOSITION:
     {
-     typedef CGAL::Small_side_angle_bisector_decomposition_2<Kernel>
-                                                No_holes_decomposition;
-     typedef CGAL::Polygon_vertical_decomposition_2<Kernel>
-                                                With_holes_decomposition;
+     using No_holes_decomposition = CGAL::Small_side_angle_bisector_decomposition_2<Kernel>;
+     using With_holes_decomposition = CGAL::Polygon_vertical_decomposition_2<Kernel>;
 
      if (0 == p.number_of_holes()) {
        const Polygon_2& pnh = p.outer_boundary();
@@ -97,10 +94,8 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
 
    case TRIANGULATION_AND_ANGLE_BISECTOR_DECOMPOSITION:
     {
-     typedef CGAL::Small_side_angle_bisector_decomposition_2<Kernel>
-                                                No_holes_decomposition;
-     typedef CGAL::Polygon_triangulation_decomposition_2<Kernel>
-                                                With_holes_decomposition;
+     using No_holes_decomposition = CGAL::Small_side_angle_bisector_decomposition_2<Kernel>;
+     using With_holes_decomposition = CGAL::Polygon_triangulation_decomposition_2<Kernel>;
      if (0 == p.number_of_holes()) {
        const Polygon_2& pnh = p.outer_boundary();
        No_holes_decomposition decomp_no_holes;
@@ -127,9 +122,7 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
     {
      CGAL::Small_side_angle_bisector_decomposition_2<Kernel> decomp_no_holes;
      CGAL::Polygon_triangulation_decomposition_2<Kernel> decomp_with_holes;
-     return CGAL::minkowski_sum_by_decomposition_2(p, q,
-                                                   decomp_no_holes,
-                                                   decomp_with_holes);
+     return CGAL::minkowski_sum_by_decomposition_2(p, q, decomp_no_holes, decomp_with_holes);
     }
 
    default:
@@ -138,8 +131,7 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_with_holes_2& p,
   }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " [-method flag] [polygon files]..."
               << std::endl;
@@ -226,3 +218,9 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+#else
+
+int main() { return 0; }
+
+#endif

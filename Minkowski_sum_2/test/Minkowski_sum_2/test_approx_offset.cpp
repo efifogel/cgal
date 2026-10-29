@@ -5,7 +5,7 @@ typedef CGAL::Exact_rational         Rational;
 
 #include <CGAL/Cartesian.h>
 #include <CGAL/Polygon_2.h>
-#include <CGAL/approximated_offset_2.h>
+#include <CGAL/Minkowski_sum_2/approximated_offset_2.h>
 #include <CGAL/Small_side_angle_bisector_decomposition_2.h>
 #include <CGAL/Polygon_convex_decomposition_2.h>
 #include <CGAL/Boolean_set_operations_2.h>
@@ -18,26 +18,36 @@ typedef CGAL::Exact_rational         Rational;
 
 #include "read_polygon.h"
 
-typedef CGAL::Cartesian<Rational>                 Kernel;
-typedef Kernel::Point_2                           Point_2;
-typedef CGAL::Polygon_2<Kernel>                   Polygon_2;
+namespace Ms = CGAL::Minkowski_sum_2;
+namespace params = CGAL::parameters;
 
-typedef CGAL::Gps_circle_segment_traits_2<Kernel> Gps_traits_2;
-typedef Gps_traits_2::Polygon_2                   Offset_polygon_2;
-typedef Gps_traits_2::Polygon_with_holes_2        Offset_polygon_with_holes_2;
+using Kernel = CGAL::Cartesian<Rational>;
+using FT = Kernel::FT;
+using Point_2 = Kernel::Point_2;
+using Polygon_2 = CGAL::Polygon_2<Kernel>;
+
+using Gps_traits_2 = CGAL::Gps_circle_segment_traits_2<Kernel>;
+using Offset_polygon_2 = Gps_traits_2::Polygon_2;
+using Offset_polygon_with_holes_2 = Gps_traits_2::Polygon_with_holes_2;
+
+/*! Approximates the offset of a polygon with the decomposition method. */
+template <typename Decomposition>
+Offset_polygon_with_holes_2
+decomposition_offset(const Polygon_2& pgn, const FT& r, double eps, const Decomposition& decomp) {
+  return Ms::approximated_offset_2(pgn, r, eps,
+                                   params::decomposition_strategy(decomp),
+                                   params::method(Ms::Method::DECOMPOSITION));
+}
 
 /*! Check if two polygons with holes are the same. */
-bool are_equal (const Offset_polygon_with_holes_2& ph1,
-                const Offset_polygon_with_holes_2& ph2)
-{
-  std::list<Offset_polygon_with_holes_2>   sym_diff;
+bool are_equal (const Offset_polygon_with_holes_2& ph1, const Offset_polygon_with_holes_2& ph2) {
+  std::list<Offset_polygon_with_holes_2> sym_diff;
   CGAL::symmetric_difference (ph1, ph2, std::back_inserter(sym_diff));
   return (sym_diff.empty());
 }
 
 /*! The main program. */
-int main (int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   const double eps = 0.0001;
 
   // Read the input file. Because of the structure of the *.cmd file
@@ -81,50 +91,42 @@ int main (int argc, char* argv[])
     Offset_polygon_with_holes_2 offset_conv;
 
     std::cout << "Using the convolution method ... ";
-    offset_conv = approximated_offset_2 (pgn, r, eps);
+    offset_conv = Ms::approximated_offset_2(pgn, r, eps);
     std::cout << "Done." << std::endl;
 
     // Define auxiliary polygon-decomposition objects.
     CGAL::Small_side_angle_bisector_decomposition_2<Kernel> ssab_decomp;
-    CGAL::Optimal_convex_decomposition_2<Kernel>            opt_decomp;
-    CGAL::Hertel_Mehlhorn_convex_decomposition_2<Kernel>    hm_approx_decomp;
-    CGAL::Greene_convex_decomposition_2<Kernel>             greene_decomp;
-    Offset_polygon_with_holes_2                             offset_decomp;
+    CGAL::Optimal_convex_decomposition_2<Kernel> opt_decomp;
+    CGAL::Hertel_Mehlhorn_convex_decomposition_2<Kernel> hm_approx_decomp;
+    CGAL::Greene_convex_decomposition_2<Kernel> greene_decomp;
+    Offset_polygon_with_holes_2 offset_decomp;
 
     if (use_ssab) {
       std::cout << "Using the small-side angle-bisector decomposition ... ";
-      offset_decomp = approximated_offset_2 (pgn, r, eps, ssab_decomp);
-      if (are_equal (offset_conv, offset_decomp))
-        std::cout << "OK." << std::endl;
-      else
-        std::cout << "ERROR (different result)." << std::endl;
+      offset_decomp = decomposition_offset (pgn, r, eps, ssab_decomp);
+      if (are_equal (offset_conv, offset_decomp)) std::cout << "OK." << std::endl;
+      else std::cout << "ERROR (different result)." << std::endl;
     }
 
     if (use_opt) {
       std::cout << "Using the optimal convex decomposition ... ";
-      offset_decomp = approximated_offset_2 (pgn, r, eps, opt_decomp);
-      if (are_equal (offset_conv, offset_decomp))
-        std::cout << "OK." << std::endl;
-      else
-        std::cout << "ERROR (different result)." << std::endl;
+      offset_decomp = decomposition_offset (pgn, r, eps, opt_decomp);
+      if (are_equal (offset_conv, offset_decomp)) std::cout << "OK." << std::endl;
+      else std::cout << "ERROR (different result)." << std::endl;
     }
 
     if (use_hm) {
       std::cout << "Using the Hertel--Mehlhorn decomposition ... ";
-      offset_decomp = approximated_offset_2 (pgn, r, eps, hm_approx_decomp);
-      if (are_equal (offset_conv, offset_decomp))
-        std::cout << "OK." << std::endl;
-      else
-        std::cout << "ERROR (different result)." << std::endl;
+      offset_decomp = decomposition_offset (pgn, r, eps, hm_approx_decomp);
+      if (are_equal (offset_conv, offset_decomp)) std::cout << "OK." << std::endl;
+      else std::cout << "ERROR (different result)." << std::endl;
     }
 
     if (use_greene) {
       std::cout << "Using the Greene decomposition ... ";
-      offset_decomp = approximated_offset_2 (pgn, r, eps, greene_decomp);
-      if (are_equal (offset_conv, offset_decomp))
-        std::cout << "OK." << std::endl;
-      else
-        std::cout << "ERROR (different result)." << std::endl;
+      offset_decomp = decomposition_offset (pgn, r, eps, greene_decomp);
+      if (are_equal (offset_conv, offset_decomp)) std::cout << "OK." << std::endl;
+      else std::cout << "ERROR (different result)." << std::endl;
     }
 
     i += (((i+2) < argc) && (argv[i+2][0] == '-')) ? 3 : 2;
