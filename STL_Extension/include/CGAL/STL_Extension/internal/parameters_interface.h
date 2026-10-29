@@ -214,6 +214,13 @@ CGAL_add_named_parameter(use_inverse_transformation_t, use_inverse_transformatio
 CGAL_add_named_parameter(erase_all_duplicates_t, erase_all_duplicates, erase_all_duplicates)
 #endif // CGAL_NO_DEPRECATED_CODE
 
+// List of named parameters that we use in the package 'Minkowski Sum 2'
+CGAL_add_named_parameter(is_convex_t, is_convex, is_convex)
+CGAL_add_named_parameter(decomposition_strategy_t, decomposition_strategy, decomposition_strategy)
+CGAL_add_named_parameter(decomposition_strategy_with_holes_t, decomposition_strategy_with_holes, decomposition_strategy_with_holes)
+CGAL_add_named_parameter(convolution_curves_t, convolution_curves, convolution_curves)
+CGAL_add_named_parameter(method_t, method, method)
+
 // List of named parameters that we use in the package 'Surface Mesh Simplification'
 CGAL_add_named_parameter(get_cost_policy_t, get_cost_policy, get_cost)
 CGAL_add_named_parameter(get_placement_policy_t, get_placement_policy, get_placement)
