@@ -1,12 +1,11 @@
 //! \file examples/Minkowski_sum_2/sum_triangle_square.cpp
 // Computing the Minkowski sum of a triangle and a square.
 
-#include <CGAL/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_2.h>
 
 #include "bops_linear.h"
 
-int main()
-{
+int main() {
   // Construct the triangle.
   Polygon_2   P;
   P.push_back(Point_2(-1, -1));  P.push_back(Point_2(1, -1));
@@ -20,7 +19,7 @@ int main()
   std::cout << "Q = " << Q << std::endl;
 
   // Compute the Minkowski sum.
-  Polygon_with_holes_2  sum = CGAL::minkowski_sum_2(P, Q);
+  Polygon_with_holes_2  sum = CGAL::Minkowski_sum_2::minkowski_sum_2(P, Q);
   assert(sum.number_of_holes() == 0);
   std::cout << "P (+) Q = " << sum.outer_boundary() << std::endl;
   return 0;

@@ -12,9 +12,9 @@
 
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/CGAL_Ipelet_base.h>
-#include <CGAL/minkowski_sum_2.h>
-#include <CGAL/approximated_offset_2.h>
-#include <CGAL/offset_polygon_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/approximated_offset_2.h>
+#include <CGAL/Minkowski_sum_2/offset_polygon_2.h>
 
 
 
@@ -87,7 +87,7 @@ void SubSelectIpelet::protected_run(int fn)
   if (fn==0){
     Polygon_2 polygon1=*pol_list.begin();
     Polygon_2 polygon2=*++pol_list.begin();
-    Polygon_with_holes_2  sum = minkowski_sum_2 (polygon1, polygon2);
+    Polygon_with_holes_2  sum = CGAL::Minkowski_sum_2::minkowski_sum_2(polygon1, polygon2);
     std::list<Point_2> LP;
     for (Polygon_2::iterator it=sum.outer_boundary().vertices_begin();it!= sum.outer_boundary().vertices_end();++it)
       LP.push_back(*it);
@@ -109,7 +109,7 @@ void SubSelectIpelet::protected_run(int fn)
       r_offsets.push_back(10);
     for (std::list<Polygon_2>::iterator it_pol=pol_list.begin();it_pol!=pol_list.end();++it_pol){
       for(std::list<double>::iterator it=r_offsets.begin();it!=r_offsets.end();++it){
-        Offset_polygon_with_holes_2  offset=approximated_offset_2 (*it_pol, *it, 0.0001);
+        Offset_polygon_with_holes_2  offset=CGAL::Minkowski_sum_2::approximated_offset_2 (*it_pol, *it, 0.0001);
         std::list<Segment_2> LS;
         for( Offset_polygon_2::Curve_iterator itt=offset.outer_boundary().curves_begin();
           itt!=offset.outer_boundary().curves_end();++itt){

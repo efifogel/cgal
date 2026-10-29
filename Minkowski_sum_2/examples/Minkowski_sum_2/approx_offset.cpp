@@ -4,14 +4,13 @@
 #include <fstream>
 #include <CGAL/Timer.h>
 
-#include <CGAL/approximated_offset_2.h>
+#include <CGAL/Minkowski_sum_2/approximated_offset_2.h>
 
 #include "bops_circular.h"
 
-typedef CGAL::Polygon_2<Kernel>                         Linear_polygon;
+using Linear_polygon = CGAL::Polygon_2<Kernel>;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   // Open the input file and read a polygon.
   const char* filename = (argc > 1) ? argv[1] : "spiked.dat";
   std::ifstream in_file(filename);
@@ -22,13 +21,12 @@ int main(int argc, char* argv[])
   Linear_polygon  P;
   in_file >> P;
   in_file.close();
-  std::cout << "Read an input polygon with " << P.size() << " vertices."
-            << std::endl;
+  std::cout << "Read an input polygon with " << P.size() << " vertices." << std::endl;
 
   // Approximate the offset polygon with radius 5 and error bound 0.00001.
   CGAL::Timer timer;
   timer.start();
-  Polygon_with_holes_2 offset = CGAL::approximated_offset_2(P, 5, 0.00001);
+  Polygon_with_holes_2 offset = CGAL::Minkowski_sum_2::approximated_offset_2(P, 5, 0.00001);
   double secs = timer.time();
 
   std::cout << "The offset polygon has " << offset.outer_boundary().size()
