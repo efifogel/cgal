@@ -9,8 +9,8 @@
 //
 // Author(s)     : Ron Wein   <wein_r@yahoo.com>
 
-#ifndef CGAL_EXACT_OFFSET_BASE_H
-#define CGAL_EXACT_OFFSET_BASE_H
+#ifndef CGAL_MINKOWSKI_SUM_2_EXACT_OFFSET_BASE_2_H
+#define CGAL_MINKOWSKI_SUM_2_EXACT_OFFSET_BASE_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
@@ -31,48 +31,45 @@ namespace CGAL {
 template <typename Traits_, typename Container_>
 class Exact_offset_base_2 {
 private:
-  typedef Traits_                                        Traits_2;
+  using Traits_2 = Traits_;
+  using Container = Container_;
 
   // Rational kernel types:
-  typedef typename Traits_2::Rat_kernel                  Rat_kernel;
-  typedef typename Rat_kernel::FT                        Rational;
-  typedef typename Rat_kernel::Point_2                   Rat_point_2;
-  typedef typename Rat_kernel::Line_2                    Rat_line_2;
-  typedef typename Rat_kernel::Circle_2                  Rat_circle_2;
+  using Rat_kernel = typename Traits_2::Rat_kernel;
+  using Rational = typename Rat_kernel::FT;
+  using Rat_point_2 = typename Rat_kernel::Point_2;
+  using Rat_line_2 = typename Rat_kernel::Line_2;
+  using Rat_circle_2 = typename Rat_kernel::Circle_2;
 
 protected:
-
-  typedef Rat_kernel                                     Basic_kernel;
-  typedef Rational                                       Basic_NT;
+  using Basic_kernel = Rat_kernel;
+  using Basic_NT = Rational;
 
 private:
   // Algebraic kernel types:
-  typedef typename Traits_2::Alg_kernel                  Alg_kernel;
-  typedef typename Alg_kernel::FT                        Algebraic;
-  typedef typename Alg_kernel::Point_2                   Alg_point_2;
-
-  typedef typename Traits_2::Nt_traits                   Nt_traits;
+  using Alg_kernel = typename Traits_2::Alg_kernel;
+  using Algebraic = typename Alg_kernel::FT;
+  using Alg_point_2 = typename Alg_kernel::Point_2;
+  using Nt_traits = typename Traits_2::Nt_traits;
 
   // Traits-class types:
-  typedef typename Traits_2::Curve_2                     Curve_2;
-  typedef typename Traits_2::X_monotone_curve_2          X_monotone_curve_2;
-
-  typedef CGAL::Gps_traits_2<Traits_2>                   Gps_traits_2;
+  using Curve_2 = typename Traits_2::Curve_2;
+  using X_monotone_curve_2 = typename Traits_2::X_monotone_curve_2;
+  using Gps_traits_2 = CGAL::Gps_traits_2<Traits_2>;
 
 protected:
-  typedef CGAL::Polygon_2<Rat_kernel, Container_>        Polygon_2;
-  typedef CGAL::Polygon_with_holes_2<Rat_kernel,
-                                     Container_>         Polygon_with_holes_2;
-  typedef typename Gps_traits_2::Polygon_2               Offset_polygon_2;
+  using Polygon_2 = CGAL::Polygon_2<Rat_kernel, Container>;
+  using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Rat_kernel, Container>;
+  using Offset_polygon_2 = typename Gps_traits_2::Polygon_2;
 
 private:
 
   // Polygon-related types:
-  typedef typename Polygon_2::Vertex_circulator          Vertex_circulator;
+  using Vertex_circulator = typename Polygon_2::Vertex_circulator;
 
 protected:
-  typedef Arr_labeled_traits_2<Traits_2>                 Labeled_traits_2;
-  typedef typename Labeled_traits_2::X_monotone_curve_2  Labeled_curve_2;
+  using Labeled_traits_2 = Arr_labeled_traits_2<Traits_2>;
+  using Labeled_curve_2 = typename Labeled_traits_2::X_monotone_curve_2;
 
 public:
   /*! Default constructor. */
@@ -90,12 +87,8 @@ protected:
    * \return A past-the-end iterator for the holes container.
    */
   template <typename OutputIterator>
-  OutputIterator _offset_polygon(const Polygon_2& pgn,
-                                 CGAL::Orientation orient,
-                                 const Rational& r,
-                                 unsigned int cycle_id,
-                                 OutputIterator oi) const
-  {
+  OutputIterator _offset_polygon(const Polygon_2& pgn, CGAL::Orientation orient, const Rational& r,
+                                 unsigned int cycle_id, OutputIterator oi) const {
     // Prepare circulators over the polygon vertices.
     const bool forward = (pgn.orientation() == orient);
     Vertex_circulator first, curr, next;
@@ -186,8 +179,7 @@ protected:
             const X_monotone_curve_2* xarc = std::get_if<X_monotone_curve_2>(&(*xobj_it));
             CGAL_assertion (xarc!=nullptr);
 
-            *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(),
-                                                         cycle_id, curve_index));
+            *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(), cycle_id, curve_index));
             curve_index++;
           }
         }
@@ -208,8 +200,7 @@ protected:
 
       auto ctr_xcv = traits.construct_x_monotone_curve_2_object();
       X_monotone_curve_2 xarc = ctr_xcv(a, b, c, op1, op2);
-      *oi++ = Labeled_curve_2(xarc, X_curve_label(xarc.is_directed_right(),
-                                                  cycle_id, curve_index));
+      *oi++ = Labeled_curve_2(xarc, X_curve_label(xarc.is_directed_right(), cycle_id, curve_index));
       curve_index++;
 
       // Proceed to the next polygon vertex.
@@ -239,9 +230,7 @@ protected:
         ++xobj_it;
         is_last = (xobj_it == xobjs.end());
 
-        *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(),
-                                                    cycle_id, curve_index,
-                                                    is_last));
+        *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(), cycle_id, curve_index, is_last));
         curve_index++;
       }
     }
@@ -250,7 +239,6 @@ protected:
   }
 
 };
-
 
 } //namespace CGAL
 

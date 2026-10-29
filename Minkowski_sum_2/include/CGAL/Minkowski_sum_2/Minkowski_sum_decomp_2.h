@@ -7,21 +7,22 @@
 // $Id$
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
-// Author(s)     : Ron Wein   <wein_r@yahoo.com>
+// Author(s) : Ron Wein   <wein_r@yahoo.com>
 
-#ifndef CGAL_MINKOWSKI_SUM_DECOMP_2_H
-#define CGAL_MINKOWSKI_SUM_DECOMP_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_DECOMP_2_H
+#define CGAL_MINKOWSKI_SUM_2_MINKOWSKI_SUM_DECOMP_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
+#include <iterator>
+#include <list>
+#include <memory>
 
 #include <CGAL/Arr_segment_traits_2.h>
 #include <CGAL/Polygon_with_holes_2.h>
-
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/General_polygon_set_2.h>
 #include <CGAL/Gps_segment_traits_2.h>
-#include <list>
 
 namespace CGAL {
 
@@ -31,38 +32,36 @@ namespace CGAL {
  * computing the union of the sub-sums.
  */
 
-template <typename DecompStrategy1_, typename DecompStrategy2_,
-          typename Container_>
+template <typename DecompStrategy1_, typename DecompStrategy2_, typename Container_>
 class Minkowski_sum_by_decomposition_2 {
 public:
-  typedef DecompStrategy1_                              Decomposition_strategy1;
-  typedef DecompStrategy2_                              Decomposition_strategy2;
-  typedef Container_                                    Container;
+  using Decomposition_strategy1 = DecompStrategy1_;
+  using Decomposition_strategy2 = DecompStrategy2_;
+  using Container = Container_;
 
-  typedef typename Decomposition_strategy1::Polygon_2    Polygon_2;
+  using Polygon_2 = typename Decomposition_strategy1::Polygon_2;
 
-  typedef typename Decomposition_strategy1::Kernel       Kernel;
-  typedef CGAL::Arr_segment_traits_2<Kernel>             Arr_segment_traits;
-  typedef CGAL::Gps_segment_traits_2<Kernel, Container, Arr_segment_traits>
-                                                         Traits_2;
-  typedef CGAL::General_polygon_set_2<Traits_2>          General_polygon_set_2;
-  typedef CGAL::Polygon_with_holes_2<Kernel,Container>   Polygon_with_holes_2;
-  typedef typename General_polygon_set_2::Arrangement_2  Arrangement_2;
+  using Kernel = typename Decomposition_strategy1::Kernel;
+  using Arr_segment_traits = CGAL::Arr_segment_traits_2<Kernel>;
+  using Traits_2 = CGAL::Gps_segment_traits_2<Kernel, Container, Arr_segment_traits>;
+  using General_polygon_set_2 = CGAL::General_polygon_set_2<Traits_2>;
+  using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel,Container>;
+  using Arrangement_2 = typename General_polygon_set_2::Arrangement_2;
 
 private:
   // Kernel types:
-  typedef typename Kernel::Point_2                       Point_2;
-  typedef typename Kernel::Vector_2                      Vector_2;
-  typedef typename Kernel::Direction_2                   Direction_2;
+  using Point_2 = typename Kernel::Point_2;
+  using Vector_2 = typename Kernel::Vector_2;
+  using Direction_2 = typename Kernel::Direction_2;
 
   // Kernel functors:
-  typedef typename Kernel::Compare_angle_with_x_axis_2   Compare_angle_2;
-  typedef typename Kernel::Construct_translated_point_2  Translate_point_2;
-  typedef typename Kernel::Construct_vector_2            Construct_vector_2;
-  typedef typename Kernel::Construct_direction_2         Construct_direction_2;
-  typedef typename Kernel::Compare_x_2                   Compare_x_2;
-  typedef typename Kernel::Compare_y_2                   Compare_y_2;
-  typedef typename Kernel::Compare_xy_2                  Compare_xy_2;
+  using Compare_angle_2 = typename Kernel::Compare_angle_with_x_axis_2;
+  using Translate_point_2 = typename Kernel::Construct_translated_point_2;
+  using Construct_vector_2 = typename Kernel::Construct_vector_2;
+  using Construct_direction_2 = typename Kernel::Construct_direction_2;
+  using Compare_x_2 = typename Kernel::Compare_x_2;
+  using Compare_y_2 = typename Kernel::Compare_y_2;
+  using Compare_xy_2 = typename Kernel::Compare_xy_2;
 
   // Polygon-related types:
   typedef typename Polygon_2::Vertex_circulator          Vertex_circulator;
@@ -72,151 +71,59 @@ private:
   typedef std::list<Polygon_with_holes_2>
     Polygon_with_holes_list;
 
-  // Data members:
-  const Decomposition_strategy1* m_decomposition_strategy1;
-  const Decomposition_strategy2* m_decomposition_strategy2;
-  bool m_own_strategy1;   // indicates whether the strategy should be freed up.
-  bool m_own_strategy2;   // indicates whether the strategy should be freed up.
+  // Data members.  An object given by the user is held by a non-owning
+  // pointer (the user keeps it alive); an object not given is created and
+  // owned.  The objects are immutable, so copies of this class share them;
+  // the implicit copy and move operations and destructor are correct.
+  std::shared_ptr<const Decomposition_strategy1> m_decomposition_strategy1;
+  std::shared_ptr<const Decomposition_strategy2> m_decomposition_strategy2;
+  std::shared_ptr<const Traits_2> m_traits;
 
-  const Traits_2* m_traits;
-  bool m_own_traits;      // indicates whether the kernel should be freed up.
+  Compare_angle_2 f_compare_angle;
+  Translate_point_2 f_add;
+  Construct_vector_2 f_vector;
+  Construct_direction_2 f_direction;
+  Compare_x_2 f_compare_x;
+  Compare_y_2 f_compare_y;
+  Compare_xy_2 f_compare_xy;
 
-  Compare_angle_2         f_compare_angle;
-  Translate_point_2       f_add;
-  Construct_vector_2      f_vector;
-  Construct_direction_2   f_direction;
-  Compare_x_2             f_compare_x;
-  Compare_y_2             f_compare_y;
-  Compare_xy_2            f_compare_xy;
+  // obtains a non-owning pointer to an object given by the user.
+  template <typename T>
+  static std::shared_ptr<const T> non_owning(const T& t)
+  { return std::shared_ptr<const T>(std::shared_ptr<void>(), &t); }
 
 public:
-  // The pointers and the corresponding flags that indicate ownerships should
-  // be replaced with smart pointers. Meanwhile, the copy constructor and
-  // copy assignment prevent double delition. Notice that once a copy
-  // constructor (assignment) is present, the move constructor (assignment)
-  // is implicitly not generated anyway.
+  //! constructs default.
+  Minkowski_sum_by_decomposition_2() { init(); }
 
-  //! Default constructor.
-  Minkowski_sum_by_decomposition_2() :
-    m_decomposition_strategy1(nullptr),
-    m_decomposition_strategy2(nullptr),
-    m_own_strategy1(false),
-    m_own_strategy2(false),
-    m_traits(nullptr),
-    m_own_traits(false)
-  { init(); }
-
-  //! Copy constructor.
-  Minkowski_sum_by_decomposition_2
-  (const Minkowski_sum_by_decomposition_2& other) :
-    m_decomposition_strategy1((other.m_own_strategy1) ?
-                              new Decomposition_strategy1 :
-                              other.m_decomposition_strategy1),
-    m_decomposition_strategy2((other.m_own_strategy2) ?
-                              new Decomposition_strategy2 :
-                              other.m_decomposition_strategy2),
-    m_own_strategy1(other.m_own_strategy1),
-    m_own_strategy2(other.m_own_strategy2),
-    m_traits((other.m_own_traits) ? new Traits_2 : other.m_traits),
-    m_own_traits(other.m_own_traits)
-  { init(); }
-
-  //! Copy assignment.
-  Minkowski_sum_by_decomposition_2&
-  operator=(const Minkowski_sum_by_decomposition_2& other) {
-    m_decomposition_strategy1 = (other.m_own_strategy1) ?
-      new Decomposition_strategy1 : other.m_decomposition_strategy1;
-    m_decomposition_strategy2 = (other.m_own_strategy2) ?
-      new Decomposition_strategy2 : other.m_decomposition_strategy2;
-    m_own_strategy1 = other.m_own_strategy1;
-    m_own_strategy2 = other.m_own_strategy2;
-    m_traits = (other.m_own_traits) ? new Traits_2 : other.m_traits;
-    m_own_traits = other.m_own_traits;
-    init();
-    return *this;
-  }
-
-  //! Constructor.
+  //! constructs.
   Minkowski_sum_by_decomposition_2(const Decomposition_strategy1& strategy1,
                                    const Decomposition_strategy2& strategy2,
                                    const Traits_2& traits) :
-    m_decomposition_strategy1(&strategy1),
-    m_decomposition_strategy2(&strategy2),
-    m_own_strategy1(false),
-    m_own_strategy2(false),
-    m_traits(&traits),
-    m_own_traits(false)
+    m_decomposition_strategy1(non_owning(strategy1)),
+    m_decomposition_strategy2(non_owning(strategy2)),
+    m_traits(non_owning(traits))
   { init(); }
 
-  //! Constructor.
+  //! constructs.
   Minkowski_sum_by_decomposition_2(const Decomposition_strategy1& strategy1,
                                    const Decomposition_strategy2& strategy2) :
-    m_decomposition_strategy1(&strategy1),
-    m_decomposition_strategy2(&strategy2),
-    m_own_strategy1(false),
-    m_own_strategy2(false),
-    m_traits(nullptr),
-    m_own_traits(false)
+    m_decomposition_strategy1(non_owning(strategy1)),
+    m_decomposition_strategy2(non_owning(strategy2))
   { init(); }
 
-  //! Constructor.
-  Minkowski_sum_by_decomposition_2(const Traits_2& traits) :
-    m_decomposition_strategy1(nullptr),
-    m_decomposition_strategy2(nullptr),
-    m_own_strategy1(false),
-    m_own_strategy2(false),
-    m_traits(&traits),
-    m_own_traits(false)
-  { init(); }
+  //! constructs.
+  Minkowski_sum_by_decomposition_2(const Traits_2& traits) : m_traits(non_owning(traits)) { init(); }
 
-  /*! Destructor */
-  ~Minkowski_sum_by_decomposition_2()
-  {
-    if (m_own_traits) {
-      if (m_traits != nullptr) {
-        delete m_traits;
-        m_traits = nullptr;
-      }
-      m_own_traits = false;
-    }
-
-    if (m_own_strategy1) {
-      if (m_decomposition_strategy1 != nullptr) {
-        delete m_decomposition_strategy1;
-        m_decomposition_strategy1 = nullptr;
-      }
-      m_own_strategy1 = false;
-    }
-
-    if (m_own_strategy2) {
-      if (m_decomposition_strategy2 != nullptr) {
-        delete m_decomposition_strategy2;
-        m_decomposition_strategy2 = nullptr;
-      }
-      m_own_strategy2 = false;
-    }
-  }
-
-  //! Initialize
-  void init()
-  {
-    // Allocate the traits if not provided.
-    if (m_traits == nullptr) {
-      m_traits = new Traits_2;
-      m_own_traits = true;
-    }
-    // Allocate the strategy if not provided.
-    if (m_decomposition_strategy1 == nullptr) {
-      m_decomposition_strategy1 = new Decomposition_strategy1;
-      m_own_strategy1 = true;
-    }
-    if (m_decomposition_strategy2 == nullptr) {
-      m_decomposition_strategy2 = new Decomposition_strategy2;
-      m_own_strategy2 = true;
-    }
+  //! initializes
+  void init() {
+    // Allocate the traits and the strategies if not provided.
+    if (! m_traits) m_traits = std::make_shared<const Traits_2>();
+    if (! m_decomposition_strategy1) m_decomposition_strategy1 = std::make_shared<const Decomposition_strategy1>();
+    if (! m_decomposition_strategy2) m_decomposition_strategy2 = std::make_shared<const Decomposition_strategy2>();
 
     // Obtain kernel functors.
-    const Kernel* kernel = m_traits;
+    const Kernel* kernel = m_traits.get();
     f_compare_angle = kernel->compare_angle_with_x_axis_2_object();
     f_add = kernel->construct_translated_point_2_object();
     f_vector = kernel->construct_vector_2_object();
@@ -226,32 +133,25 @@ public:
     f_compare_xy = kernel->compare_xy_2_object();
   }
 
-  /*!
-   * Obtain the traits
+  /*! obtains the traits
    * \return the traits
    */
-  const Traits_2* traits() const { return m_traits; }
+  const Traits_2* traits() const { return m_traits.get(); }
 
-  /*!
-   * Obtain the decomposition strategy
+  /*! obtains the decomposition strategy
    * \return the decomposition strategy
    */
-  const Decomposition_strategy1* decomposition_strategy1() const
-  { return m_decomposition_strategy1; }
+  const Decomposition_strategy1* decomposition_strategy1() const { return m_decomposition_strategy1.get(); }
 
-  const Decomposition_strategy2* decomposition_strategy2() const
-  { return m_decomposition_strategy2; }
+  const Decomposition_strategy2* decomposition_strategy2() const { return m_decomposition_strategy2.get(); }
 
-  /*!
-   * Compute the Minkowski sum of two simple polygons.
+  /*! computes the Minkowski sum of two simple polygons.
    * \param pgn1 The first polygon.
    * \param pgn2 The second polygon.
    * \pre Both input polygons are simple.
    * \return The resulting polygon with holes, representing the sum.
    */
-  Polygon_with_holes_2
-  operator()(const Polygon_2& pgn1, const Polygon_2& pgn2) const
-  {
+  Polygon_with_holes_2 operator()(const Polygon_2& pgn1, const Polygon_2& pgn2) const {
     CGAL_precondition(pgn1.is_simple());
     CGAL_precondition(pgn2.is_simple());
 
@@ -262,21 +162,16 @@ public:
     (*m_decomposition_strategy1)(pgn1, std::back_inserter(sub_pgns1));
     (*m_decomposition_strategy2)(pgn2, std::back_inserter(sub_pgns2));
 
-    return operator()(sub_pgns1.begin(), sub_pgns1.end(),
-                      sub_pgns2.begin(), sub_pgns2.end());
+    return operator()(sub_pgns1.begin(), sub_pgns1.end(), sub_pgns2.begin(), sub_pgns2.end());
   }
 
-  /*!
-   * Compute the Minkowski sum of two polygon-with-holes.
+  /*! computes the Minkowski sum of two polygon-with-holes.
    * \param pgn1 The first polygon.
    * \param pgn2 The second polygon.
    * \pre Both input polygons are simple.
    * \return The resulting polygon with holes, representing the sum.
    */
-  Polygon_with_holes_2
-  operator()(const Polygon_with_holes_2& pgn1,
-             const Polygon_with_holes_2& pgn2) const
-  {
+  Polygon_with_holes_2 operator()(const Polygon_with_holes_2& pgn1, const Polygon_with_holes_2& pgn2) const {
     // Decompose both input polygons to convex sub-polygons.
     Polygons_list sub_pgns1;
     Polygons_list sub_pgns2;
@@ -284,20 +179,16 @@ public:
     (*m_decomposition_strategy1)(pgn1, std::back_inserter(sub_pgns1));
     (*m_decomposition_strategy2)(pgn2, std::back_inserter(sub_pgns2));
 
-    return operator()(sub_pgns1.begin(), sub_pgns1.end(),
-                      sub_pgns2.begin(), sub_pgns2.end());
+    return operator()(sub_pgns1.begin(), sub_pgns1.end(), sub_pgns2.begin(), sub_pgns2.end());
   }
 
-  /*!
-   * Compute the Minkowski sum of a simple polygon and a polygon-with-holes.
+  /*! computes the Minkowski sum of a simple polygon and a polygon-with-holes.
    * \param pgn1 The simple polygon.
    * \param pgn2 The polygon with holes.
    * \pre Both input polygons are simple.
    * \return The resulting polygon with holes, representing the sum.
    */
-  Polygon_with_holes_2
-  operator()(const Polygon_2& pgn1, const Polygon_with_holes_2& pgn2) const
-  {
+  Polygon_with_holes_2 operator()(const Polygon_2& pgn1, const Polygon_with_holes_2& pgn2) const {
     CGAL_precondition(pgn1.is_simple());
 
     // Decompose both input polygons to convex sub-polygons.
@@ -307,22 +198,19 @@ public:
     (*m_decomposition_strategy1)(pgn1, std::back_inserter(sub_pgns1));
     (*m_decomposition_strategy2)(pgn2, std::back_inserter(sub_pgns2));
 
-    return operator()(sub_pgns1.begin(), sub_pgns1.end(),
-                      sub_pgns2.begin(), sub_pgns2.end());
+    return operator()(sub_pgns1.begin(), sub_pgns1.end(), sub_pgns2.begin(), sub_pgns2.end());
   }
 
-  /*! Compute the union of the pairwise Minkowski sum of two sets of
+  /*! computes the union of the pairwise Minkowski sum of two sets of
    * convex polygons.
    * \param begin1 the iterator to the begin element of the first set.
    * \param end1 the iterator to the past-the-end element of the first set.
    * \param begin2 the iterator to the begin element of the second set.
    * \param end2 the iterator to the past-the-end element of the second set.
    */
-  template <class InputIterator1, class InputIterator2>
+  template <typename InputIterator1, typename InputIterator2>
   Polygon_with_holes_2 operator()(InputIterator1 begin1, InputIterator1 end1,
-                                  InputIterator2 begin2, InputIterator1 end2)
-    const
-  {
+                                  InputIterator2 begin2, InputIterator2 end2) const {
     Polygons_list sub_sum_polygons;
 
     // Compute the sub-sums of all pairs of sub-polygons.
@@ -348,21 +236,17 @@ public:
   }
 
 private:
-  /*! Merge mergeable edges
+  /*! merges mergeable edges
    * \param arr (in) The underlying arrangement.
    */
-  void simplify(Arrangement_2& arr) const
-  {
+  void simplify(Arrangement_2& arr) const {
     typename Arrangement_2::Vertex_iterator vit = arr.vertices_begin();
     while (vit != arr.vertices_end()) {
       typename Arrangement_2::Vertex_iterator curr = vit++;
       if (curr->degree() != 2) continue;
-      typename Arrangement_2::Halfedge_around_vertex_circulator eit =
-        curr->incident_halfedges();
-      const typename Arrangement_2::Geometry_traits_2* traits =
-        arr.geometry_traits();
-      if (traits->are_mergeable_2_object()(eit->curve(), eit->next()->curve()))
-      {
+      typename Arrangement_2::Halfedge_around_vertex_circulator eit = curr->incident_halfedges();
+      const typename Arrangement_2::Geometry_traits_2* traits = arr.geometry_traits();
+      if (traits->are_mergeable_2_object()(eit->curve(), eit->next()->curve())) {
         typename Arrangement_2::Geometry_traits_2::X_monotone_curve_2 c;
         traits->merge_2_object()(eit->curve(), eit->next()->curve(), c);
         arr.merge_edge(eit, eit->next(), c);
@@ -370,17 +254,13 @@ private:
     }
   }
 
-  /*!
-   * Compute the Minkowski sum of two convex polygons.
+  /*! computes the Minkowski sum of two convex polygons.
    * \param pgn1 The first convex polygon.
    * \param pgn2 The second convex polygon.
    * \param sub_sum Output: Polygon which is the sub sum of the two convex
    *        polygons
    */
-  void _compute_sum_of_convex(const Polygon_2& pgn1,
-                              const Polygon_2& pgn2,
-                              Polygon_2& sub_sum) const
-  {
+  void _compute_sum_of_convex(const Polygon_2& pgn1, const Polygon_2& pgn2, Polygon_2& sub_sum) const {
     // Find the bottom-left vertex in both polygons.
     Vertex_circulator first1, curr1, next1;
     Vertex_circulator bottom_left1;
@@ -389,8 +269,7 @@ private:
     ++curr1;
     while (curr1 != first1) {
       res = f_compare_y(*curr1, *bottom_left1);
-      if ((res == SMALLER) ||
-          ((res == EQUAL) && (f_compare_x(*curr1, *bottom_left1) == SMALLER)))
+      if ((res == SMALLER) || ((res == EQUAL) && (f_compare_x(*curr1, *bottom_left1) == SMALLER)))
       {
         bottom_left1 = curr1;
       }
@@ -398,15 +277,14 @@ private:
     }
 
     // Find the bottom-left vertex in both polygons.
-    Vertex_circulator         first2, curr2, next2;
-    Vertex_circulator         bottom_left2;
+    Vertex_circulator first2, curr2, next2;
+    Vertex_circulator bottom_left2;
 
     bottom_left2 = curr2 = first2 = pgn2.vertices_circulator();
     ++curr2;
     while (curr2 != first2) {
       res = f_compare_y(*curr2, *bottom_left2);
-      if ((res == SMALLER) ||
-          ((res == EQUAL) && (f_compare_x(*curr2, *bottom_left2) == SMALLER)))
+      if ((res == SMALLER) || ((res == EQUAL) && (f_compare_x(*curr2, *bottom_left2) == SMALLER)))
       {
         bottom_left2 = curr2;
       }
@@ -474,7 +352,7 @@ private:
       if (inc2) {
         curr2 = next2;
         ++next2;
-         moved_on2 = true;
+        moved_on2 = true;
      }
     } while ((curr1 != bottom_left1) || (curr2 != bottom_left2));
   }

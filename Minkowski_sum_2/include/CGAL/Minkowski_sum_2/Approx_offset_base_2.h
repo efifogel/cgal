@@ -7,16 +7,15 @@
 // $Id$
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
-// Author(s)     : Ron Wein       <wein_r@yahoo.com>
-//                 Andreas Fabri  <Andreas.Fabri@geometryfactory.com>
-//                 Laurent Rineau <Laurent.Rineau@geometryfactory.com>
-//                 Efi Fogel      <efif@post.tau.ac.il>
+// Author(s) : Ron Wein       <wein_r@yahoo.com>
+//             Andreas Fabri  <Andreas.Fabri@geometryfactory.com>
+//             Laurent Rineau <Laurent.Rineau@geometryfactory.com>
+//             Efi Fogel      <efif@post.tau.ac.il>
 
-#ifndef CGAL_APPROXIMATED_OFFSET_BASE_H
-#define CGAL_APPROXIMATED_OFFSET_BASE_H
+#ifndef CGAL_MINKOWSKI_SUM_2_APPROX_OFFSET_BASE_2_H
+#define CGAL_MINKOWSKI_SUM_2_APPROX_OFFSET_BASE_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
-
 
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Polygon_with_holes_2.h>
@@ -31,47 +30,43 @@ namespace CGAL {
  * A base class for approximating the offset of a given polygon by a given
  * radius.
  */
-template <class Kernel_, class Container_>
-class Approx_offset_base_2
-{
+template <typename Kernel_, typename Container_>
+class Approx_offset_base_2 {
 private:
-
-  typedef Kernel_                                        Kernel;
-  typedef typename Kernel::FT                            NT;
+  using Kernel = Kernel_;
+  using Container = Container_;
+  using NT = typename Kernel::FT;
 
 protected:
-
-  typedef Kernel                                         Basic_kernel;
-  typedef NT                                             Basic_NT;
-  typedef CGAL::Polygon_2<Kernel, Container_>            Polygon_2;
-  typedef CGAL::Polygon_with_holes_2<Kernel, Container_> Polygon_with_holes_2;
+  using Basic_kernel = Kernel;
+  using Basic_NT = NT;
+  using Polygon_2 = CGAL::Polygon_2<Kernel, Container_>;
+  using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel, Container>;
 
 private:
-
   // Kernel types:
-  typedef typename Kernel::Point_2                       Point_2;
-  typedef typename Kernel::Line_2                        Line_2;
+  using Point_2 = typename Kernel::Point_2;
+  using Line_2 = typename Kernel::Line_2;
 
   // Polygon-related types:
-  typedef typename Polygon_2::Vertex_circulator          Vertex_circulator;
+  using Vertex_circulator = typename Polygon_2::Vertex_circulator;
 
   // Traits-class types:
-  typedef Gps_circle_segment_traits_2<Kernel>            Traits_2;
-  typedef typename Traits_2::CoordNT                     CoordNT;
-  typedef typename Traits_2::Point_2                     Tr_point_2;
-  typedef typename Traits_2::Curve_2                     Curve_2;
-  typedef typename Traits_2::X_monotone_curve_2          X_monotone_curve_2;
+  using Traits_2 = Gps_circle_segment_traits_2<Kernel>;
+  using CoordNT = typename Traits_2::CoordNT;
+  using Tr_point_2 = typename Traits_2::Point_2;
+  using Curve_2 = typename Traits_2::Curve_2;
+  using X_monotone_curve_2 = typename Traits_2::X_monotone_curve_2;
 
 protected:
+  using Offset_polygon_2 = typename Traits_2::Polygon_2;
 
-  typedef typename Traits_2::Polygon_2                   Offset_polygon_2;
-
-  typedef Arr_labeled_traits_2<Traits_2>                 Labeled_traits_2;
-  typedef typename Labeled_traits_2::X_monotone_curve_2  Labeled_curve_2;
+  using Labeled_traits_2 = Arr_labeled_traits_2<Traits_2>;
+  using Labeled_curve_2 = typename Labeled_traits_2::X_monotone_curve_2;
 
   // Data members:
-  double        _eps;            // An upper bound on the approximation error.
-  int           _inv_sqrt_eps;   // The inverse squared root of _eps.
+  double _eps;            // An upper bound on the approximation error.
+  int _inv_sqrt_eps;      // The inverse squared root of _eps.
 
 public:
 
@@ -80,19 +75,14 @@ public:
    * \param eps An upper bound on the approximation error.
    */
   Approx_offset_base_2 (const double& eps) :
-    _eps (eps)
-  {
+    _eps (eps) {
     CGAL_precondition (CGAL::sign (eps) == POSITIVE);
-
     _inv_sqrt_eps = static_cast<int> (1.0 / CGAL::sqrt (_eps));
-    if (_inv_sqrt_eps <= 0)
-      _inv_sqrt_eps = 1;
+    if (_inv_sqrt_eps <= 0) _inv_sqrt_eps = 1;
   }
 
 protected:
-
-  /*!
-   * Compute curves that constitute the offset of a simple polygon by a given
+  /*! computes curves that constitute the offset of a simple polygon by a given
    * radius, with a given approximation error.
    * \param pgn The polygon.
    * \param orient The orientation to traverse the vertices.
@@ -102,84 +92,71 @@ protected:
    * \pre The value type of the output iterator is Labeled_curve_2.
    * \return A past-the-end iterator for the holes container.
    */
-  template <class OutputIterator>
-  OutputIterator _offset_polygon (const Polygon_2& pgn,
-                                  CGAL::Orientation orient,
-                                  const Basic_NT& r,
-                                  unsigned int cycle_id,
-                                  OutputIterator oi) const
-  {
+  template <typename OutputIterator>
+  OutputIterator _offset_polygon(const Polygon_2& pgn, CGAL::Orientation orient, const Basic_NT& r,
+                                 unsigned int cycle_id, OutputIterator oi) const {
     // Prepare circulators over the polygon vertices.
-    const bool            forward = (pgn.orientation() == orient);
-    Vertex_circulator     first, curr, next, prev;
+    const bool forward = (pgn.orientation() == orient);
+    Vertex_circulator first, curr, next, prev;
 
     first = pgn.vertices_circulator();
     curr = first;
     next = first;
     prev = first;
 
-    if (forward)
-      --prev;
-    else
-      ++prev;
+    if (forward) --prev;
+    else ++prev;
 
     // Traverse the polygon vertices and edges and approximate the arcs that
     // constitute the single convolution cycle.
-    NT              x1, y1;              // The source of the current edge.
-    NT              x2, y2;              // The target of the current edge.
-    NT              delta_x, delta_y;    // (x2 - x1) and (y2 - y1), resp.
-    NT              abs_delta_x;
-    NT              abs_delta_y;
-    CGAL::Sign      sign_delta_x;        // The sign of (x2 - x1).
-    CGAL::Sign      sign_delta_y;        // The sign of (y2 - y1).
-    NT              sqr_d;               // The squared length of the edge.
-    NT              err_bound;           // An approximation bound for d.
-    NT              app_d;               // The apporximated edge length.
-    NT              app_err;             // The approximation error.
-    CGAL::Sign      sign_app_err;        // Its sign.
-    NT              lower_tan_half_phi;
-    NT              upper_tan_half_phi;
-    NT              sqr_tan_half_phi;
-    NT              sin_phi, cos_phi;
-    Point_2         op1;                 // The approximated offset point
-                                         // corresponding to (x1, y1).
-    Point_2         op2;                 // The approximated offset point
-                                         // corresponding to (x2, y2).
-    Line_2          l1, l2;              // Lines tangent at op1 and op2.
-    Object          obj;
-    bool            assign_success;
-    Point_2         mid_p;               // The intersection of l1 and l2.
-    Point_2         first_op;            // op1 for the first edge visited.
-    Point_2         prev_op;             // op2 for the previous edge.
+    NT x1, y1;                  // The source of the current edge.
+    NT x2, y2;                  // The target of the current edge.
+    NT delta_x, delta_y;        // (x2 - x1) and (y2 - y1), resp.
+    NT abs_delta_x;
+    NT abs_delta_y;
+    CGAL::Sign sign_delta_x;    // The sign of (x2 - x1).
+    CGAL::Sign sign_delta_y;    // The sign of (y2 - y1).
+    NT sqr_d;                   // The squared length of the edge.
+    NT err_bound;               // An approximation bound for d.
+    NT app_d;                   // The apporximated edge length.
+    NT app_err;                 // The approximation error.
+    CGAL::Sign sign_app_err;    // Its sign.
+    NT lower_tan_half_phi;
+    NT upper_tan_half_phi;
+    NT sqr_tan_half_phi;
+    NT sin_phi, cos_phi;
+    Point_2 op1;                // The approximated offset point corresponding to (x1, y1).
+    Point_2 op2;                // The approximated offset point corresponding to (x2, y2).
+    Line_2 l1, l2;              // Lines tangent at op1 and op2.
+    Object obj;
+    bool assign_success;
+    Point_2 mid_p;              // The intersection of l1 and l2.
+    Point_2 first_op;           // op1 for the first edge visited.
+    Point_2 prev_op;            // op2 for the previous edge.
 
-    unsigned int                    curve_index = 0;
-    X_monotone_curve_2              seg1, seg2;
-    bool                            dir_right1 = false, dir_right2 = false;
-    X_monotone_curve_2              seg_short;
-    bool                            dir_right_short;
-    int                             n_segments;
+    unsigned int curve_index = 0;
+    X_monotone_curve_2 seg1, seg2;
+    bool dir_right1 = false, dir_right2 = false;
+    X_monotone_curve_2  seg_short;
+    bool dir_right_short;
+    int n_segments;
 
-    Kernel                            ker;
-    typename Kernel::Intersect_2      f_intersect = ker.intersect_2_object();
-    typename Kernel::Construct_line_2 f_line = ker.construct_line_2_object();
-    typename Kernel::Construct_perpendicular_line_2
-                     f_perp_line = ker.construct_perpendicular_line_2_object();
-    typename Kernel::Compare_xy_2     f_comp_xy = ker.compare_xy_2_object();
-    typename Kernel::Orientation_2    f_orient = ker.orientation_2_object();
+    Kernel ker;
+    auto f_intersect = ker.intersect_2_object();
+    auto f_line = ker.construct_line_2_object();
+    auto f_perp_line = ker.construct_perpendicular_line_2_object();
+    auto f_comp_xy = ker.compare_xy_2_object();
+    auto f_orient = ker.orientation_2_object();
 
-    Traits_2                        traits;
-    std::list<std::variant<Tr_point_2, X_monotone_curve_2>>               xobjs;
-    typename Traits_2::Make_x_monotone_2
-                       f_make_x_monotone = traits.make_x_monotone_2_object();
-    Curve_2                         arc;
+    Traits_2 traits;
+    std::list<std::variant<Tr_point_2, X_monotone_curve_2>> xobjs;
+    auto f_make_x_monotone = traits.make_x_monotone_2_object();
+    Curve_2 arc;
 
-    do
-    {
+    do {
       // Get a circulator for the next vertex (in the proper orientation).
-      if (forward)
-        ++next;
-      else
-        --next;
+      if (forward) ++next;
+      else --next;
 
       // Compute the vector v = (delta_x, delta_y) of the current edge,
       // and compute the squared edge length.
@@ -190,26 +167,23 @@ protected:
 
       delta_x = x2 - x1;
       delta_y = y2 - y1;
-      sqr_d = CGAL::square (delta_x) + CGAL::square (delta_y);
+      sqr_d = CGAL::square (delta_x) + CGAL::square(delta_y);
 
       sign_delta_x = CGAL::sign (delta_x);
       sign_delta_y = CGAL::sign (delta_y);
 
-      if (sign_delta_x == CGAL::ZERO)
-      {
-        CGAL_assertion (sign_delta_y != CGAL::ZERO);
+      if (sign_delta_x == CGAL::ZERO) {
+        CGAL_assertion(sign_delta_y != CGAL::ZERO);
 
         // The edge [(x1, y1) -> (x2, y2)] is vertical. The offset edge lies
         // at a distance r to the right if y2 > y1, and to the left if y2 < y1.
-        if (sign_delta_y == CGAL::POSITIVE)
-        {
-          op1 = Point_2 (x1 + r, y1);
-          op2 = Point_2 (x2 + r, y2);
+        if (sign_delta_y == CGAL::POSITIVE) {
+          op1 = Point_2(x1 + r, y1);
+          op2 = Point_2(x2 + r, y2);
         }
-        else
-        {
-          op1 = Point_2 (x1 - r, y1);
-          op2 = Point_2 (x2 - r, y2);
+        else {
+          op1 = Point_2(x1 - r, y1);
+          op2 = Point_2(x2 - r, y2);
         }
 
         // Create the offset segment [op1 -> op2].
@@ -218,19 +192,16 @@ protected:
 
         n_segments = 1;
       }
-      else if (sign_delta_y == CGAL::ZERO)
-      {
+      else if (sign_delta_y == CGAL::ZERO) {
         // The edge [(x1, y1) -> (x2, y2)] is horizontal. The offset edge lies
         // at a distance r to the bottom if x2 > x1, and to the top if x2 < x1.
-        if (sign_delta_x == CGAL::POSITIVE)
-        {
-          op1 = Point_2 (x1, y1 - r);
-          op2 = Point_2 (x2, y2 - r);
+        if (sign_delta_x == CGAL::POSITIVE) {
+          op1 = Point_2(x1, y1 - r);
+          op2 = Point_2(x2, y2 - r);
         }
-        else
-        {
-          op1 = Point_2 (x1, y1 + r);
-          op2 = Point_2 (x2, y2 + r);
+        else {
+          op1 = Point_2(x1, y1 + r);
+          op2 = Point_2(x2, y2 + r);
         }
 
         // Create the offset segment [op1 -> op2].
@@ -239,8 +210,7 @@ protected:
 
         n_segments = 1;
       }
-      else
-      {
+      else {
         abs_delta_x = (sign_delta_x == POSITIVE) ? delta_x : NT(-delta_x);
         abs_delta_y = (sign_delta_y == POSITIVE) ? delta_y : NT(-delta_y);
 
@@ -259,77 +229,60 @@ protected:
         // of symmetry, we can rotate the scene by pi/2, and swap roles of
         // x and y. In fact, we do that in order to get a larger approximation
         // bound if possible.
-        const double    dd = CGAL::sqrt (CGAL::to_double (sqr_d));
-        const double    dabs_dx = CGAL::to_double (abs_delta_x);
-        const double    dabs_dy = CGAL::to_double (abs_delta_y);
-        double          derr_bound;
+        const double dd = CGAL::sqrt (CGAL::to_double (sqr_d));
+        const double dabs_dx = CGAL::to_double(abs_delta_x);
+        const double dabs_dy = CGAL::to_double(abs_delta_y);
+        double derr_bound;
 
-        if (dabs_dy < dabs_dx)
-        {
-          derr_bound = 2 * dd * _eps * (dd - dabs_dy) / dabs_dx;
-        }
-        else
-        {
-          derr_bound = 2 * dd * _eps * (dd - dabs_dx) / dabs_dy;
-        }
+        if (dabs_dy < dabs_dx) derr_bound = 2 * dd * _eps * (dd - dabs_dy) / dabs_dx;
+        else derr_bound = 2 * dd * _eps * (dd - dabs_dx) / dabs_dy;
 
-        CGAL_assertion (derr_bound > 0);
-        err_bound = NT (derr_bound);
+        CGAL_assertion(derr_bound > 0);
+        err_bound = NT(derr_bound);
 
         // Compute an approximation for d (the squared root of sqr_d).
-        int             numer;
-        int             denom = _inv_sqrt_eps;
-        const int       max_int = (1 << (8*sizeof(int) - 2));
+        int numer;
+        int denom = _inv_sqrt_eps;
+        const int max_int = (1 << (8*sizeof(int) - 2));
 
         numer = static_cast<int> (dd * denom + 0.5);
-        if (numer > 0)
-        {
-            while (static_cast<double>(max_int) / denom < dd &&
-                   numer > 0)
-            {
-              denom >>= 1;
+        if (numer > 0) {
+          while (static_cast<double>(max_int) / denom < dd && numer > 0) {
+            denom >>= 1;
+            numer = static_cast<int> (dd * denom + 0.5);
+          }
+        }
+        else if (numer == 0) {
+          while (numer == 0) {
+            denom <<= 1;
+            if (denom > 0) {
               numer = static_cast<int> (dd * denom + 0.5);
             }
-        }
-        else if (numer == 0)
-        {
-            while (numer == 0)
-            {
-              denom <<= 1;
-              if (denom > 0)
-              {
-                numer = static_cast<int> (dd * denom + 0.5);
-              }
-              else
-              {
-    // In case of overflow of denom
-                numer = 1;
-                denom = max_int;
-              }
+            else {
+              // In case of overflow of denom
+              numer = 1;
+              denom = max_int;
             }
+          }
         }
         else {// if numer < 0 (overflow)
           numer = max_int;
           denom = 1;
         }
 
-
         app_d = NT (numer) / NT (denom);
         app_err = sqr_d - CGAL::square (app_d);
 
-        while (CGAL::compare (CGAL::abs (app_err),
-                              err_bound) == CGAL::LARGER ||
-               CGAL::compare (app_d, abs_delta_x) != LARGER ||
-               CGAL::compare (app_d, abs_delta_y) != LARGER)
-        {
+        while (CGAL::compare(CGAL::abs (app_err), err_bound) == CGAL::LARGER ||
+               CGAL::compare(app_d, abs_delta_x) != LARGER ||
+               CGAL::compare(app_d, abs_delta_y) != LARGER) {
           app_d = (app_d + sqr_d/app_d) / 2;
           app_err = sqr_d - CGAL::square (app_d);
         }
 
         sign_app_err = CGAL::sign (app_err);
 
-        if (sign_app_err == CGAL::ZERO)
-        {
+        if (sign_app_err == CGAL::ZERO) {
           // In this case d is a rational number, and we should shift the
           // both edge endpoints by (r * delta_y / d, -r * delta_x / d) to
           // obtain the offset points op1 and op2.
@@ -353,9 +306,7 @@ protected:
           // we are guaranteed to have: phi- < phi < phi+ .
           bool rotate_pi2 = false;
 
-          if (CGAL::compare (CGAL::abs(delta_x),
-                             CGAL::abs(delta_y)) == SMALLER)
-          {
+          if (CGAL::compare(CGAL::abs(delta_x), CGAL::abs(delta_y)) == SMALLER) {
             rotate_pi2 = true;
 
             // We use the rotation matrix by pi/2:
@@ -381,19 +332,17 @@ protected:
             delta_y = tmp;
 
             CGAL::Sign  tmp_sign = sign_delta_x;
-            sign_delta_x = CGAL::opposite (sign_delta_y);
+            sign_delta_x = CGAL::opposite(sign_delta_y);
             sign_delta_y = tmp_sign;
           }
 
           // Act according to the sign of delta_x.
-          if (sign_delta_x == CGAL::NEGATIVE)
-          {
+          if (sign_delta_x == CGAL::NEGATIVE) {
             // x1 > x2, so we take a lower approximation for the squared root.
             if (sign_app_err == CGAL::NEGATIVE)
               app_d = sqr_d / app_d;
           }
-          else
-          {
+          else {
             // x1 < x2, so we take an upper approximation for the squared root.
             if (sign_app_err == CGAL::POSITIVE)
               app_d = sqr_d / app_d;
@@ -414,12 +363,10 @@ protected:
           sin_phi = 2 * lower_tan_half_phi / (1 + sqr_tan_half_phi);
           cos_phi = (1 - sqr_tan_half_phi) / (1 + sqr_tan_half_phi);
 
-          if (! rotate_pi2)
-          {
+          if (! rotate_pi2) {
             op1 = Point_2 (x1 + r*cos_phi, y1 + r*sin_phi);
           }
-          else
-          {
+          else {
             // In case of symbolic rotation by pi/2, we have to rotate the
             // translated point by -(pi/2), transforming (x, y) to (y, -x).
             op1 = Point_2 (y1 + r*sin_phi, -(x1 + r*cos_phi));
@@ -431,24 +378,22 @@ protected:
           sin_phi = 2 * upper_tan_half_phi / (1 + sqr_tan_half_phi);
           cos_phi = (1 - sqr_tan_half_phi) / (1 + sqr_tan_half_phi);
 
-          if (! rotate_pi2)
-          {
+          if (! rotate_pi2) {
             op2 = Point_2 (x2 + r*cos_phi, y2 + r*sin_phi);
           }
-          else
-          {
+          else {
             // In case of symbolic rotation by pi/2, we have to rotate the
             // translated point by -(pi/2), transforming (x, y) to (y, -x).
-            op2 = Point_2 (y2 + r*sin_phi, -(x2 + r*cos_phi));
+            op2 = Point_2(y2 + r*sin_phi, -(x2 + r*cos_phi));
           }
 
           // Compute the line l1 tangent to the circle centered at (x1, y1)
           // with radius r at the approximated point op1.
-          l1 = f_perp_line (f_line (*curr, op1), op1);
+          l1 = f_perp_line(f_line (*curr, op1), op1);
 
           // Compute the line l2 tangent to the circle centered at (x2, y2)
           // with radius r at the approximated point op2.
-          l2 = f_perp_line (f_line (*next, op2), op2);
+          l2 = f_perp_line(f_line (*next, op2), op2);
 
           // Intersect the two lines. The intersection point serves as a common
           // end point for the two line segments we are about to introduce.
@@ -459,17 +404,17 @@ protected:
           CGAL_USE(assign_success);
 
           // Andreas's assertions:
-          CGAL_assertion( right_turn(*curr, *next, op2) );
-          CGAL_assertion( angle(*curr, *next, op2) != ACUTE);
-          CGAL_assertion( angle(op1, *curr, *next) != ACUTE);
-          CGAL_assertion( right_turn(op1, *curr, *next) );
+          CGAL_assertion(right_turn(*curr, *next, op2) );
+          CGAL_assertion(angle(*curr, *next, op2) != ACUTE);
+          CGAL_assertion(angle(op1, *curr, *next) != ACUTE);
+          CGAL_assertion(right_turn(op1, *curr, *next) );
 
           // Create the two segments [op1 -> p_mid] and [p_min -> op2].
           seg1 = X_monotone_curve_2 (op1, mid_p);
-          dir_right1 = (f_comp_xy (op1, mid_p) == CGAL::SMALLER);
+          dir_right1 = (f_comp_xy(op1, mid_p) == CGAL::SMALLER);
 
           seg2 = X_monotone_curve_2 (mid_p, op2);
-          dir_right2 = (f_comp_xy (mid_p, op2) == CGAL::SMALLER);
+          dir_right2 = (f_comp_xy(mid_p, op2) == CGAL::SMALLER);
 
           n_segments = 2;
         }
@@ -489,13 +434,13 @@ protected:
            * and negative spikes, and treat them as left and right turns,
            * respectively.
            */
-          typename Kernel::Compare_x_2 f_comp_x = ker.compare_x_2_object();
+          auto f_comp_x = ker.compare_x_2_object();
           Comparison_result res1, res2;
           res1 = f_comp_x(*prev, *curr);
           if (res1 != CGAL::EQUAL)
             res2 = f_comp_x(*curr, *next);
           else {
-            typename Kernel::Compare_y_2 f_comp_y = ker.compare_y_2_object();
+            auto f_comp_y = ker.compare_y_2_object();
             res1 = f_comp_y(*prev, *curr);
             res2 = f_comp_y(*curr, *next);
           }
@@ -507,20 +452,18 @@ protected:
         if (orient == CGAL::LEFT_TURN) {
           // Connect prev_op and op1 with a circular arc, whose supporting
           // circle is (x1, x2) with radius r.
-          arc = Curve_2 (*curr, r, CGAL::COUNTERCLOCKWISE,
-                         Tr_point_2 (prev_op.x(), prev_op.y()),
-                         Tr_point_2 (op1.x(), op1.y()));
+          arc = Curve_2(*curr, r, CGAL::COUNTERCLOCKWISE,
+                        Tr_point_2(prev_op.x(), prev_op.y()),
+                        Tr_point_2(op1.x(), op1.y()));
 
           // Subdivide the arc into x-monotone subarcs and insert them into the
           // convolution cycle.
           xobjs.clear();
-          f_make_x_monotone (arc, std::back_inserter(xobjs));
+          f_make_x_monotone(arc, std::back_inserter(xobjs));
           for (auto xobj_it = xobjs.begin(); xobj_it != xobjs.end(); ++xobj_it) {
             const X_monotone_curve_2* xarc = std::get_if<X_monotone_curve_2>(&(*xobj_it));
             CGAL_assertion(xarc!=nullptr);
-            *oi++ = Labeled_curve_2 (*xarc,
-                                     X_curve_label (xarc->is_directed_right(),
-                                                    cycle_id, curve_index++));
+            *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(), cycle_id, curve_index++));
           }
         }
         else if (orient == CGAL::RIGHT_TURN) {
@@ -532,23 +475,16 @@ protected:
           // this segment will not be part of the output offset or inset).
           seg_short = X_monotone_curve_2(prev_op, op1);
 
-          dir_right_short = (f_comp_xy (prev_op, op1) == CGAL::SMALLER);
-          *oi++ = Labeled_curve_2 (seg_short,
-                                   X_curve_label (dir_right_short,
-                                                  cycle_id, curve_index++));
+          dir_right_short = (f_comp_xy(prev_op, op1) == CGAL::SMALLER);
+          *oi++ = Labeled_curve_2(seg_short, X_curve_label(dir_right_short, cycle_id, curve_index++));
         }
       }
 
       // Append the offset segment(s) to the convolution cycle.
       CGAL_assertion (n_segments == 1 || n_segments == 2);
-      *oi++ = Labeled_curve_2 (seg1, X_curve_label (dir_right1,
-                                                    cycle_id, curve_index++));
+      *oi++ = Labeled_curve_2(seg1, X_curve_label(dir_right1, cycle_id, curve_index++));
 
-      if (n_segments == 2)
-      {
-        *oi++ = Labeled_curve_2 (seg2, X_curve_label (dir_right2,
-                                                      cycle_id, curve_index++));
-      }
+      if (n_segments == 2) *oi++ = Labeled_curve_2(seg2, X_curve_label(dir_right2, cycle_id, curve_index++));
 
       // Proceed to the next polygon vertex.
       prev_op = op2;
@@ -559,9 +495,9 @@ protected:
 
     // Close the convolution cycle by creating the final circular arc,
     // centered at the first vertex.
-    arc = Curve_2 (*first, r, CGAL::COUNTERCLOCKWISE,
-                   Tr_point_2 (op2.x(), op2.y()),
-                   Tr_point_2 (first_op.x(), first_op.y()));
+    arc = Curve_2(*first, r, CGAL::COUNTERCLOCKWISE,
+                  Tr_point_2(op2.x(), op2.y()),
+                  Tr_point_2(first_op.x(), first_op.y()));
 
     // Subdivide the arc into x-monotone subarcs and insert them to the
     // convolution cycle.
@@ -569,22 +505,18 @@ protected:
     f_make_x_monotone (arc, std::back_inserter(xobjs));
 
     auto xobj_it = xobjs.begin();
-    while (xobj_it != xobjs.end())
-    {
+    while (xobj_it != xobjs.end()) {
       const X_monotone_curve_2* xarc = std::get_if<X_monotone_curve_2>(&(*xobj_it));
       CGAL_assertion (xarc != nullptr);
 
       ++xobj_it;
       bool is_last = (xobj_it == xobjs.end());
 
-      *oi++ = Labeled_curve_2 (*xarc,
-                               X_curve_label (xarc->is_directed_right(),
-                                              cycle_id, curve_index++, is_last));
+      *oi++ = Labeled_curve_2(*xarc, X_curve_label(xarc->is_directed_right(), cycle_id, curve_index++, is_last));
     }
 
-    return (oi);
+    return oi;
   }
-
 };
 
 } //namespace CGAL

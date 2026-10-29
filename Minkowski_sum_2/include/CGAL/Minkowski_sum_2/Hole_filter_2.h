@@ -9,14 +9,15 @@
 //
 // Author(s): Sebastian Morr    <sebastian@morr.cc>
 
-#ifndef CGAL_MINKOWSKI_SUM_HOLE_FILTER_2_H
-#define CGAL_MINKOWSKI_SUM_HOLE_FILTER_2_H
+#ifndef CGAL_MINKOWSKI_SUM_2_HOLE_FILTER_2_H
+#define CGAL_MINKOWSKI_SUM_2_HOLE_FILTER_2_H
 
 #include <CGAL/license/Minkowski_sum_2.h>
 
 
-#include <CGAL/basic.h>
-#include <vector>
+#include <CGAL/Bbox_2.h>
+#include <CGAL/Polygon_2.h>
+#include <CGAL/Polygon_with_holes_2.h>
 
 namespace CGAL {
 
@@ -39,17 +40,13 @@ public:
    * \param[in] pgn2 The reference polygon with holes.
    * \param[out] filtered_pgn1 the filtered polygon.
    */
-  void operator()(const Polygon_with_holes_2& pgn1,
-                  const Polygon_2& pgn2,
-                  Polygon_with_holes_2& filtered_pgn1) const {
+  void operator()(const Polygon_with_holes_2& pgn1, const Polygon_2& pgn2, Polygon_with_holes_2& filtered_pgn1) const {
     Bbox_2 boundary_bbox = pgn2.bbox();
     filtered_pgn1 = Polygon_with_holes_2(pgn1.outer_boundary());
     for (const auto& h : pgn1.holes()) {
       Bbox_2 hole_bbox = h.bbox();
-      if ((hole_bbox.ymax()-hole_bbox.ymin() >=
-           boundary_bbox.ymax()-boundary_bbox.ymin()) &&
-          (hole_bbox.xmax()-hole_bbox.xmin() >=
-           boundary_bbox.xmax()-boundary_bbox.xmin()))
+      if ((hole_bbox.ymax()-hole_bbox.ymin() >= boundary_bbox.ymax()-boundary_bbox.ymin()) &&
+          (hole_bbox.xmax()-hole_bbox.xmin() >= boundary_bbox.xmax()-boundary_bbox.xmin()))
         filtered_pgn1.add_hole(h);
     }
   }
@@ -59,8 +56,7 @@ public:
    * \param[in] pgn2 The reference polygon with holes.
    * \param[out] filtered_pgn1 the filtered polygon.
    */
-  void operator()(const Polygon_with_holes_2& pgn1,
-                  const Polygon_with_holes_2& pgn2,
+  void operator()(const Polygon_with_holes_2& pgn1, const Polygon_with_holes_2& pgn2,
                   Polygon_with_holes_2& filtered_pgn1) const
   { operator()(pgn1, pgn2.outer_boundary(), filtered_pgn1); }
 };
