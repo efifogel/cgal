@@ -1,3 +1,11 @@
+// Tests the deprecated functions of the namespace CGAL that compute Minkowski
+// sums; see test_minkowski_sum_named_parameters.cpp for the functions of the
+// namespace CGAL::Minkowski_sum_2 that replace them.
+#define CGAL_NO_DEPRECATION_WARNINGS
+
+#include <string.h>
+#include <list>
+
 #include <CGAL/minkowski_sum_2.h>
 #include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 #include <CGAL/Small_side_angle_bisector_decomposition_2.h>
@@ -9,16 +17,13 @@
 
 #include "read_polygon.h"
 
-#include <string.h>
-#include <list>
+#ifndef CGAL_NO_DEPRECATED_CODE
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
-typedef CGAL::Polygon_2<Kernel> Polygon_2;
-typedef CGAL::Polygon_with_holes_2<Kernel> Polygon_with_holes_2;
+using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
+using Polygon_2 = CGAL::Polygon_2<Kernel>;
+using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel>;
 
-bool are_equal(const Polygon_with_holes_2& ph1,
-               const Polygon_with_holes_2& ph2)
-{
+bool are_equal(const Polygon_with_holes_2& ph1, const Polygon_with_holes_2& ph2) {
   std::list<Polygon_with_holes_2> sym_diff;
   CGAL::symmetric_difference(ph1, ph2, std::back_inserter(sym_diff));
   return sym_diff.empty();
@@ -46,15 +51,10 @@ static const char* strategy_names[] = {
   "Vertical decomposition"
 };
 
-Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_2& p, Polygon_2& q,
-                                             Strategy strategy)
-{
+Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_2& p, Polygon_2& q, Strategy strategy) {
   switch (strategy) {
-   case REDUCED_CONVOLUTION:
-    return minkowski_sum_by_reduced_convolution_2(p, q);
-
-   case FULL_CONVOLUTION:
-    return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
+   case REDUCED_CONVOLUTION: return minkowski_sum_by_reduced_convolution_2(p, q);
+   case FULL_CONVOLUTION: return CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(p, q);
 
    case SSAB_DECOMP:
     {
@@ -94,8 +94,7 @@ Polygon_with_holes_2 compute_minkowski_sum_2(Polygon_2& p, Polygon_2& q,
   }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " [method flag] [polygon files]..."
               << std::endl;
@@ -113,30 +112,14 @@ int main(int argc, char* argv[])
   std::list<Strategy> strategies;
   for (std::size_t i = 0; i < strlen(argv[1]); ++i) {
     switch (argv[1][i]) {
-      case 'r':
-        strategies.push_back(REDUCED_CONVOLUTION);
-        break;
-      case 'f':
-        strategies.push_back(FULL_CONVOLUTION);
-        break;
-      case 's':
-        strategies.push_back(SSAB_DECOMP);
-        break;
-      case 'o':
-        strategies.push_back(OPT_DECOMP);
-        break;
-      case 'h':
-        strategies.push_back(HM_DECOMP);
-        break;
-      case 'g':
-        strategies.push_back(GREENE_DECOMP);
-        break;
-      case 't':
-        strategies.push_back(TRIANGULATION_DECOMP);
-        break;
-      case 'v':
-        strategies.push_back(VERTICAL_DECOMP);
-        break;
+      case 'r': strategies.push_back(REDUCED_CONVOLUTION); break;
+      case 'f': strategies.push_back(FULL_CONVOLUTION); break;
+      case 's': strategies.push_back(SSAB_DECOMP); break;
+      case 'o': strategies.push_back(OPT_DECOMP); break;
+      case 'h': strategies.push_back(HM_DECOMP); break;
+      case 'g': strategies.push_back(GREENE_DECOMP); break;
+      case 't': strategies.push_back(TRIANGULATION_DECOMP); break;
+      case 'v': strategies.push_back(VERTICAL_DECOMP); break;
       default:
         std::cerr << "Unknown flag '" << argv[1][i] << "'" << std::endl;
         return 1;
@@ -187,3 +170,9 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+#else
+
+int main() { return 0; }
+
+#endif
