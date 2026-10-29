@@ -48,6 +48,69 @@ Release date: December 2026
 - Deprecated `set_leftmost()` and `set_rightmost()`; the diagram maintains its leftmost and rightmost edges.
 - Fixed the handling of degenerate input, such as overlapping curves, vertical segments, and intersections at the x-coordinates of endpoints.
 
+### [2D Minkowski Sums](https://doc.cgal.org/6.3/Manual/packages.html#PkgMinkowskiSum2)
+
+- The functions that compute Minkowski sums are now defined in the namespace `CGAL::Minkowski_sum_2`,
+  each in its own header file, and accept three optional sequences of named parameters: one for each polygon and one for
+  the computation. The former functions of the namespace `CGAL`, declared in `<CGAL/minkowski_sum_2.h>`, are deprecated:
+  - `CGAL::minkowski_sum_2()` is replaced by `CGAL::Minkowski_sum_2::minkowski_sum_2()`, declared in
+    `<CGAL/Minkowski_sum_2/minkowski_sum_2.h>`. It applies the method given by the named parameter `method`, of the type
+    `CGAL::Minkowski_sum_2::Method`: decomposition, reduced convolution, full convolution, or a method chosen automatically
+    (the default), by an estimate of the size of the full convolution computed in linear time; the sum of two polygons
+    that are convex once the holes that cannot affect the sum are removed is computed directly.
+  - `CGAL::minkowski_sum_by_reduced_convolution_2()` is replaced by `CGAL::Minkowski_sum_2::minkowski_sum_by_reduced_convolution_2()`,
+    declared in `<CGAL/Minkowski_sum_2/minkowski_sum_by_reduced_convolution_2.h>`.
+  - `CGAL::minkowski_sum_by_decomposition_2()` and the overloads of `CGAL::minkowski_sum_2()` that accept decomposition
+    strategies are replaced by `CGAL::Minkowski_sum_2::minkowski_sum_by_decomposition_2()`, declared in
+    `<CGAL/Minkowski_sum_2/minkowski_sum_by_decomposition_2.h>`. The decomposition strategies of each polygon are given by
+    its named parameters `decomposition_strategy` and `decomposition_strategy_with_holes` (by default,
+    `CGAL::Small_side_angle_bisector_decomposition_2` and `CGAL::Polygon_vertical_decomposition_2`, respectively), and the
+    traits by the named parameter `geom_traits`.
+  - `CGAL::minkowski_sum_by_full_convolution_2()` is replaced by `CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2()`,
+    declared in `<CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>`, a new implementation of the full convolution
+    method. It finds the convolution edges in time linear in the sizes of the polygons and the number of convolution edges,
+    using 1D arrangements on the circle of directions, and it represents the convolution cycles either by polylines or by
+    segments, as determined by the named parameter `convolution_curves` (of the type `CGAL::Minkowski_sum_2::Convolution_curves`);
+    by default, the representation is chosen automatically. Unlike the old implementation, it also accepts polygons with
+    holes as either one or both summands, treating their outer boundaries and holes alike, including unbounded polygons with
+    holes (without outer boundaries).
+- The functions that compute offsets and insets are now defined in the namespace `CGAL::Minkowski_sum_2`, each in its own
+  header file, and accept two optional sequences of named parameters: one for the polygon and one for the computation. The
+  former functions of the namespace `CGAL`, declared in `<CGAL/approximated_offset_2.h>` and `<CGAL/offset_polygon_2.h>`, are
+  deprecated:
+  - `CGAL::approximated_offset_2()` is replaced by `CGAL::Minkowski_sum_2::approximated_offset_2()`, declared in
+    `<CGAL/Minkowski_sum_2/approximated_offset_2.h>`.
+  - `CGAL::approximated_inset_2()` is replaced by `CGAL::Minkowski_sum_2::approximated_inset_2()`, declared in
+    `<CGAL/Minkowski_sum_2/approximated_inset_2.h>`.
+  - `CGAL::offset_polygon_2()` is replaced by `CGAL::Minkowski_sum_2::offset_polygon_2()`, declared in
+    `<CGAL/Minkowski_sum_2/offset_polygon_2.h>`.
+  - `CGAL::inset_polygon_2()` is replaced by `CGAL::Minkowski_sum_2::inset_polygon_2()`, declared in
+    `<CGAL/Minkowski_sum_2/inset_polygon_2.h>`.
+
+  The offset of a simple polygon is computed with the decomposition method, instead of the convolution method, if the named
+  parameter `method` is `CGAL::Minkowski_sum_2::Method::DECOMPOSITION`; the polygon is then decomposed by the strategy given
+  by its named parameter `decomposition_strategy` (by default, `CGAL::Small_side_angle_bisector_decomposition_2`), unless it
+  is convex. (The former overloads that accept a decomposition strategy default-constructed it; the given strategy object
+  is now used.)
+- The named parameter `is_convex` of a polygon is a hint whether it is convex, which saves the test of its convexity (the
+  hint is verified if expensive checks are enabled). The sum of two convex polygons is computed directly, and a convex
+  polygon is not decomposed by the decomposition method.
+- Added the functions `CGAL::Minkowski_sum_2::minkowski_difference_2()` and
+  `CGAL::Minkowski_sum_2::minkowski_difference_by_full_convolution_2()`, declared in
+  `<CGAL/Minkowski_sum_2/minkowski_difference_2.h>` and `<CGAL/Minkowski_sum_2/minkowski_difference_by_full_convolution_2.h>`,
+  which compute the Minkowski difference of two polygons, the complement of the Minkowski sum of the first polygon and the
+  complement of the second. Either polygon may be a polygon with holes, which may be unbounded.
+- Added the concepts `MinkowskiSumDirectionTraits_2`, `MinkowskiSumConvolutionTraits_2`, `MinkowskiSumDecompositionTraits_2`,
+  and `MinkowskiSumTraits_2`, which list the minimal requirements on the traits given by the named parameter `geom_traits`:
+  the full convolution method (and the Minkowski difference) requires a model of `MinkowskiSumConvolutionTraits_2`, the
+  decomposition method requires a model of `MinkowskiSumDecompositionTraits_2`, and `CGAL::Minkowski_sum_2::minkowski_sum_2()`
+  requires a model of `MinkowskiSumTraits_2`, which refines both; the reduced convolution method does not use the traits.
+  `CGAL::Gps_segment_traits_2` (the default) models all of them. The traits are used throughout the computation; in
+  particular, the decomposition method no longer requires them to be of the type `CGAL::Gps_segment_traits_2`.
+- The traits (the named parameter `geom_traits`) and the decomposition strategies (the named parameters
+  `decomposition_strategy` and `decomposition_strategy_with_holes`) may be given by value, by reference (with `std::cref()`),
+  or by a `std::shared_ptr`; in the latter two cases, they are not copied by the named parameters.
+
 ### [2D and 3D Linear Geometry Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernel23)
 
 - Added operator to functor `Orientation_3` that takes 5 points as argument, with the last two getting tested against the first three points
