@@ -6,8 +6,7 @@
 #include <CGAL/config.h>
 
 #ifndef CGAL_USE_CORE
-int main()
-{
+int main() {
   std::cout << "Sorry, this example needs CORE ..." << std::endl;
   return 0;
 }
@@ -17,16 +16,15 @@ int main()
 #include <CGAL/Timer.h>
 
 #include <CGAL/Gps_traits_2.h>
-#include <CGAL/offset_polygon_2.h>
+#include <CGAL/Minkowski_sum_2/offset_polygon_2.h>
 
 #include "arr_conics.h"
 
-typedef CGAL::Polygon_2<Rat_kernel>             Polygon_2;
-typedef CGAL::Gps_traits_2<Traits>              Gps_traits;
-typedef Gps_traits::Polygon_with_holes_2        Offset_polygon_with_holes_2;
+using Polygon_2 = CGAL::Polygon_2<Rat_kernel>;
+using Gps_traits = CGAL::Gps_traits_2<Traits>;
+using Offset_polygon_with_holes_2 = Gps_traits::Polygon_with_holes_2;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   // Open the input file and read the input polygon.
   const char* filename = (argc > 1) ? argv[1] : "spiked.dat";
   std::ifstream in_file(filename);
@@ -37,19 +35,17 @@ int main(int argc, char* argv[])
   Polygon_2  P;
   in_file >> P;
   in_file.close();
-  std::cout << "Read an input polygon with " << P.size() << " vertices."
-            << std::endl;
+  std::cout << "Read an input polygon with " << P.size() << " vertices." << std::endl;
 
   // Compute the offset polygon.
   Traits traits;
   CGAL::Timer timer;
   timer.start();
-  Offset_polygon_with_holes_2 offset = CGAL::offset_polygon_2(P, 5, traits);
+  Offset_polygon_with_holes_2 offset = CGAL::Minkowski_sum_2::offset_polygon_2(P, 5, traits);
   double secs = timer.time();
 
   std::cout << "The offset polygon has " << offset.outer_boundary().size()
-            << " vertices, " << offset.number_of_holes() << " holes."
-            << std::endl;
+            << " vertices, " << offset.number_of_holes() << " holes." << std::endl;
   std::cout << "Offset computation took " << secs << " seconds." << std::endl;
   return 0;
 }

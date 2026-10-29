@@ -9,7 +9,7 @@
 #include<CGAL/create_offset_polygons_2.h>
 #include <CGAL/linear_least_squares_fitting_2.h>
 #include <CGAL/extremal_polygon_2.h>
-#include <CGAL/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_2.h>
 #include <boost/config.hpp>
 #include <boost/version.hpp>
 #include <CGAL/IO/WKT.h>
@@ -316,7 +316,7 @@ MainWindow::on_actionSelfMinkowskiSum_triggered()
       return;
     }
 
-    selfmink = minkowski_sum_2 (poly, poly);
+    selfmink = CGAL::Minkowski_sum_2::minkowski_sum_2(poly, poly);
 
     minkgi = new CGAL::Qt::PolygonWithHolesGraphicsItem<Polygon_with_holes_2>(&selfmink);
 

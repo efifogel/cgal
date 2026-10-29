@@ -2,18 +2,18 @@
 // Computing the Minkowski sum of two polygons with holes read from a file
 // using the vertical decomposition strategy and the full convolution method.
 
+#include <iostream>
+#include <iterator>
+#include <vector>
+#include <fstream>
+
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_by_decomposition_2.h>
 #include <CGAL/Polygon_vertical_decomposition_2.h>
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 #include <CGAL/draw_polygon_2.h>
 #include <CGAL/draw_polygon_with_holes_2.h>
-
-#include <iostream>
-#include <iterator>
-#include <vector>
-#include <fstream>
 
 #include "print_utils.h"
 
@@ -47,7 +47,9 @@ int main(int argc, char* argv[]) {
   // Compute the Minkowski sum using the decomposition approach.
   CGAL::Polygon_vertical_decomposition_2<Kernel>::Traits_2 traits;
   CGAL::Polygon_vertical_decomposition_2<Kernel> vertical_decomp(traits);
-  Polygon_with_holes_2 sum = minkowski_sum_2(P, Q, vertical_decomp, traits);
+  auto np = CGAL::parameters::decomposition_strategy_with_holes(vertical_decomp);
+  Polygon_with_holes_2 sum =
+    CGAL::Minkowski_sum_2::minkowski_sum_by_decomposition_2(P, Q, np, np, CGAL::parameters::geom_traits(traits));
   CGAL::draw(sum, "P + Q");
   std::cout << "P (+) Q = ";
   print_polygon_with_holes(sum);

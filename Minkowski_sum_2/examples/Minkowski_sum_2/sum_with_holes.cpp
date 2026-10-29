@@ -3,7 +3,8 @@
 
 #include <fstream>
 
-#include <CGAL/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_2.h>
+#include <CGAL/Minkowski_sum_2/minkowski_sum_by_full_convolution_2.h>
 #include <CGAL/draw_polygon_2.h>
 #include <CGAL/draw_polygon_with_holes_2.h>
 
@@ -25,8 +26,8 @@ int main(int argc, char* argv[]) {
   CGAL::draw(Q, "Q");
 
   // Compute and print the Minkowski sum.
-  // Polygon_with_holes_2 sum = CGAL::minkowski_sum_2(P, Q);
-  Polygon_with_holes_2 sum = CGAL::minkowski_sum_by_full_convolution_2(P, Q);
+  // Polygon_with_holes_2 sum = CGAL::Minkowski_sum_2::minkowski_sum_2(P, Q);
+  Polygon_with_holes_2 sum = CGAL::Minkowski_sum_2::minkowski_sum_by_full_convolution_2(P, Q);
   std::cout << "P (+) Q = ";
   print_polygon_with_holes(sum);
   CGAL::draw(sum, "P + Q");

@@ -6,14 +6,13 @@
 #include <list>
 #include <CGAL/Timer.h>
 
-#include <CGAL/approximated_offset_2.h>
+#include <CGAL/Minkowski_sum_2/approximated_inset_2.h>
 
 #include "bops_circular.h"
 
-typedef CGAL::Polygon_2<Kernel>                         Linear_polygon;
+using Linear_polygon = CGAL::Polygon_2<Kernel>;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   // Open the input file and read a polygon.
   const char* filename = (argc > 1) ? argv[1] : "tight.dat";
   std::ifstream in_file(filename);
@@ -28,19 +27,17 @@ int main(int argc, char* argv[])
   in_file >> P;
   in_file.close();
 
-  std::cout << "Read an input polygon with " << P.size() << " vertices."
-            << std::endl;
+  std::cout << "Read an input polygon with " << P.size() << " vertices." << std::endl;
 
   // Approximate the offset polygon.
   std::list<Polygon_2> inset_polygons;
   CGAL::Timer timer;
   timer.start();
-  approximated_inset_2(P, 1, 0.00001, std::back_inserter(inset_polygons));
+  CGAL::Minkowski_sum_2::approximated_inset_2(P, 1, 0.00001, std::back_inserter(inset_polygons));
   double secs = timer.time();
 
   std::list<Polygon_2>::iterator it;
-  std::cout << "The inset comprises " << inset_polygons.size()
-            << " polygon(s)." << std::endl;
+  std::cout << "The inset comprises " << inset_polygons.size() << " polygon(s)." << std::endl;
   for (it = inset_polygons.begin(); it != inset_polygons.end(); ++it)
     std::cout << "    Polygon with " << it->size() << " vertices." << std::endl;
   std::cout << "Inset computation took " << secs << " seconds." << std::endl;
