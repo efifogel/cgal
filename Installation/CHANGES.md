@@ -38,6 +38,8 @@ Release date: December 2026
 - The functor `Equal_2` of `CGAL::Arr_segment_traits_2`, which hides the functor `Equal_2` of the kernel it derives from, also
   determines whether two objects of any other type that `Kernel::Equal_2` accepts (e.g., two directions) are equal; that is,
   it models the concept `Kernel::Equal_2` as well.
+- Speed up the polyline and polycurve traits (`Arr_polyline_traits_2`, `Arr_polycurve_traits_2`) and the surface sweep on long polylines, reducing construction time by up to 38%.
+- Fixed the surface sweep, which could produce invalid arrangements or crash on overlapping polylines, and the landmarks point location, which could fail to terminate on curves that cross the walk segment more than once or on antennas.
 
 ### [2D Envelopes](https://doc.cgal.org/6.3/Manual/packages.html#PkgEnvelope2)
 
