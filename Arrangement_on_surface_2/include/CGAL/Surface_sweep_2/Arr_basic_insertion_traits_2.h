@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
-// Author(s)     : Baruch Zukerman <baruchzu@post.tau.ac.il>
-//                 Ron Wein <wein@post.tau.ac.il>
-//                 Efi Fogel <efif@post.tau.ac.il>
-//                 Eric Berberich <eric@mpi-inf.mpg.de>
+// Author(s) : Baruch Zukerman <baruchzu@post.tau.ac.il>
+//             Ron Wein <wein@post.tau.ac.il>
+//             Efi Fogel <efif@post.tau.ac.il>
+//             Eric Berberich <eric@mpi-inf.mpg.de>
 
 #ifndef CGAL_ARR_BASIC_INSERTION_TRAITS_2_H
 #define CGAL_ARR_BASIC_INSERTION_TRAITS_2_H
@@ -23,12 +23,13 @@
  * Definition of the Arr_basic_insertion_traits_2<Traits,Arrangement> class.
  */
 
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
+#include <CGAL/tags.h>
+#include <CGAL/Arr_enums.h>
 #include <CGAL/Arr_tags.h>
 
 #include <type_traits>
-
-#include <list>
-#include <iterator>
 
 namespace CGAL {
 
@@ -39,42 +40,38 @@ namespace CGAL {
 template <typename GeometryTraits_2, typename Arrangement_>
 class Arr_basic_insertion_traits_2 {
 public:
-  typedef GeometryTraits_2                              Geometry_traits_2;
-  typedef Arrangement_                                  Arrangement_2;
+  using Geometry_traits_2 = GeometryTraits_2;
+  using Arrangement_2 = Arrangement_;
 
 private:
-  typedef Geometry_traits_2                             Gt2;
+  using Gt2 = Geometry_traits_2;
 
 public:
-  typedef typename Arrangement_2::Halfedge_handle       Halfedge_handle;
-  typedef typename Arrangement_2::Vertex_handle         Vertex_handle;
+  using Halfedge_handle = typename Arrangement_2::Halfedge_handle;
+  using Vertex_handle = typename Arrangement_2::Vertex_handle;
 
-  typedef typename Gt2::X_monotone_curve_2     Base_x_monotone_curve_2;
-  typedef typename Gt2::Point_2                Base_point_2;
-  typedef typename Gt2::Construct_min_vertex_2 Base_construct_min_vertex_2;
-  typedef typename Gt2::Construct_max_vertex_2 Base_construct_max_vertex_2;
-  typedef typename Gt2::Compare_x_2            Base_compare_x_2;
-  typedef typename Gt2::Compare_xy_2           Base_compare_xy_2;
-  typedef typename Gt2::Compare_y_at_x_2       Base_compare_y_at_x_2;
-  typedef typename Gt2::Compare_y_at_x_right_2 Base_compare_y_at_x_right_2;
-  typedef typename Gt2::Equal_2                Base_equal_2;
-  typedef typename Gt2::Is_vertical_2          Base_is_vertical_2;
+  using Base_x_monotone_curve_2 = typename Gt2::X_monotone_curve_2;
+  using Base_point_2 = typename Gt2::Point_2;
+  using Base_construct_min_vertex_2 = typename Gt2::Construct_min_vertex_2;
+  using Base_construct_max_vertex_2 = typename Gt2::Construct_max_vertex_2;
+  using Base_compare_x_2 = typename Gt2::Compare_x_2;
+  using Base_compare_xy_2 = typename Gt2::Compare_xy_2;
+  using Base_compare_y_at_x_2 = typename Gt2::Compare_y_at_x_2;
+  using Base_compare_y_at_x_right_2 = typename Gt2::Compare_y_at_x_right_2;
+  using Base_equal_2 = typename Gt2::Equal_2;
+  using Base_is_vertical_2 = typename Gt2::Is_vertical_2;
 
-  typedef typename Gt2::Multiplicity           Multiplicity;
+  using Multiplicity = typename Gt2::Multiplicity;
 
-  typedef typename internal::Arr_complete_left_side_category< Gt2>::Category
-                                                    Left_side_category;
-  typedef typename internal::Arr_complete_bottom_side_category< Gt2>::Category
-                                                    Bottom_side_category;
-  typedef typename internal::Arr_complete_top_side_category< Gt2>::Category
-                                                    Top_side_category;
-  typedef typename internal::Arr_complete_right_side_category< Gt2>::Category
-                                                    Right_side_category;
+  using Left_side_category = typename internal::Arr_complete_left_side_category< Gt2>::Category;
+  using Bottom_side_category = typename internal::Arr_complete_bottom_side_category< Gt2>::Category;
+  using Top_side_category = typename internal::Arr_complete_top_side_category< Gt2>::Category;
+  using Right_side_category = typename internal::Arr_complete_right_side_category< Gt2>::Category;
 
   /* Insertion is implemented as surface-sweep visitor. The surface-sweep
    * algorithm never uses Compare_y_at_x_left_2.
    */
-  typedef Tag_false                                 Has_left_category;
+  using Has_left_category = Tag_false;
 
 protected:
   //! The base traits.
@@ -82,23 +79,19 @@ protected:
 
 public:
   /*! constructs. */
-  Arr_basic_insertion_traits_2(const Gt2& tr) :
-    m_base_traits(&tr)
-  {}
+  Arr_basic_insertion_traits_2(const Gt2& tr) : m_base_traits(&tr) {}
 
   /*!
    * Nested extension of the x-monotone curve type.
    */
   class Ex_x_monotone_curve_2 {
   public:
-    typedef  Base_x_monotone_curve_2  Base;
+    using Base = Base_x_monotone_curve_2;
 
   protected:
     Base m_base_xcv;                    // The base x-monotone curve.
-    Halfedge_handle m_he_handle;        // The corresponding arrangement edge
-                                        // (may be invalid).
-    bool m_overlap;                     // Does this curve represent and overlap
-                                        // of two other curves.
+    Halfedge_handle m_he_handle;        // The corresponding arrangement edge (may be invalid).
+    bool m_overlap;                     // Does this curve represent and overlap of two other curves.
 
   public:
     Ex_x_monotone_curve_2():
@@ -117,10 +110,7 @@ public:
       m_base_xcv(xcv),
       m_he_handle(he),
       m_overlap(false)
-    {
-      CGAL_precondition(he == Halfedge_handle() ||
-                        he->direction() == ARR_RIGHT_TO_LEFT);
-    }
+    { CGAL_precondition(he == Halfedge_handle() || he->direction() == ARR_RIGHT_TO_LEFT); }
 
     const Base& base() const { return m_base_xcv; }
 
@@ -128,8 +118,7 @@ public:
 
     operator const Base& () const { return m_base_xcv; }
 
-    Ex_x_monotone_curve_2& operator=(const Base& xcv)
-    {
+    Ex_x_monotone_curve_2& operator=(const Base& xcv) {
       m_base_xcv = xcv;
       m_he_handle = Halfedge_handle();
       return (*this);
@@ -137,24 +126,20 @@ public:
 
     Halfedge_handle halfedge_handle() const { return m_he_handle; }
 
-    void set_halfedge_handle(Halfedge_handle he)
-    {
-      CGAL_precondition(he == Halfedge_handle() ||
-                        he->direction() == ARR_RIGHT_TO_LEFT);
+    void set_halfedge_handle(Halfedge_handle he) {
+      CGAL_precondition(he == Halfedge_handle() || he->direction() == ARR_RIGHT_TO_LEFT);
       m_he_handle = he;
     }
 
     bool is_overlapping() const { return m_overlap; }
 
-    void set_overlapping() { m_overlap = true; }
+    void set_overlapping(bool overlap = true) { m_overlap = overlap; }
   };
 
-  typedef Ex_x_monotone_curve_2                     X_monotone_curve_2;
+  using X_monotone_curve_2 = Ex_x_monotone_curve_2;
 
   // For debugging purposes:
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const X_monotone_curve_2& xcv)
-  {
+  friend std::ostream& operator<<(std::ostream& os, const X_monotone_curve_2& xcv) {
     os << xcv.base();
     return (os);
   }
@@ -164,7 +149,7 @@ public:
    */
   class Ex_point_2 {
   public:
-    typedef  Base_point_2            Base;
+    using Base = Base_point_2;
 
   protected:
     Base m_base_pt;                     // The base point.
@@ -196,11 +181,10 @@ public:
     void set_vertex_handle(Vertex_handle v) { m_v = v; }
   };
 
-  typedef Ex_point_2                                Point_2;
+  using Point_2 = Ex_point_2;
 
   // For debugging purposes:
-  friend std::ostream& operator<<(std::ostream& os, const Point_2& pt)
-  {
+  friend std::ostream& operator<<(std::ostream& os, const Point_2& pt) {
     os << pt.base();
     return os;
   }
@@ -217,8 +201,7 @@ public:
      * obtaining function, which is a member of the nesting class,
      * constructing it.
      */
-    Construct_min_vertex_2(const Base_construct_min_vertex_2& base_min_v,
-                           const Base_equal_2& base_equal) :
+    Construct_min_vertex_2(const Base_construct_min_vertex_2& base_min_v, const Base_equal_2& base_equal) :
       m_base_min_v(base_min_v),
       m_base_equal(base_equal),
       invalid_he()
@@ -228,8 +211,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Point_2 operator()(const X_monotone_curve_2& xcv)
-    {
+    Point_2 operator()(const X_monotone_curve_2& xcv) {
       // If there is not halfedge associated with the curve, just return
       // a point with invalid halfedge handle.
       const Base_point_2& base_p = m_base_min_v(xcv.base());
@@ -247,19 +229,14 @@ public:
       // In case of an overlapping curve, make sure the curve endpoint equals
       // the point associated with the vertex. If not, we attach an invalid
       // vertex to the extended point.
-      if (! vh->is_at_open_boundary() && m_base_equal(base_p, vh->point()))
-        return (Point_2(base_p, vh));
+      if (! vh->is_at_open_boundary() && m_base_equal(base_p, vh->point())) return Point_2(base_p, vh);
       return (Point_2(base_p));
     }
   };
 
   /*! obtains a Construct_min_vertex_2 function object */
   Construct_min_vertex_2 construct_min_vertex_2_object() const
-  {
-    return (Construct_min_vertex_2
-            (m_base_traits->construct_min_vertex_2_object(),
-             m_base_traits->equal_2_object()));
-  }
+  { return (Construct_min_vertex_2(m_base_traits->construct_min_vertex_2_object(), m_base_traits->equal_2_object())); }
 
   /*! A functor that obtains the right endpoint of an x-monotone curve. */
   class Construct_max_vertex_2 {
@@ -273,8 +250,7 @@ public:
      * obtaining function, which is a member of the nesting class,
      * constructing it.
      */
-    Construct_max_vertex_2(const Base_construct_max_vertex_2& base_max_v,
-                           const Base_equal_2& base_equal) :
+    Construct_max_vertex_2(const Base_construct_max_vertex_2& base_max_v, const Base_equal_2& base_equal) :
       m_base_max_v(base_max_v),
       m_base_equal(base_equal),
       invalid_he()
@@ -285,8 +261,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Point_2 operator()(const X_monotone_curve_2& xcv)
-    {
+    Point_2 operator()(const X_monotone_curve_2& xcv) {
       // If there is not halfedge associated with the curve, just return
       // a point with invalid halfedge handle.
       const Base_point_2& base_p = m_base_max_v(xcv.base());
@@ -304,21 +279,16 @@ public:
       // In case of an overlapping curve, make sure the curve endpoint equals
       // the point associated with the vertex. If not, we attach an invalid
       // vertex to the extended point.
-      if (! vh->is_at_open_boundary() && m_base_equal(base_p, vh->point()))
-        return (Point_2(base_p, vh));
+      if (! vh->is_at_open_boundary() && m_base_equal(base_p, vh->point())) return Point_2(base_p, vh);
       return (Point_2(base_p));
     }
   };
 
   /*! obtains a Construct_max_vertex_2 function object */
   Construct_max_vertex_2 construct_max_vertex_2_object() const
-  {
-    return (Construct_max_vertex_2
-            (m_base_traits->construct_max_vertex_2_object(),
-             m_base_traits->equal_2_object()));
-  }
+  { return (Construct_max_vertex_2(m_base_traits->construct_max_vertex_2_object(), m_base_traits->equal_2_object())); }
 
-  /*! A functor that compares two points lexigoraphically: by x, then by y. */
+  /*! A functor that compares two points lexicographically: by x, then by y. */
   class Compare_xy_2 {
   protected:
     Base_compare_xy_2 m_base_cmp_xy;
@@ -334,19 +304,14 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const
-    {
-      if(p1.vertex_handle() == p2.vertex_handle() &&
-         p1.vertex_handle() != Vertex_handle())
-        return EQUAL;
-
+    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const {
+      if (p1.vertex_handle() == p2.vertex_handle() && p1.vertex_handle() != Vertex_handle()) return EQUAL;
       return (m_base_cmp_xy(p1.base(), p2.base()));
     }
   };
 
   /*! obtains a Compare_xy_2 function object */
-  Compare_xy_2 compare_xy_2_object() const
-  { return (Compare_xy_2(m_base_traits->compare_xy_2_object())); }
+  Compare_xy_2 compare_xy_2_object() const { return (Compare_xy_2(m_base_traits->compare_xy_2_object())); }
 
   /*! A functor that compares the y-coordinates of a point and an
    * x-monotone curve at the point x-coordinate.
@@ -368,8 +333,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Comparison_result operator()(const Point_2& p,
-                                 const X_monotone_curve_2& xcv) const
+    Comparison_result operator()(const Point_2& p, const X_monotone_curve_2& xcv) const
     { return (m_base_cmp_y_at_x(p.base(), xcv.base())); }
   };
 
@@ -389,26 +353,19 @@ public:
      * obtaining function, which is a member of the nesting class,
      * constructing it.
      */
-    Compare_y_at_x_right_2(const Base_compare_y_at_x_right_2& base) :
-        m_base_cmp_y_at_x_right(base)
-    {}
+    Compare_y_at_x_right_2(const Base_compare_y_at_x_right_2& base) : m_base_cmp_y_at_x_right(base) {}
 
     //! Allow its functor obtaining function calling the private constructor.
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Comparison_result operator()(const X_monotone_curve_2& xcv1,
-                                 const X_monotone_curve_2& xcv2,
-                                 const Point_2& p) const
+    Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2, const Point_2& p) const
     { return (m_base_cmp_y_at_x_right(xcv1.base(), xcv2.base(), p.base())); }
   };
 
   /*! obtains a Compare_y_at_x_right_2 function object */
   Compare_y_at_x_right_2 compare_y_at_x_right_2_object() const
-  {
-    return (Compare_y_at_x_right_2
-            (m_base_traits->compare_y_at_x_right_2_object()));
-  }
+  { return (Compare_y_at_x_right_2(m_base_traits->compare_y_at_x_right_2_object())); }
 
   /*! A functor that checks whether two points and two x-monotone curves are
    * identical.
@@ -429,13 +386,11 @@ public:
 
   public:
     /*! Check if two curves are the same. */
-    bool operator()(const X_monotone_curve_2& xcv1,
-                    const X_monotone_curve_2& xcv2) const
+    bool operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const
     { return (m_base_eq(xcv1.base(), xcv2.base())); }
 
     /*! Check if the two points are the same. */
-    bool operator()(const Point_2& p1, const Point_2& p2) const
-    { return (m_base_eq(p1.base(), p2.base())); }
+    bool operator()(const Point_2& p1, const Point_2& p2) const { return (m_base_eq(p1.base(), p2.base())); }
   };
 
   /*! obtains an `Equal_2` function object */
@@ -482,13 +437,11 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    bool operator()(const X_monotone_curve_2& xcv) const
-    { return (m_base_is_vert(xcv.base())); }
+    bool operator()(const X_monotone_curve_2& xcv) const { return (m_base_is_vert(xcv.base())); }
   };
 
   /*! obtains a Is_vertical_2 function object */
-  Is_vertical_2 is_vertical_2_object() const
-  { return (Is_vertical_2(m_base_traits->is_vertical_2_object())); }
+  Is_vertical_2 is_vertical_2_object() const { return (Is_vertical_2(m_base_traits->is_vertical_2_object())); }
 
   // left-right
 
@@ -513,8 +466,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Arr_parameter_space operator()(const X_monotone_curve_2& xcv,
-                                   Arr_curve_end ce) const
+    Arr_parameter_space operator()(const X_monotone_curve_2& xcv, Arr_curve_end ce) const
     { return (m_base->parameter_space_in_x_2_object()(xcv.base(), ce)); }
 
     Arr_parameter_space operator()(const Point_2& p) const
@@ -525,8 +477,7 @@ public:
   };
 
   /*! obtains a Parameter_space_in_x_2 function object */
-  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
-  { return Parameter_space_in_x_2(m_base_traits); }
+  Parameter_space_in_x_2 parameter_space_in_x_2_object() const { return Parameter_space_in_x_2(m_base_traits); }
 
   /*! A function object that determines whether an x-monotone curve or a
    * point coincide with the vertical identification curve.
@@ -549,8 +500,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    bool operator()(const Point_2& p) const
-    { return m_base->is_on_x_identification_2_object()(p.base()); }
+    bool operator()(const Point_2& p) const { return m_base->is_on_x_identification_2_object()(p.base()); }
 
     bool operator()(const X_monotone_curve_2& xcv) const
     { return m_base->is_on_x_identification_2_object()(xcv.base()); }
@@ -590,8 +540,7 @@ public:
 
   /*! obtains a Compare_y_on_boundary_2 object
    */
-  Compare_y_on_boundary_2 compare_y_on_boundary_2_object() const
-  { return Compare_y_on_boundary_2(m_base_traits); }
+  Compare_y_on_boundary_2 compare_y_on_boundary_2_object() const { return Compare_y_on_boundary_2(m_base_traits); }
 
   /*! A functor that compares the y-coordinates of curve ends near the
    * boundary of the parameter space.
@@ -617,13 +566,8 @@ public:
     /*! Use tag dispatching to avoid compilation errors in case the functor
      * is not defined
      */
-    Comparison_result operator()(const X_monotone_curve_2& xcv1,
-                                 const X_monotone_curve_2& xcv2,
-                                 Arr_curve_end ce) const
-    {
-      return m_base->compare_y_near_boundary_2_object()(xcv1.base(),
-                                                        xcv2.base(), ce);
-    }
+    Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2, Arr_curve_end ce) const
+    { return m_base->compare_y_near_boundary_2_object()(xcv1.base(), xcv2.base(), ce); }
   };
 
   /*! obtains a Compare_y_near_boundary_2 object
@@ -654,8 +598,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    Arr_parameter_space operator()(const X_monotone_curve_2& xcv,
-                                   Arr_curve_end ce) const
+    Arr_parameter_space operator()(const X_monotone_curve_2& xcv, Arr_curve_end ce) const
     { return m_base->parameter_space_in_y_2_object()(xcv.base(), ce); }
 
     Arr_parameter_space operator()(const Point_2& p) const
@@ -666,8 +609,7 @@ public:
   };
 
   /*! obtains a Parameter_space_in_y_2 function object */
-  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
-  { return Parameter_space_in_y_2(m_base_traits); }
+  Parameter_space_in_y_2 parameter_space_in_y_2_object() const { return Parameter_space_in_y_2(m_base_traits); }
 
   /*! A function object that determines whether an x-monotone curve or a
    * point coincide with the horizontal identification curve.
@@ -690,8 +632,7 @@ public:
     friend class Arr_basic_insertion_traits_2<GeometryTraits_2, Arrangement_>;
 
   public:
-    bool operator()(const Point_2& p) const
-    { return m_base->is_on_y_identification_2_object()(p.base()); }
+    bool operator()(const Point_2& p) const { return m_base->is_on_y_identification_2_object()(p.base()); }
 
     bool operator()(const X_monotone_curve_2 & xcv) const
     { return m_base->is_on_y_identification_2_object()(xcv.base()); }
@@ -731,24 +672,15 @@ public:
     /*! uses tag dispatching to avoid compilation errors in case the functor
      * is not defined
      */
-    Comparison_result operator()(const Point_2& p,
-                                 const X_monotone_curve_2& xcv,
-                                 Arr_curve_end ce) const
-    {
-      return m_base->compare_x_on_boundary_2_object()(p.base(), xcv.base(), ce);
-    }
+    Comparison_result operator()(const Point_2& p, const X_monotone_curve_2& xcv, Arr_curve_end ce) const
+    { return m_base->compare_x_on_boundary_2_object()(p.base(), xcv.base(), ce); }
 
     /*! uses tag dispatching to avoid compilation errors in case the functor
      * is not defined
      */
-    Comparison_result operator()(const X_monotone_curve_2& xcv1,
-                                 Arr_curve_end ce1,
-                                 const X_monotone_curve_2& xcv2,
-                                 Arr_curve_end ce2) const
-    {
-      return m_base->compare_x_on_boundary_2_object()(xcv1.base(), ce1,
-                                                      xcv2.base(), ce2);
-    }
+    Comparison_result operator()(const X_monotone_curve_2& xcv1, Arr_curve_end ce1,
+                                 const X_monotone_curve_2& xcv2, Arr_curve_end ce2) const
+    { return m_base->compare_x_on_boundary_2_object()(xcv1.base(), ce1, xcv2.base(), ce2); }
   };
 
   /*! obtains a Compare_x_on_boundary_2 object
@@ -780,13 +712,8 @@ public:
     /*! uses tag dispatching to avoid compilation errors in case the functor
      * is not defined
      */
-    Comparison_result operator()(const X_monotone_curve_2& xcv1,
-                                 const X_monotone_curve_2& xcv2,
-                                 Arr_curve_end ce) const
-    {
-      return m_base->compare_x_near_boundary_2_object()(xcv1.base(),
-                                                        xcv2.base(), ce);
-    }
+    Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2, Arr_curve_end ce) const
+    { return m_base->compare_x_near_boundary_2_object()(xcv1.base(), xcv2.base(), ce); }
   };
 
   /*! obtains a Compare_x_near_boundary_2 object
