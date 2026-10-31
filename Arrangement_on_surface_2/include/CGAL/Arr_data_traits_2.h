@@ -282,7 +282,8 @@ private:
 
   /*! obtains the data of an end of an x-monotone curve that is a subcurve of
    * two given x-monotone curves, that is, the merged data of the corresponding
-   * ends of the two curves that coincide with it.
+   * ends of the two curves that coincide with it, or the data of an
+   * intersection point of the two curves if there are none.
    */
   Point_data overlap_end_data(const Base_x_monotone_curve_2& ovl, Arr_curve_end ce,
                               const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const {
@@ -294,7 +295,7 @@ private:
       if (! is_closed(*xcv, ce) || ! equal(p, vertex(*xcv, ce))) continue;
       data = data ? m_policy.merge_point_data(*data, xcv->end_data(ce)) : xcv->end_data(ce);
     }
-    return data ? *data : Point_data();
+    return data ? *data : m_policy.intersection_point_data(xcv1, xcv2);
   }
 
   /*! obtains the common endpoints of two x-monotone curves, whose data are
