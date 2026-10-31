@@ -754,17 +754,6 @@ public:
         p.vertex_handle() : q.vertex_handle();
       return Point_2(m_base->merge_point_data_2_object()(p.base(), q.base()), v);
     }
-
-    /*! merges the data of a point with the data of an intersection point of
-     * two x-monotone curves that coincides with it.
-     */
-    Point_2 operator()(const Point_2& p, const X_monotone_curve_2& xcv1,
-                       const X_monotone_curve_2& xcv2) const
-    {
-      return Point_2(m_base->merge_point_data_2_object()(p.base(), xcv1.base(),
-                                                         xcv2.base()),
-                     p.vertex_handle());
-    }
   };
 
   /*! obtains a Merge_point_data_2 object

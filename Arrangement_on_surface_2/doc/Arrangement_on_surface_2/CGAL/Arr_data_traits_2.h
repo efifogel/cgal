@@ -243,12 +243,6 @@ public:
      * \pre `p` and `q` are equal.
      */
     Point_2 operator()(const Point_2& p, const Point_2& q) const;
-
-    /*! returns the point `p` with the merged data of `p` and of an
-     * intersection point of `xcv1` and `xcv2`.
-     * \pre `p` lies on `xcv1` and on `xcv2`.
-     */
-    Point_2 operator()(const Point_2& p, const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const;
   };
 
   /// \name Creation
