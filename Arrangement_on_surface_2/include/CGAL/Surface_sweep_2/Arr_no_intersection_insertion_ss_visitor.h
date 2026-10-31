@@ -100,9 +100,9 @@ public:
                     Arr_curve_end /* cv_end */, bool /* is_new */)
   {}
 
-  void update_event(Event* e, Subcurve* sc1, Subcurve* sc2,
-                    bool is_new, Multiplicity /* multiplicity */)
-  { if (! is_new) merge_point_data(e, sc1, sc2); }
+  void update_event(Event* /* e */, Subcurve* /* sc1 */, Subcurve* /* sc2 */,
+                    bool /* is_new */, Multiplicity /* multiplicity */)
+  {}
 
   void update_event(Event* /* e */, Subcurve* /* sc1 */) {}
 
@@ -112,6 +112,13 @@ public:
       e->point().set_vertex_handle(pt.vertex_handle());
     if (! is_new) merge_point_data(e, pt);
   }
+
+  /*! merges the data of an intersection point constructed by the traits that
+   * coincides with an existing event into the point of the event, and into
+   * the point of its arrangement vertex if exists.
+   */
+  void found_intersection_point(Event* e, const Point_2& xp, Subcurve* /* sc1 */, Subcurve* /* sc2 */, bool is_new)
+  { if (! is_new) merge_point_data(e, xp); }
   //@}
 
   /// \name Point-data merging.
@@ -122,15 +129,6 @@ public:
    */
   void merge_point_data(Event* e, const Point_2& pt) {
     Base::merge_point_data(e, pt);
-    update_vertex_point(e);
-  }
-
-  /*! merges the data of an intersection point of two subcurves that coincides
-   * with an event into the point of the event, and into the point of its
-   * arrangement vertex if exists.
-   */
-  void merge_point_data(Event* e, Subcurve* sc1, Subcurve* sc2) {
-    Base::merge_point_data(e, sc1, sc2);
     update_vertex_point(e);
   }
 

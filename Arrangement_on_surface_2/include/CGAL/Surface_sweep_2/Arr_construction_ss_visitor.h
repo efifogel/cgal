@@ -180,12 +180,11 @@ public:
   /*! updates an event with an isolated point that coincides with it. */
   void update_event(Event* e, const Point_2& pt, bool is_new) { if (! is_new) merge_point_data(e, pt); }
 
-  /*! updates an event with an intersection point of two subcurves that
-   * coincides with it.
+  /*! merges the data of an intersection point constructed by the traits that
+   * coincides with an existing event into the point of the event.
    */
-  void update_event(Event* e, Subcurve* sc1, Subcurve* sc2, bool is_new,
-                    typename Gt2::Multiplicity /* multiplicity */)
-  { if (! is_new) merge_point_data(e, sc1, sc2); }
+  void found_intersection_point(Event* e, const Point_2& xp, Subcurve* /* sc1 */, Subcurve* /* sc2 */, bool is_new)
+  { if (! is_new) merge_point_data(e, xp); }
   //@}
 
   /// \name Point-data merging.
@@ -197,15 +196,6 @@ public:
   void merge_point_data(Event* e, const Point_2& pt) {
     if constexpr (internal::Arr_has_point_data<Gt2>::value)
       e->point() = this->traits()->merge_point_data_2_object()(e->point(), pt);
-  }
-
-  /*! merges the data of an intersection point of two subcurves that coincides
-   * with an event into the point of the event, if the geometry traits
-   * attaches data to points.
-   */
-  void merge_point_data(Event* e, Subcurve* sc1, Subcurve* sc2) {
-    if constexpr (internal::Arr_has_point_data<Gt2>::value)
-      e->point() = this->traits()->merge_point_data_2_object()(e->point(), sc1->last_curve(), sc2->last_curve());
   }
   //@}
 

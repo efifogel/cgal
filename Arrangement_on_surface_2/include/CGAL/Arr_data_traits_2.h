@@ -763,19 +763,6 @@ public:
      */
     Point_2 operator()(const Point_2& p, const Point_2& q) const
     { return Point_2(p, m_traits.m_policy.merge_point_data(p.data(), q.data())); }
-
-    /*! merges the data of a point with the data of an intersection point of
-     * two x-monotone curves that coincides with it.
-     * \param p the point.
-     * \param xcv1 the first curve.
-     * \param xcv2 the second curve.
-     * \return the point `p` with the merged data.
-     * \pre `p` lies on `xcv1` and on `xcv2`.
-     */
-    Point_2 operator()(const Point_2& p, const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const {
-      const auto& policy = m_traits.m_policy;
-      return Point_2(p, policy.merge_point_data(p.data(), policy.intersection_point_data(xcv1, xcv2)));
-    }
   };
 
   /*! obtains a `Merge_point_data_2` functor object. */

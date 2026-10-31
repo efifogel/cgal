@@ -337,6 +337,34 @@ bool test_intersection_point_data() {
   return ok;
 }
 
+// tests the merging of the data of an intersection point at the endpoint of
+// one of the two intersecting segments (a weak intersection), in construction
+// and in insertion.
+bool test_weak_intersection_point_data() {
+  using Traits = CGAL::Arr_data_traits_2<Segment_traits, Intersection_label_policy>;
+  using Arr = CGAL::Arrangement_2<Traits>;
+  using Pnt = Traits::Point_2;
+  const Traits traits;
+  auto ctr = traits.construct_x_monotone_curve_2_object();
+  const std::vector<Traits::X_monotone_curve_2> xcvs = {
+    ctr(Pnt(Point(0, 0), Labels{1}), Pnt(Point(4, 0), Labels{2}), Labels{0}),
+    ctr(Pnt(Point(1, -1), Labels{3}), Pnt(Point(2, 0), Labels{4}), Labels{1})
+  };
+  auto data_at = [](const Arr& arr, const Point& p) {
+    for (auto vit = arr.vertices_begin(); vit != arr.vertices_end(); ++vit)
+      if (vit->point() == p) return vit->point().data();
+    return Labels{-2};
+  };
+  Arr arr1(&traits);
+  CGAL::insert(arr1, xcvs.begin(), xcvs.end());
+  Arr arr2(&traits);
+  CGAL::insert(arr2, xcvs.begin(), xcvs.begin() + 1);
+  CGAL::insert(arr2, xcvs.begin() + 1, xcvs.end());
+  const bool ok = (data_at(arr1, Point(2, 0)) == (Labels{-1, 4})) && (data_at(arr2, Point(2, 0)) == (Labels{-1, 4}));
+  std::cout << (ok ? "Passed: " : "Failed: ") << "weak intersection point data" << std::endl;
+  return ok;
+}
+
 // tests Arr_label_policy_2 for segments: the arrangement of labeled cycles is
 // compared with the arrangement constructed with the base traits. With
 // multiple labels, the label set of every vertex must consist of the labels of
@@ -389,6 +417,7 @@ int main() {
   if (! test_functors()) ++failures;
   if (! test_default_policy()) ++failures;
   if (! test_intersection_point_data()) ++failures;
+  if (! test_weak_intersection_point_data()) ++failures;
 
   // A triangle and a square that share a vertex and an edge part.
   const std::vector<std::vector<Input_point>> simple = {
