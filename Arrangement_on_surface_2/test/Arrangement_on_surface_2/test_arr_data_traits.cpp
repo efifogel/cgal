@@ -399,6 +399,30 @@ bool test_overlap_end_data() {
   return ok;
 }
 
+// tests the merging of the data of the end of an overlap that coincides with
+// an existing event, here of an isolated vertex.
+bool test_overlap_end_at_existing_event() {
+  using Polyline_traits = CGAL::Arr_polyline_traits_2<Segment_traits>;
+  using Traits = CGAL::Arr_data_traits_2<Polyline_traits, Polyline_label_policy>;
+  using Arr = CGAL::Arrangement_2<Traits>;
+  Traits traits;
+  Polyline_traits polyline_traits;
+  auto ctr = polyline_traits.construct_curve_2_object();
+  std::vector<Point> points1 = {Point(0, 1), Point(1, 0), Point(3, 0), Point(4, 1)};
+  std::vector<Point> points2 = {Point(0, -1), Point(1, 0), Point(3, 0), Point(4, -1)};
+  std::vector<Traits::Curve_2> cvs = {Traits::Curve_2(ctr(points1.begin(), points1.end()), 1),
+                                      Traits::Curve_2(ctr(points2.begin(), points2.end()), 2)};
+  Arr arr(&traits);
+  CGAL::insert_point(arr, Traits::Point_2(Point(1, 0), Labels{7}));
+  CGAL::insert(arr, cvs.begin(), cvs.end());
+  Labels data{-2};
+  for (auto vit = arr.vertices_begin(); vit != arr.vertices_end(); ++vit)
+    if (vit->point() == Point(1, 0)) data = vit->point().data();
+  const bool ok = (data == (Labels{-1, 7}));
+  std::cout << (ok ? "Passed: " : "Failed: ") << "overlap end at an existing event" << std::endl;
+  return ok;
+}
+
 // tests Arr_label_policy_2 for segments: the arrangement of labeled cycles is
 // compared with the arrangement constructed with the base traits. With
 // multiple labels, the label set of every vertex must consist of the labels of
@@ -453,6 +477,7 @@ int main() {
   if (! test_intersection_point_data()) ++failures;
   if (! test_weak_intersection_point_data()) ++failures;
   if (! test_overlap_end_data()) ++failures;
+  if (! test_overlap_end_at_existing_event()) ++failures;
 
   // A triangle and a square that share a vertex and an edge part.
   const std::vector<std::vector<Input_point>> simple = {
