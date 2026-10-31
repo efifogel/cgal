@@ -337,6 +337,40 @@ bool test_intersection_point_data() {
   return ok;
 }
 
+// A policy for polylines that marks intersection points with a special label.
+struct Polyline_label_policy : public CGAL::Arr_data_policy_2<Labels, int> {
+  Labels merge_point_data(const Labels& labels1, const Labels& labels2) const { return unite(labels1, labels2); }
+
+  template <typename XMonotoneCurve_2>
+  Labels intersection_point_data(const XMonotoneCurve_2& /* xcv1 */, const XMonotoneCurve_2& /* xcv2 */) const
+  { return Labels{-1}; }
+};
+
+// tests the data of the ends of an overlap that lie in the interior of both
+// polylines.
+bool test_overlap_end_data() {
+  using Polyline_traits = CGAL::Arr_polyline_traits_2<Segment_traits>;
+  using Traits = CGAL::Arr_data_traits_2<Polyline_traits, Polyline_label_policy>;
+  using Arr = CGAL::Arrangement_2<Traits>;
+  Traits traits;
+  Polyline_traits polyline_traits;
+  auto ctr = polyline_traits.construct_curve_2_object();
+  std::vector<Point> points1 = {Point(0, 1), Point(1, 0), Point(3, 0), Point(4, 1)};
+  std::vector<Point> points2 = {Point(0, -1), Point(1, 0), Point(3, 0), Point(4, -1)};
+  std::vector<Traits::Curve_2> cvs = {Traits::Curve_2(ctr(points1.begin(), points1.end()), 1),
+                                      Traits::Curve_2(ctr(points2.begin(), points2.end()), 2)};
+  auto data_at = [](const Arr& arr, const Point& p) {
+    for (auto vit = arr.vertices_begin(); vit != arr.vertices_end(); ++vit)
+      if (vit->point() == p) return vit->point().data();
+    return Labels{-2};
+  };
+  Arr arr(&traits);
+  CGAL::insert(arr, cvs.begin(), cvs.end());
+  const bool ok = (data_at(arr, Point(1, 0)) == Labels{-1}) && (data_at(arr, Point(3, 0)) == Labels{-1});
+  std::cout << (ok ? "Passed: " : "Failed: ") << "overlap end data" << std::endl;
+  return ok;
+}
+
 // tests Arr_label_policy_2 for segments: the arrangement of labeled cycles is
 // compared with the arrangement constructed with the base traits. With
 // multiple labels, the label set of every vertex must consist of the labels of
@@ -389,6 +423,7 @@ int main() {
   if (! test_functors()) ++failures;
   if (! test_default_policy()) ++failures;
   if (! test_intersection_point_data()) ++failures;
+  if (! test_overlap_end_data()) ++failures;
 
   // A triangle and a square that share a vertex and an edge part.
   const std::vector<std::vector<Input_point>> simple = {
