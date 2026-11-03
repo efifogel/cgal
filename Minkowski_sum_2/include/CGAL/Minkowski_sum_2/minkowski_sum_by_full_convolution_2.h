@@ -50,6 +50,7 @@
 #include <CGAL/Arrangement_on_curve_1/Arrangement_on_curve_1.h>
 #include <CGAL/Arrangement_on_curve_1/insert.h>
 #include <CGAL/Arrangement_on_curve_1/overlay.h>
+// #include <CGAL/draw_arrangement_2.h>
 
 namespace CGAL {
 namespace Minkowski_sum_2 {
@@ -1326,6 +1327,7 @@ minkowski_sum_with_unbounded_2_impl(const std::vector<std::vector<typename Kerne
   const auto traits = make_convolution_traits<CurveTraits_2>(traits_ptr);
   Arrangement arr(&traits);
   construct_convolution_arrangement<CurveTraits_2>(paths, ids, arr);
+  // CGAL::draw(arr);
   auto in = [winding](typename Arrangement::Face_const_handle f)
   { return ! f->data().m_visited || (f->data().m_winding_number != winding); };
   std::vector<Polygon_with_holes_2> components;
