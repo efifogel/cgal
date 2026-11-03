@@ -16,6 +16,7 @@ foreach(cppfile ${cppfiles})
 endforeach()
 
 if(CGAL_Qt6_FOUND)
+  target_link_libraries(full_conv PRIVATE CGAL::CGAL_Basic_viewer)
   target_link_libraries(sum_of_holes PRIVATE CGAL::CGAL_Basic_viewer)
   target_link_libraries(sum_with_holes PRIVATE CGAL::CGAL_Basic_viewer)
 else()
