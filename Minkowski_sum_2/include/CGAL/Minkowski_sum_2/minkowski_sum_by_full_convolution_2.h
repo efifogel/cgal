@@ -50,7 +50,6 @@
 #include <CGAL/Arrangement_on_curve_1/Arrangement_on_curve_1.h>
 #include <CGAL/Arrangement_on_curve_1/insert.h>
 #include <CGAL/Arrangement_on_curve_1/overlay.h>
-// #include <CGAL/draw_arrangement_2.h>
 
 namespace CGAL {
 namespace Minkowski_sum_2 {
@@ -1269,19 +1268,26 @@ void construct_convolution_arrangement(const std::vector<std::vector<Point_2>>& 
 }
 
 /*! computes the Minkowski sum of two input polygons, given their convolution
- * cycles.
+ * cycles.  The winding numbers of the faces of the arrangement of the cycles
+ * are counted from the unbounded face, whose winding number is 0; the true
+ * count of a face is its winding number plus `offset`, the true count of the
+ * unbounded face.  The offset is 0 if both polygons are bounded, as the
+ * unbounded face is not in the sum then.  The sum consists of the faces whose
+ * true counts are positive; it is connected, and it is unbounded if the
+ * offset is positive.
  * \tparam CurveTraits_2 the traits of the curves that represent the
  *         convolution cycles; either the traits given by the user (segments)
  *         or `Arr_polyline_traits_2` of these traits.
  * \param paths the convolution cycles of the two summand polygons
  * \param ids the identifiers of the vertices of the convolution cycles, or
  *        empty
+ * \param offset the true count of the unbounded face
  * \param traits_ptr a shared pointer to the traits
  */
 template <typename CurveTraits_2, typename Kernel_, typename Container_, typename Traits_>
 Polygon_with_holes_2<Kernel_, Container_>
 minkowski_sum_by_full_convolution_2_impl(const std::vector<std::vector<typename Kernel_::Point_2>>& paths,
-                                         const std::vector<std::vector<std::size_t>>& ids,
+                                         const std::vector<std::vector<std::size_t>>& ids, int offset,
                                          const std::shared_ptr<const Traits_>& traits_ptr) {
   using Kernel = Kernel_;
   using Container = Container_;
@@ -1291,49 +1297,13 @@ minkowski_sum_by_full_convolution_2_impl(const std::vector<std::vector<typename 
   const auto traits = make_convolution_traits<CurveTraits_2>(traits_ptr);
   Arrangement arr(&traits);
   construct_convolution_arrangement<CurveTraits_2>(paths, ids, arr);
-  // The sum consists of the faces whose winding numbers are positive; it is
-  // connected.
-  auto in = [](typename Arrangement::Face_const_handle f)
-  { return f->data().m_visited && (f->data().m_winding_number > 0); };
+  auto in = [offset](typename Arrangement::Face_const_handle f)
+  { return f->data().m_visited && (f->data().m_winding_number + offset > 0); };
   std::vector<Polygon_with_holes_2> components;
   extract_region<Kernel, Container>(arr, in, true, std::back_inserter(components), *traits_ptr);
   CGAL_assertion(components.size() <= 1);
+  CGAL_assertion((offset <= 0) || ((components.size() == 1) && components.front().is_unbounded()));
   return components.empty() ? Polygon_with_holes_2() : std::move(components.front());
-}
-
-/*! computes the Minkowski sum of a bounded polygon and an unbounded polygon
- * with holes, given the convolution cycles of the outer boundary of the former
- * and the holes of the latter.  The points that are not in the sum are those
- * whose winding number with respect to these cycles is `winding`; they form
- * bounded, simply connected regions, the holes of the (unbounded and connected)
- * sum.
- * \tparam CurveTraits_2 the traits of the curves that represent the
- *         convolution cycles; either the traits given by the user (segments)
- *         or `Arr_polyline_traits_2` of these traits.
- * \param paths the convolution cycles
- * \param ids the identifiers of the vertices of the convolution cycles, or
- *        empty
- * \param winding the winding number of the faces that are not in the sum
- * \param traits_ptr a shared pointer to the traits
- */
-template <typename CurveTraits_2, typename Kernel_, typename Container_, typename Traits_>
-Polygon_with_holes_2<Kernel_, Container_>
-minkowski_sum_with_unbounded_2_impl(const std::vector<std::vector<typename Kernel_::Point_2>>& paths,
-                                    const std::vector<std::vector<std::size_t>>& ids, int winding,
-                                    const std::shared_ptr<const Traits_>& traits_ptr) {
-  using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel_, Container_>;
-  using Arrangement = Convolution_arrangement_2<CurveTraits_2>;
-
-  const auto traits = make_convolution_traits<CurveTraits_2>(traits_ptr);
-  Arrangement arr(&traits);
-  construct_convolution_arrangement<CurveTraits_2>(paths, ids, arr);
-  // CGAL::draw(arr);
-  auto in = [winding](typename Arrangement::Face_const_handle f)
-  { return ! f->data().m_visited || (f->data().m_winding_number != winding); };
-  std::vector<Polygon_with_holes_2> components;
-  extract_region<Kernel_, Container_>(arr, in, true, std::back_inserter(components), *traits_ptr);
-  CGAL_assertion((components.size() == 1) && components.front().is_unbounded());
-  return std::move(components.front());
 }
 
 /*! obtains the representation of the convolution cycles, given by the named
@@ -1479,7 +1449,8 @@ minkowski_sum_with_unbounded_2(const Polygon_with_holes_2<Kernel_, Container_>& 
     curr = next;
     ++next;
   } while (curr != outer.vertices_circulator());
-  const int winding = -(1 + num_non_convex);
+  // The true count of the unbounded face.
+  const int offset = 1 + num_non_convex;
 
   std::vector<std::vector<typename Kernel_::Point_2>> paths;
   std::vector<std::vector<std::size_t>> ids;
@@ -1493,8 +1464,9 @@ minkowski_sum_with_unbounded_2(const Polygon_with_holes_2<Kernel_, Container_>& 
   }
 
   if (use_segments(paths, num_vertices, curves))
-    return minkowski_sum_with_unbounded_2_impl<Traits_, Kernel_, Container_>(paths, ids, winding, traits_ptr);
-  return minkowski_sum_with_unbounded_2_impl<Polyline_traits_2, Kernel_, Container_>(paths, ids, winding, traits_ptr);
+    return minkowski_sum_by_full_convolution_2_impl<Traits_, Kernel_, Container_>(paths, ids, offset, traits_ptr);
+  return minkowski_sum_by_full_convolution_2_impl<Polyline_traits_2, Kernel_, Container_>(paths, ids, offset,
+                                                                                         traits_ptr);
 }
 
 } // namespace internal
@@ -1615,8 +1587,8 @@ minkowski_sum_by_full_convolution_2(const Polygon_with_holes_2<Kernel_, Containe
   }
 
   if (internal::use_segments(paths, num_vertices, curves))
-    return internal::minkowski_sum_by_full_convolution_2_impl<Traits, Kernel_, Container_>(paths, ids, traits_ptr);
-  return internal::minkowski_sum_by_full_convolution_2_impl<Polyline_traits_2, Kernel_, Container_>(paths, ids,
+    return internal::minkowski_sum_by_full_convolution_2_impl<Traits, Kernel_, Container_>(paths, ids, 0, traits_ptr);
+  return internal::minkowski_sum_by_full_convolution_2_impl<Polyline_traits_2, Kernel_, Container_>(paths, ids, 0,
                                                                                                     traits_ptr);
 }
 
