@@ -56,16 +56,16 @@ compare_y_at_x_right 32 31 0 LARGER
 compare_y_at_x_right 33 31 0 LARGER
 compare_y_at_x_right 35 31 0 LARGER
 #
-compare_y_at_x_right 36 37 3 LARGER
-compare_y_at_x_right 37 36 3 SMALLER
-compare_y_at_x_right 38 39 3 SMALLER
-compare_y_at_x_right 39 38 3 LARGER
-compare_y_at_x_right 36 39 3 EQUAL
-compare_y_at_x_right 38 37 3 EQUAL
+compare_y_near_boundary 36 37 MIN_END LARGER
+compare_y_near_boundary 37 36 MIN_END SMALLER
+compare_y_near_boundary 38 39 MIN_END SMALLER
+compare_y_near_boundary 39 38 MIN_END LARGER
+compare_y_near_boundary 36 39 MIN_END EQUAL
+compare_y_near_boundary 38 37 MIN_END EQUAL
 #
-compare_y_at_x_left 40 41 3 LARGER
-compare_y_at_x_left 41 40 3 SMALLER
-compare_y_at_x_left 42 43 3 SMALLER
-compare_y_at_x_left 43 42 3 LARGER
-compare_y_at_x_left 40 43 3 EQUAL
-compare_y_at_x_left 42 41 3 EQUAL
+compare_y_near_boundary 40 41 MAX_END LARGER
+compare_y_near_boundary 41 40 MAX_END SMALLER
+compare_y_near_boundary 42 43 MAX_END SMALLER
+compare_y_near_boundary 43 42 MAX_END LARGER
+compare_y_near_boundary 40 43 MAX_END EQUAL
+compare_y_near_boundary 42 41 MAX_END EQUAL

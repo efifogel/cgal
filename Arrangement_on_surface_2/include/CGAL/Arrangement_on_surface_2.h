@@ -32,6 +32,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <type_traits>
 #include <boost/mpl/assert.hpp>
 
 #include <CGAL/Arr_tags.h>
@@ -1815,6 +1816,7 @@ protected:
 
   /*! Is the first given x-monotone curve above the second given?
    * \param xcv1 the first given curve
+   * \param ps_x1 the parameter space in x of the minimal end of xcv1
    * \param ps_y1 the parameter space in y of xcv1
    * \param xcv2 the second given curve
    * \param Arr_identified_side_tag used for dispatching to ensure that this
@@ -1824,11 +1826,13 @@ protected:
   bool _is_above(const X_monotone_curve_2& xcv1,
                  const X_monotone_curve_2& xcv2,
                  const Point_2& point,
+                 Arr_parameter_space ps_x1,
                  Arr_parameter_space ps_y1,
                  Arr_has_identified_side_tag) const;
 
   /*! Is the first given x-monotone curve above the second given?
    * \param xcv1 the first given curve
+   * \param ps_x1 the parameter space in x of the minimal end of xcv1
    * \param ps_y1 the parameter space in y of xcv1
    * \param xcv2 the second given curve
    * \param Arr_contracted_side_tag used for dispatching to ensure that this
@@ -1838,11 +1842,13 @@ protected:
   bool _is_above(const X_monotone_curve_2& xcv1,
                  const X_monotone_curve_2& xcv2,
                  const Point_2& point,
+                 Arr_parameter_space ps_x1,
                  Arr_parameter_space ps_y1,
                  Arr_has_contracted_side_tag) const;
 
   /*! Is the first given x-monotone curve above the second given?
    * \param xcv1 the first given curve
+   * \param ps_x1 the parameter space in x of the minimal end of xcv1
    * \param ps_y1 the parameter space in y of xcv1
    * \param xcv2 the second given curve
    * \param Arr_oblivious_side_tag used for dispatching to ensure that this
@@ -1852,6 +1858,7 @@ protected:
   bool _is_above(const X_monotone_curve_2& xcv1,
                  const X_monotone_curve_2& xcv2,
                  const Point_2& point,
+                 Arr_parameter_space ps_x1,
                  Arr_parameter_space ps_y1,
                  Arr_boundary_cond_tag) const;
 

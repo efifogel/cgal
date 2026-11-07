@@ -398,11 +398,15 @@ public:
   public:
     /*! compares the \f$y\f$-value of two \f$x\f$-monotone curves immediately to
      * the left of their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param cv1 the first curve.
      * \param cv2 the second curve.
      * \param p the intersection point.
-     * \pre the point `p` lies on both curves, and both of them must be also be
+     * \pre the point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its left.
+     * \pre `p` does not lie on a boundary side of the parameter space.
      * \return the relative position of `cv1` with respect to `cv2` immediately
      *         to the left of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
@@ -449,11 +453,15 @@ public:
   public:
     /*! compares the \f$y\f$-value of two \f$x\f$-monotone curves immediately to
      * the right of their intersection point.
+     * If one of the curves is vertical and extends upward from `p`, it is
+     * considered to lie above the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the right of `p`.
      * \param cv1 the first curve.
      * \param cv2 the second curve.
      * \param p the intersection point.
-     * \pre the point `p` lies on both curves, and both of them must be also be
+     * \pre the point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its right.
+     * \pre `p` does not lie on a boundary side of the parameter space.
      * \return the relative position of `cv1` with respect to `cv2` immediately
      *         to the right of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */

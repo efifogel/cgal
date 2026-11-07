@@ -378,6 +378,28 @@ _find_prev_around_vertex(Vertex_handle v, Halfedge_handle& he) {
 }
 
 //-----------------------------------------------------------------------------
+// Compare a curve, whose left endpoint lies in the interior of the curve of an
+// edge, with the curve of the edge immediately to the right of this point.
+//
+template <typename Arrangement, typename ZoneVisitor>
+Comparison_result Arrangement_zone_2<Arrangement, ZoneVisitor>::
+_compare_y_at_x_right_on_edge(const X_monotone_curve_2& cv_ins, const X_monotone_curve_2& cv,
+                              const Point_2& p) const {
+  if constexpr (std::is_same_v<Left_or_right_sides_category, Arr_has_identified_side_tag>) {
+    // A point in the interior of a curve lies on the identification curve only
+    // if the curve lies on the identification curve. In this case, the point
+    // lies on a boundary side, and cv_ins either lies on the identification
+    // curve as well, in which case the two curves overlap to the right of the
+    // point, or it leaves the point from the left boundary. In the latter
+    // case, cv_ins lies below the part of the (vertical) curve that extends
+    // upward from the point.
+    auto is_on_y_ident = m_geom_traits->is_on_y_identification_2_object();
+    if (is_on_y_ident(cv)) return is_on_y_ident(cv_ins) ? EQUAL : SMALLER;
+  }
+  return m_geom_traits->compare_y_at_x_right_2_object()(cv_ins, cv, p);
+}
+
+//-----------------------------------------------------------------------------
 // Direct the halfedge for the location of the given subcurve around a split
 // point that occurs in the interior of a given edge, when the subcurve lies
 // to the right of the split point.
@@ -406,8 +428,7 @@ _direct_intersecting_edge_to_right(const X_monotone_curve_2& cv_ins,
   // Check whether the curve lies above of below the edge immediately to
   // the right of its left endpoint.
   const Comparison_result pos_res =
-    m_geom_traits->compare_y_at_x_right_2_object()(cv_ins, query_he->curve(),
-                                                   cv_left_pt);
+    _compare_y_at_x_right_on_edge(cv_ins, query_he->curve(), cv_left_pt);
 
   if (pos_res == SMALLER) {
     // If m_cv below the curve associated with query_he, the relevant halfedge
@@ -474,9 +495,8 @@ _direct_intersecting_edge_to_left(const X_monotone_curve_2& cv_ins,
     // abused this predicate (since the two curves are not supposed to
     // intersect), so we now simply have to compare the two curves to the right
     // of cv_ins' left endpoint.
-    pos_res = m_geom_traits->compare_y_at_x_right_2_object()
-      (cv_ins, query_he->curve(),
-       m_geom_traits->construct_min_vertex_2_object()(cv_ins));
+    pos_res = _compare_y_at_x_right_on_edge(cv_ins, query_he->curve(),
+                                            m_geom_traits->construct_min_vertex_2_object()(cv_ins));
   }
 
   if (pos_res == SMALLER) {
@@ -775,6 +795,12 @@ _is_to_right_impl(const Point_2& p, Halfedge_handle he,
   std::cout << "_is_to_right_impl(" << p << "," << he->curve() << ")"
             << std::endl;
 #endif
+
+  // A curve that lies on the identification curve lies on both the left and
+  // the right boundaries; no point is to the right of the right boundary.
+  if constexpr (std::is_same_v<Left_or_right_sides_category, Arr_has_identified_side_tag>) {
+    if (m_geom_traits->is_on_y_identification_2_object()(he->curve())) return false;
+  }
 
   // Check the boundary conditions of the maximal end of the curve associated
   // with the given halfedge.

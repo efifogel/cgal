@@ -778,17 +778,22 @@ public:
   public:
     /*! compares the y value of two \f$x\f$-monotone curves immediately to the
      * left of their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param cv1 the first polycurve curve.
      * \param cv2 the second polycurve curve.
      * \param p the intersection point.
-     * \pre the point `p` lies on both curves, and both of them must be also be
+     * \pre the point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its left.
-     * \return the relative position of `cv1` with respect to `cv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return the relative position of `cv1` with respect to `cv2` immediately
      *         to the left of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
     Comparison_result operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, const Point_2& p) const {
       // Get the indices of the subcurves in cv1 and cv2 containing p and
       // defined to its left.
+      CGAL_precondition(! m_poly_traits.is_on_boundary(p));
       std::size_t i1 = m_poly_traits.locate_side(cv1, p, false);
       std::size_t i2 = m_poly_traits.locate_side(cv2, p, false);
 
@@ -826,17 +831,22 @@ public:
   public:
     /*! compares the \f$y\f$-value of two \f$x\f$-monotone curves immediately to
      * the right of their intersection point.
+     * If one of the curves is vertical and extends upward from `p`, it is
+     * considered to lie above the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the right of `p`.
      * \param cv1 the first curve.
      * \param cv2 the second curve.
      * \param p the intersection point.
-     * \pre the point `p` lies on both curves, and both of them must be also be
+     * \pre the point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its right.
-     * \return the relative position of `cv1` with respect to `cv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return the relative position of `cv1` with respect to `cv2` immediately
      *         to the right of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
     Comparison_result operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, const Point_2& p) const {
       // Get the indices of the subcurves in cv1 and cv2 containing p and
       // defined to its right.
+      CGAL_precondition(! m_poly_traits.is_on_boundary(p));
       std::size_t i1 = m_poly_traits.locate_side(cv1, p, true);
       std::size_t i2 = m_poly_traits.locate_side(cv2, p, true);
 
@@ -2503,6 +2513,19 @@ protected:
   /*! determines whether a point lies on the identification curve. */
   bool is_on_identification(const Point_2& p) const {
     if constexpr (has_identified_x_sides) return subcurve_traits_2()->is_on_y_identification_2_object()(p);
+    else return false;
+  }
+
+  /*! determines whether a point lies on a boundary side of the parameter
+   * space. Only a point on a closed boundary side, that is, an identified or a
+   * contracted side, may lie on a boundary side.
+   */
+  bool is_on_boundary(const Point_2& p) const {
+    if (is_on_identification(p)) return true;
+    constexpr bool has_contracted_y_sides = std::is_same_v<Bottom_side_category, Arr_contracted_side_tag> ||
+      std::is_same_v<Top_side_category, Arr_contracted_side_tag>;
+    if constexpr (has_contracted_y_sides)
+      return (subcurve_traits_2()->parameter_space_in_y_2_object()(p) != ARR_INTERIOR);
     else return false;
   }
 

@@ -932,10 +932,13 @@ _face_below_vertex_on_discontinuity(Vertex* v) const
   // Otherwise, we traverse the halfedges around v and locate the first
   // halfedge we encounter if we go from "6 o'clock" clockwise.
   // First locate the lower left and the top right halfedges around v.
-  typename Gt_adaptor_2::Compare_y_at_x_right_2 cmp_y_at_x_op_right =
-    m_geom_traits->compare_y_at_x_right_2_object();
-  typename Gt_adaptor_2::Compare_y_at_x_left_2  cmp_y_at_x_op_left =
-    m_geom_traits->compare_y_at_x_left_2_object();
+  // As v lies on the line of discontinuity, the curves defined to its left
+  // reach it at their maximal ends, which lie on the right boundary, and the
+  // curves defined to its right leave it at their minimal ends, which lie on
+  // the left boundary. Thus, the curves are compared near these ends.
+  auto cmp_y_near_bnd = m_geom_traits->compare_y_near_boundary_2_object();
+  auto is_vertical = m_geom_traits->is_vertical_2_object();
+  bool lowest_left_is_vertical = false;
 
   Halfedge* lowest_left = nullptr;
   Halfedge* top_right = nullptr;
@@ -945,20 +948,26 @@ _face_below_vertex_on_discontinuity(Vertex* v) const
     // right of the given vertex.
     if (curr->direction() == ARR_LEFT_TO_RIGHT) {
       // The curve associated with the current halfedge is defined to the left
-      // of v.
-      if (lowest_left == nullptr ||
-          cmp_y_at_x_op_left(curr->curve(), lowest_left->curve(), v->point())
-          == SMALLER)
-      {
-        lowest_left = curr;
+      // of v. A vertical curve (which lies on the line of discontinuity) that
+      // extends downward from v is encountered first when we go clockwise from
+      // "6 o'clock"; thus, it is the lowest curve to the left of v.
+      if (! lowest_left_is_vertical) {
+        if (is_vertical(curr->curve())) {
+          lowest_left = curr;
+          lowest_left_is_vertical = true;
+        }
+        else if (lowest_left == nullptr ||
+                 cmp_y_near_bnd(curr->curve(), lowest_left->curve(), ARR_MAX_END) == SMALLER)
+        {
+          lowest_left = curr;
+        }
       }
     }
     else {
       // The curve associated with the current halfedge is defined to the right
       // of v.
       if (top_right == nullptr ||
-          cmp_y_at_x_op_right(curr->curve(), top_right->curve(), v->point()) ==
-          LARGER)
+          cmp_y_near_bnd(curr->curve(), top_right->curve(), ARR_MIN_END) == LARGER)
       {
         top_right = curr;
       }

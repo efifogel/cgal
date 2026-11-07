@@ -28,9 +28,11 @@
  */
 
 #include <list>
+#include <type_traits>
 
 #include <CGAL/config.h>
 #include <CGAL/tags.h>
+#include <CGAL/use.h>
 #include <CGAL/Arr_enums.h>
 #include <CGAL/Arr_tags.h>
 #include <CGAL/Arr_has.h>
@@ -416,13 +418,22 @@ public:
   class Compare_y_at_x_left_2 {
   public:
     /*! compares two curves immediately to the left of their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param xcv1 The first curve.
      * \param xcv2 The second curve.
      * \param p The query point.
-     * \pre The two curves intersect at p, and they are defined to its left.
-     * \return SMALLER if xcv1 lies below xcv2 to the left of q;
-     *         LARGER if xcv1 lies above xcv2 to the left of q;
-     *         EQUAL in case of an overlap to the left of q.
+     * \pre the point `p` lies on both curves, and both of them must also be
+     *      defined (lexicographically) to its left.
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return SMALLER if xcv1 lies below xcv2 to the left of p;
+     *         LARGER if xcv1 lies above xcv2 to the left of p;
+     *         EQUAL in case of an overlap to the left of p.
+     * \note If the base traits does not provide this predicate, the internal
+     *       implementation compares the curves at the rightmost of their left
+     *       ends; thus, it also requires that the curves do not intersect
+     *       between that point and `p`.
      */
     Comparison_result operator()(const X_monotone_curve_2& xcv1,
                                  const X_monotone_curve_2& xcv2,
@@ -462,9 +473,20 @@ public:
      */
     Comparison_result
     _compare_y_at_x_left_imp(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
-                             const Point_2& CGAL_assertion_code(p), Tag_false) const {
+                             const Point_2& p, Tag_false) const {
+      CGAL_USE(p);
       auto ps_x = m_self->parameter_space_in_x_2_object();
       auto ps_y = m_self->parameter_space_in_y_2_object();
+
+#if ! defined(CGAL_NO_PRECONDITIONS)
+      // The point must not lie on a boundary side. Only a point on a closed
+      // (identified or contracted) boundary side may lie on a boundary side.
+      if constexpr (std::is_same_v<Left_or_right_sides_category, Arr_has_identified_side_tag>)
+        CGAL_precondition(ps_x(p) == ARR_INTERIOR);
+      if constexpr (std::is_same_v<Bottom_or_top_sides_category, Arr_has_identified_side_tag> ||
+                    std::is_same_v<Bottom_or_top_sides_category, Arr_has_contracted_side_tag>)
+        CGAL_precondition(ps_y(p) == ARR_INTERIOR);
+#endif
       auto min_vertex = m_self->construct_min_vertex_2_object();
       auto equal = m_self->equal_2_object();
 
@@ -1609,8 +1631,24 @@ public:
      * \return (true) if there is an overlap in the x-ranges of the given
      *         curves; (false) otherwise.
      */
-    bool operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const
-    { return is_in_x_range(xcv1, xcv2, Left_or_right_sides_category(), Bottom_or_top_sides_category()); }
+    bool operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2) const {
+      if constexpr (std::is_same_v<Left_or_right_sides_category, Arr_has_identified_side_tag>) {
+        // A curve that lies on the identification curve lies on both the left
+        // and the right boundaries. The parameter-space-in-x predicate must not
+        // be applied to such a curve; check whether either curve lies on the
+        // identification curve first.
+        auto is_on_y_ident = m_self->is_on_y_identification_2_object();
+        const bool on_ident1 = is_on_y_ident(xcv1);
+        const bool on_ident2 = is_on_y_ident(xcv2);
+        if (on_ident1 && on_ident2) return true;
+        if (on_ident1 || on_ident2) {
+          const X_monotone_curve_2& xcv = on_ident1 ? xcv2 : xcv1;
+          auto ps_x = m_self->parameter_space_in_x_2_object();
+          return ((ps_x(xcv, ARR_MIN_END) == ARR_LEFT_BOUNDARY) || (ps_x(xcv, ARR_MAX_END) == ARR_RIGHT_BOUNDARY));
+        }
+      }
+      return is_in_x_range(xcv1, xcv2, Left_or_right_sides_category(), Bottom_or_top_sides_category());
+    }
 
   protected:
     //! The base traits.
@@ -1932,6 +1970,36 @@ public:
 
       auto ps_x = m_self->parameter_space_in_x_2_object();
       auto ps_y = m_self->parameter_space_in_y_2_object();
+
+      if constexpr (std::is_same_v<Left_or_right_sides_category, Arr_has_identified_side_tag>) {
+        // A curve that lies on the identification curve is vertical; it lies
+        // on both the left and the right boundaries. A curve that reaches the
+        // identification curve from the right boundary (and does not leave it
+        // from the left boundary) shares only the x-coordinate of the right
+        // boundary with it. As with any vertical curve, points of the curve on
+        // the identification curve are ordered lexicographically; thus, the
+        // other curve lies above it, unless its right end lies below the
+        // bottom end of the curve on the identification curve.
+        auto is_on_y_ident = m_self->is_on_y_identification_2_object();
+        const bool on_ident1 = is_on_y_ident(xcv1);
+        const bool on_ident2 = is_on_y_ident(xcv2);
+        if (on_ident1 != on_ident2) {
+          const X_monotone_curve_2& xcv_ident = on_ident1 ? xcv1 : xcv2;
+          const X_monotone_curve_2& xcv = on_ident1 ? xcv2 : xcv1;
+          if ((ps_x(xcv, ARR_MIN_END) != ARR_LEFT_BOUNDARY) && (ps_x(xcv, ARR_MAX_END) == ARR_RIGHT_BOUNDARY)) {
+            auto res = LARGER;
+            if (ps_y(xcv_ident, ARR_MIN_END) != ARR_BOTTOM_BOUNDARY) {
+              auto cmp_y_on_bnd = m_self->compare_y_on_boundary_2_object();
+              auto ctr_max_vertex = m_self->construct_max_vertex_2_object();
+              auto ctr_min_vertex = m_self->construct_min_vertex_2_object();
+              if (cmp_y_on_bnd(ctr_max_vertex(xcv), ctr_min_vertex(xcv_ident)) == SMALLER) res = SMALLER;
+            }
+            // res is the position of xcv relative to xcv_ident.
+            return on_ident1 ? CGAL::opposite(res) : res;
+          }
+        }
+      }
+
       auto compare_y_at_x = m_self->compare_y_at_x_2_object();
       auto min_vertex = m_self->construct_min_vertex_2_object();
       auto compare_x_point_curve_end = m_self->compare_x_point_curve_end_2_object();

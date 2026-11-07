@@ -877,18 +877,19 @@ public:
    * Compares the relative vertical alignment of two arcs
    * immediately to the left of one of their intersection points.
    *
-   * If one of the arcs is vertical (emanating downward from p), it is
-   * always considered to be below the other curve.
-   *
+   * If one of the curves is vertical and extends downward from `p`, it is
+   * considered to lie below the other curve. `EQUAL` is returned if and
+   * only if the two curves coincide immediately to the left of `p`.
    * \param cv1 The first arc
    * \param cv2 The second arc
    * \param p The intersection point.
    * \return The relative vertical alignment of cv1 with respect to cv2
    *         immediately to the left of p: CGAL::SMALLER, CGAL::LARGER or
-   CGAL::EQUAL.
+   *         CGAL::EQUAL.
    *
-   * \pre The point p lies on both curves, and both of them must be also be
+   * \pre The point p lies on both curves, and both of them must also be
    *      defined (lexicographically) to its left.
+   * \pre `p` does not lie on a boundary side of the parameter space.
    */
   result_type operator() (const Arc_2& cv1, const Arc_2& cv2,
                           const Point_2& p) const {
@@ -972,18 +973,19 @@ public:
    * Compares the relative vertical alignment of two arcs
    * immediately to the right of one of their intersection points.
    *
-   * If one of the arcs is vertical (emanating downward from p), it is
-   * always considered to be below the other curve.
-   *
+   * If one of the curves is vertical and extends upward from `p`, it is
+   * considered to lie above the other curve. `EQUAL` is returned if and
+   * only if the two curves coincide immediately to the right of `p`.
    * \param cv1 The first arc
    * \param cv2 The second arc
    * \param p The intersection point.
    * \return The relative vertical alignment of cv1 with respect to cv2
    *         immediately to the right of p: CGAL::SMALLER, CGAL::LARGER or
-   CGAL::EQUAL.
+   *         CGAL::EQUAL.
    *
-   * \pre The point p lies on both curves, and both of them must be also be
+   * \pre The point p lies on both curves, and both of them must also be
    *      defined (lexicographically) to its right.
+   * \pre `p` does not lie on a boundary side of the parameter space.
    */
   result_type operator()(const Arc_2& cv1, const Arc_2& cv2,
                          const Point_2& p) const {

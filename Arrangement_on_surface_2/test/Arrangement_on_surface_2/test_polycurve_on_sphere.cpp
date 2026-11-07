@@ -16,6 +16,7 @@
 #include <iostream>
 #include <list>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -366,6 +367,123 @@ bool test_closing_zone() {
   return false;
 }
 
+/* Insert incrementally an x-monotone curve that lies on the identification
+ * curve and a curve that crosses the identification curve in its interior, in
+ * either order. The crossing curve is subdivided into two x-monotone curves
+ * that end at the identification curve, and the curve on the identification
+ * curve must be split at the crossing point. Thus, the arrangement must
+ * consist of five vertices and four edges.
+ */
+template <typename Gt>
+bool test_crossing_identification_arc(bool identification_first) {
+  using Arrangement = CGAL::Arrangement_on_surface_2<Gt, CGAL::Arr_spherical_topology_traits_2<Gt>>;
+  Geodesic_traits geodesic_traits;
+  auto ctr_p = geodesic_traits.construct_point_2_object();
+  auto crossing = geodesic_traits.construct_curve_2_object()(ctr_p(std::cos(2.9), std::sin(2.9), 0.1),
+                                                             ctr_p(std::cos(3.4), std::sin(3.4), -0.1));
+  auto on_identification = geodesic_traits.construct_x_monotone_curve_2_object()
+    (point_on_identification(geodesic_traits, -0.5), point_on_identification(geodesic_traits, 0.5));
+  Gt traits;
+  Arrangement arr(&traits);
+  typename Gt::Curve_2 cv;
+  typename Gt::X_monotone_curve_2 xcv;
+  if constexpr (std::is_same_v<Gt, Geodesic_traits>) {
+    cv = crossing;
+    xcv = on_identification;
+  }
+  else {
+    cv = traits.construct_curve_2_object()(crossing);
+    xcv = traits.construct_x_monotone_curve_2_object()(on_identification);
+  }
+  if (identification_first) {
+    CGAL::insert(arr, xcv);
+    CGAL::insert(arr, cv);
+  }
+  else {
+    CGAL::insert(arr, cv);
+    CGAL::insert(arr, xcv);
+  }
+  if (! arr.is_valid()) return false;
+  if ((arr.number_of_vertices() == 5) && (arr.number_of_edges() == 4)) return true;
+  std::cerr << "The arrangement has " << arr.number_of_vertices() << " vertices and " << arr.number_of_edges()
+            << " edges, expected 5 and 4" << std::endl;
+  return false;
+}
+
+/* Convert a geodesic arc to an x-monotone curve of the given traits. */
+template <typename Gt>
+typename Gt::X_monotone_curve_2 to_x_monotone_curve(const Gt& traits, const Arc& arc) {
+  if constexpr (std::is_same_v<Gt, Geodesic_traits>) return arc;
+  else return traits.construct_x_monotone_curve_2_object()(arc);
+}
+
+/* Insert incrementally an x-monotone curve that lies on the identification
+ * curve, and then an x-monotone curve that ends at a point in its interior,
+ * either reaching the point from the right boundary or leaving it from the
+ * left boundary. The curve on the identification curve must be split at the
+ * point. Thus, the arrangement must consist of four vertices and three edges.
+ */
+template <typename Gt>
+bool test_curve_end_on_identification_arc(bool from_right) {
+  using Arrangement = CGAL::Arrangement_on_surface_2<Gt, CGAL::Arr_spherical_topology_traits_2<Gt>>;
+  Geodesic_traits geodesic_traits;
+  auto ctr_arc = geodesic_traits.construct_x_monotone_curve_2_object();
+  auto q = point_on_identification(geodesic_traits, 0.0);
+  auto arc = from_right ? ctr_arc(point_at(geodesic_traits, 2.9, 0.0), q) : ctr_arc(q, point_at(geodesic_traits, 3.4, 0.0));
+  auto on_identification =
+    ctr_arc(point_on_identification(geodesic_traits, -0.5), point_on_identification(geodesic_traits, 0.5));
+  Gt traits;
+  Arrangement arr(&traits);
+  CGAL::insert(arr, to_x_monotone_curve(traits, on_identification));
+  CGAL::insert(arr, to_x_monotone_curve(traits, arc));
+  if (! arr.is_valid()) return false;
+  if ((arr.number_of_vertices() == 4) && (arr.number_of_edges() == 3)) return true;
+  std::cerr << "The arrangement has " << arr.number_of_vertices() << " vertices and " << arr.number_of_edges()
+            << " edges, expected 4 and 3" << std::endl;
+  return false;
+}
+
+/* Insert incrementally an x-monotone curve that lies on the identification
+ * curve and a closed loop (a small circle parallel to the XY-plane) that
+ * crosses it, in either order. The loop splits the sphere into two faces.
+ * Check that the arrangement has two faces and that the numbers of vertices and
+ * edges do not depend on the order of insertion.
+ */
+template <typename Gt>
+bool test_loop_crossing_identification_arc(const std::vector<Point>& loop) {
+  using Arrangement = CGAL::Arrangement_on_surface_2<Gt, CGAL::Arr_spherical_topology_traits_2<Gt>>;
+  Geodesic_traits geodesic_traits;
+  auto on_identification = geodesic_traits.construct_x_monotone_curve_2_object()
+    (point_on_identification(geodesic_traits, -0.5), point_on_identification(geodesic_traits, 0.5));
+  std::array<std::size_t, 2> vertices, edges;
+  bool ok = true;
+  for (int identification_first = 0; identification_first < 2; ++identification_first) {
+    Gt traits;
+    Arrangement arr(&traits);
+    std::vector<typename Gt::Curve_2> curves;
+    if constexpr (std::is_same_v<Gt, Geodesic_traits>) {
+      for (std::size_t i = 0; i + 1 < loop.size(); ++i)
+        curves.push_back(traits.construct_curve_2_object()(loop[i], loop[i + 1]));
+    }
+    else curves.push_back(traits.construct_curve_2_object()(loop.begin(), loop.end()));
+    auto xcv = to_x_monotone_curve(traits, on_identification);
+    if (identification_first == 1) CGAL::insert(arr, xcv);
+    for (const auto& cv : curves) CGAL::insert(arr, cv);
+    if (identification_first == 0) CGAL::insert(arr, xcv);
+    if (! arr.is_valid()) return false;
+    if (arr.number_of_faces() != 2) {
+      std::cerr << "The arrangement has " << arr.number_of_faces() << " faces, expected 2" << std::endl;
+      ok = false;
+    }
+    vertices[identification_first] = arr.number_of_vertices();
+    edges[identification_first] = arr.number_of_edges();
+  }
+  if ((vertices[0] == vertices[1]) && (edges[0] == edges[1])) return ok;
+  std::cerr << "The arrangement has " << vertices[1] << " vertices and " << edges[1] << " edges, expected "
+            << vertices[0] << " and " << edges[0] << std::endl;
+  return false;
+}
+
 int main() {
   bool ok = true;
   Geodesic_traits geodesic_traits;
@@ -384,6 +502,29 @@ int main() {
             [&]() { return test_closing_polyline(false); });
   ok &= run("zone of a polyline that closes a loop on the identification curve",
             [&]() { return test_closing_zone(); });
+
+  // A curve on the identification curve and a curve that crosses it
+  ok &= run("incremental insertion of an arc on the identification curve and a crossing curve",
+            [&]() { return test_crossing_identification_arc<Geodesic_traits>(true); });
+  ok &= run("incremental insertion of a crossing curve and an arc on the identification curve",
+            [&]() { return test_crossing_identification_arc<Geodesic_traits>(false); });
+  ok &= run("incremental insertion of a polyline on the identification curve and a crossing polyline",
+            [&]() { return test_crossing_identification_arc<Polyline_traits>(true); });
+  ok &= run("incremental insertion of a crossing polyline and a polyline on the identification curve",
+            [&]() { return test_crossing_identification_arc<Polyline_traits>(false); });
+  ok &= run("incremental insertion of an arc reaching an arc on the identification curve from the right",
+            [&]() { return test_curve_end_on_identification_arc<Geodesic_traits>(true); });
+  ok &= run("incremental insertion of an arc leaving an arc on the identification curve from the left",
+            [&]() { return test_curve_end_on_identification_arc<Geodesic_traits>(false); });
+  ok &= run("incremental insertion of a polyline reaching a polyline on the identification curve from the right",
+            [&]() { return test_curve_end_on_identification_arc<Polyline_traits>(true); });
+  ok &= run("incremental insertion of a polyline leaving a polyline on the identification curve from the left",
+            [&]() { return test_curve_end_on_identification_arc<Polyline_traits>(false); });
+  // The small circle at z = 0.2 crosses the arc on the identification curve.
+  ok &= run("incremental insertion of an arc on the identification curve and a loop of arcs",
+            [&]() { return test_loop_crossing_identification_arc<Geodesic_traits>(loops[1]); });
+  ok &= run("incremental insertion of a polyline on the identification curve and a closed polyline",
+            [&]() { return test_loop_crossing_identification_arc<Polyline_traits>(loops[1]); });
 
   // Polylines that reach the identification curve at either end, directed
   // either left to right or right to left

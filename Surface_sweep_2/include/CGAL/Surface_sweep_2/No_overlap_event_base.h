@@ -23,6 +23,9 @@
  */
 
 #include <list>
+#include <type_traits>
+
+#include <CGAL/Arr_tags.h>
 
 namespace CGAL {
 namespace Surface_sweep_2 {
@@ -224,6 +227,58 @@ public:
   void push_back_curve_to_right(Subcurve* curve)
   { m_right_curves.push_back(curve); }
 
+  /*! compares two curves defined to the right of the event immediately to
+   * the right of the event. If the event is a contraction point, the curves
+   * emanate from it with the same x-coordinate, and they are compared near the
+   * boundary. If the event lies on an identified left boundary,
+   * the event point lies on the boundary. In this case, a curve that lies on
+   * the identification curve extends upward from the event, and thus lies
+   * above any other curve; other curves are compared near their minimal ends,
+   * which lie on the boundary.
+   * \param xcv1 the first curve.
+   * \param xcv2 the second curve.
+   * \param tr the geometry traits.
+   * \pre Both curves are defined to the right of the event, and the event
+   *      lies on both of them.
+   */
+  template <typename Traits>
+  Comparison_result compare_y_right_of_event(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
+                                             const Traits* tr) const {
+    constexpr bool has_contracted_y_sides = std::is_same_v<Bottom_side_category, Arr_contracted_side_tag> ||
+      std::is_same_v<Top_side_category, Arr_contracted_side_tag>;
+    if constexpr (has_contracted_y_sides) {
+      if (parameter_space_in_y() != ARR_INTERIOR) {
+        // The event is a contraction point. Two curves that emanate from it
+        // and share the event have the same x-coordinate at the contraction
+        // point. If one of them lies on the identification curve, so does
+        // the other, and they overlap.
+        if constexpr (std::is_same_v<Left_side_category, Arr_identified_side_tag>) {
+          auto is_on_y_ident = tr->is_on_y_identification_2_object();
+          if (is_on_y_ident(xcv1) || is_on_y_ident(xcv2)) {
+            CGAL_assertion(is_on_y_ident(xcv1) && is_on_y_ident(xcv2));
+            return EQUAL;
+          }
+        }
+        // Otherwise, compare the curves near the contraction point. The curve
+        // whose end is to the left near the boundary lies above the other
+        // curve immediately to the right of the event.
+        return CGAL::opposite(tr->compare_x_near_boundary_2_object()(xcv1, xcv2, ARR_MIN_END));
+      }
+    }
+    if constexpr (std::is_same_v<Left_side_category, Arr_identified_side_tag>) {
+      if (parameter_space_in_x() != ARR_INTERIOR) {
+        // A (vertical) curve that lies on the identification curve extends
+        // upward from the event; thus, it lies above any other curve.
+        auto is_on_y_ident = tr->is_on_y_identification_2_object();
+        if (is_on_y_ident(xcv1)) return is_on_y_ident(xcv2) ? EQUAL : LARGER;
+        if (is_on_y_ident(xcv2)) return SMALLER;
+        // Both curves leave the event from the left boundary.
+        return tr->compare_y_near_boundary_2_object()(xcv1, xcv2, ARR_MIN_END);
+      }
+    }
+    return tr->compare_y_at_x_right_2_object()(xcv1, xcv2, m_point);
+  }
+
   /*! Add a subcurve to the container of right curves. */
   std::pair<bool, Subcurve_iterator>
   add_curve_to_right(Subcurve* curve, const Gt2* tr)
@@ -243,8 +298,7 @@ public:
     Subcurve_iterator iter = m_right_curves.begin();
     Comparison_result res;
 
-    while ((res = tr->compare_y_at_x_right_2_object()
-            (curve->last_curve(), (*iter)->last_curve(), m_point)) == LARGER)
+    while ((res = compare_y_right_of_event(curve->last_curve(), (*iter)->last_curve(), tr)) == LARGER)
     {
       ++iter;
       if (iter == m_right_curves.end()) {
