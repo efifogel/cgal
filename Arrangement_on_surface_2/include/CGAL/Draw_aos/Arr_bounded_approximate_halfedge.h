@@ -208,19 +208,31 @@ private:
 
   template <typename Gt, std::enable_if_t<is_or_derived_from_agas_v<Gt>, int> = 0>
   static void transform_polyline_impl(Context& ctx, Polyline& polyline, const Halfedge_const_handle& he) {
-    using Direction_3 = typename Geom_traits::Direction_3;
-    using Vector_3 = typename Geom_traits::Vector_3;
-
     if (polyline.size() < 2) return;
     const X_monotone_curve_2& curve = he->curve();
     const auto& traits = ctx.m_traits;
-    if (curve.is_vertical()) {
-      Direction_3 normal_dir = curve.is_directed_right() ? curve.normal() : -curve.normal();
-      Direction_3 azimuth_dir(CGAL::cross_product(Vector_3(0, 0, 1), normal_dir.vector()));
-      Approx_nt azimuth = ctx.to_uv(traits.approximate_2_object()(traits.construct_point_2_object()(azimuth_dir))).x();
-      if (azimuth == 0 && he->direction() == ARR_LEFT_TO_RIGHT) azimuth = 2 * CGAL_PI;
-      std::transform(polyline.begin(), polyline.end(), polyline.begin(),
-                     [azimuth](Point pt) { return Point(azimuth, pt.y()); });
+    if (traits.is_vertical_2_object()(curve)) {
+      // All points of a vertical curve share the same azimuth (x), except for
+      // the poles, where the azimuth is undefined and the conversion sets it to
+      // 0. Assign the same azimuth to all points.
+      std::optional<Approx_nt> azimuth;
+      if (traits.is_on_y_identification_2_object()(curve)) {
+        // The curve lies on the identification curve, where the azimuth is
+        // either 0 or 2 * pi depending on the side of the halfedge. Set it
+        // exactly, as the approximated points may deviate slightly.
+        azimuth = (he->direction() == ARR_LEFT_TO_RIGHT) ? 2 * CGAL_PI : 0;
+      }
+      else {
+        // Obtain the azimuth from a point that is not a pole (0 < y < pi).
+        auto it = std::find_if(polyline.begin(), polyline.end(),
+                               [](Point pt) { return (0 < pt.y()) && (pt.y() < CGAL_PI); });
+        CGAL_assertion_msg(it != polyline.end(),
+                           "The approximation of a vertical curve has no point other than poles.");
+        if (it != polyline.end()) azimuth = it->x();
+      }
+      if (azimuth.has_value())
+        std::transform(polyline.begin(), polyline.end(), polyline.begin(),
+                       [x = *azimuth](Point pt) { return Point(x, pt.y()); });
     }
     else if (polyline.back().x() == 0) {
       // For strictly x-monotone arcs whose target point sits on the boundary, the x should be set to 2 * CGAL_PI
@@ -290,11 +302,16 @@ public:
     m_right(ctx.bottom_right(), ctx.top_right()),
     m_bottom(ctx.bottom_left(), ctx.bottom_right()),
     m_top(ctx.top_left(), ctx.top_right()) {
-    Construct_gt_point_2<Geom_traits> ctr_p;
-    m_top_left = ctr_p(ctx.to_cartesian(ctx.top_left()));
-    m_top_right = ctr_p(ctx.to_cartesian(ctx.top_right()));
-    m_bottom_left = ctr_p(ctx.to_cartesian(ctx.bottom_left()));
-    m_bottom_right = ctr_p(ctx.to_cartesian(ctx.bottom_right()));
+    // The corners are used only by the approximation with a bounding box.
+    // Constructing them requires the construction of a point of the geometry
+    // traits from its coordinates, which some traits do not support.
+    if constexpr (has_approximate_xcv_with_bounds_v<Geom_traits, typename Geom_traits::Approximate_2>) {
+      Construct_gt_point_2<Geom_traits> ctr_p;
+      m_top_left = ctr_p(ctx.to_cartesian(ctx.top_left()));
+      m_top_right = ctr_p(ctx.to_cartesian(ctx.top_right()));
+      m_bottom_left = ctr_p(ctx.to_cartesian(ctx.bottom_left()));
+      m_bottom_right = ctr_p(ctx.to_cartesian(ctx.bottom_right()));
+    }
     Approx_nt ep_base = std::numeric_limits<Approx_nt>::epsilon();
     m_ep_left = std::max(std::abs(ep_base * ctx.xmin()), ep_base);
     m_ep_right = std::max(std::abs(ep_base * ctx.xmax()), ep_base);
