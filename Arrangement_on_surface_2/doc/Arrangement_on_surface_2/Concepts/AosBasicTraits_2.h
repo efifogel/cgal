@@ -62,7 +62,7 @@ public:
   /// \name Categories
   /// @{
 
-  /// indicates whether the nested functor `Compare_at_x_left_2` is provided.
+  /// indicates whether the nested functor `Compare_y_at_x_left_2` is provided.
   typedef unspecified_type Has_left_category;
 
   /// Must be convertible to `CGAL::Arr_oblivious_side_tag`.

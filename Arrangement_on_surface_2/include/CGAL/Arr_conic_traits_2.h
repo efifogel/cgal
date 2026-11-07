@@ -340,12 +340,16 @@ public:
   public:
     /*! compares the \f$y\f$ value of two \f$x\f$-monotone arcs immediately
      * to the left of their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param xcv1 The first arc.
      * \param xcv2 The second arc.
      * \param p The intersection point.
-     * \pre The point `p` lies on both curves, and both of them must be also be
+     * \pre The point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its left.
-     * \return The relative position of `xcv1` with respect to `xcv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return The relative position of `xcv1` with respect to `xcv2` immediately
      *         to the left of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
     Comparison_result operator()(const X_monotone_curve_2& xcv1,
@@ -368,7 +372,7 @@ public:
     }
 
   private:
-    /*! compares two arcs immediately to the leftt of their intersection point.
+    /*! compares two arcs immediately to the left of their intersection point.
      * \param xcv1 The first compared arc.
      * \param xcv2 The second compared arc.
      * \param p The reference intersection point.
@@ -502,12 +506,16 @@ public:
   public:
     /*! compares the `y` value of two \f$x\f$-monotone arcs immediately
      * to the right of their intersection point.
+     * If one of the curves is vertical and extends upward from `p`, it is
+     * considered to lie above the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the right of `p`.
      * \param xcv1 The first arc.
      * \param xcv2 The second arc.
      * \param p The intersection point.
-     * \pre The point `p` lies on both curves, and both of them must be also be
+     * \pre The point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its right.
-     * \return The relative position of `xcv1` with respect to `xcv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return The relative position of `xcv1` with respect to `xcv2` immediately
      *         to the right of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
     Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,

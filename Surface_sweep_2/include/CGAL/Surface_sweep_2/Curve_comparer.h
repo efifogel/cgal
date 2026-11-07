@@ -89,8 +89,7 @@ public:
                   (*m_curr_event)->right_curves_end(),
                   c2) != (*m_curr_event)->right_curves_end())
     {
-      return m_traits->compare_y_at_x_right_2_object()
-              (c1->last_curve(), c2->last_curve(), (*m_curr_event)->point());
+      return (*m_curr_event)->compare_y_right_of_event(c1->last_curve(), c2->last_curve(), m_traits);
     }
 
     Arr_parameter_space ps_x1 =

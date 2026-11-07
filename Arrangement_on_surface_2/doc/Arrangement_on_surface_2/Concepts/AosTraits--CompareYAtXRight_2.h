@@ -15,12 +15,18 @@ public:
   /// A model of this concept must provide:
   /// @{
 
-  /*! accepts two \f$x\f$-monotone curves `xc1` and `xc2`
-   * that have a common left endpoint `p`, and returns `CGAL::SMALLER`,
-   * `CGAL::EQUAL` or `CGAL::LARGER` according to the relative position of the
-   * two curves immediately to the right of \f$p\f$. Note that in case one of
-   * the \f$x\f$-monotone curves is a vertical segment emanating upward from
-   * `p`, it is always considered to be <I>above</I> the other curve.
+  /*! accepts two \f$x\f$-monotone curves `xc1` and `xc2` and a point `p` that
+   * lies on both curves, and returns `CGAL::SMALLER`, `CGAL::EQUAL`, or
+   * `CGAL::LARGER` according to the relative position of the two curves
+   * immediately to the right of `p`.
+   * - If one of the curves is vertical and extends upward from `p`, it is
+   *   considered to lie <I>above</I> the other curve.
+   * - `CGAL::EQUAL` is returned if and only if the two curves coincide
+   *   immediately to the right of `p`, that is, they overlap there.
+   *
+   * \pre `p` lies on both `xc1` and `xc2`, and both curves are defined
+   *      (lexicographically) to its right.
+   * \pre `p` does not lie on a boundary side of the parameter space.
    */
   Comparison_result operator()(AosTraits::X_monotone_curve_2 xc1,
                                AosTraits::X_monotone_curve_2 xc2,

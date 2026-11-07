@@ -4156,7 +4156,7 @@ _defines_outer_ccb_of_new_face(const DHalfedge* he_to,
   // the hole to be created or not.
   const X_monotone_curve_2& cv_next = (he_min == nullptr) ?
     he_away->curve() : ((he_min == he_to) ? cv : he_min->next()->curve());
-  return _is_above(*cv_min, cv_next, v_min->point(), ps_y_min,
+  return _is_above(*cv_min, cv_next, v_min->point(), ps_x_min, ps_y_min,
                    Top_or_bottom_sides_category());
 }
 
@@ -4167,9 +4167,18 @@ template <typename GeomTraits, typename TopTraits>
 bool Arrangement_on_surface_2<GeomTraits, TopTraits>::
 _is_above(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
           const Point_2& point,
+          Arr_parameter_space ps_x1,
           Arr_parameter_space /* ps_y1 */,
           Arr_boundary_cond_tag) const
 {
+  // If the left and right boundaries are identified, the common minimal end of
+  // the curves may lie on the left boundary, in which case the curves are
+  // compared near this end.
+  if constexpr (std::is_same_v<Left_side_category, Arr_identified_side_tag>) {
+    if (ps_x1 != ARR_INTERIOR)
+      return (m_geom_traits->compare_y_near_boundary_2_object()(xcv1, xcv2, ARR_MIN_END) == LARGER);
+  }
+  else CGAL_USE(ps_x1);
   return (m_geom_traits->compare_y_at_x_right_2_object()(xcv1, xcv2, point) ==
           LARGER);
 }
@@ -4180,6 +4189,7 @@ template <typename GeomTraits, typename TopTraits>
 bool Arrangement_on_surface_2<GeomTraits, TopTraits>::
 _is_above(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
           const Point_2& point,
+          Arr_parameter_space ps_x1,
           Arr_parameter_space ps_y1,
           Arr_has_identified_side_tag) const
 {
@@ -4214,7 +4224,7 @@ _is_above(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
                     (ps_y2 == ARR_TOP_BOUNDARY)));
   }
 
-  return _is_above(xcv1, xcv2, point, ps_y1, Arr_all_sides_oblivious_tag());
+  return _is_above(xcv1, xcv2, point, ps_x1, ps_y1, Arr_all_sides_oblivious_tag());
 }
 
 // Is the first given x-monotone curve above the second given?
@@ -4223,6 +4233,7 @@ template <typename GeomTraits, typename TopTraits>
 bool Arrangement_on_surface_2<GeomTraits, TopTraits>::
 _is_above(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
           const Point_2& point,
+          Arr_parameter_space ps_x1,
           Arr_parameter_space ps_y1,
           Arr_has_contracted_side_tag) const
 {
@@ -4252,7 +4263,7 @@ _is_above(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
             ((ps_y1 == ARR_TOP_BOUNDARY) && (x_res == LARGER)));
   }
 
-  return _is_above(xcv1, xcv2, point, ps_y1, Arr_all_sides_oblivious_tag());
+  return _is_above(xcv1, xcv2, point, ps_x1, ps_y1, Arr_all_sides_oblivious_tag());
 }
 
 

@@ -290,6 +290,34 @@ protected:
     return CGAL::sign(dot) == ZERO;
   }
 
+  /*! computes the orientation of the normals of the planes that contain two
+   * non-vertical arcs and a point on both arcs. Each normal is oriented such
+   * that its \f$z\f$-component is positive, that is, the arc, traversed in
+   * the direction of increasing \f$x\f$, turns counterclockwise around it.
+   * The tangent of the arc at \f$p\f$ in the direction of increasing
+   * \f$x\f$ is the cross product of the normal and \f$p\f$. Thus, the
+   * orientation is the orientation of the two tangents with respect to the
+   * outward normal of the sphere at \f$p\f$, negated. It is `COLLINEAR` if
+   * and only if the arcs lie on the same great circle (as both planes contain
+   * \f$p\f$), `NEGATIVE` if the first arc lies above the second immediately
+   * to the right of \f$p\f$, and `POSITIVE` otherwise.
+   * \param xc1 the first arc.
+   * \param xc2 the second arc.
+   * \param p the point.
+   * \pre neither arc is vertical.
+   * \pre `p` lies on both arcs.
+   */
+  inline Orientation orientation_at(const X_monotone_curve_2& xc1, const X_monotone_curve_2& xc2,
+                                    const Point_2& p) const {
+    const Kernel& kernel(*this);
+    auto opposite = kernel.construct_opposite_vector_3_object();
+    Vector_3 n1 = xc1.normal().vector();
+    Vector_3 n2 = xc2.normal().vector();
+    if (! xc1.is_directed_right()) n1 = opposite(n1);
+    if (! xc2.is_directed_right()) n2 = opposite(n2);
+    return kernel.orientation_3_object()(n1, n2, p.vector());
+  }
+
 public:
   /*! compares two endpoint directions by v.
    * \param d1 the first endpoint direction.
@@ -1180,92 +1208,35 @@ public:
   public:
     /*! compares the \f$y\f$-value of two \f$x\f$-monotone curves immediately to
      * the left of their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param xc1 the first curve.
      * \param xc2 the second curve.
      * \param p the intersection point.
-     * \return the relative position of `xc1` with respect to `xc2` immdiately to
+     * \return the relative position of `xc1` with respect to `xc2` immediately to
      *         the left of `p`: `SMALLER`, `EQUAL`, or `LARGER`.
-     * \pre the point `p` lies on both curves, and both of them must be also be
+     * \pre the point `p` lies on both curves, and both of them must also be
      *      defined (lexicographically) to its left.
+     * \pre `p` does not lie on a boundary side of the parameter space.
      * \pre the arcs are not degenerate
      */
     Comparison_result operator()(const X_monotone_curve_2& xc1, const X_monotone_curve_2& xc2, const Point_2& p) const {
       CGAL_precondition(! xc1.is_degenerate());
       CGAL_precondition(! xc2.is_degenerate());
-      CGAL_precondition(p == xc1.right());
-      CGAL_precondition(p == xc2.right());
+      CGAL_precondition(p.is_no_boundary());
 
-      // If Both arcs are vertical, they overlap:
+      // If both arcs are vertical, they overlap. Otherwise, a vertical arc,
+      // which extends downward from p, lies below the other arc.
       if (xc1.is_vertical() && xc2.is_vertical()) return EQUAL;
       if (xc1.is_vertical()) return SMALLER;
       if (xc2.is_vertical()) return LARGER;
 
-      // Non of the arc is verticel. Thus, non of the endpoints coincide with
-      // a pole.
-      // Compare the \f$y\f$-coordinate at the \f$x\f$-coordinate of the most
-      // right left-endpoint.
-      const Point_2& l1 = xc1.left();
-      const Point_2& l2 = xc2.left();
-
-      if (!l1.is_no_boundary()) {
-        // use l2 and xc1:
-        Oriented_side os = m_traits.oriented_side(xc1.normal(), l2);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc1.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER) :
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER);
-      }
-
-      // if p and r1 are antipodal, compare the plane normals
-      const Kernel& kernel = m_traits;
-      auto opposite_3 = kernel.construct_opposite_direction_3_object();
-      Direction_3 opposite_p = opposite_3(p);
-      if (kernel.equal_3_object()(opposite_p, Direction_3(l1)) ||
-          kernel.equal_3_object()(opposite_p, Direction_3(l2))) {
-        Sign xsign = Traits::x_sign(p);
-        Sign ysign = Traits::y_sign(p);
-        Project project = (xsign == ZERO) ?
-          ((ysign == POSITIVE) ? Traits::project_minus_xz : Traits::project_xz) :
-          ((xsign == POSITIVE) ? Traits::project_yz : Traits::project_minus_yz);
-
-        Direction_2 n1 = project(xc1.normal());
-        Direction_2 n2 = project(xc2.normal());
-        auto opposite_2 = kernel.construct_opposite_direction_2_object();
-        if (! xc1.is_directed_right()) n1 = opposite_2(n1);
-        if (! xc2.is_directed_right()) n2 = opposite_2(n2);
-        if (kernel.equal_2_object()(n1, n2)) return EQUAL;
-        const Direction_2 d(1, 0);
-        return (kernel.counterclockwise_in_between_2_object()(n1, d, n2)) ? LARGER : SMALLER;
-      }
-
-      if (! l2.is_no_boundary()) {
-        // use l1 and xc2:
-        Oriented_side os = m_traits.oriented_side(xc2.normal(), l1);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc2.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER) :
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER);
-      }
-
-      Comparison_result res = m_traits.compare_xy(l1, l2);
-      if (res == SMALLER) {
-        // use l2 and xc1:
-        Oriented_side os = m_traits.oriented_side(xc1.normal(), l2);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc1.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER) :
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER);
-      }
-      if (res == LARGER) {
-        // use l1 and xc2:
-        Oriented_side os = m_traits.oriented_side(xc2.normal(), l1);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc2.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER) :
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER);
-      }
-      // res == equal
-      return EQUAL;
+      // Neither arc is vertical. The relative position of the arcs immediately
+      // to the left of p is the opposite of their relative position
+      // immediately to its right.
+      auto orient = m_traits.orientation_at(xc1, xc2, p);
+      return (orient == COLLINEAR) ? EQUAL : ((orient == POSITIVE) ? LARGER : SMALLER);
     }
   };
 
@@ -1292,91 +1263,33 @@ public:
   public:
     /*! compares the \f$y\f$-value of two \f$x\f$-monotone curves immediately to
      * the right of their intersection point.
+     * If one of the curves is vertical and extends upward from `p`, it is
+     * considered to lie above the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the right of `p`.
      * \param xc1 the first curve.
      * \param xc2 the second curve.
      * \param p the intersection point.
-     * \return the relative position of `xc1` with respect to `xc2` immdiately
+     * \return the relative position of `xc1` with respect to `xc2` immediately
      *         to the right of `p`: `SMALLER`, `EQUAL`, or `LARGER`.
      * \pre the point `p` lies on both curves, and both of them must also be
      *      defined to its right (lexicographically).
+     * \pre `p` does not lie on a boundary side of the parameter space.
      * \pre the arcs are not degenerate
      */
     Comparison_result operator()(const X_monotone_curve_2& xc1, const X_monotone_curve_2& xc2, const Point_2& p) const {
       CGAL_precondition(! xc1.is_degenerate());
       CGAL_precondition(! xc2.is_degenerate());
+      CGAL_precondition(p.is_no_boundary());
 
-      // CGAL_precondition(p == xc1.left());
-      // CGAL_precondition(p == xc2.left());
-
-      // If Both arcs are vertical, they overlap:
+      // If both arcs are vertical, they overlap. Otherwise, a vertical arc,
+      // which extends upward from p, lies above the other arc.
       if (xc1.is_vertical() && xc2.is_vertical()) return EQUAL;
       if (xc1.is_vertical()) return LARGER;
       if (xc2.is_vertical()) return SMALLER;
 
-      // Non of the arcs is verticel. Thus, non of the endpoints coincide with
-      // a pole.
-      const Point_2& r1 = xc1.right();
-      const Point_2& r2 = xc2.right();
-
-      // if p and r1 are antipodal, compare the plane normals
-      const Kernel& kernel = m_traits;
-      auto opposite_3 = kernel.construct_opposite_direction_3_object();
-      Direction_3 opposite_p = opposite_3(p);
-      if (kernel.equal_3_object()(opposite_p, Direction_3(r1)) ||
-          kernel.equal_3_object()(opposite_p, Direction_3(r2))) {
-        Sign xsign = Traits::x_sign(p);
-        Sign ysign = Traits::y_sign(p);
-        Project project = (xsign == ZERO) ?
-          ((ysign == POSITIVE) ? Traits::project_minus_xz : Traits::project_xz) :
-          ((xsign == POSITIVE) ? Traits::project_yz : Traits::project_minus_yz);
-
-        Direction_2 n1 = project(xc1.normal());
-        Direction_2 n2 = project(xc2.normal());
-        auto opposite_2 = kernel.construct_opposite_direction_2_object();
-        if (! xc1.is_directed_right()) n1 = opposite_2(n1);
-        if (! xc2.is_directed_right()) n2 = opposite_2(n2);
-        if (kernel.equal_2_object()(n1, n2)) return EQUAL;
-        const Direction_2 d(1, 0);
-        return (kernel.counterclockwise_in_between_2_object()(n1, d, n2)) ? SMALLER : LARGER;
-      }
-
-      // Compare the \f$y\f$-coord. at the \f$x\f$-coordinate of the most left
-      // right-endpoint.
-      if (! r1.is_no_boundary()) {
-        // use r2 and xc1:
-        Oriented_side os = m_traits.oriented_side(xc1.normal(), r2);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc1.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER) :
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER);
-      }
-      if (! r2.is_no_boundary()) {
-        // use r1 and xc2:
-        Oriented_side os = m_traits.oriented_side(xc2.normal(), r1);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc2.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER) :
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER);
-      }
-      Comparison_result res = m_traits.compare_xy(r1, r2);
-      if (res == LARGER) {
-        // use r2 and xc1:
-        Oriented_side os = m_traits.oriented_side(xc1.normal(), r2);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc1.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER) :
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER);
-      }
-      if (res == SMALLER) {
-        // use r1 and xc2:
-        Oriented_side os = m_traits.oriented_side(xc2.normal(), r1);
-        return (os == ON_ORIENTED_BOUNDARY) ? EQUAL :
-          (xc2.is_directed_right()) ?
-          ((os == ON_NEGATIVE_SIDE) ? SMALLER : LARGER) :
-          ((os == ON_NEGATIVE_SIDE) ? LARGER : SMALLER);
-      }
-      // res == equal
-      return EQUAL;
+      // Neither arc is vertical.
+      auto orient = m_traits.orientation_at(xc1, xc2, p);
+      return (orient == COLLINEAR) ? EQUAL : ((orient == POSITIVE) ? SMALLER : LARGER);
     }
   };
 

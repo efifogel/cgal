@@ -3305,14 +3305,17 @@ see Section \ref aos_sssec-tr_landmarks_concept.
   below, above or lies on \f$c\f$.
 
 <DT>\link AosBasicTraits_2::Compare_y_at_x_right_2 <B>`Compare_y_at_x_right_2`</B>\endlink:
-<DD> Given two \f$x\f$-monotone curves \f$c_1\f$ and \f$c_2\f$ that
-  share a common minimal (left) endpoint \f$p\f$, determines whether
-  \f$c_1\f$ is above or below \f$c_2\f$ immediately to the right of
-  \f$p\f$, or whether the two curves overlap there.
+<DD> Given two \f$x\f$-monotone curves \f$c_1\f$ and \f$c_2\f$ and
+  a point \f$p\f$ that lies on both curves, such that both curves are
+  defined to the right of \f$p\f$, determines whether \f$c_1\f$ is
+  above or below \f$c_2\f$ immediately to the right of \f$p\f$, or
+  whether the two curves overlap there. A vertical curve that extends
+  upward from \f$p\f$ is considered to lie above the other curve. The
+  point \f$p\f$ must not lie on a boundary side of the parameter space.
 
 <DT>\link AosBasicTraits_2::Do_intersect_2 <B>`Do_intersect_2`</B>\endlink:
 <DD> Determines whether two given \f$x\f$-monotone curves intersect.
-  An input flag determines whether the curve are closed or open.
+  An input flag determines whether the curves are closed or open.
 </DL>
 
 Every model of the concept `AosBasicTraits_2` needs to define
@@ -3323,10 +3326,13 @@ supports the following predicate:
 <DL>
 
 <DT>\link AosBasicTraits_2::Compare_y_at_x_left_2 <B>`Compare_y_at_x_left_2`</B>\endlink:
-<DD> Given two \f$x\f$-monotone curves \f$c_1\f$ and \f$c_2\f$ that
-  share a common maximal (right) endpoint \f$p\f$, determines whether
-  \f$c_1\f$ is above or under \f$c_2\f$ immediately to the left of
-  \f$p\f$, or whether the two curves overlap there.
+<DD> Given two \f$x\f$-monotone curves \f$c_1\f$ and \f$c_2\f$ and
+  a point \f$p\f$ that lies on both curves, such that both curves are
+  defined to the left of \f$p\f$, determines whether \f$c_1\f$ is
+  above or below \f$c_2\f$ immediately to the left of \f$p\f$, or
+  whether the two curves overlap there. A vertical curve that extends
+  downward from \f$p\f$ is considered to lie below the other curve. The
+  point \f$p\f$ must not lie on a boundary side of the parameter space.
 
 </DL>
 
@@ -3337,7 +3343,7 @@ but in practice the category is typically explicitly defined as the
 tag.} the model must support the predicate. If the type is defined as
 `Tag_false`, we resort to an internal version, which is based just on
 the reduced set of provided operations.  The internal version might be
-less efficient, but it exempts the traits developer from the providing
+less efficient, but it exempts the traits developer from providing
 an (efficient) implementation of this predicate---a task that turns
 out to be nontrivial in some cases.
 

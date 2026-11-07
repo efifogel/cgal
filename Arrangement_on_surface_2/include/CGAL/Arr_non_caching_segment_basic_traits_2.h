@@ -109,14 +109,18 @@ public:
    */
   class Compare_y_at_x_left_2 {
   public:
-    /* compares the \f$y\f$-value of two segments immediately to the left of
+    /*! compares the \f$y\f$-value of two segments immediately to the left of
      * their intersection point.
+     * If one of the curves is vertical and extends downward from `p`, it is
+     * considered to lie below the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the left of `p`.
      * \param cv1 The first segment.
      * \param cv2 The second segment.
      * \param p The intersection point.
-     * \pre The point `p` lies on both segments, and both of them must be also
+     * \pre The point `p` lies on both segments, and both of them must also
      *      be defined (lexicographically) to its left.
-     * \return The relative position of `cv1` with respect to `cv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return The relative position of `cv1` with respect to `cv2` immediately
      *         to the left of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
     Comparison_result operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2,
@@ -160,12 +164,16 @@ public:
   public:
     /*! compares the \f$y\f$-value of two segments immediately to the right of
      * their intersection point.
+     * If one of the curves is vertical and extends upward from `p`, it is
+     * considered to lie above the other curve. `EQUAL` is returned if and
+     * only if the two curves coincide immediately to the right of `p`.
      * \param cv1 The first segment.
      * \param cv2 The second segment.
      * \param p The intersection point.
-     * \pre The point `p` lies on both segments, and both of them must be also
+     * \pre The point `p` lies on both segments, and both of them must also
      *      be defined (lexicographically) to its right.
-     * \return The relative position of `cv1` with respect to `cv2` immdiately
+     * \pre `p` does not lie on a boundary side of the parameter space.
+     * \return The relative position of `cv1` with respect to `cv2` immediately
      *         to the right of `p`: `SMALLER`, `LARGER`, or `EQUAL`.
      */
 

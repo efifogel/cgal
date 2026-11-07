@@ -139,9 +139,7 @@ public:
     Subcurve_iterator iter = this->right_curves_begin();
     Comparison_result res;
 
-    while ((res = tr->compare_y_at_x_right_2_object()
-            (curve->last_curve(), (*iter)->last_curve(), this->point())) ==
-           LARGER)
+    while ((res = this->compare_y_right_of_event(curve->last_curve(), (*iter)->last_curve(), tr)) == LARGER)
     {
       ++iter;
       if (iter == this->right_curves_end()) {
@@ -220,8 +218,7 @@ public:
     }
     CGAL_assertion(!found_c1 || !found_c2);
 
-    return tr->compare_y_at_x_right_2_object()
-      (c1->last_curve(), c2->last_curve(), this->point()) == LARGER;
+    return this->compare_y_right_of_event(c1->last_curve(), c2->last_curve(), tr) == LARGER;
   }
 
   std::vector< std::pair<Subcurve*, Subcurve*> > overlaps_on_right;

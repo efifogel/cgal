@@ -32,6 +32,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <type_traits>
 
 namespace CGAL {
 
@@ -393,6 +394,18 @@ private:
 
   bool _is_to_right_impl(const Point_2& p, Halfedge_handle he,
                          Arr_not_all_sides_oblivious_tag) const;
+
+  /*! compares a curve, whose left endpoint lies in the interior of the curve
+   * of an edge, with the curve of the edge immediately to the right of this
+   * point. The point may lie on the identification curve, in which case the
+   * curve of the edge lies on the identification curve as well.
+   * \param cv_ins The curve.
+   * \param cv The curve of the edge.
+   * \param p The left endpoint of cv_ins.
+   * \return SMALLER, LARGER, or EQUAL, as Compare_y_at_x_right_2.
+   */
+  Comparison_result _compare_y_at_x_right_on_edge(const X_monotone_curve_2& cv_ins, const X_monotone_curve_2& cv,
+                                                  const Point_2& p) const;
 
   /*! checks whether the curve associated with the given halfedge reaches the
    * left end-vertex of the query curve, m_left_v, at its maximal end from the
