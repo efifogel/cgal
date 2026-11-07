@@ -394,6 +394,24 @@ private:
   bool _is_to_right_impl(const Point_2& p, Halfedge_handle he,
                          Arr_not_all_sides_oblivious_tag) const;
 
+  /*! checks whether the curve associated with the given halfedge reaches the
+   * left end-vertex of the query curve, m_left_v, at its maximal end from the
+   * right boundary, while the query curve leaves m_left_v from the left
+   * boundary. In this case, the two curves do not share an endpoint in the
+   * parameter space, although they are incident to a common vertex; thus,
+   * their x-ranges may overlap and they may intersect elsewhere.
+   * \param he The halfedge.
+   * \pre The maximal end of the curve associated with he is m_left_v.
+   */
+  bool _reaches_left_vertex_from_right_boundary(Halfedge_handle he) const {
+    return _reaches_left_vertex_from_right_boundary_impl(he, Left_or_right_sides_category());
+  }
+
+  bool _reaches_left_vertex_from_right_boundary_impl(Halfedge_handle, Arr_boundary_cond_tag) const
+  { return false; }
+
+  bool _reaches_left_vertex_from_right_boundary_impl(Halfedge_handle he, Arr_has_identified_side_tag) const;
+
   /*! checks whether an intersection point is valid. A valid intersection point
    * must be to the left of the left end of the curve involved.
    */

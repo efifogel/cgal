@@ -299,6 +299,73 @@ bool test_overlap(const Point& q, bool entire) {
   return true;
 }
 
+/* Construct a closed loop of two polylines that meet at a point on the
+ * identification curve and at a point away from it. The first polyline is
+ * directed left to right from the point away from the identification curve,
+ * through the identification point, that is, the point opposite to the
+ * identification curve; it reaches the identification curve from the right
+ * side. The second polyline leaves the identification curve from the left side
+ * and ends at the first point of the first polyline. The x-ranges of the two
+ * polylines in the parameter space overlap, although they share an endpoint on
+ * the identification curve.
+ */
+std::pair<Polyline, Polyline> closing_polylines(const Polyline_traits& traits) {
+  const Geodesic_traits& geodesic_traits = *traits.subcurve_traits_2();
+  const double z = -0.6;
+  auto q = point_on_identification(geodesic_traits, z);
+  std::vector<Point> chain = {point_at(geodesic_traits, 4.0, z), point_at(geodesic_traits, 0.36, z),
+                              point_at(geodesic_traits, 2.36, z), q};
+  auto xcv1 = arcs_and_polyline(traits, chain).second;
+  auto xcv2 = arcs_and_polyline(traits, {q, chain.front()}).second;
+  return std::make_pair(xcv1, xcv2);
+}
+
+/* Insert the two polylines that form a closed loop and meet at a point on the
+ * identification curve incrementally, in either order. Check that the
+ * arrangement consists of two vertices and two edges.
+ */
+bool test_closing_polyline(bool closing_last) {
+  Polyline_traits traits;
+  Polyline_arrangement arr(&traits);
+  auto [xcv1, xcv2] = closing_polylines(traits);
+  if (closing_last) {
+    CGAL::insert(arr, xcv1);
+    CGAL::insert(arr, xcv2);
+  }
+  else {
+    CGAL::insert(arr, xcv2);
+    CGAL::insert(arr, xcv1);
+  }
+  if (! arr.is_valid()) return false;
+  if ((arr.number_of_vertices() == 2) && (arr.number_of_edges() == 2)) return true;
+  std::cerr << "The arrangement has " << arr.number_of_vertices() << " vertices and " << arr.number_of_edges()
+            << " edges, expected 2 and 2" << std::endl;
+  return false;
+}
+
+/* Compute the zone of the polyline that closes the loop in the arrangement of
+ * the other polyline. Check that the zone contains the vertex at the far
+ * endpoint of the closing polyline.
+ */
+bool test_closing_zone() {
+  Polyline_traits traits;
+  Polyline_arrangement arr(&traits);
+  auto [xcv1, xcv2] = closing_polylines(traits);
+  CGAL::insert(arr, xcv1);
+  using Zone_feature = std::variant<Polyline_arrangement::Vertex_handle, Polyline_arrangement::Halfedge_handle,
+                                    Polyline_arrangement::Face_handle>;
+  std::vector<Zone_feature> features;
+  CGAL::zone(arr, xcv2, std::back_inserter(features));
+  const auto& p = traits.construct_max_vertex_2_object()(xcv2);
+  auto equal = traits.equal_2_object();
+  for (const auto& feature : features) {
+    auto* vh = std::get_if<Polyline_arrangement::Vertex_handle>(&feature);
+    if ((vh != nullptr) && equal((*vh)->point(), p)) return true;
+  }
+  std::cerr << "The zone does not contain the vertex at the endpoint of the curve" << std::endl;
+  return false;
+}
+
 int main() {
   bool ok = true;
   Geodesic_traits geodesic_traits;
@@ -309,6 +376,14 @@ int main() {
   ok &= run("incremental insertion", [&]() { return test_arrangement(loops, true, false); });
   ok &= run("aggregate insertion and the identification curve",
             [&]() { return test_arrangement(loops, false, true); });
+
+  // Polylines that form a closed loop and meet on the identification curve
+  ok &= run("incremental insertion of a polyline that closes a loop on the identification curve",
+            [&]() { return test_closing_polyline(true); });
+  ok &= run("incremental insertion of a polyline closed by a loop on the identification curve",
+            [&]() { return test_closing_polyline(false); });
+  ok &= run("zone of a polyline that closes a loop on the identification curve",
+            [&]() { return test_closing_zone(); });
 
   // Polylines that reach the identification curve at either end, directed
   // either left to right or right to left

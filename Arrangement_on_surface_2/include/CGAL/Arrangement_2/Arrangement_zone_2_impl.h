@@ -538,6 +538,20 @@ is_intersection_valid_impl(const Point_2& ip,
   return (m_geom_traits->compare_xy_2_object()(ip, m_left_pt) == LARGER);
 }
 
+//! Implementation for left and right identified boundaries.
+template <typename Arrangement, typename ZoneVisitor>
+bool Arrangement_zone_2<Arrangement, ZoneVisitor>::
+_reaches_left_vertex_from_right_boundary_impl(Halfedge_handle he, Arr_has_identified_side_tag) const {
+  // The parameter-space-in-x predicate must not be applied to a curve that
+  // lies on the identification curve. Such a curve is vertical; it neither
+  // reaches the right boundary nor leaves the left boundary.
+  auto is_on_y_ident = m_geom_traits->is_on_y_identification_2_object();
+  if (is_on_y_ident(m_cv) || is_on_y_ident(he->curve())) return false;
+  auto ps_x = m_geom_traits->parameter_space_in_x_2_object();
+  return ((ps_x(he->curve(), ARR_MAX_END) == ARR_RIGHT_BOUNDARY) &&
+          (ps_x(m_cv, ARR_MIN_END) == ARR_LEFT_BOUNDARY));
+}
+
 /*! Implementation for all the rest.
  * It would be better to split into the various cases, which is the cartesian
  * product of (contructed, closed, open) X (contructed, closed, open)
@@ -883,13 +897,23 @@ _leftmost_intersection(Ccb_halfedge_circulator he_curr, bool on_boundary,
     // skip this edge, as there is no true overlap in the x-range. Otherwise, we
     // keep track of the fact that m_left_v is the left end-vertex of the
     // current halfedge.
+    // However, if the left and right boundaries are identified, the current
+    // halfedge may reach m_left_v from the right boundary, while the inserted
+    // curve leaves m_left_v from the left boundary. In this case, the two
+    // curves do not share an endpoint in the parameter space, so their
+    // x-ranges may overlap, and we must process the halfedge as if it is not
+    // incident to m_left_v.
     if (he_curr->target() == m_left_v) {
-      left_equals_curr_endpoint = true;
-      if (he_curr->direction() == ARR_LEFT_TO_RIGHT) return;
+      if (he_curr->direction() == ARR_LEFT_TO_RIGHT) {
+        if (! _reaches_left_vertex_from_right_boundary(he_curr)) return;
+      }
+      else left_equals_curr_endpoint = true;
     }
     else if (he_curr->source() == m_left_v) {
-      left_equals_curr_endpoint = true;
-      if (he_curr->direction() == ARR_RIGHT_TO_LEFT) return;
+      if (he_curr->direction() == ARR_RIGHT_TO_LEFT) {
+        if (! _reaches_left_vertex_from_right_boundary(he_curr)) return;
+      }
+      else left_equals_curr_endpoint = true;
     }
   }
 
