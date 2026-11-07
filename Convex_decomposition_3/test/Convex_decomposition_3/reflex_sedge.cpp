@@ -1,4 +1,4 @@
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Exact_integer.h>
 #include <CGAL/Homogeneous.h>
 #include <CGAL/Nef_S2/Sphere_point.h>
 #include <CGAL/Nef_S2/Sphere_circle.h>
@@ -19,7 +19,7 @@ public:
 
   struct Vertex {
     Point_3 pnt;
-    
+
     Vertex(Point_3 p) : pnt(p) {}
     Point_3 point() {return pnt; }
   };
@@ -55,12 +55,12 @@ public:
   typedef SHalfedge* SHalfedge_handle;
 };
 
-int main() 
+int main()
 {
 
   //  CGAL_NEF_SETDTHREAD(239);
 
-  typedef CGAL::Arithmetic_kernel::Integer  RT;
+  typedef CGAL::Exact_integer  RT;
   typedef CGAL::Homogeneous<RT> Kernel;
   typedef Test_SNC<Kernel> SNC;
   typedef SNC::Point_3 Point_3;
@@ -72,7 +72,7 @@ int main()
   Sphere_point dir(1,0,0);
 
   Vertex v0(Point_3(0,0,0));
-  
+
   Halfedge d0(&v0, Sphere_point( 2,  0,  0));
   Halfedge d1(&v0, Sphere_point(-5,  0,  0));
 

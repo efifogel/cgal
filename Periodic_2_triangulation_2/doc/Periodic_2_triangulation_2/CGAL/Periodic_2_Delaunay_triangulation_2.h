@@ -13,40 +13,39 @@ Delaunay triangulation in two-dimensional periodic space.
 \cgalHeading{Parameters}
 
 The class `Periodic_2_Delaunay_triangulation_2` has two template parameters. The first one
-\tparam Traits is the geometric traits, it is to be instantiated by a
+\tparam Traits is the geometric traits, it is to be instantiated with a
 model of the concept `Periodic_2DelaunayTriangulationTraits_2`.
 
-The second parameter is the triangulation data structure, it has to be
-instantiated by a model of the concept
-`TriangulationDataStructure_2` with some additional functionality
-in faces. By default, the triangulation data structure is instantiated
-by
-`CGAL::Triangulation_data_structure_2 < CGAL::Triangulation_vertex_base_2<Gt>, CGAL::Periodic_2_triangulation_face_base_2<Gt> > >`.
+\tparam Tds is the triangulation data structure and must be a model of `TriangulationDataStructure_2`
+whose vertex and face are models of `Periodic_2TriangulationVertexBase_2` and `Periodic_2TriangulationFaceBase_2`.
+It defaults to:
+\code
+CGAL::Triangulation_data_structure_2<
+  CGAL::Periodic_2_triangulation_vertex_base_2<Gt>,
+  CGAL::Periodic_2_triangulation_face_base_2<Gt> > >
+\endcode
 
 \cgalHeading{Implementation}
 
 Insertion is implemented by inserting in the triangulation, then
-performing a sequence of Delaunay flips. The number of flips is \f$ O(d)\f$
+performing a sequence of Delaunay flips. The number of flips is \cgalBigO{d}
 if the new vertex is of degree \f$ d\f$ in the new triangulation. For
-points distributed uniformly at random, insertion takes time \f$ O(1)\f$ on
+points distributed uniformly at random, insertion takes time \cgalBigO{1} on
 average.
 
 Removal calls the removal in the triangulation and then
 re-triangulates the hole in such a way that the Delaunay criterion is
-satisfied. Removal of a vertex of degree \f$ d\f$ takes time \f$ O(d^2)\f$. The
-expected degree \f$ d\f$ is \f$ O(1)\f$ for a random vertex in the
+satisfied. Removal of a vertex of degree \f$ d\f$ takes time \cgalBigO{d^2}. The
+expected degree \f$ d\f$ is \cgalBigO{1} for a random vertex in the
 triangulation.
 
 After a point location step, the nearest neighbor is found in time
-\f$ O(n)\f$ in the worst case, but in expected time \f$ O(1)\f$ on average for
+\cgalBigO{n} in the worst case, but in expected time \cgalBigO{1} on average for
 vertices distributed uniformly at random and any query point.
 
 \sa `CGAL::Periodic_2_triangulation_2<Traits,Tds>`
-\sa `CGAL::Delaunay_triangulation_2<Traits,Tds>`
-\sa `TriangulationDataStructure_2`
-\sa `Periodic_2DelaunayTriangulationTraits_2`
 \sa `CGAL::Periodic_2_triangulation_hierarchy_2<Tr>`
-
+\sa `CGAL::Delaunay_triangulation_2<Traits,Tds>`
 */
 template< typename Traits, typename Tds >
 class Periodic_2_Delaunay_triangulation_2 : public Periodic_2_triangulation_2<Traits, Tds>
@@ -184,11 +183,22 @@ public:
   Vertex_handle nearest_vertex(Point p,
                                Face_handle f = Face_handle());
 
+  /*!
+  Returns on which side of the circumcircle of face `f` lies
+  the point `p`. The circle is assumed to be counterclockwise
+  oriented, so its positive
+  side correspond to its bounded side.
+  This predicate is available only if the corresponding predicates on
+  points is provided in the geometric traits class.
+  */
+  Oriented_side
+  side_of_oriented_circle(Face_handle f, const Point & p);
+
 /// @}
 
 /// \name
 /// A point-offset pair (`p`,`off`) is said to be in conflict with a
-/// cell `c` iff `dt`.`side_of_circle(c, p, off)` returns
+/// face `f` iff `dt`.`side_of_circle(f, p, off)` returns
 /// `ON_BOUNDED_SIDE`. The set of faces that are in conflict with
 /// (`p`,`off`) is star-shaped.
 /// @{
@@ -202,7 +212,7 @@ public:
   contains `p`. It outputs in the container pointed to by
   `eit` the boundary of the zone in conflict with `p`.
   The boundary edges of the conflict zone are output in
-  counter-clockwise order and each edge is described through its
+  counterclockwise order and each edge is described through its
   incident face which is not in conflict with `p`. The function
   returns in a std::pair the resulting output
   iterators. \pre `start` is in conflict with `p` and `p` lies in the original domain `domain`.
@@ -238,6 +248,13 @@ public:
 /// \name Voronoi diagram
 /// The following member functions provide the elements of the dual Voronoi diagram.
 /// @{
+
+  /*!
+  Compute the circumcenter of the face pointed to by f. This function
+  is available only if the corresponding function is provided in the
+  geometric traits.
+  */
+  Point circumcenter(Face_handle f) const;
 
   /*!
   Returns the center of the circle circumscribed to face `f`.
@@ -287,11 +304,12 @@ public:
 /// @{
 
   /*!
+  \cgalAdvancedFunction
   \cgalAdvancedBegin
   Checks the combinatorial validity of the triangulation and the
   validity of its geometric embedding (see
   Section \ref P2Triangulation2secintro). Also checks that all the
-  circumscribing circles of cells are empty.
+  circumscribing circles of faces are empty.
 
   When `verbose` is set to true, messages describing the first
   invalidity encountered are printed.
@@ -301,10 +319,11 @@ public:
   is_valid(bool verbose = false) const;
 
   /*!
+  \cgalAdvancedFunction
   \cgalAdvancedBegin
-  Checks the combinatorial and geometric validity of the cell (see
+  Checks the combinatorial and geometric validity of the face (see
   Section \ref P2Triangulation2secintro). Also checks that the
-  circumscribing circle of cells is empty.
+  circumscribing circle of faces is empty.
 
   When `verbose` is set to true, messages are printed to give
   a precise indication of the kind of invalidity encountered.
@@ -312,7 +331,7 @@ public:
   */
   bool
   is_valid(Face_handle f, bool verbose = false) const;
-  
+
 /// @}
 
 }; /* end Periodic_2_Delaunay_triangulation_2 */

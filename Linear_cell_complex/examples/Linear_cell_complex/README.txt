@@ -5,18 +5,12 @@ Examples for Linear_cell_complex package:
   linear_cell_complex_3_with_colored_vertices.cpp
   linear_cell_complex_4.cpp
 
-  Three "basic" examples, detailled in the user manual.
+  Three "basic" examples, detailed in the user manual.
 
 
-* plane_graph_to_lcc_2.cpp
+* read_plane_graph_in_lcc_2.cpp
 
   Program allowing to transform a planar graph into a 2D linear cell complex.
-
-
-* linear_cell_complex_3_triangulation.cpp
-
-  Example showing how to triangulate a face of a Linear_cell_complex, 
-  using CGAL::Constrained_Delaunay_triangulation_2.
 
 
 * voronoi_2.cpp
@@ -32,3 +26,7 @@ Examples for Linear_cell_complex package:
 * linear_cell_complex_3_with_mypoint.cpp
 
   Example showing how to customize the type of points used in LCC.
+
+* hexmeshing_cube.cpp
+
+  Example showing how to generate hexahedral LCC grid with .off file.

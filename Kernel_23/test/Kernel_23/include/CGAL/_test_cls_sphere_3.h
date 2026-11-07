@@ -1,24 +1,19 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 //
 // Author(s)     : Stefan Schirra
- 
+
 
 #ifndef CGAL__TEST_CLS_SPHERE_3_H
 #define CGAL__TEST_CLS_SPHERE_3_H
@@ -37,6 +32,7 @@ _test_cls_sphere_3(const R& )
  typename R::Sphere_3  ic;
  CGAL::Sphere_3<R> c0;
 
+ const bool nonexact = std::is_floating_point<FT>::value;
  RT n0 =  0;
  RT n1 = 16;
  RT n2 = -4;
@@ -92,19 +88,19 @@ _test_cls_sphere_3(const R& )
  assert( cc != c8 );
  assert( cc == c7 );
 
- assert( c5.center() == p3 );
+ assert( c5.center() == p3 || nonexact);
  assert( cc.center() == p3 );
  assert( c5.squared_radius() == FT( n9 ) );
  assert( c4.squared_radius() == cc.squared_radius() );
- assert( c4 == c5 );
+ assert( c4 == c5 || nonexact);
  assert( c4 == c7 );
  assert( c4 != c8 );
  assert( cn == cp.opposite() );
  assert( cn3 == cp3.opposite() );
  assert( c7.opposite() == c8 );
  assert( c8.opposite() == c7 );
- assert( c1.opposite() == c3 );
- assert( c3.opposite() == c1 );
+ assert( c1.opposite() == c3 || nonexact );
+ assert( c3.opposite() == c1 || nonexact );
  assert( c7.orientation() == CGAL::POSITIVE );
  assert( c8.orientation() == CGAL::NEGATIVE );
  assert( c5.orientation() == CGAL::POSITIVE );
@@ -118,7 +114,7 @@ _test_cls_sphere_3(const R& )
  std::cout << '.';
 
  assert( c4.center() == p3 );
- assert( c5.center() == p3 );
+ assert( c5.center() == p3 || nonexact);
  assert( c4.squared_radius() == FT( n9 ) );
  assert( c5.squared_radius() == FT( n9 ) );
  assert( c8.squared_radius() == FT( n9 ) );
@@ -131,6 +127,22 @@ _test_cls_sphere_3(const R& )
  assert( c8.bounded_side( p3 - vy6 ) == CGAL::ON_BOUNDARY );
  assert( cc.has_on_boundary( p3 + vy6) );
  assert( cc.has_on_boundary( p3 - vx6) );
+
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-2, 0, 0), CGAL::Point_3<R>(2, 0, 0)))); // the cuboid is a segment, and the endpoints are on the sphere
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-2, 0, 0), CGAL::Point_3<R>(-3, 0, 0)))); // the cuboid is a segment, and one endpoint is on the sphere, the other is outside
+ assert( CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(FT(-2.1), 0, 0), CGAL::Point_3<R>(-3, 0, 0)))); // the cuboid is a segment, and both endpoints are outside
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-3, -3, -3), CGAL::Point_3<R>(3, 3, 3)))); // the cuboid contains the sphere
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-1, -1, -1), CGAL::Point_3<R>(0, 0, 0)))); // one corner at the center of the sphere, three on the sphere and the remaining ones outside
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-1, -1, -1), CGAL::Point_3<R>(1, 1, 1)))); // the cuboid contains the sphere and touches it in the mid of the faces
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-1.1, -1.1, -1.1), CGAL::Point_3<R>(1.1, 1.1, 1.1)))); // the cuboid contains the sphere and is strictly larger than it
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-1.1, -1.1, -2), CGAL::Point_3<R>(1.1, 1.1, 0)))); // the cuboid intersects with the sphere
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(0, 0, 0), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(-0.1, -0.1, -0.1), CGAL::Point_3<R>(0.1, 0.1, 0.1)))); // the cuboid is strictly contained in the sphere
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(5, 5, 11), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // the cuboid intersects with the sphere at a face
+ assert( CGAL::Sphere_3<R>(CGAL::Point_3<R>(5, 5, 11), 0.5).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // same positioning without intersection
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(5, 11, 11), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // the cuboid intersects with the sphere at an edge
+ assert( CGAL::Sphere_3<R>(CGAL::Point_3<R>(5, 11, 11), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // same positioning without intersection
+ assert(!CGAL::Sphere_3<R>(CGAL::Point_3<R>(11, 11, 11), 4).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // the cuboid intersects with the sphere at a corner
+ assert( CGAL::Sphere_3<R>(CGAL::Point_3<R>(11, 11, 11), 1).has_on_unbounded_side(CGAL::Iso_cuboid_3<R>(CGAL::Point_3<R>(0, 0, 0), CGAL::Point_3<R>(10, 10, 10)))); // same positioning without intersection
 
  std::cout << '.';
 
@@ -180,22 +192,22 @@ _test_cls_sphere_3(const R& )
 
  CGAL::Point_3<R> ori = CGAL::Point_3<R>( RT(0), RT(0), RT(0));
  CGAL::Point_3<R> p6  = p2.transform( rotate1 );
- assert( CGAL::compare_distance_to_point( ori, p2, p6) == CGAL::EQUAL );
+ assert( CGAL::compare_distance_to_point( ori, p2, p6) == CGAL::EQUAL || nonexact );
  CGAL::Point_3<R> p7  = p2.transform( rotate2 );
- assert( CGAL::compare_distance_to_point( ori, p2, p7) == CGAL::EQUAL );
+ assert( CGAL::compare_distance_to_point( ori, p2, p7) == CGAL::EQUAL || nonexact );
  CGAL::Point_3<R> p8  = p2.transform( rotate3 );
- assert( CGAL::compare_distance_to_point( ori, p2, p8) == CGAL::EQUAL );
+ assert( CGAL::compare_distance_to_point( ori, p2, p8) == CGAL::EQUAL || nonexact );
  CGAL::Point_3<R> p9  = p2.transform( rotate4 );
  assert( CGAL::compare_distance_to_point( ori, p2, p9) == CGAL::EQUAL );
  CGAL::Point_3<R> p10 = p2.transform( rotate5 );
- assert( CGAL::compare_distance_to_point( ori, p2, p10) == CGAL::EQUAL );
+ assert( CGAL::compare_distance_to_point( ori, p2, p10) == CGAL::EQUAL || nonexact );
  p6 = p6 + v1;
  p7 = p7 + v1;
  p8 = p8 + v1;
  p9 = p9 + v1;
  p10 = p10 + v1;
  CGAL::Sphere_3<R> c10 (p6, p8, p7, p9);
- assert( c10.center() == ori + v1 );
+ assert( c10.center() == ori + v1 || nonexact );
  assert( c10.orientation() == CGAL::POSITIVE );
  assert( c10.opposite().orientation() == CGAL::NEGATIVE );
 
@@ -204,9 +216,9 @@ _test_cls_sphere_3(const R& )
          == CGAL::ON_POSITIVE_SIDE );
  assert( c10.oriented_side(CGAL::ORIGIN + v1 + vx*n2 ) \
          == CGAL::ON_NEGATIVE_SIDE );
- assert( c10.oriented_side(p9 ) == CGAL::ON_ORIENTED_BOUNDARY );
- assert( c10.has_on_boundary(p9) );
- assert( c10.has_on_boundary(p4 + v1) );
+ assert( c10.oriented_side(p9 ) == CGAL::ON_ORIENTED_BOUNDARY || nonexact );
+ assert( c10.has_on_boundary(p9) || nonexact );
+ assert( c10.has_on_boundary(p4 + v1) || nonexact );
  CGAL::Point_3<R> p11( n4, n4, n4, n3) ; // (2.5, 2.5, 2.5)
  CGAL::Point_3<R> p12( n5, n5, n5, n3) ; // ( 5 ,  5,   5 )
  assert( c10.has_on_bounded_side( p11 ) );
@@ -216,8 +228,8 @@ _test_cls_sphere_3(const R& )
  assert( c10.has_on_negative_side( p12 ) );
  assert( c10.opposite().has_on_negative_side( p11 ) );
  assert( c10.opposite().has_on_positive_side( p12 ) );
- assert( c10.has_on_boundary( p6 ) );
- assert( c10.has_on_boundary( p8 ) );
+ assert( c10.has_on_boundary( p6 ) || nonexact );
+ assert( c10.has_on_boundary( p8 ) || nonexact );
 
 
  std::cout << '.';

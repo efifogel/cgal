@@ -1,105 +1,73 @@
 # Created by the script cgal_create_cmake_script
 # This is the CMake script for compiling a CGAL application.
 
-project (Triangulation_2)
+cmake_minimum_required(VERSION 3.12...3.31)
+project(Triangulation_2_Demo)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
+
+find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt6)
+find_package(Qt6 QUIET COMPONENTS Widgets)
+
+if(NOT CGAL_Qt6_FOUND OR NOT Qt6_FOUND)
+  message("NOTICE: This demo requires CGAL and Qt6, and will not be compiled.")
+  return()
 endif()
 
-find_package(CGAL COMPONENTS Qt4)
-
-include(${CGAL_USE_FILE})
-
-set( QT_USE_QTXML    TRUE )
-set( QT_USE_QTMAIN   TRUE )
-set( QT_USE_QTSCRIPT  TRUE )
-set( QT_USE_QTOPENGL  TRUE )
-
-
-#find_package(Qt4)
-
-include_directories (BEFORE ../../include)
-include_directories (BEFORE ./include)
-include_directories (BEFORE ../../../Number_types/include)
-
-include_directories (BEFORE ../../../Triangulation_2/include)
-
-if ( CGAL_FOUND AND CGAL_Qt4_FOUND AND QT4_FOUND )
-
-include(${QT_USE_FILE})
+add_compile_definitions(QT_NO_KEYWORDS)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #--------------------------------
 # The "constrained Delaunay" demo: Constrained_Delaunay_triangulation_2
 #--------------------------------
-# UI files (Qt Designer files)
-qt4_wrap_ui( CDT_UI_FILES Constrained_Delaunay_triangulation_2.ui )
 
-# qrc files (resources files, that contain icons, at least)
-qt4_add_resources ( CDT_RESOURCE_FILES ./Constrained_Delaunay_triangulation_2.qrc )
+qt_add_executable(
+  Constrained_Delaunay_triangulation_2
+  Constrained_Delaunay_triangulation_2.cpp
+  Constrained_Delaunay_triangulation_2.ui Constrained_Delaunay_triangulation_2.qrc)
+target_link_libraries(Constrained_Delaunay_triangulation_2
+                      PRIVATE CGAL::CGAL CGAL::CGAL_Qt6 Qt6::Widgets)
+target_include_directories(Constrained_Delaunay_triangulation_2
+                           PRIVATE ./include)
 
-# use the Qt MOC preprocessor on classes that derives from QObject
-qt4_generate_moc( "Constrained_Delaunay_triangulation_2.cpp" "${CMAKE_CURRENT_BINARY_DIR}/Constrained_Delaunay_triangulation_2.moc" )
-
-# The executable itself.
-add_executable  ( Constrained_Delaunay_triangulation_2 Constrained_Delaunay_triangulation_2.cpp Constrained_Delaunay_triangulation_2.moc ${CDT_UI_FILES} ${CDT_RESOURCE_FILES} )
-
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS Constrained_Delaunay_triangulation_2 )
-
-# Link with Qt libraries
-target_link_libraries( Constrained_Delaunay_triangulation_2 ${QT_LIBRARIES} )
-# Link with CGAL
-target_link_libraries( Constrained_Delaunay_triangulation_2 ${CGAL_LIBRARIES}  ${CGAL_3RD_PARTY_LIBRARIES})
+add_to_cached_list(CGAL_EXECUTABLE_TARGETS Constrained_Delaunay_triangulation_2)
 
 #--------------------------------
 # The "Delaunay" demo: Delaunay_triangulation_2
 #--------------------------------
-# UI files (Qt Designer files)
-qt4_wrap_ui( DT_UI_FILES Delaunay_triangulation_2.ui )
+qt_add_executable(
+  Delaunay_triangulation_2 Delaunay_triangulation_2.cpp
+  Delaunay_triangulation_2.ui Delaunay_triangulation_2.qrc)
+target_link_libraries(Delaunay_triangulation_2
+                      PRIVATE CGAL::CGAL CGAL::CGAL_Qt6 Qt6::Widgets)
 
-# qrc files (resources files, that contain icons, at least)
-qt4_add_resources ( DT_RESOURCE_FILES ./Delaunay_triangulation_2.qrc )
-
-# use the Qt MOC preprocessor on classes that derives from QObject
-qt4_generate_moc( "Delaunay_triangulation_2.cpp" "${CMAKE_CURRENT_BINARY_DIR}/Delaunay_triangulation_2.moc" )
-
-# The executable itself.
-add_executable  ( Delaunay_triangulation_2 Delaunay_triangulation_2.cpp Delaunay_triangulation_2.moc ${DT_UI_FILES} ${DT_RESOURCE_FILES} )
-
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS Delaunay_triangulation_2 )
-
-# Link with Qt libraries
-target_link_libraries( Delaunay_triangulation_2 ${QT_LIBRARIES} )
-# Link with CGAL
-target_link_libraries( Delaunay_triangulation_2 ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
+add_to_cached_list(CGAL_EXECUTABLE_TARGETS Delaunay_triangulation_2)
 
 #--------------------------------
 # The "Regular" demo: Regular_triangulation_2
 #--------------------------------
-# UI files (Qt Designer files)
-qt4_wrap_ui( DT_UI_FILES Regular_triangulation_2.ui )
 
-# qrc files (resources files, that contain icons, at least)
-qt4_add_resources ( DT_RESOURCE_FILES ./Regular_triangulation_2.qrc )
+qt_add_executable(
+  Regular_triangulation_2 Regular_triangulation_2.cpp
+  Regular_triangulation_2.ui Regular_triangulation_2.qrc)
+target_link_libraries(Regular_triangulation_2 PRIVATE CGAL::CGAL CGAL::CGAL_Qt6
+                                                      Qt6::Widgets)
 
-# use the Qt MOC preprocessor on classes that derives from QObject
-qt4_generate_moc( "Regular_triangulation_2.cpp" "${CMAKE_CURRENT_BINARY_DIR}/Regular_triangulation_2.moc" )
+add_to_cached_list(CGAL_EXECUTABLE_TARGETS Regular_triangulation_2)
 
-# The executable itself.
-add_executable  ( Regular_triangulation_2 Regular_triangulation_2.cpp Regular_triangulation_2.moc ${DT_UI_FILES} ${DT_RESOURCE_FILES} )
+#--------------------------------
+# The "Mesh_2" demo: mesh_2_demo
+#--------------------------------
 
-add_to_cached_list( CGAL_EXECUTABLE_TARGETS Regular_triangulation_2 )
+qt_add_executable(mesh_2_demo mesh_2_demo.cpp)
+target_link_libraries(mesh_2_demo PRIVATE CGAL::CGAL CGAL::CGAL_Qt6 Qt6::Widgets)
+add_to_cached_list(CGAL_EXECUTABLE_TARGETS mesh_2_demo)
 
-# Link with Qt libraries
-target_link_libraries( Regular_triangulation_2 ${QT_LIBRARIES} )
-# Link with CGAL
-target_link_libraries( Regular_triangulation_2 ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
-
-else()
-
-  message(STATUS "NOTICE: This demo requires CGAL and Qt4, and will not be compiled.")
-
-endif()
+include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+foreach(target Constrained_Delaunay_triangulation_2 Delaunay_triangulation_2
+               Regular_triangulation_2 mesh_2_demo)
+  cgal_add_compilation_test(${target})
+endforeach()

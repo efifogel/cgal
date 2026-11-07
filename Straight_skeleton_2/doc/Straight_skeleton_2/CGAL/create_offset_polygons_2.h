@@ -1,113 +1,170 @@
 namespace CGAL {
 
 /*!
-\ingroup PkgStraightSkeleton2Functions
+\ingroup PkgStraightSkeleton2OffsetFunctions
 
-returns a container with all the outer offset polygons at distance
-`offset` of the 2D polygon `poly`.  A temporary straight
-skeleton is constructed in the `limited exterior` of the input polygon
-to obtain the offsets. The construction of this skeleton is the most
-expensive operation, therefore, to construct offsets at more than one
-single distance, use the separate functions
-`create_exterior_straight_skeleton_2()` and `create_offset_polygons_2()`
-instead. The exterior skeleton is limited by an outer rectangular
-frame placed at a margin sufficiently large to allow the offset
-polygons to be constructed.
+\brief returns a container with the offset polygons at distance `offset` obtained from the straight skeleton `ss`.
 
+If `ss` is the interior skeleton of a polygon with holes, the offset polygons will be generated
+in its interior. If `ss` is the outer skeleton of a polygon with holes, the offset polygons
+will be generated in its exterior.
 
-\tparam OffsettingK must be a \cgal kernel. It is used to instantiate 
-    `Polygon_offset_builder_traits_2<K>` for constructing 
-    the offset polygons.
-\tparam SkeletonK must be a \cgal kernel. It is used to instantiate
-   `Straight_skeleton_builder_traits_2<K>` for constructing 
-   the straight skeleton.
-   If `SkeletonK != OffsettingK` the constructed straight skeleton
-   is converted to `Straight_skeleton_2<OffsettingK>`.
-\tparam FT must be a number type implicitly convertible to `OffsettingK::FT`.
-4. `Straight_skeleton` is `Straight_skeleton_2<K2>`. 
-    If `K != K2` the straight skeleton is converted to `Straight_skeleton_2<K>`.
+\tparam OfKPolygon is a polygon without holes type determined from `OfK`, see Section \ref SLSOffsetPolygonReturnType.
+\tparam FT must be a model of `FieldNumberType` convertible to `OfK::FT`.
+\tparam StraightSkeleton is an object of type `CGAL::Straight_skeleton_2<SsK>`.
+\tparam OfK must be a model of `Kernel`. It is used to instantiate
+           `Polygon_offset_builder_traits_2<OfK>` for constructing the offset polygons.
 
-\sa `create_exterior_straight_skeleton_2`
-\sa `Straight_skeleton_builder_2<Gt,Ss>` 
+\note If `SsK != OfK` the constructed straight skeleton is converted to `CGAL::Straight_skeleton_2<OfK>`.
 
+\pre `offset` is positive.
+\pre `ss` is a valid straight skeleton.
+
+\sa `CGAL::create_interior_skeleton_and_offset_polygons_2()`
+\sa `CGAL::create_exterior_skeleton_and_offset_polygons_2()`
+\sa `Polygon_offset_builder_2`
 */
-template<class FT, class Polygon, class OffsettingK, class SkeletonK>
-std::vector< boost::shared_ptr<Polygon> >
-create_exterior_skeleton_and_offset_polygons_2
-  ( FT             offset
-  , Polygon const& poly
-  , OffsettingK    ofk  = Exact_predicates_inexact_constructions_kernel
-  , SkeletonK      ssk  = Exact_predicates_inexact_constructions_kernel
-  ) ;
+template <typename OfKPolygon,
+          typename FT,
+          typename StraightSkeleton,
+          typename OfK = CGAL::Exact_predicates_inexact_constructions_kernel>
+std::vector< std::shared_ptr<OfKPolygon> >
+create_offset_polygons_2(const FT& offset,
+                         const StraightSkeleton& ss,
+                         const OfK& k = OfK());
 
-}
+// ############################################## INTERIOR #########################################
 
 /*!
-\ingroup PkgStraightSkeleton2Functions
-returns a container with all the inner offset polygons at distance `offset` of the 2D polygon with holes whose outer boundary is `outer_boundary` and its holes are given by `[holes_begin,holes_end]`.
-A temporary straight skeleton is constructed in the interior of the input polygon to obtain the offsets. The construction of this skeleton is the most expensive operation, therefore, to construct offsets at more than one single distance, use the separate functions `create_interior_straight_skeleton_2()` and `create_offset_polygons_2()` instead.
+\ingroup PkgStraightSkeleton2OffsetFunctions
 
-1. `OffsettingK` is the \cgal kernel used to instantiate
-   `Polygon_offset_builder_traits_2<K>` for constructing 
-   the offset polygons.
-2. `SkeletonK` is the \cgal kernel used to instantiate
-   `Straight_skeleton_builder_traits_2<K>` for constructing 
-   the straight skeleton.
-   If `SkeletonK != OffsettingK` the constructed straight skeleton
-   is converted to `Straight_skeleton_2<OffsettingK>`.
-3. `FT` is any number type implicitly convertible to `OffsettingK::FT`.
-3. `Straight_skeleton` is `Straight_skeleton_2<K2>`. 
-   If `K != K2` the straight skeleton is converted to `Straight_skeleton_2<K>`.
-4. `HoleIterator::value_type` and `Polygon` are `CGAL::Polygon_2<OffsettingK>`
-   or a standard container of `OffsettingK::Point_2` elements 
+\brief returns a container with all the inner offset polygons at distance `offset` of a 2D polygon with holes.
 
-\sa `create_exterior_straight_skeleton_2`
-\sa `Straight_skeleton_builder_2<Gt,Ss>` 
+The outer boundary is `outer_boundary` and its holes are given by `[holes_begin,holes_end)`.
 
+\note A temporary straight skeleton is constructed in the interior of the input polygon to obtain the offsets.
+The construction of this skeleton is the most expensive operation, therefore, to construct offsets
+at more than one single distance, it is advised to use `create_interior_straight_skeleton_2()` to create
+the skeleton only once, and then call `create_offset_polygons_2()` for each distance.
+
+\tparam OfKPolygon is a polygon without holes type determined from `OfK` and `InKPolygon`,
+                   see Section \ref SLSOffsetPolygonReturnType.
+\tparam FT must be a model of `FieldNumberType` convertible to `OfK::FT` and `SsK::FT`.
+\tparam HoleIterator must be a model of `InputIterator` with value type being a model of `ConstRange`
+                     with value type `SsK::Point_2`.
+\tparam InKPolygon must be a model of `SequenceContainer` with value type `InK::Point_2` (e.g. `Polygon_2<InK>`).
+\tparam OfK must be a model of `Kernel`. It is used to instantiate
+            `Polygon_offset_builder_traits_2<OfK>` for constructing the offset polygons.
+\tparam SsK must be a model of `Kernel`. It is used to instantiate
+            `Straight_skeleton_builder_traits_2<SsK>` for constructing the straight skeleton.
+
+\note If `SsK != OfK` the constructed straight skeleton is converted to `CGAL::Straight_skeleton_2<OfK>`.
+
+\pre `outer_boundary` describes a weakly simple, counterclockwise polygon.
+\pre `[holes_begin,holes_end)` is a range of weakly simple, clockwise polygons.
+\pre Holes do not intersect each other or the outer boundary.
+
+\sa `CGAL::create_exterior_skeleton_and_offset_polygons_2()`
+\sa `CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2()`
+\sa `Polygon_offset_builder_2`
 */
-template<class FT, class Polygon, class HoleIterator, class OffsettingK, class SkeletonK>
-std::vector< boost::shared_ptr<Polygon> >
-create_interior_skeleton_and_offset_polygons_2 ( FT             offset
-                                               , Polygon const& outer_boundary
-                                               , HoleIterator   holes_begin
-                                               , HoleIterator   holes_end
-                                               , OffsettingK   ofk 
-                                                  = CGAL::Exact_predicates_inexact_constructions_kernel
-                                               , SkeletonK      ssk 
-                                                  = CGAL::Exact_predicates_inexact_constructions_kernel
-                                               ) ;
+template <typename OfKPolygon,
+          typename FT,
+          typename InKPolygon,
+          typename HoleIterator,
+          typename OfK = CGAL::Exact_predicates_inexact_constructions_kernel,
+          typename SsK = CGAL::Exact_predicates_inexact_constructions_kernel>
+std::vector< std::shared_ptr<OfKPolygon> >
+create_interior_skeleton_and_offset_polygons_2(const FT& offset,
+                                               const InKPolygon& outer_boundary,
+                                               HoleIterator holes_begin,
+                                               HoleIterator holes_end,
+                                               const OfK& ofk = OfK(),
+                                               const SsK& ssk = SsK());
 
 /*!
-\ingroup PkgStraightSkeleton2Functions
+\ingroup PkgStraightSkeleton2OffsetFunctions
 
-returns a container with all the inner offset polygons at distance `offset` of the 2D polygon `poly`.
-A temporary straight skeleton is constructed in the interior of the input polygon to obtain the offsets. The construction of this skeleton is the most expensive operation, therefore, to construct offsets at more than one single distance, use the separate functions `create_interior_straight_skeleton_2()` and `create_offset_polygons_2()` instead.
+\brief returns a container with all the inner offset polygons at distance `offset` of the 2D polygon `poly`.
 
-1. `OffsettingK` is the \cgal kernel used to instantiate
-   `Polygon_offset_builder_traits_2<K>` for constructing 
-   the offset polygons.
-2. `SkeletonK` is the \cgal kernel used to instantiate
-   `Straight_skeleton_builder_traits_2<K>` for constructing 
-   the straight skeleton.
-   If `SkeletonK != OffsettingK` the constructed straight skeleton
-   is converted to `Straight_skeleton_2<OffsettingK>`.
-3. `FT` is any number type implicitly convertible to `OffsettingK::FT`.
-3. `Straight_skeleton` is `Straight_skeleton_2<K2>`. 
-   If `K != K2` the straight skeleton is converted to `Straight_skeleton_2<K>`.
-4. `HoleIterator::value_type` and `Polygon` are `CGAL::Polygon_2<OffsettingK>`
-   or a standard container of `OffsettingK::Point_2` elements 
+\note A temporary straight skeleton is constructed in the interior of the input polygon to obtain the offsets.
+The construction of this skeleton is the most expensive operation, therefore, to construct offsets
+ at more than one single distance, it is advised to use `create_interior_straight_skeleton_2()` to create
+the skeleton only once, and then call `create_offset_polygons_2()` for each distance
 
-\sa `create_exterior_straight_skeleton_2`
-\sa `Straight_skeleton_builder_2<Gt,Ss>` 
+\tparam OfKPolygon is a polygon without holes type determined by `OfK` and `InKPolygon`,
+                   see Section \ref SLSOffsetPolygonReturnType.
+\tparam FT must be a model of `FieldNumberType` convertible to `OfK::FT` and `SsK::FT`.
+\tparam InKPolygon must be a model of `SequenceContainer` with value type `InK::Point_2` (e.g. `Polygon_2<InK>`)
+                   or a model of `GeneralPolygonWithHoles_2` (e.g. `Polygon_with_holes_2<InK>`).
+\tparam OfK must be a model of `Kernel`. It is used to instantiate
+            `Polygon_offset_builder_traits_2<OfK>` for constructing the offset polygons.
+\tparam SsK must be a model of `Kernel`. It is used to instantiate
+            `Straight_skeleton_builder_traits_2<SsK>` for constructing the straight skeleton.
 
+\note If `SsK != OfK` the constructed straight skeleton is converted to `CGAL::Straight_skeleton_2<OfK>`.
+
+\pre `offset` is positive
+\pre `poly` is weakly simple, counterclockwise polygon.
+
+\sa `CGAL::create_exterior_skeleton_and_offset_polygons_2()`
+\sa `CGAL::create_interior_skeleton_and_offset_polygons_with_holes_2()`
+\sa `Polygon_offset_builder_2`
 */
-template<class FT, class Polygon, class OffsettingK, class SkeletonK>
-std::vector< boost::shared_ptr<Polygon> >
-create_interior_skeleton_and_offset_polygons_2 ( FT             offset
-                                               , Polygon const& poly
-                                               , OffsettingK     ofk 
-                                                  = CGAL::Exact_predicates_inexact_constructions_kernel
-                                               , SkeletonK      ssk 
-                                                  = CGAL::Exact_predicates_inexact_constructions_kernel
-                                               ) ;
+template <typename OfKPolygon,
+          typename FT,
+          typename InKPolygon,
+          typename OfK = CGAL::Exact_predicates_inexact_constructions_kernel,
+          typename SsK = CGAL::Exact_predicates_inexact_constructions_kernel>
+std::vector< std::shared_ptr<OfKPolygon> >
+create_interior_skeleton_and_offset_polygons_2(const FT& offset,
+                                               const InKPolygon& poly,
+                                               const OfK& ofk = OfK(),
+                                               const SsK& ssk = CGAL::SsK());
+
+// ############################################## EXTERIOR #########################################
+
+/*!
+\ingroup PkgStraightSkeleton2OffsetFunctions
+
+\brief returns a container with all the outer offset polygons at distance `offset` of the 2D polygon `poly`.
+
+The exterior skeleton is limited by an outer rectangular frame placed at a margin sufficiently
+large to allow the offset polygons to be constructed.
+
+\note A temporary straight skeleton is constructed in the <I>limited exterior</I> of the input polygon
+to obtain the offsets. The construction of this skeleton is the most expensive operation,
+therefore, to construct offsets at more than one single distance, use the separate functions
+`create_exterior_straight_skeleton_2()` and `create_offset_polygons_2()` instead.
+
+\tparam OfKPolygon is a polygon without holes type determined from `OfK` and `InKPolygon`,
+                   see Section \ref SLSOffsetPolygonReturnType.
+\tparam FT must be a model of `FieldNumberType` convertible to `OfK::FT` and `SsK::FT`.
+\tparam InKPolygon must be a model of `SequenceContainer` with value type `InK::Point_2` (e.g. `Polygon_2<InK>`)
+                   or a model of `GeneralPolygonWithHoles_2` (e.g. `Polygon_with_holes_2<InK>`).
+\tparam OfK must be a model of `Kernel`. It is used to instantiate
+            `Polygon_offset_builder_traits_2<OfK>` for constructing the offset polygons.
+\tparam SsK must be a model of `Kernel`. It is used to instantiate
+            `Straight_skeleton_builder_traits_2<SsK>` for constructing the straight skeleton.
+
+\note If `SsK != OfK` the constructed straight skeleton is converted to `CGAL::Straight_skeleton_2<OfK>`.
+
+\pre `offset` is positive
+\pre `poly` is weakly simple, counterclockwise polygon.
+
+\sa `CGAL::create_interior_skeleton_and_offset_polygons_2()`
+\sa `CGAL::create_exterior_skeleton_and_offset_polygons_with_holes_2()`
+\sa `Polygon_offset_builder_2`
+*/
+template <typename OfKPolygon,
+          typename FT,
+          typename InKPolygon,
+          typename OfK = CGAL::Exact_predicates_inexact_constructions_kernel,
+          typename SsK = CGAL::Exact_predicates_inexact_constructions_kernel>
+std::vector< std::shared_ptr<OfKPolygon> >
+create_exterior_skeleton_and_offset_polygons_2(const FT& offset,
+                                               const InKPolygon& poly,
+                                               const OfK& ofk = OfK(),
+                                               const SsK& ssk = SsK());
+
 } /* namespace CGAL */

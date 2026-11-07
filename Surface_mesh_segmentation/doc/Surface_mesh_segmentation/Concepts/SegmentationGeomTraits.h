@@ -1,13 +1,15 @@
 /*!
-\ingroup PkgSurfaceSegmentationConcepts
+\ingroup PkgSurfaceMeshSegmentationConcepts
 \cgalConcept
 
 The concept `SegmentationGeomTraits` describes the set of requirements
 of the geometric traits needed by the segmentation functions.
 
-\cgalHasModel All the \cgal Kernels
+\cgalHasModelsBegin
+\cgalHasModelsBare{All models of the \cgal concept `Kernel`}
+\cgalHasModelsEnd
 
-\cgalRefines AABBGeomTraits
+\cgalRefines{AABBGeomTraits_3}
 
 */
 
@@ -100,7 +102,31 @@ Function object model of Kernel::ConstructSumOfVectors_3 for the aforementioned 
 */
 typedef unspecified_type Construct_sum_of_vectors_3;
 
+/*!
+Function object model of Kernel::Collinear_3 for the aforementioned geometric types.
+*/
+class Collinear_3
+{
+public:
+ //!determines if points `p`, `q` and `r` are collinear.
+  bool operator()(const Point_3 &p,
+                  const Point_3 &q,
+                  const Point_3 &r);
+};
+
 /// @}
 
-}; /* end SegmentationGeomTraits */
+/// \name Operations
+/// @{
+/*! For each of the above function and predicate object types, `Func_obj_type`,
+ * a function must exist with the name `func_obj_type_object` that creates
+ * an instance of the function or predicate object type.
 
+For example:
+*/
+Collinear_3
+collinear_3_object()const
+{return Collinear_3();}
+
+/// @}
+}; /* end SegmentationGeomTraits */

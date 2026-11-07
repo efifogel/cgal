@@ -3,37 +3,37 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Laurent Rineau
 
 #ifndef CGAL_MESH_2_CLUSTERS_H
 #define CGAL_MESH_2_CLUSTERS_H
 
+#include <CGAL/license/Mesh_2.h>
+
+
+#include <CGAL/boost/iterator/transform_iterator.hpp>
 #include <CGAL/Filter_circulator.h>
+#include <CGAL/tags.h>
 #include <CGAL/Unique_hash_map.h>
 
-#include <utility>
 #include <boost/iterator/transform_iterator.hpp>
+#include <CGAL/enum.h>
+#include <CGAL/functional.h>
+#include <map>
+#include <utility>
 
 namespace CGAL {
 
-namespace Mesh_2 
+namespace Mesh_2
 {
 
-  namespace details 
+  namespace details
   {
     template <class Tr>
     class Is_edge_constrained {
@@ -41,7 +41,7 @@ namespace Mesh_2
     public:
       typedef Is_edge_constrained<Tr> Self;
       typedef typename Tr::Edge_circulator Edge_circulator;
-      
+
       Is_edge_constrained(const Tr& tr) : tr_(&tr)
       {}
 
@@ -62,7 +62,7 @@ class Clusters
   typedef FT      Squared_length; /**<This typedef is used to remind that
                                      the length is squared. */
   typedef typename Tr::Edge_circulator Edge_circulator;
-  
+
   /**
    *  Special type: filtered circulator that returns only constrained
    *  edges.
@@ -75,26 +75,23 @@ public:
   /** \name Clusters public types */
 
   /**
-   * \c Cluster register several informations about clusters.
-   * A cluster is a set of vertices v_i incident to one vertice
+   * `Cluster` register information about clusters.
+   * A cluster is a set of vertices v_i adjacent to one vertex
    * v_0, so that angles between segments [v_0, v_i] is less than 60
-   * degres.
+   * degrees.
    */
   struct Cluster {
-    bool reduced ; /**< Is the cluster reduced? */
+    bool reduced ; ///< Is the cluster reduced?
 
-    /** 
-     * Smallest_angle gives the two vertices defining the
-     * smallest angle in the cluster.
-     */
+    /// the two vertices defining the smallest angle in the cluster.
     std::pair<Vertex_handle, Vertex_handle> smallest_angle;
 
-    FT rmin; // @fixme: rmin has no meaning if reduced=false!!!
+    FT next_sq_insertion_radius; // next_sq_insertion_radius has no meaning if reduced=false
     Squared_length minimum_squared_length;
 
     /**
-     * The following map tells what vertices are in the cluster and if
-     * the corresponding segment has been splitted once.
+     * The following map tells which vertices are in the cluster and if
+     * the corresponding segment has already been split.
      */
     typedef std::map<Vertex_handle, bool> Vertices_map;
     Vertices_map vertices;
@@ -114,8 +111,8 @@ private:
   typedef typename Cluster_map::value_type Cluster_map_value_type;
 
   template <class Pair>
-  struct Pair_get_first: public std::unary_function<Pair,
-                                                    typename Pair::first_type>
+  struct Pair_get_first
+    : public CGAL::cpp98::unary_function<Pair, typename Pair::first_type>
   {
     typedef typename Pair::first_type result;
     const result& operator()(const Pair& p) const
@@ -127,13 +124,13 @@ private:
   typedef typename Cluster::Vertices_map Cluster_vertices_map;
 
 private:
-  /* --- protected datas --- */
+  /* --- protected data --- */
 
   Tr& tr; /**< The triangulation itself. */
 
   /**
-   * Multimap \c Vertex_handle -> \c Cluster
-   * Each vertex can have several clusters. 
+   * Multimap `Vertex_handle -> Cluster`
+   * Each vertex can have several clusters.
    */
   Cluster_map cluster_map;
 
@@ -165,15 +162,14 @@ public:
   void create_clusters(Tag_true) {
     cluster_map.clear();
     Unique_hash_map<Vertex_handle,bool> created(false);
-    for(typename Tr::Subconstraint_iterator it = tr.subconstraints_begin();
-        it != tr.subconstraints_end(); ++it) {
-      Vertex_handle vh = it->first.first;
+    for(const auto& sc : tr.subconstraints()) {
+      Vertex_handle vh = sc.first;
       if(!created[vh]){
         created[vh] = true;
         create_clusters_of_vertex(vh);
       }
 
-      vh = it->first.second;
+      vh = sc.second;
       if(!created[vh]){
         created[vh] = true;
         create_clusters_of_vertex(vh);
@@ -183,14 +179,14 @@ public:
 
 private:
   /**
-   * Computes clusters of the vertex \c v, using the auxiliary function
+   * Computes clusters of the vertex `v`, using the auxiliary function
    * construct_cluster().
    */
   void create_clusters_of_vertex(const Vertex_handle v);
 
   /**
-   * Adds the sequence [\c begin, \c end] to the cluster \c c and adds it 
-   * to the clusters of the vertex \c v.
+   * Adds the sequence `[begin, end]` to the cluster `c` and adds it
+   * to the clusters of the vertex `v`.
    */
   void construct_cluster(const Vertex_handle v,
                          const Constrained_edge_circulator& begin,
@@ -200,9 +196,9 @@ private:
 public:
   /** \name Functions to manage clusters during the refinement process. */
 
-  /** 
-   * Update the cluster of [\c va,\c vb], putting \c vm instead of \c vb.
-   * If reduction=false, the edge [va,vm] is not set reduced. 
+  /**
+   * Updates the cluster of `[va,vb]`, putting `vm` instead of `vb`.
+   * If reduction=false, the edge [va,vm] is not set reduced.
    */
   void update_cluster(Cluster& c, iterator it,
                       const Vertex_handle va, const Vertex_handle vb,
@@ -210,8 +206,8 @@ public:
                       bool reduction = true);
 
   /**
-   * Returns the cluster of [\c va,\c vb] in \c c and return true
-   * if it is in a cluster. Returns also a const_iterator in \c it.
+   * Returns the cluster of `[va,vb]` in `c` and return true
+   * if it is in a cluster. Returns also a const_iterator in `it`.
    */
   bool get_cluster(const Vertex_handle va, const Vertex_handle vb,
                    Cluster& c, iterator& it);
@@ -223,7 +219,7 @@ public:
   /** \name Auxiliary functions that return a boolean. */
 
   /**
-   * Tells if the angle <pleft, pmiddle, pright> is less than 60 degres.
+   * Tells if the angle <pleft, pmiddle, pright> is less than 60 degrees.
    * Uses squared_cosine_of_angle_times_4() and used by
    * create_clusters_of_vertex().
    */
@@ -281,7 +277,7 @@ public:
     return Cluster_vertices_iterator(cluster_map.end());
   }
 
-  unsigned int number_of_clusters_at_vertex(const Vertex_handle& vh) const 
+  unsigned int number_of_clusters_at_vertex(const Vertex_handle& vh) const
   {
     typedef typename Cluster_map::const_iterator Iterator;
     typedef std::pair<Iterator, Iterator> Range;
@@ -322,6 +318,16 @@ update_cluster(Cluster& c, iterator it, Vertex_handle va,
   c.vertices.erase(vb);
   c.vertices[vm] = reduction;
 
+  if(false == reduction) {
+    for(typename Cluster::Vertices_map::iterator
+          it = c.vertices.begin(),
+          end = c.vertices.end();
+        it != end; ++it)
+    {
+      it->second = false;
+    }
+  }
+
   if(vb==c.smallest_angle.first)
     c.smallest_angle.first = vm;
   if(vb==c.smallest_angle.second)
@@ -341,9 +347,16 @@ update_cluster(Cluster& c, iterator it, Vertex_handle va,
     }
 
   if(c.is_reduced())
-    c.rmin = squared_distance(c.smallest_angle.first->point(),
-                              c.smallest_angle.second->point())/FT(4);
+    c.next_sq_insertion_radius =
+        squared_distance(c.smallest_angle.first->point(), c.smallest_angle.second->point()) / FT(4);
   cluster_map.insert(Cluster_map_value_type(va,c));
+#ifdef CGAL_MESH_2_DEBUG_CLUSTERS
+  std::cerr << "Cluster at " << IO::oformat(va, With_point_tag{}) << " is updated.  "
+            << "\n  vm: " << IO::oformat(vm, With_point_tag{})
+            << "\n  reduction: " << reduction
+            << "\n  min_sq_len: " << c.minimum_squared_length
+            << "\n";
+#endif // CGAL_MESH_2_DEBUG_CLUSTERS
 }
 
 template <typename Tr>
@@ -369,7 +382,7 @@ get_cluster(Vertex_handle va, Vertex_handle vb, Cluster& c,
 template <typename Tr>
 bool Clusters<Tr>::
 get_cluster(Vertex_handle va, Vertex_handle vb, Cluster& c,
-            iterator& it) 
+            iterator& it)
 {
   typedef std::pair<iterator, iterator> Range;
 
@@ -458,7 +471,7 @@ construct_cluster(Vertex_handle v,
   if(c.vertices.empty())
     {
       c.reduced = false;
-      // c.rmin is not initialized because
+      // c.next_sq_insertion_radius is not initialized because
       // reduced=false!
       c.minimum_squared_length =
         squared_distance(v->point(), target(begin)->point());
@@ -523,7 +536,7 @@ is_small_angle(const Point& pleft,
                const Point& pmiddle,
                const Point& pright) const
 {
-  typename Geom_traits::Angle_2 angle = 
+  typename Geom_traits::Angle_2 angle =
     tr.geom_traits().angle_2_object();
   typename Geom_traits::Orientation_2 orient =
     tr.geom_traits().orientation_2_object();
@@ -564,7 +577,7 @@ squared_cosine_of_angle_times_4(const Point& pb, const Point& pa,
 
   return (num*num)/(b*c);
 }
-  
+
 } // end namespace Mesh_2
 
 } // end namespace CGAL

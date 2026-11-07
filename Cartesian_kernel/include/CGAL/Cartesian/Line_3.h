@@ -1,31 +1,22 @@
-// Copyright (c) 2000  
+// Copyright (c) 2000
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Andreas Fabri
 
 #ifndef CGAL_CARTESIAN_LINE_3_H
 #define CGAL_CARTESIAN_LINE_3_H
 
-#include <utility>
 #include <CGAL/Handle_for.h>
 
 namespace CGAL {
@@ -33,7 +24,8 @@ namespace CGAL {
 template < class R_ >
 class LineC3
 {
-  typedef typename R_::RT                   RT;
+  typedef typename R_::Boolean              Boolean;
+  typedef typename R_::FT                   FT;
   typedef typename R_::Point_3              Point_3;
   typedef typename R_::Vector_3             Vector_3;
   typedef typename R_::Direction_3          Direction_3;
@@ -42,7 +34,14 @@ class LineC3
   typedef typename R_::Line_3               Line_3;
   typedef typename R_::Segment_3            Segment_3;
 
-  typedef std::pair<Point_3, Vector_3>             Rep;
+  struct Rep
+  {
+    Point_3 first;
+    Vector_3 second;
+    Rep () : first(), second() { }
+    Rep (const Point_3& p, const Vector_3& v) : first(p), second(v) { }
+  };
+
   typedef typename R_::template Handle<Rep>::type  Base;
 
   Base base;
@@ -67,20 +66,20 @@ public:
   LineC3(const Point_3 &p, const Direction_3 &d)
   { *this = R().construct_line_3_object()(p, d); }
 
-  bool        operator==(const LineC3 &l) const;
-  bool        operator!=(const LineC3 &l) const;
+  typename R::Boolean operator==(const LineC3 &l) const;
+  typename R::Boolean operator!=(const LineC3 &l) const;
 
   Plane_3     perpendicular_plane(const Point_3 &p) const;
   Line_3      opposite() const;
 
   const Point_3 &     point() const
   {
-      return get(base).first;
+      return get_pointee_or_identity(base).first;
   }
 
   const Vector_3 & to_vector() const
   {
-      return get(base).second;
+      return get_pointee_or_identity(base).second;
   }
 
   Direction_3 direction() const
@@ -88,15 +87,15 @@ public:
       return Direction_3(to_vector());
   }
 
-  Point_3     point(int i) const;
+  Point_3     point(const FT i) const;
 
-  bool        has_on(const Point_3 &p) const;
-  bool        is_degenerate() const;
+  Boolean has_on(const Point_3 &p) const;
+  Boolean is_degenerate() const;
 };
 
 template < class R >
 inline
-bool
+typename R::Boolean
 LineC3<R>::operator==(const LineC3<R> &l) const
 {
   if (CGAL::identical(base, l.base))
@@ -106,7 +105,7 @@ LineC3<R>::operator==(const LineC3<R> &l) const
 
 template < class R >
 inline
-bool
+typename R::Boolean
 LineC3<R>::operator!=(const LineC3<R> &l) const
 {
   return !(*this == l);
@@ -115,8 +114,8 @@ LineC3<R>::operator!=(const LineC3<R> &l) const
 template < class R >
 inline
 typename LineC3<R>::Point_3
-LineC3<R>::point(int i) const
-{ return point() + to_vector()*RT(i); }
+LineC3<R>::point(const FT i) const
+{ return point() + i * to_vector(); }
 
 template < class R >
 inline
@@ -137,7 +136,7 @@ LineC3<R>::opposite() const
 
 template < class R >
 inline
-bool
+typename R::Boolean
 LineC3<R>::
 has_on(const typename LineC3<R>::Point_3 &p) const
 {
@@ -146,7 +145,7 @@ has_on(const typename LineC3<R>::Point_3 &p) const
 
 template < class R >
 inline
-bool
+typename R::Boolean
 LineC3<R>::is_degenerate() const
 {
   return to_vector() == NULL_VECTOR;

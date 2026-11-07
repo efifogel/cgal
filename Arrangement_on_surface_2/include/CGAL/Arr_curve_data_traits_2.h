@@ -2,35 +2,36 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
-// Author(s)     : Ron Wein          <wein@post.tau.ac.il>
-//                 Efi Fogel         <efif@post.tau.ac.il>
+// Author(s): Ron Wein          <wein@post.tau.ac.il>
+//            Efi Fogel         <efifogel@gmail.com>
 
 #ifndef CGAL_ARR_CURVE_DATA_TRAITS_2_H
 #define CGAL_ARR_CURVE_DATA_TRAITS_2_H
+
+#include <CGAL/license/Arrangement_on_surface_2.h>
+
+#include <CGAL/disable_warnings.h>
 
 /*! \file
  * Definition of the Arr_curve_data_traits_2<> class template.
  */
 
-#include<CGAL/Object.h>
-#include<CGAL/tags.h>
-#include<CGAL/Arr_tags.h>
-#include<CGAL/Arr_geometry_traits/Curve_data_aux.h>
-#include<list>
+#include <list>
+
+#include <variant>
+#include <boost/mpl/has_xxx.hpp>
+
+#include <CGAL/tags.h>
+#include <CGAL/assertions.h>
+#include <CGAL/Arr_tags.h>
+#include <CGAL/Arr_geometry_traits/Curve_data_aux.h>
+
+#include <type_traits>
 
 namespace CGAL {
 
@@ -46,183 +47,141 @@ namespace CGAL {
  * the overlapping subcurve is obtained from the merge functor.
  * All other functors are inherited from the base ordinary traits class.
  */
-template <class Traits_, class XMonotoneCurveData_, 
-          class Merge_ = _Default_merge_func<XMonotoneCurveData_>,
-          class CurveData_ = XMonotoneCurveData_,
-          class Convert_ = _Default_convert_func<CurveData_,
-                                                 XMonotoneCurveData_> >
-class Arr_curve_data_traits_2 : public Traits_ 
-{
+template <typename Traits_, typename XMonotoneCurveData_,
+          typename Merge_ = _Default_merge_func<XMonotoneCurveData_>,
+          typename CurveData_ = XMonotoneCurveData_,
+          typename Convert_ = _Default_convert_func<CurveData_, XMonotoneCurveData_> >
+class Arr_curve_data_traits_2 : public Traits_ {
 public:
+  using Base_traits_2 = Traits_;
+  using X_monotone_curve_data = XMonotoneCurveData_;
+  using Merge = Merge_;
+  using Curve_data = CurveData_;
+  using Convert = Convert_;
 
-  typedef Traits_                                     Base_traits_2;
-  typedef XMonotoneCurveData_                         X_monotone_curve_data;
-  typedef Merge_                                      Merge;
-  typedef CurveData_                                  Curve_data;
-  typedef Convert_                                    Convert;
-  
-  typedef typename Base_traits_2::Curve_2             Base_curve_2;
-  typedef typename Base_traits_2::X_monotone_curve_2  Base_x_monotone_curve_2;
-  typedef typename Base_traits_2::Point_2             Point_2;
+  using Base_curve_2 = typename Base_traits_2::Curve_2;
+  using Base_x_monotone_curve_2 = typename Base_traits_2::X_monotone_curve_2;
+  using Point_2 = typename Base_traits_2::Point_2;
 
-  typedef typename Base_traits_2::Has_left_category   Has_left_category;
-  typedef typename Base_traits_2::Has_merge_category  Base_has_merge_category;
-  typedef Tag_true                                    Has_merge_category;
-  typedef typename Base_traits_2::Has_do_intersect_category
-                                                      Has_do_intersect_category;
+  using Has_left_category = typename Base_traits_2::Has_left_category;
+  using Base_has_merge_category = typename Base_traits_2::Has_merge_category;
+  using Has_merge_category = Tag_true;
 
-  typedef typename internal::Arr_complete_left_side_category< Base_traits_2 >::Category
-                                                      Left_side_category;
-  typedef typename internal::Arr_complete_bottom_side_category< Base_traits_2 >::Category
-                                                      Bottom_side_category;
-  typedef typename internal::Arr_complete_top_side_category< Base_traits_2 >::Category
-                                                      Top_side_category;
-  typedef typename internal::Arr_complete_right_side_category< Base_traits_2 >::Category
-                                                      Right_side_category;
+  using Left_side_category = typename internal::Arr_complete_left_side_category<Base_traits_2>::Category;
+  using Bottom_side_category = typename internal::Arr_complete_bottom_side_category<Base_traits_2>::Category;
+  using Top_side_category = typename internal::Arr_complete_top_side_category<Base_traits_2>::Category;
+  using Right_side_category = typename internal::Arr_complete_right_side_category<Base_traits_2>::Category;
 
-  // Representation of a curve with an addtional data field:
-  typedef _Curve_data_ex<Base_curve_2, Curve_data>    Curve_2;
-  
-  // Representation of an x-monotone curve with an addtional data field:
-  typedef _Curve_data_ex<Base_x_monotone_curve_2,
-                         X_monotone_curve_data>       X_monotone_curve_2;
+  // Representation of a curve with an additional data field:
+  using Curve_2 = _Curve_data_ex<Base_curve_2, Curve_data>;
 
-  typedef typename Base_traits_2::Multiplicity        Multiplicity;
-  
+  // Representation of an x-monotone curve with an additional data field:
+  using X_monotone_curve_2 = _Curve_data_ex<Base_x_monotone_curve_2, X_monotone_curve_data>;
+
+  using Multiplicity = typename Base_traits_2::Multiplicity;
+
 public:
-  
   /// \name Construction.
   //@{
 
-  /*! Default constructor. */
-  Arr_curve_data_traits_2 ()
-  {}
-  
-  /*! Constructor from a base-traits class. */
-  Arr_curve_data_traits_2 (const Base_traits_2 & traits) :
-    Base_traits_2 (traits)
-  {}
+  /*! constructs default. */
+  Arr_curve_data_traits_2() {}
+
+  /*! constructs from a base-traits class. */
+  Arr_curve_data_traits_2(const Base_traits_2& traits) : Base_traits_2(traits) {}
   //@}
 
-  /// \name Overriden functors.
+  /// \name Overridden functors.
   //@{
 
-  class Make_x_monotone_2
-  {
+  //! \name Intersections & subdivisions
+  //@{
+
+  /*! \class Make_x_monotone_2
+   * A functor for subdividing a curve into x-monotone curves.
+   */
+  class Make_x_monotone_2 {
   private:
-    const Base_traits_2 * base;
+    const Base_traits_2& m_base;
 
   public:
+    /*! constructs. */
+    Make_x_monotone_2(const Base_traits_2& base) : m_base(base) {}
 
-    /*! Constructor. */
-    Make_x_monotone_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
-    
-    /*!
-     * Cut the given curve into x-monotone subcurves and insert them to the
-     * given output iterator. As segments are always x_monotone, only one
-     * x-monotone curve will be contained in the iterator.
-     * \param cv The curve.
-     * \param oi The output iterator, whose value-type is X_monotone_curve_2.
-     * \return The past-the-end iterator.
+    /*! subdivides a given curve into x-monotone subcurves and insert them into
+     * a given output iterator.
+     * \param cv the curve.
+     * \param oi the output iterator for the result. Its value type is a variant
+     *           that wraps Point_2 or an X_monotone_curve_2 objects.
+     * \return the past-the-end iterator.
      */
-    template<class OutputIterator>
-    OutputIterator operator() (const Curve_2& cv, OutputIterator oi) const
-    {
+    template <typename OutputIterator>
+    OutputIterator operator()(const Curve_2& cv, OutputIterator oi) const {
+      using Base_make_x_monotone_result = std::variant<Point_2, Base_x_monotone_curve_2>;
+      using Make_x_monotone_result = std::variant<Point_2, X_monotone_curve_2>;
+
       // Make the original curve x-monotone.
-      std::list<CGAL::Object>       base_objects;
-    
-      base->make_x_monotone_2_object() (cv,
-                                        std::back_inserter (base_objects));
+      std::list<Base_make_x_monotone_result> base_objects;
+      m_base.make_x_monotone_2_object()(cv, std::back_inserter(base_objects));
 
       // Attach the data to each of the resulting x-monotone curves.
-      typename std::list<CGAL::Object>::const_iterator  it;
-      const Base_x_monotone_curve_2  *base_x_curve;
-      X_monotone_curve_data           xdata = Convert()(cv.data());
-
-      for (it = base_objects.begin(); it != base_objects.end(); ++it)
-      {
-        base_x_curve = object_cast<Base_x_monotone_curve_2> (&(*it));
-        if (base_x_curve != NULL)
-        {
-          // Current object is an x-monotone curve: Attach data to it.
-          *oi = make_object (X_monotone_curve_2 (*base_x_curve,
-                                                 xdata));
+      X_monotone_curve_data xdata = Convert()(cv.data());
+      for (const auto& base_obj : base_objects) {
+        if (const auto* bxcv = std::get_if<Base_x_monotone_curve_2>(&base_obj)) {
+          *oi++ = Make_x_monotone_result(X_monotone_curve_2(*bxcv, xdata));
+          continue;
         }
-        else
-        {
-          // Current object is an isolated point: Leave it as is.
-          CGAL_assertion (object_cast<Point_2> (&(*it)) != NULL);
-          *oi = *it;
-        }
-        ++oi;
+        // Current object is an isolated point: Leave it as is.
+        const auto* bp = std::get_if<Point_2>(&base_obj);
+        CGAL_assertion(bp);
+        *oi++ = Make_x_monotone_result(*bp);
       }
 
-      return (oi);
+      return oi;
     }
   };
 
-  /*! Get a Make_x_monotone_2 functor object. */
-  Make_x_monotone_2 make_x_monotone_2_object () const
-  {
-    return Make_x_monotone_2 (this);
-  }
+  /*! obtains a Make_x_monotone_2 functor object. */
+  Make_x_monotone_2 make_x_monotone_2_object() const { return Make_x_monotone_2(*this); }
 
-  class Split_2
-  {
+  class Split_2 {
   private:
-    const Base_traits_2 * base;
+    const Base_traits_2& m_base;
 
   public:
+    /*! constructs. */
+    Split_2(const Base_traits_2& base) : m_base(base) {}
 
-    /*! Constructor. */
-    Split_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
-
-    /*!
-     * Split a given x-monotone curve at a given point into two sub-curves.
-     * \param cv The curve to split
-     * \param p The split point.
-     * \param c1 Output: The left resulting subcurve (p is its right endpoint).
-     * \param c2 Output: The right resulting subcurve (p is its left endpoint).
+    /*! splits a given x-monotone curve at a given point into two sub-curves.
+     * \param cv[in] The curve to split
+     * \param p[in] The split point.
+     * \param c1[out] The left resulting subcurve (p is its right endpoint).
+     * \param c2[out] The right resulting subcurve (p is its left endpoint).
      * \pre p lies on cv but is not one of its end-points.
      */
-    void operator() (const X_monotone_curve_2& cv, const Point_2 & p,
-                     X_monotone_curve_2& c1, X_monotone_curve_2& c2) const
-    {
+    void operator()(const X_monotone_curve_2& cv, const Point_2& p,
+                    X_monotone_curve_2& c1, X_monotone_curve_2& c2) const {
       // Split the original curve.
-      base->split_2_object() (cv, p, c1, c2);
+      m_base.split_2_object()(cv, p, c1, c2);
 
       // Attach data to the split curves.
-      c1.set_data (cv.data());
-      c2.set_data (cv.data());
-
-      return;
+      c1.set_data(cv.data());
+      c2.set_data(cv.data());
     }
   };
 
-  /*! Get a Split_2 functor object. */
-  Split_2 split_2_object () const
-  {
-    return Split_2 (this);
-  }
+  /*! obtains a Split_2 functor object. */
+  Split_2 split_2_object() const { return Split_2(*this); }
 
-  class Intersect_2
-  {
+  class Intersect_2 {
   private:
-    const Base_traits_2 * base;
+    const Base_traits_2& m_base;
 
   public:
+    /*! constructs. */
+    Intersect_2(const Base_traits_2& base) : m_base(base) {}
 
-    /*! Constructor. */
-    Intersect_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
-
-    /*!
-     * Find the intersections of the two given curves and insert them to the
+    /*! finds the intersections of the two given curves and insert them to the
      * given output iterator. As two segments may itersect only once, only a
      * single will be contained in the iterator.
      * \param cv1 The first curve.
@@ -230,225 +189,244 @@ public:
      * \param oi The output iterator.
      * \return The past-the-end iterator.
      */
-    template<class OutputIterator>
-    OutputIterator operator() (const X_monotone_curve_2& cv1,
-                               const X_monotone_curve_2& cv2,
-                               OutputIterator oi) const
-    {
-      // Use the base functor to obtain all intersection objects.
-      std::list<CGAL::Object>                   base_objects;
+    template <typename OutputIterator>
+    OutputIterator operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2,
+                              OutputIterator oi) const {
+      using Intersection_point = std::pair<Point_2, Multiplicity>;
+      using Intersection_base_result = std::variant<Intersection_point, Base_x_monotone_curve_2>;
 
-      base->intersect_2_object() (cv1, cv2,
-                                  std::back_inserter (base_objects));
+      // Use the base functor to obtain all intersection objects.
+      std::list<Intersection_base_result> base_objects;
+      m_base.intersect_2_object()(cv1, cv2, std::back_inserter(base_objects));
 
       // Stop if the list is empty:
-      if (base_objects.empty())
-        return (oi);
+      if (base_objects.empty()) return oi;
 
       // Go over all intersection objects and prepare the output.
-      typename std::list<CGAL::Object>::const_iterator  it;
-      const Base_x_monotone_curve_2                    *base_cv;
-
-      for (it = base_objects.begin(); it != base_objects.end(); ++it)
-      {
-        if ((base_cv = object_cast<Base_x_monotone_curve_2> (&(*it))) != NULL)
-        {
+      for (const auto& item : base_objects) {
+        const Base_x_monotone_curve_2* base_cv =
+          std::get_if<Base_x_monotone_curve_2>(&item);
+        if (base_cv != nullptr) {
           // The current intersection object is an overlapping x-monotone
           // curve: Merge the data fields of both intersecting curves and
           // associate the result with the overlapping curve.
-          X_monotone_curve_2  cv (*base_cv,
-                                  Merge() (cv1.data(), cv2.data()));
-
-          *oi = make_object (cv);
+          X_monotone_curve_2 cv(*base_cv, Merge()(cv1.data(), cv2.data()));
+          *oi++ = cv;
+          continue;
         }
-        else
-        {
-          // The current intersection object is an intersection point:
-          // Copy it as is.
-          *oi = *it;
-        }
-        ++oi;
+        // The current intersection object is an intersection point:
+        // Copy it as is.
+        const Intersection_point* ip = std::get_if<Intersection_point>(&item);
+        *oi++ = *ip;
       }
 
-      return (oi);
+      return oi;
     }
   };
 
-  /*! Get an Intersect_2 functor object. */
-  Intersect_2 intersect_2_object () const
-  {
-    return Intersect_2 (this);
-  }
+  /*! obtains an `Intersect_2` functor object. */
+  Intersect_2 intersect_2_object() const { return Intersect_2(*this); }
 
-  class Are_mergeable_2
-  {
+  class Are_mergeable_2 {
   private:
-    const Base_traits_2 * base;
+    const Base_traits_2& m_base;
 
-  public:
-
-    /*! Constructor. */
-    Are_mergeable_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
-
-    /*!
-     * Check whether it is possible to merge two given x-monotone curves.
-     * \param cv1 The first curve.
-     * \param cv2 The second curve.
-     * \return (true) if the two curves are mergeable; (false) otherwise.
-     */
-    bool operator() (const X_monotone_curve_2& cv1,
-                     const X_monotone_curve_2& cv2) const
-    {
-      return (_are_mergeable_base_imp (cv1, cv2, Base_has_merge_category()));
+    template <typename T>
+    bool are_mergeable_data(const T& /* cv1 */, const T& /* cv2 */, long) const {
+      CGAL_error_msg("Equality operator is not supported.");
+      return false;
     }
 
-  private:
+    template <typename T>
+    auto are_mergeable_data(const T& cv1, const T& cv2, int) const ->
+      decltype(cv1.data() == cv2.data())
+    { return cv1.data() == cv2.data(); }
 
-    /*!
-     * Implementation of the base predicate in case the HasMerge tag is true.
+    /*! Implementation of the predicate in case the base geometry traits class
+     * has a nested type named Are_mergeable_2.
      */
-    bool _are_mergeable_base_imp (const X_monotone_curve_2& cv1,
-                                  const X_monotone_curve_2& cv2,
-                                  Tag_true) const
-    {
+    template <typename GeomeTraits_2>
+    auto are_mergeable(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, const GeomeTraits_2& traits,
+                       int) const->decltype(traits.are_mergeable_2_object(), bool()) {
       // In case the two base curves are not mergeable, the extended curves
       // are not mergeable as well.
-      if (! (base->are_mergeable_2_object() (cv1, cv2)))
-        return (false);
+      if (! (traits.are_mergeable_2_object()(cv1, cv2))) return false;
 
       // In case the two base curves are mergeable, check that they have the
       // same data fields.
-      return (cv1.data() == cv2.data());
+      return are_mergeable_data(cv1, cv2, 0);
     }
 
-    /*!
-     * Implementation of the base predicate in case the HasMerge tag is false.
+    /*! Implementation of the predicate in case the base geometry traits class
+     * does not have a nested type named Are_mergeable_2.
+     * This function should never be called!
      */
-    bool _are_mergeable_base_imp (const X_monotone_curve_2& ,
-                                  const X_monotone_curve_2& ,
-                                  Tag_false) const
-    {
-      // Curve merging is not supported:
-      return (false);
+    template <typename GeomeTraits_2>
+    bool are_mergeable(const X_monotone_curve_2& /* cv1 */, const X_monotone_curve_2& /* cv2 */,
+                       const GeomeTraits_2& /* traits */, long) const {
+      CGAL_error_msg("Are mergeable is not supported.");
+      return false;
     }
+
+  public:
+    /*! constructs. */
+    Are_mergeable_2(const Base_traits_2& base) : m_base(base) {}
+
+    /*! checks whether it is possible to merge two given x-monotone curves.
+     * \param cv1[in] The first curve.
+     * \param cv2[in] The second curve.
+     * \return (true) if the two curves are mergeable; (false) otherwise.
+     */
+    bool operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2) const
+    { return are_mergeable<Base_traits_2>(cv1, cv2, m_base, 0); }
   };
-  
-  /*! Get an Are_mergeable_2 functor object. */
-  Are_mergeable_2 are_mergeable_2_object () const
-  {
-    return Are_mergeable_2 (this);
-  }
+
+  /*! obtains an Are_mergeable_2 functor object. */
+  Are_mergeable_2 are_mergeable_2_object() const
+  { return Are_mergeable_2(*this); }
 
   /*! \class Merge_2
    * A functor that merges two x-monotone arcs into one.
    */
-  class Merge_2
-  {
+  class Merge_2 {
   private:
-    const Base_traits_2 * base;
+    const Base_traits_2& m_base;
 
-  public:
-
-    /*! Constructor. */
-    Merge_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
-
-    /*!
-     * Merge two given x-monotone curves into a single curve (segment).
-     * \param cv1 The first curve.
-     * \param cv2 The second curve.
-     * \param c Output: The merged curve.
-     * \pre The two curves are mergeable.
+    /*! generates a helper class template to find out whether the base geometry
+     * traits has a nested type named Merge_2.
      */
-    void operator() (const X_monotone_curve_2& cv1,
-                     const X_monotone_curve_2& cv2,
-                     X_monotone_curve_2& c) const
-    {
-      // The function is implemented based on the base Has_merge category.
-      _merge_imp (cv1, cv2, c, Base_has_merge_category());
-    }
+    BOOST_MPL_HAS_XXX_TRAIT_NAMED_DEF(has_merge_2, Are_mergeable_2, false)
 
-  private:
-
-    /*!
-     * Implementation of the operator() in case the HasMerge tag is true.
+    /*! Implementation of the predicate in case the base geometry traits class
+     * has a nested type named Merge_2.
      */
-    void _merge_imp (const X_monotone_curve_2& cv1,
-                     const X_monotone_curve_2& cv2,
-                     X_monotone_curve_2& c,
-                     Tag_true) const
-    {      
+    template <typename GeomeTraits_2>
+    std::enable_if_t<has_merge_2<GeomeTraits_2>::value, void>
+    merge(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, X_monotone_curve_2& c) const {
       // Merge the two base curve.
-      Base_x_monotone_curve_2  base_cv;
+      Base_x_monotone_curve_2 base_cv;
 
-      base->merge_2_object() (cv1, cv2, base_cv);
+      m_base.merge_2_object()(cv1, cv2, base_cv);
 
       // Attach data from one of the curves.
-      CGAL_precondition (cv1.data() == cv2.data());
+      CGAL_precondition(cv1.data() == cv2.data());
 
-      c = X_monotone_curve_2 (base_cv, cv1.data());
-      return;
+      c = X_monotone_curve_2(base_cv, cv1.data());
     }
 
-    /*!
-     * Implementation of the operator() in case the HasMerge tag is false.
+    /*! Implementation of the predicate in case the base geometry traits class
+     * does not have a nested type named Merge_2.
+     * This function should never be called!
      */
-    void _merge_imp (const X_monotone_curve_2& ,
-                     const X_monotone_curve_2& ,
-                     X_monotone_curve_2& ,
-                     Tag_false) const
-    {
-      // This function should never be called!
-      CGAL_error_msg("Merging curves is not supported.");
-    }
-  };
-
-  /*! Get a Merge_2 functor object. */
-  Merge_2 merge_2_object () const
-  {
-    return Merge_2 (this);
-  }
-
-  class Construct_x_monotone_curve_2
-  {
-  private:
-    const Base_traits_2 * base;
+    template <typename GeomeTraits_2>
+    std::enable_if_t<! has_merge_2<GeomeTraits_2>::value, void>
+    merge(const X_monotone_curve_2& /* cv1 */, const X_monotone_curve_2& /* cv2 */, X_monotone_curve_2& /* c */) const
+    { CGAL_error_msg("Merging curves is not supported."); }
 
   public:
+    /*! constructs. */
+    Merge_2(const Base_traits_2& base) : m_base(base) {}
 
-    /*! Constructor. */
-    Construct_x_monotone_curve_2 (const Base_traits_2 * _base) :
-      base (_base)
-    {}
+    /*! merges two given x-monotone curves into a single curve (segment).
+     * \param[in] cv1 The first curve.
+     * \param[in] cv2 The second curve.
+     * \param[out] c The merged curve.
+     * \pre The two curves are mergeable.
+     */
+    void operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, X_monotone_curve_2& c) const
+    { merge<Base_traits_2>(cv1, cv2, c); }
+  };
 
-    /*!
-     * Return an x-monotone curve connecting the two given endpoints.
+  /*! obtains a `Merge_2` functor object. */
+  Merge_2 merge_2_object() const { return Merge_2(*this); }
+
+  //@}
+
+  class Construct_x_monotone_curve_2 {
+  private:
+    const Base_traits_2& m_base;
+
+  public:
+    /*! constructs. */
+    Construct_x_monotone_curve_2(const Base_traits_2& base) : m_base(base) {}
+
+    /*! obtains an x-monotone curve connecting the two given endpoints.
      * \param p The first point.
      * \param q The second point.
      * \pre p and q must not be the same.
      * \return An x-monotone curve connecting p and q.
      */
-    X_monotone_curve_2 operator() (const Point_2& p, const Point_2& q) const
-    {
-      Base_x_monotone_curve_2  base_cv =
-        base->construct_x_monotone_curve_2_object() (p, q);
+    X_monotone_curve_2 operator()(const Point_2& p, const Point_2& q) const {
+      Base_x_monotone_curve_2 base_cv = m_base.construct_x_monotone_curve_2_object()(p, q);
+      return (X_monotone_curve_2(base_cv, X_monotone_curve_data()));
+    }
 
-      return (X_monotone_curve_2 (base_cv, X_monotone_curve_data()));
+    /*! obtains an x-monotone curve connecting the two given endpoints.
+     * \param p The first point.
+     * \param q The second point.
+     * \param data the data associated with the \f$x\f$-monotone curve
+     * \pre p and q must not be the same.
+     * \return An x-monotone curve connecting p and q.
+     */
+    X_monotone_curve_2 operator()(const Point_2& p, const Point_2& q, const X_monotone_curve_data& data) const {
+      Base_x_monotone_curve_2 base_cv = m_base.construct_x_monotone_curve_2_object()(p, q);
+      return (X_monotone_curve_2(base_cv, data));
     }
   };
 
-  /*! Get a Construct_x_monotone_curve_2 functor object. */
-  Construct_x_monotone_curve_2 construct_x_monotone_curve_2_object () const
-  {
-    return Construct_x_monotone_curve_2 (this);
-  }
-  //@}
+  /*! obtains a Construct_x_monotone_curve_2 functor object. */
+  Construct_x_monotone_curve_2 construct_x_monotone_curve_2_object() const
+  { return Construct_x_monotone_curve_2(*this); }
 
+  class Construct_opposite_2 {
+  private:
+    const Base_traits_2& m_base;
+
+    /*! generates a helper class template to find out whether the base geometry
+     * traits has a nested type named Construct_opposite_2.
+     */
+    BOOST_MPL_HAS_XXX_TRAIT_NAMED_DEF(has_construct_opposite_2, Construct_opposite_2, false)
+
+    /*! Implementation of the predicate in case the base geometry traits class
+     * has a nested type named Construct_opposite_2.
+     */
+    template <typename GeomeTraits_2>
+    std::enable_if_t<has_construct_opposite_2<GeomeTraits_2>::value, X_monotone_curve_2>
+    construct_opposite(const X_monotone_curve_2& cv) const {
+      X_monotone_curve_2 new_cv(m_base.construct_opposite_2_object()(cv), cv.data());
+      return new_cv;
+    }
+
+    /*! Implementation of the predicate in case the base geometry traits class
+     * does not have a nested type named Construct_opposite_2.
+     * This function should never be called!
+     */
+    template <typename GeomeTraits_2>
+    std::enable_if_t<! has_construct_opposite_2<GeomeTraits_2>::value, X_monotone_curve_2>
+    construct_opposite(const X_monotone_curve_2&) const {
+      CGAL_error_msg("Construct opposite curve is not supported!");
+      return X_monotone_curve_2();
+    }
+
+  public:
+    /*! constructs. */
+    Construct_opposite_2(const Base_traits_2& base) : m_base(base) {}
+
+    /*! constructs an opposite x-monotone (with swapped source and target).
+     * \param cv The curve.
+     * \return The opposite curve.
+     */
+    X_monotone_curve_2 operator()(const X_monotone_curve_2& cv) const
+    { return construct_opposite<Base_traits_2>(cv); }
+  };
+
+  /*! obtains a Construct_opposite_2 functor object. */
+  Construct_opposite_2 construct_opposite_2_object() const { return Construct_opposite_2(*this); }
+  //@}
 };
 
 } //namespace CGAL
+
+#include <CGAL/enable_warnings.h>
 
 #endif

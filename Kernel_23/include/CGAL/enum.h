@@ -1,24 +1,16 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Stefan Schirra
 
@@ -27,8 +19,7 @@
 
 #include <CGAL/config.h>
 #include <CGAL/Kernel/Same_uncertainty.h>
-
-// If you add/change one type here, please update Is_a_predicate.h as well.
+#include <CGAL/Origin.h>
 
 namespace CGAL {
 
@@ -63,9 +54,9 @@ enum  Bounded_side
 
 enum  Angle
       {
-	  OBTUSE = -1,
-	  RIGHT,
-	  ACUTE
+          OBTUSE = -1,
+          RIGHT,
+          ACUTE
       };
 
 
@@ -95,26 +86,27 @@ inline Sign operator* (Sign s1, Sign s2)
     return static_cast<Sign> (static_cast<int> (s1) * static_cast<int> (s2));
 }
 
-#ifdef CGAL_CFG_MATCHING_BUG_5
 
-template < typename T, typename U >
-inline
-T enum_cast_bug(const U& u, const T*)
-{ return static_cast<T>(u); }
+enum Box_parameter_space_2
+     {
+        LEFT_BOUNDARY = 0,
+        RIGHT_BOUNDARY,
+        BOTTOM_BOUNDARY,
+        TOP_BOUNDARY,
+        INTERIOR,
+        EXTERIOR
+     };
 
-template < typename T, typename U >
-inline
-typename Same_uncertainty<T,U>::type enum_cast(const U& u)
-{ return enum_cast_bug(u, (const T*)0); }
-
-#else
+enum class API_version {
+  any = 0,
+  v1 = 1,
+  v2 = 2,
+};
 
 template < typename T, typename U >
 inline
 T enum_cast(const U& u)
 { return static_cast<T>(u); }
-
-#endif
 
 } //namespace CGAL
 

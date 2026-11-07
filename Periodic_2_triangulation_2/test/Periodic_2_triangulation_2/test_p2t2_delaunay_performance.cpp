@@ -1,21 +1,16 @@
 // Author(s)     : Nico Kruithof  <Nico@nghk.nl>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/point_generators_2.h>
 
-#include <CGAL/Periodic_2_triangulation_traits_2.h>
-#include <CGAL/Periodic_2_triangulation_2.h>
 #include <CGAL/Periodic_2_Delaunay_triangulation_2.h>
+#include <CGAL/Periodic_2_Delaunay_triangulation_traits_2.h>
 #include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Periodic_2_triangulation_hierarchy_2.h>
-#include <CGAL/Triangulation_hierarchy_2.h>
 
 #include <CGAL/Timer.h>
-
 #include <CGAL/point_generators_2.h>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef CGAL::Periodic_2_triangulation_traits_2<K>          Gt;
+typedef CGAL::Periodic_2_Delaunay_triangulation_traits_2<K> Gt;
 typedef Gt::Point_2                                         Point;
 typedef Gt::Vector_2                                        Vector;
 
@@ -89,7 +84,7 @@ int main(int argc, char *argv[])
 // For generating the plot:
 
 /*
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "https://www.w3.org/TR/html4/loose.dtd">
 <html>
  <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">

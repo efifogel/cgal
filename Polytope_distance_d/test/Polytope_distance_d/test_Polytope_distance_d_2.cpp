@@ -13,22 +13,22 @@
 //
 // file          : test/Polytope_distance_d/test_Polytope_distance_d_2.C
 // package       : $CGAL_Package: Polytope_distance_d $
-// chapter       : Geometric Optimisation
+// chapter       : Geometric Optimization
 //
 // source        : web/Polytope_distance_d.aw
 // revision      : $Id$
 // revision_date : $Date$
 //
-// author(s)     : Sven Schönherr <sven@inf.ethz.ch>
-// coordinator   : ETH Zürich (Bernd Gärtner <gaertner@inf.ethz.ch>)
+// author(s)     : Sven SchÃ¶nherr <sven@inf.ethz.ch>
+// coordinator   : ETH ZÃ¼rich (Bernd GÃ¤rtner <gaertner@inf.ethz.ch>)
 //
 // implementation: test program for polytope distance (2D traits class)
 // ============================================================================
 
-#include <CGAL/Cartesian.h>
-#include <CGAL/Homogeneous.h>
 #include <CGAL/Polytope_distance_d.h>
 #include <CGAL/Polytope_distance_d_traits_2.h>
+#include <CGAL/Cartesian.h>
+#include <CGAL/Homogeneous.h>
 #ifdef CGAL_USE_GMP
 #include <CGAL/Gmpzf.h>
 typedef CGAL::Gmpzf RT;
@@ -55,7 +55,7 @@ typedef  CGAL::Polytope_distance_d_traits_2<HK1, RT, double> HTraits1;
 #include "test_Polytope_distance_d.h"
 
 template <class K, class Traits>
-void process () 
+void process ()
 {
   // generate point set
   std::vector<typename K::Point_2>  p_points, q_points;
@@ -66,27 +66,27 @@ void process ()
     double hom = 2.0;
     for ( i = 0; i < 50; ++i) {
       p_points.push_back
-	(typename K::Point_2(
-			     CGAL::default_random( 0x100000),
-			     CGAL::default_random( 0x100000), 
-			     hom));
+        (typename K::Point_2(
+                             CGAL::get_default_random()( 0x100000),
+                             CGAL::get_default_random()( 0x100000),
+                             hom));
     }
     hom = 3.0;
     for ( i = 0; i < 50; ++i) {
       q_points.push_back
-	(typename K::Point_2(
-			     -CGAL::default_random( 0x100000),
-			     -CGAL::default_random( 0x100000),
-			     hom));
+        (typename K::Point_2(
+                             -CGAL::get_default_random()( 0x100000),
+                             -CGAL::get_default_random()( 0x100000),
+                             hom));
     }
   }
-    
+
   // call test function
   CGAL::test_Polytope_distance_d( p_points.begin(), p_points.end(),
-				  q_points.begin(), q_points.end(),
-				  Traits(), 1);
+                                  q_points.begin(), q_points.end(),
+                                  Traits(), 1);
 }
-    
+
 // main
 // ----
 int
@@ -95,5 +95,5 @@ main()
     process<CK1, CTraits1>();
     process<HK1, HTraits1>();
 }
- 
+
 // ===== EOF ==================================================================

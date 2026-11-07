@@ -3,21 +3,11 @@
  * Copyright (c) 1995-2004 Exact Computation Project
  * All rights reserved.
  *
- * This file is part of CORE (http://cs.nyu.edu/exact/core/).
- * You can redistribute it and/or modify it under the terms of the GNU
- * General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * Licensees holding a valid commercial license may use this file in
- * accordance with the commercial license agreement provided with the
- * software.
- *
- * This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
- * WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- *
+ * This file is part of CGAL (www.cgal.org).
  *
  * $URL$
  * $Id$
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  ***************************************************************************/
 
 #ifndef _CORE_CONFIG_H_
@@ -38,5 +28,12 @@
 #include <CGAL/auto_link/CORE.h>
 
 #include <CGAL/export/CORE.h>
+
+#ifdef CGAL_CORE_DEBUG
+#define CGAL_CORE_warning_msg(X ,Y) CGAL_warning_msg(X ,Y)
+#else
+#define CGAL_CORE_warning_msg(X ,Y)
+#endif
+
 
 #endif // _CORE_CONFIG_H_

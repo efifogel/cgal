@@ -19,7 +19,7 @@
  ** Foundation and appearing in the file LICENSE.LGPL included in the
  ** packaging of this file.  Please review the following information to
  ** ensure the GNU Lesser General Public License version 2.1 requirements
- ** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+ ** will be met: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
  **
  ** In addition, as a special exception, Nokia gives you certain additional
  ** rights.  These rights are described in the Nokia Qt LGPL Exception
@@ -31,34 +31,54 @@
  ** Foundation and appearing in the file LICENSE.GPL included in the
  ** packaging of this file.  Please review the following information to
  ** ensure the GNU General Public License version 3.0 requirements will be
- ** met: http://www.gnu.org/copyleft/gpl.html.
+ ** met: https://www.gnu.org/licenses/gpl-3.0.html.
  **
  ** If you have questions regarding the use of this file, please contact
  ** Nokia at qt-info@nokia.com.
  ** $QT_END_LICENSE$
  **
+ ** SPDX-License-Identifier: LGPL-2.1-only
+ **
  ****************************************************************************/
 
 #include <QtGui>
 #include <iostream>
+#include <QColorDialog>
+
 
 #include "ColorItemEditor.h"
 
+//! a pick color option
+/*!
+  \param widget A QWidget pointer
+  \return a starting point to ask the user for color
+*/
 ColorItemEditor::ColorItemEditor( QWidget* widget ) : QPushButton( widget )
 {
   this->setText( tr("Select a color") );
 }
 
+//! get the color reference
+/*!
+  \return the Qcolor object of the selected color
+*/
 QColor ColorItemEditor::color( ) const
 {
   return this->m_color;
 }
 
+//! a pick color option
+/*!
+  \param color A QColor that the user selected to be changed
+*/
 void ColorItemEditor::setColor( QColor color )
 {
   this->m_color = color;
 }
 
+//! checking if the color reference that user wanted is valid or not
+/*!
+*/
 void ColorItemEditor::mousePressEvent(QMouseEvent* /* e */)
 {
   QColor selectedColor = QColorDialog::getColor(this->m_color);
@@ -67,5 +87,5 @@ void ColorItemEditor::mousePressEvent(QMouseEvent* /* e */)
     this->setColor( selectedColor );
   }
 
-  emit confirmed();
+  Q_EMIT confirmed();
 }

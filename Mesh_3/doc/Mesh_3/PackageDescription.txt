@@ -1,62 +1,72 @@
-/// \defgroup PkgMesh_3 3D Mesh Generation Reference
+/// \defgroup PkgMesh3Ref Reference Manual
 
-/// \defgroup PkgMesh_3Concepts Main Concepts
-/// \ingroup PkgMesh_3
+/// \defgroup PkgMesh3Concepts Main Concepts
+/// \ingroup PkgMesh3Ref
 /// The main concepts of this package.
 
-/// \defgroup PkgMesh_3SecondaryConcepts Secondary Concepts
-/// \ingroup PkgMesh_3
+/// \defgroup PkgMesh3SecondaryConcepts Secondary Concepts
+/// \ingroup PkgMesh3Ref
 /// The concepts in this group are secondary concepts, related to the template parameters of some models of the main concept.
 
-/// \defgroup PkgMesh_3MeshClasses Mesh Classes
-/// \ingroup PkgMesh_3
+/// \defgroup PkgMesh3MeshClasses Mesh Classes
+/// \ingroup PkgMesh3Ref
+/// The classes in this group are the main classes involved in the mesh generation process.
 
-/// \defgroup PkgMesh_3Domains Domain Classes
-/// \ingroup PkgMesh_3
+/// \defgroup PkgMesh3Domains Domain Classes
+/// \ingroup PkgMesh3Ref
 /// The classes in this group are models of domain concepts and their associated classes.
 
-/// \defgroup PkgMesh_3Functions Mesh Generation Functions
-/// \ingroup PkgMesh_3
-/// The two main functions to generate a mesh are `make_mesh_3()` and `refine_mesh_3()`. 
-/// The other functions allow to optimize an existing mesh.
+/// \defgroup PkgMesh3FeatureDetection Feature Detection
+/// \ingroup PkgMesh3Ref
+/// The functors in this group perform polyline features detection in input domains.
 
+/// \defgroup PkgMesh3DomainFields Mesh Domain Fields
+/// \ingroup PkgMesh3Ref
+/// The classes in this group are models of `MeshDomainField_3`
 
-/// \defgroup PkgMesh_3Parameters Parameter Functions
-/// \ingroup PkgMesh_3
+/// \defgroup PkgMesh3Functions Mesh Generation Functions
+/// \ingroup PkgMesh3Ref
+/// The two main functions to generate a mesh are `CGAL::make_mesh_3()` and `CGAL::refine_mesh_3()`.
+/// The other functions enable to optimize an existing mesh.
 
+/// \defgroup PkgMesh3Initializers Mesh Initialization Functors
+/// \ingroup PkgMesh3Ref
+/// The functors in this group perform mesh initialization by providing initial points.
+/// \defgroup PkgMesh3Parameters Parameter Functions
+/// \ingroup PkgMesh3Ref
 
+/// \defgroup PkgMesh3Enum Enumerations
+/// \ingroup PkgMesh3Ref
 
-/// \defgroup PkgMesh_3Enum Enumerations
-/// \ingroup PkgMesh_3
-
+/// \defgroup PkgMesh3IOFunctions Input/Output Functions
+/// \ingroup PkgMesh3Ref
+/// See \ref PkgSMDS3IOFunctions from \ref PkgSMDS3
 
 /*!
-\addtogroup PkgMesh_3
-\todo check generated documentation
-\cgalPkgDescriptionBegin{3D Mesh Generation,PkgMesh_3Summary}
+\addtogroup PkgMesh3Ref
+\cgalPkgDescriptionBegin{3D Mesh Generation,PkgMesh3}
 \cgalPkgPicture{Mesh_3/fig/multilabel_mesher_small.jpg}
 \cgalPkgSummaryBegin
-\cgalPkgAuthors{Pierre Alliez, Laurent Rineau, Stéphane Tayeb, Jane Tournois, Mariette Yvinec}
-\cgalPkgDesc{This package is devoted to the generation of  isotropic simplicial meshes discretizing 3D domains. The domain to be meshed is a region of 3D space that has to be bounded. The region may be connected or  composed of multiple components and/or subdivided in several subdomains.  The domain is input as an oracle able to answer  queries, of a few different types, on the domain. Boundary and subdivision surfaces  are either smooth or piecewise smooth surfaces, formed with planar or curved surface patches. Surfaces may exhibit 1-dimensional features (e.g. crease edges) and 0-dimensional features (e.g. singular points as corners  tips, cusps or darts), that have to be fairly approximated in the mesh. }
-\cgalPkgManuals{Chapter_3D_Mesh_Generation,PkgMesh_3}
+\cgalPkgAuthors{Pierre Alliez, Clément Jamin, Laurent Rineau, Stéphane Tayeb, Jane Tournois, and Mariette Yvinec}
+\cgalPkgDesc{This package is devoted to the generation of isotropic simplicial meshes discretizing 3D domains. The domain to be meshed is a region of 3D space that has to be bounded. The region may be connected or composed of multiple components and/or subdivided in several subdomains. The domain is input as an oracle able to answer queries, of a few different types, on the domain. Boundary and subdivision surfaces are either smooth or piecewise smooth surfaces, formed with planar or curved surface patches. Surfaces may exhibit 1-dimensional features (e.g., crease edges) and 0-dimensional features (e.g., singular points as corners tips, cusps or darts), that have to be fairly approximated in the mesh. Optionally, the algorithms support multi-core shared-memory architectures to take advantage of available parallelism.}
+\cgalPkgManuals{Chapter_3D_Mesh_Generation,PkgMesh3Ref}
 \cgalPkgSummaryEnd
 \cgalPkgShortInfoBegin
 \cgalPkgSince{3.5}
-\cgalPkgDependsOn{\ref PkgTriangulation3Summary}
+\cgalPkgDependsOn{\ref PkgTriangulation3 and \ref thirdpartyEigen}
 \cgalPkgBib{cgal:rty-m3}
 \cgalPkgLicense{\ref licensesGPL  "GPL"}
-\cgalPkgDemo{3D Mesh Generation,mesh_3.zip}
+\cgalPkgDemo{CGAL Lab,CGALlab.zip}
 \cgalPkgShortInfoEnd
 \cgalPkgDescriptionEnd
 
 \cgalClassifedRefPages
 
-## Concepts ##
+\cgalCRPSection{Concepts}
 
 Here are the main concepts of this package:
 
-- `MeshComplex_3InTriangulation_3`
-- `MeshComplexWithFeatures_3InTriangulation_3`
+- `MeshTriangulationTraits_3`
 - `MeshDomain_3`
 - `MeshDomainWithFeatures_3`
 - `MeshCriteria_3`
@@ -70,63 +80,76 @@ related to the template parameters of some models of the main concepts:
 
 - `BisectionGeometricTraits_3`
 - `IntersectionGeometricTraits_3`
-- `LabeledImage_3`
+- `InitialPointsGenerator_3`
 - `MeshCellBase_3`
 - `MeshVertexBase_3`
 - `MeshDomainField_3`
 - `MeshPolyline_3`
-- `TriangleAccessor_3`
 
-## Classes ##
+\cgalCRPSection{Classes}
 
-- `CGAL::Mesh_complex_3_in_triangulation_3<Tr,CornerIndex,CurveSegmentIndex>`
-- `CGAL::Mesh_triangulation_3<MD,Gt,Concurrency_tag,Vertex_base,Cell_base>`
-- `CGAL::Mesh_vertex_base_3<MD,Gt,Vb>`
-- `CGAL::Compact_mesh_cell_base_3<Gt,MD,Tds>`
-- `CGAL::Mesh_cell_base_3<MD,Gt,Cb>`
-- `CGAL::Mesh_criteria_3<Tr>`
-- `CGAL::Mesh_cell_criteria_3<Tr>`
-- `CGAL::Mesh_facet_criteria_3<Tr>`
-- `CGAL::Mesh_edge_criteria_3<Tr>`
-- `CGAL::Mesh_constant_domain_field_3<Gt,Index>`
+- `CGAL::Mesh_triangulation_3<MD,GT,ConcurrencyTag,Vb,Cb>`
+- `CGAL::Mesh_vertex_base_3<GT,MD,Vb>`
+- `CGAL::Compact_mesh_cell_base_3<GT,MD,Tds>`
+- `CGAL::Mesh_cell_base_3<GT,MD,Cb>`
+- `CGAL::Mesh_criteria_3<C3T3>`
+- `CGAL::Mesh_cell_criteria_3<C3T3>`
+- `CGAL::Mesh_facet_criteria_3<C3T3>`
+- `CGAL::Mesh_edge_criteria_3<C3T3>`
+- `CGAL::Mesh_constant_domain_field_3<GT,%Index>`
 
 The following classes are models of domain concepts
 and their associated classes:
 
-- `CGAL::Implicit_mesh_domain_3<Function,BGT>`
-- `CGAL::Polyhedral_mesh_domain_3<Polyhedron,IGT,TriangleAccessor>`
+- `CGAL::Labeled_mesh_domain_3<BGT,SubdomainIndex,SurfacePatchIndex>`
+- `CGAL::Polyhedral_mesh_domain_3<Polyhedron,IGT>`
 - `CGAL::Polyhedral_mesh_domain_with_features_3<IGT>`
-- `CGAL::Labeled_image_mesh_domain_3<Image,BGT>`
-- `CGAL::Mesh_domain_with_polyline_features_3<MeshDomain_3>`
+- `CGAL::Polyhedral_complex_mesh_domain_3<IGT>`
+- `CGAL::Mesh_domain_with_polyline_features_3<MD>`
 - `CGAL::Mesh_polyhedron_3<IGT>`
-- `CGAL::Triangle_accessor_3<CGAL::Polyhedron_3<K>,K>`
+- `CGAL::Implicit_multi_domain_to_labeling_function_wrapper<Function>`
+- `CGAL::Image_3`
 
-## Function Templates ##
+The following functors are available for feature detection:
 
-- `CGAL::make_mesh_3`
-- `CGAL::refine_mesh_3`
-- `CGAL::exude_mesh_3`
-- `CGAL::perturb_mesh_3`
-- `CGAL::lloyd_optimize_mesh_3`
-- `CGAL::odt_optimize_mesh_3`
+- `CGAL::Mesh_3::Detect_features_in_image`
+- `CGAL::Mesh_3::Detect_features_on_image_bbox`
 
-## CGAL::parameters Functions ##
+The following functors are available for mesh initialization:
 
-- `CGAL::parameters::features`
-- `CGAL::parameters::no_features`
-- `CGAL::parameters::exude`
-- `CGAL::parameters::no_exude`
-- `CGAL::parameters::perturb`
-- `CGAL::parameters::no_perturb`
-- `CGAL::parameters::lloyd`
-- `CGAL::parameters::no_lloyd`
-- `CGAL::parameters::odt`
-- `CGAL::parameters::no_odt`
+- `CGAL::Construct_initial_points_labeled_image`
+- `CGAL::Construct_initial_points_gray_image`
 
-## Enumerations ##
+\cgalCRPSection{Function Templates}
+
+- `CGAL::make_mesh_3()`
+- `CGAL::refine_mesh_3()`
+- `CGAL::exude_mesh_3()`
+- `CGAL::perturb_mesh_3()`
+- `CGAL::lloyd_optimize_mesh_3()`
+- `CGAL::odt_optimize_mesh_3()`
+- `CGAL::Mesh_3::generate_label_weights()`
+
+\cgalCRPSection{%CGAL::parameters Functions}
+
+- `CGAL::parameters::features()`
+- `CGAL::parameters::no_features()`
+- `CGAL::parameters::initial_points()`
+- `CGAL::parameters::initial_points_generator()`
+- `CGAL::parameters::exude()`
+- `CGAL::parameters::no_exude()`
+- `CGAL::parameters::perturb()`
+- `CGAL::parameters::no_perturb()`
+- `CGAL::parameters::lloyd()`
+- `CGAL::parameters::no_lloyd()`
+- `CGAL::parameters::odt()`
+- `CGAL::parameters::no_odt()`
+- `CGAL::parameters::manifold()`
+- `CGAL::parameters::manifold_with_boundary()`
+- `CGAL::parameters::non_manifold()`
+
+\cgalCRPSection{Enumerations}
 
 - `CGAL::Mesh_optimization_return_code`
 - `CGAL::Mesh_facet_topology`
-
 */
-

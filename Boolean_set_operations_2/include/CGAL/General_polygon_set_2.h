@@ -2,25 +2,20 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
-// $Id$ $Date$
-// 
+// $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
-// Author(s)     : Baruch Zukerman <baruchzu@post.tau.ac.il>
-//                 Efi Fogel <efif@post.tau.ac.il>
+// Author(s) : Baruch Zukerman <baruchzu@post.tau.ac.il>
+//             Efi Fogel <efif@post.tau.ac.il>
 
 #ifndef CGAL_GENERAL_POLYGON_SET_2_H
 #define CGAL_GENERAL_POLYGON_SET_2_H
+
+#include <CGAL/license/Boolean_set_operations_2.h>
+
+#include <CGAL/disable_warnings.h>
 
 #include <CGAL/basic.h>
 
@@ -32,45 +27,47 @@
 namespace CGAL {
 
 // General_polygon_set_2
-template <class Traits_, class Dcel_ = Gps_default_dcel<Traits_> >
-class General_polygon_set_2 : public General_polygon_set_on_surface_2
-  <Traits_, typename Default_planar_topology<Traits_, Dcel_>::Traits>
-{
-protected:
-  typedef General_polygon_set_2<Traits_, Dcel_>           Self;
-  
+template <typename Traits_, typename Dcel_ = Gps_default_dcel<Traits_>>
+class General_polygon_set_2 :
+  public General_polygon_set_on_surface_2<
+    Traits_, typename Default_planar_topology<Traits_, Dcel_>::Traits> {
+
 public:
-  typedef Traits_                                         Traits_2;
-  typedef Dcel_                                           Dcel;
+  using Traits_2 = Traits_;
+  using Dcel = Dcel_;
+  using Self = General_polygon_set_2<Traits_2, Dcel>;
+  using Topology_traits = typename Default_planar_topology<Traits_2, Dcel>::Traits;
+  using Base = General_polygon_set_on_surface_2<Traits_2, Topology_traits>;
+  using Arrangement_2 = CGAL::Arrangement_2<Traits_2, Dcel>;
+  using Polygon_2 = typename Base::Polygon_2;
+  using Polygon_with_holes_2 = typename Base::Polygon_with_holes_2;
 
-  typedef General_polygon_set_on_surface_2 <Traits_2,
-    typename Default_planar_topology<Traits_2, Dcel >::Traits>
-                                                          Base;
+  // default constructor
+  General_polygon_set_2() : Base() {}
 
-  typedef CGAL::Arrangement_2<Traits_2, Dcel>             Arrangement_2;
+  // constructor from a traits object
+  General_polygon_set_2(const Traits_2& traits) : Base(traits) {}
 
-  typedef typename Base::Polygon_2                        Polygon_2;
-  typedef typename Base::Polygon_with_holes_2             Polygon_with_holes_2;
+  // constructor from a polygon
+  explicit General_polygon_set_2(const Polygon_2& pgn) : Base(pgn) {}
 
-  // default costructor
-  General_polygon_set_2() : Base()
+  // constructor from a polygon with holes
+  explicit General_polygon_set_2(const Polygon_with_holes_2& pwh) : Base(pwh) {}
+
+  // constructor from a polygon and a traits object
+  explicit General_polygon_set_2(const Polygon_2& pgn, const Traits_2& traits) :
+    Base(pgn, traits)
   {}
 
-
-  // constructor with traits object
-  General_polygon_set_2(Traits_2& tr) : Base(tr)
+  // constructor from a polygon with holes and a traits object
+  explicit General_polygon_set_2(const Polygon_with_holes_2& pwh,
+                                 const Traits_2& traits) :
+    Base(pwh, traits)
   {}
-
-  explicit General_polygon_set_2(const Polygon_2& pgn) : Base(pgn)
-  { }
-
-  explicit General_polygon_set_2(const Polygon_with_holes_2& pgn_with_holes): 
-   Base(pgn_with_holes) 
-  { }
 
   // For some reason the below functions (the ones that we call "using" for)
   // are hidden by the function in this class and are not found in the parent's
-  // class (General_polygon_set_on_surface_2) when they are called on an 
+  // class (General_polygon_set_on_surface_2) when they are called on an
   // object of type General_polygon_set_2.
   // Check in the Vandervoorde / Stroustrup books what is the exact reason.
   // (There may be a better and more correct solution.)
@@ -78,44 +75,39 @@ public:
   using Base::join;
   using Base::symmetric_difference;
 
-  inline void intersection(const Self& ps1, const Self& ps2)
-  {
+  inline void intersection(const Self& ps1, const Self& ps2) {
     Base::intersection(static_cast<const Base&>(ps1),
                        static_cast<const Base&>(ps2));
   }
 
-  inline void join(const Self& ps1, const Self& ps2)
-  {
+  inline void join(const Self& ps1, const Self& ps2) {
     Base::join(static_cast<const Base&>(ps1), static_cast<const Base&>(ps2));
   }
 
-  inline void symmetric_difference(const Self& ps1, const Self& ps2)
-  {
+  inline void symmetric_difference(const Self& ps1, const Self& ps2) {
     Base::symmetric_difference(static_cast<const Base&>(ps1),
                                static_cast<const Base&>(ps2));
   }
 
   //@{
-  
+
   /*! Obtain a const reference to the underlying arrangement
    * \return the underlying arrangement.
    */
   const Arrangement_2& arrangement() const
-  {
-    return *(static_cast<const Arrangement_2*>(this->m_arr));
-  }
+  { return *(static_cast<const Arrangement_2*>(this->m_arr)); }
 
   /*! Obtain a reference to the underlying arrangement
    * \return the underlying arrangement.
    */
   Arrangement_2& arrangement()
-  {
-    return *(static_cast<Arrangement_2*>(this->m_arr));
-  }
+  { return *(static_cast<Arrangement_2*>(this->m_arr)); }
 
   //@}
 };
 
 } //namespace CGAL
+
+#include <CGAL/enable_warnings.h>
 
 #endif

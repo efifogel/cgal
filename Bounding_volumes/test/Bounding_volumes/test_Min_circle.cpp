@@ -13,19 +13,19 @@
 //
 // file          : test/Min_circle_2/test_Min_circle_2.C
 // package       : $CGAL_Package: Min_circle_2 $
-// chapter       : Geometric Optimisation
+// chapter       : Geometric Optimization
 //
 // source        : web/Min_circle_2.aw
 // revision      : $Id$
 // revision_date : $Date$
 //
-// author(s)     : Sven Schönherr <sven@inf.ethz.ch>, Bernd Gärtner
-// coordinator   : ETH Zürich (Bernd Gärtner <gaertner@inf.ethz.ch>)
+// author(s)     : Sven SchÃ¶nherr <sven@inf.ethz.ch>, Bernd GÃ¤rtner
+// coordinator   : ETH ZÃ¼rich (Bernd GÃ¤rtner <gaertner@inf.ethz.ch>)
 //
 // implementation: test program for 2D Smallest Enclosing Circle
 // ============================================================================
 
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Exact_integer.h>
 #include <CGAL/Cartesian.h>
 #include <CGAL/Homogeneous.h>
 #include <CGAL/Min_circle_2.h>
@@ -38,7 +38,7 @@
 #include <cstring>
 #include <fstream>
 
-typedef CGAL::Arithmetic_kernel::Integer      Rt;
+typedef CGAL::Exact_integer                   Rt;
 typedef  CGAL::Quotient< Rt >                 Ft;
 
 typedef  CGAL::Cartesian< Ft >                KerC;
@@ -219,26 +219,26 @@ cover_Min_circle_2( bool verbose, const Traits&, const RT&)
     {
         verr << endl << "  writing `test_Min_circle_2.ascii'...";
         ofstream os( "test_Min_circle_2.ascii");
-        CGAL::set_ascii_mode( os);
+        CGAL::IO::set_ascii_mode( os);
         os << mc;
     }
     {
         verr << endl << "  writing `test_Min_circle_2.pretty'...";
         ofstream os( "test_Min_circle_2.pretty");
-        CGAL::set_pretty_mode( os);
+        CGAL::IO::set_pretty_mode( os);
         os << mc;
     }
     {
         verr << endl << "  writing `test_Min_circle_2.binary'...";
         ofstream os( "test_Min_circle_2.binary");
-        CGAL::set_binary_mode( os);
+        CGAL::IO::set_binary_mode( os);
         os << mc;
     }
     {
         verr << endl << "  reading `test_Min_circle_2.ascii'...";
         Min_circle mc_in;
         ifstream is( "test_Min_circle_2.ascii");
-        CGAL::set_ascii_mode( is);
+        CGAL::IO::set_ascii_mode( is);
         is >> mc_in;
         bool    is_valid = mc_in.is_valid( verbose);
         assert( is_valid);
@@ -433,15 +433,15 @@ main( int argc, char* argv[])
     // external test sets
     // -------------------
     while ( argc > 1) {
-    
+
         typedef  CGAL::Min_circle_2< TraitsH >  Min_circle;
         typedef  Min_circle::Point              Point;
-    
+
         CGAL::Verbose_ostream verr( verbose);
-    
+
         // read points from file
         verr << std::endl << "input file: `" << argv[ 1] << "'" << std::flush;
-    
+
         std::list<Point>  points;
         int               n, x, y;
         std::ifstream     in( argv[ 1]);
@@ -451,12 +451,12 @@ main( int argc, char* argv[])
             in >> x >> y;
             assert( in);
             points.push_back( Point( x, y)); }
-    
+
         // compute and check min_circle
         Min_circle  mc2( points.begin(), points.end(), false);
         bool  is_valid = mc2.is_valid( verbose);
         assert( is_valid);
-    
+
         // next file
         --argc;
         ++argv; }

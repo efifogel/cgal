@@ -1,3 +1,4 @@
+
 // ============================================================================
 //
 // Copyright (c) 1997 The CGAL Consortium
@@ -11,25 +12,22 @@
 // release       : $CGAL_Revision: CGAL-wip $
 // release_date  : $CGAL_Date$
 //
-// chapter       : $CGAL_Chapter: Optimisation $
+// chapter       : $CGAL_Chapter: Geometric Optimization $
 // package       : $CGAL_Package: MinSphere $
 // file          : min_sphere_traits_2_test.C
 // source        : web/Optimisation/Min_sphere_d.aw
 // revision      : $Id$
 // revision_date : $Date$
-// author(s)     : Sven Schönherr <sven@inf.fu-berlin.de>
-//                 Bernd Gärtner
+// author(s)     : Sven SchÃ¶nherr <sven@inf.fu-berlin.de>
+//                 Bernd GÃ¤rtner
 //
-// coordinator   : ETH Zurich (Bernd Gärtner <gaertner@inf.ethz.ch>)
+// coordinator   : ETH Zurich (Bernd GÃ¤rtner <gaertner@inf.ethz.ch>)
 //
 // implementation: dD Smallest Enclosing Sphere
 // ============================================================================
 
 // hack to overcome external linkage conflict warning in MIPS
 #define __SGI_STL_INTERNAL_RELOPS
-
-#include <CGAL/basic.h>
-
 
 #include <cassert>
 #include<CGAL/Random.h>
@@ -39,12 +37,12 @@
 #include<CGAL/Min_sphere_d.h>
 #include<CGAL/Min_circle_2.h>
 #include<CGAL/Min_circle_2_traits_2.h>  //why is this not in Min_circle_2.h
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Exact_rational.h>
 
 using namespace CGAL;
 
 // leda_rational, or Gmpq, or Quotient<MP_float>
-typedef CGAL::Arithmetic_kernel::Rational           NT;
+typedef CGAL::Exact_rational                        NT;
 typedef NT                                          FT;
 typedef NT                                          RT;
 typedef Cartesian<FT>                               C;

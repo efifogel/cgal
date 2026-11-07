@@ -21,13 +21,13 @@ int main(int argc, char** argv)
     std::ifstream input_aux_file(sub_filename.str().c_str());
     int xdim, ydim, zdim;
     input_aux_file >> xdim >> ydim >> zdim;
-    if(!input_aux_file) 
+    if(!input_aux_file)
     {
       cout << "\nERROR: cannot read the auxiliary file '" << sub_filename.str() << "'!\n";
       return 1;
     }
 
-    _image* image = ::_readImage_raw(argv[1],
+    CGAL::_image* image = CGAL::_readImage_raw(argv[1],
                                      xdim, ydim, zdim);
     if(image)
     {
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 #else
                       << ".inr";
 #endif
-      return ::_writeImage(image, output_filename.str().c_str());
+      return CGAL::_writeImage(image, output_filename.str().c_str());
     }
   }
   else

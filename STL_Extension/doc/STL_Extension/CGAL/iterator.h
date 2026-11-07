@@ -1,5 +1,5 @@
 /// \defgroup STLIterators Iterators and Iterator/Circulator Adaptors
-/// \ingroup PkgStlExtension
+/// \ingroup PkgSTLExtensionRef
 
 namespace CGAL {
 
@@ -12,7 +12,7 @@ specific object of type `T`.
 
 
 
-\cgalModels `RandomAccessIterator`
+\cgalModels{RandomAccessIterator}
 
 \sa `CGAL::Emptyset_iterator`
 \sa `CGAL::Oneset_iterator`
@@ -54,14 +54,12 @@ from input iterators.
 
 
 
-\cgalModels `InputIterator`
+\cgalModels{InputIterator}
 
 \cgalHeading{Requirements}
 
 `Iterator` is a model for
 `InputIterator`.
-
-\sa `CGAL::copy_n()`
 
 
 */
@@ -108,19 +106,19 @@ The class `Dispatch_or_drop_output_iterator` defines an
 `OutputIterator` that contains a tuple of output iterators, and
 dispatches among those based on the type of the value type which is
 put in it. Besides defining assignment for all parameters of `V`
-and for a tuple of type `V`,  it is also defined for the types `boost::variant<T...>` and
-`boost::optional<boost::variant<T...>>`, where `T...`
+and for a tuple of type `V`,  it is also defined for the types `std::variant<T...>` and
+`std::optional<std::variant<T...> >`, where `T...`
 must be a subset of the parameters of `V`. Should the
-`boost::optional` be empty, it will be discarded.
+`std::optional` be empty, it will be discarded.
 
 \cgalHeading{Parameters}
 
-\tparam V must be a `CGAL::cpp11::tuple<...>` of the types of values to be accepted and dispatched.
-\tparam O must be a `CGAL::cpp11::tuple<...>` of the types of corresponding output iterators.
+\tparam V must be a `std::tuple<...>` of the types of values to be accepted and dispatched.
+\tparam O must be a `std::tuple<...>` of the types of corresponding output iterators.
 
-\cgalModels `OutputIterator`
+\cgalModels{OutputIterator}
 
-cgalExample{STL_Extension/Dispatch_output_iterator.cpp}
+\cgalExample{STL_Extension/Dispatch_output_iterator.cpp}
 
 \sa `CGAL::Dispatch_output_iterator<V,O>`
 */
@@ -193,22 +191,22 @@ dispatch_or_drop_output(O... o);
 The class `Dispatch_output_iterator` defines an
 `OutputIterator` that contains a tuple of output iterators, and
 dispatches among those based on the type of the value type which is
-put in it. Other types are also accepted, and the object is 
+put in it. Other types are also accepted, and the object is
 discarded in this case. Besides defining assignment for all
-parameters of V and for a tuple of type `V`, it is also defined for the types
-`boost::variant<T...` and
-`boost::optional<boost::variant<T...>`, where `T...`
+parameters of `V` and for a tuple of type `V`, it is also defined for the types
+`std::variant<T...>` and
+`std::optional<std::variant<T...> >`, where `T...`
 can be a list of arbitrary types.
 
-  It also inherits from `O, which makes it easy to treat like a
+  It also inherits from `O`, which makes it easy to treat like a
   tuple.
 
 \cgalHeading{Parameters}
 
-\tparam V must be a `CGAL::cpp11::tuple<...>` of the types of values to be accepted and dispatched.
-\tparam O must be a `CGAL::cpp11::tuple<...>` of the types of corresponding output iterators.
+\tparam V must be a `std::tuple<...>` of the types of values to be accepted and dispatched.
+\tparam O must be a `std::tuple<...>` of the types of corresponding output iterators.
 
-\cgalModels `OutputIterator`
+\cgalModels{OutputIterator}
 
 \sa `CGAL::Dispatch_or_drop_output_iterator<V,O>`
 */
@@ -287,7 +285,7 @@ think of it as being connected to <TT>/dev/null</TT>.
 
 
 
-\cgalModels `OutputIterator`
+\cgalModels{OutputIterator}
 
 \sa `CGAL::Oneset_iterator`
 \sa `CGAL::Const_oneset_iterator`
@@ -295,8 +293,7 @@ think of it as being connected to <TT>/dev/null</TT>.
 
 */
 
-class Emptyset_iterator {
-public:
+struct Emptyset_iterator {
 
 /// \name Creation
 /// @{
@@ -348,8 +345,7 @@ argument, and not the iterator itself.
 
 */
 template< typename Iterator, typename Predicate >
-class Filter_iterator {
-public:
+struct Filter_iterator {
 
 /// \name Creation
 /// @{
@@ -399,9 +395,9 @@ to `std::insert_iterator`, but differs in that it calls the
 `insert()` function of the container without the iterator
 additional argument.
 
-\cgalModels `OutputIterator`
+\cgalModels{OutputIterator}
 
-\cgalRequires `Container` provides a member function `insert(const Container::const_reference&)`.
+\tparam Container provides a member function `insert(const Container::const_reference&)`.
 
 */
 template< typename Container >
@@ -540,7 +536,7 @@ object.
 
 
 
-\cgalModels `InputIterator`
+\cgalModels{InputIterator}
 
 \sa `CGAL::Creator_1<Arg, Result>`
 
@@ -599,7 +595,7 @@ The class `Join_input_iterator_2` joins two iterators. The result is again an it
 iterator category type as the original iterator) that reads an object
 from the stream and applies a function object to that object.
 
-\cgalModels `InputIterator`
+\cgalModels{InputIterator}
 
 
 */
@@ -646,11 +642,11 @@ Join_input_iterator_2(I1 i1,I2 i2,const Op& op=Op());
 /*!
 \ingroup STLIterators
 
-The class `Join_input_iterator_3` joins two iterators. The result is again an iterator (of the same
+The class `Join_input_iterator_3` joins three iterators. The result is again an iterator (of the same
 iterator category type as the original iterator) that reads an object
 from the stream and applies a function object to that object.
 
-\cgalModels `InputIterator`
+\cgalModels{InputIterator}
 
 
 */
@@ -744,7 +740,7 @@ pointer to the referred object.
 
 
 
-\cgalModels `BidirectionalIterator`
+\cgalModels{BidirectionalIterator}
 
 \sa `CGAL::Emptyset_iterator`
 \sa `CGAL::Const_oneset_iterator`

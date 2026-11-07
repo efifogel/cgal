@@ -1,24 +1,16 @@
-// Copyright (c) 2003  
+// Copyright (c) 2003
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Menelaos Karavelas <mkaravel@cse.nd.edu>
 
@@ -40,7 +32,7 @@ template <class It1, class It2> class Concatenate_iterator;
 
 template <class It1, class It2>
 bool operator==(const Concatenate_iterator<It1,It2>&,
-		const Concatenate_iterator<It1,It2>&);
+                const Concatenate_iterator<It1,It2>&);
 
 
 template <class It1, class It2>
@@ -62,8 +54,10 @@ public:
 
 public:
   Concatenate_iterator() : e1_(), i1_(), b2_(), i2_() {}
+
   Concatenate_iterator(It1 e1, It2 b2, It1 i1)
     : e1_(e1), i1_(i1), b2_(b2), i2_(b2) {}
+
   Concatenate_iterator(It1 e1, It2 b2, It2 i2, int)
     : e1_(e1), i1_(e1), b2_(b2), i2_(i2) {}
 
@@ -101,7 +95,33 @@ public:
     return tmp;
   }
 
-  
+  Self operator+(std::size_t offset) const
+  {
+    // todo: make this a O(1) time operation
+    Self res(*this);
+    for(std::size_t i=0;i<offset;++i){
+      ++res;
+    }
+    return res;
+  }
+
+  Self& operator+=(std::size_t offset)
+  {
+    *this=this->operator+(offset);
+    return *this;
+  }
+
+  std::size_t operator-(Self other) const
+  {
+    // todo: make this a O(1) time operation
+    std::size_t res = 0;
+    while(other != *this){
+      ++res;
+      ++other;
+    }
+    return res;
+  }
+
   reference  operator*()  const
   {
     if ( i1_ == e1_ ) {
@@ -132,7 +152,7 @@ protected:
 template<class It1, class It2>
 inline
 bool operator==(const Concatenate_iterator<It1, It2>& it1,
-		const Concatenate_iterator<It1, It2>& it2)
+                const Concatenate_iterator<It1, It2>& it2)
 {
   return (it1.i1_ == it2.i1_ && it1.i2_ == it2.i2_);
 }
@@ -140,7 +160,7 @@ bool operator==(const Concatenate_iterator<It1, It2>& it1,
 template<class It1, class It2>
 inline
 bool operator!=(const Concatenate_iterator<It1, It2>& it1,
-		const Concatenate_iterator<It1, It2>& it2)
+                const Concatenate_iterator<It1, It2>& it2)
 {
   return !(it1 == it2);
 }

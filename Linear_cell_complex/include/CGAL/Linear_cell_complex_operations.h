@@ -1,19 +1,11 @@
 // Copyright (c) 2011 CNRS and LIRIS' Establishments (France).
 // All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
 //
 // Author(s)     : Guillaume Damiand <guillaume.damiand@liris.cnrs.fr>
 //
@@ -21,15 +13,33 @@
 #define CGAL_LINEAR_CELL_COMPLEX_OPERATIONS_H 1
 
 #include <CGAL/Cell_iterators.h>
-#include <CGAL/Combinatorial_map_operations.h>
-#include <vector>
+#include <CGAL/Cell_const_iterators.h>
+#include <CGAL/Origin.h>
+#include <CGAL/assertions.h>
 
 namespace CGAL {
 
   /** @file Linear_cell_complex_operations.h
    * Basic operators on  a linear cell complex.
    */
+  namespace internal {
+    template <class Point, class Vector>
+    void newell_single_step_3_for_lcc(const Point& p, const Point& q, Vector& n)
+    {
+      // Compute normal of the face by using Newell's method: for each edge PQ
+      // Nx += (Py - Qy) * (Pz + Qz);
+      // Ny += (Pz - Qz) * (Px + Qx);
+      // Nz += (Px - Qx) * (Py + Qy);
+      n = Vector(n.x()+((p.y()-q.y())*(p.z()+q.z())),
+                 n.y()+((p.z()-q.z())*(p.x()+q.x())),
+                 n.z()+((p.x()-q.x())*(p.y()+q.y())));
 
+      // Dot product formula
+      /*n=Vector(n.x()+((p.y()*q.z())-(p.z()*q.y())),
+               n.y()+((p.x()*q.z())-(p.z()*q.x())),
+               n.z()+((p.x()*q.y())-(p.y()*q.x())));*/
+    }
+  } // End namespace internal
 
   /** Compute the normal of the given facet.
    * @param amap the used linear cell complex.
@@ -38,48 +48,42 @@ namespace CGAL {
    */
   template <class LCC>
   typename LCC::Vector compute_normal_of_cell_2
-  (const LCC& amap, typename LCC::Dart_const_handle adart)
+  (const LCC& amap, typename LCC::Dart_const_descriptor adart)
   {
-    // TODO Better approximation by using Newell's method
-    // Nx += (Vy - V'y) * (Vz + V'z);
-    // Ny += (Vz - V'z) * (Vx + V'x);
-    // Nz += (Vx - V'x) * (Vy + V'y);
-    // But problem with functor since this is not the sum of normal vectors.
-
     typedef typename LCC::Point Point;
     typedef typename LCC::Vector Vector;
-    typename LCC::Dart_const_handle start=adart;
+
+    typename LCC::Dart_const_descriptor start=adart;
     Vector normal(CGAL::NULL_VECTOR);
 
-    while ( !amap.template is_free<0>(start) &&
-            amap.template beta<0>(start)!=adart )
-      start = amap.template beta<0>(start);
+    // We go to the beginning of the face (first dart)
+    while ( amap.is_previous_exist(start) && amap.previous(start)!=adart )
+      start = amap.previous(start);
 
-    if ( amap.template is_free<1>(start) ||
-         amap.other_extremity(amap.template beta<1>(start))==LCC::null_handle )
-      return normal;
-
+    // Now we advance to process each edge
     unsigned int nb = 0;
-    adart = amap.template beta<1>(start);
+    const Point* curr = &amap.point(start);
 
-    const Point* prev = &amap.point(start);
-    const Point* curr = &amap.point(adart);
-    for ( ; adart!=start && amap.other_extremity(adart)!=LCC::null_handle;
-          adart=amap.template beta<1>(adart) )
+    adart=start;
+    do
     {
-      const Point* next = &amap.point( amap.other_extremity(adart));
-      if ( !typename LCC::Traits::Collinear_3()(*prev, *curr, *next) )
+      if (amap.other_extremity(adart)==LCC::null_descriptor)
+        adart=start; // To leave the loop, because we know that adart has no next dart
+      else
       {
-        normal = typename LCC::Traits::Construct_sum_of_vectors()
-          (normal, typename LCC::Traits::Construct_normal_3()
-           (*prev, *curr, *next));
-        prev = curr;
+        const Point* next = &amap.point(amap.other_extremity(adart));
+        internal::newell_single_step_3_for_lcc(*curr, *next, normal);
         ++nb;
+        curr = next;
+        if (amap.is_next_exist(adart) && amap.next(adart)!=start)
+          adart=amap.next(adart);
+        else
+          adart=start;
       }
-      curr = next;
     }
+    while(adart!=start);
 
-    if ( nb<2 ) return normal;
+    CGAL_assertion(nb>0);
     return (typename LCC::Traits::Construct_scaled_vector()(normal, 1.0/nb));
     //  return normal / std::sqrt(normal * normal);
   }
@@ -91,14 +95,14 @@ namespace CGAL {
    */
   template <class LCC>
   typename LCC::Vector compute_normal_of_cell_0
-  (const LCC& amap, typename LCC::Dart_const_handle adart)
+  (const LCC& amap, typename LCC::Dart_const_descriptor adart)
   {
     typedef typename LCC::Vector Vector;
     Vector normal(CGAL::NULL_VECTOR);
     unsigned int nb = 0;
 
-    for ( CMap_one_dart_per_incident_cell_const_iterator<LCC,2,0>
-            it(amap, adart); it.cont(); ++it )
+    for ( typename LCC::template One_dart_per_incident_cell_range<2,0>::
+          const_iterator it(amap, adart); it.cont(); ++it )
     {
       normal = typename LCC::Traits::Construct_sum_of_vectors()
         (normal, CGAL::compute_normal_of_cell_2(amap,it));
@@ -114,18 +118,18 @@ namespace CGAL {
   struct Barycenter_functor
   {
     static typename LCC::Point run(const LCC& amap,
-                                   typename LCC::Dart_const_handle adart)
+                                   typename LCC::Dart_const_descriptor adart)
     {
-      CGAL_static_assertion(0<i && i<=LCC::dimension);
-      CGAL_assertion(adart != LCC::null_handle);
+      static_assert(0<i && i<=LCC::dimension);
+      CGAL_assertion(adart != LCC::null_descriptor);
 
       typename LCC::Vector vec
         (typename LCC::Traits::Construct_vector()(CGAL::ORIGIN,
                                                   amap.point(adart)));
       unsigned int nb = 1;
 
-      CGAL::CMap_one_dart_per_incident_cell_const_iterator<LCC,0,i,i>
-          it(amap, adart);
+      typename LCC::template One_dart_per_incident_cell_range<0, i, i>::
+          const_iterator it(amap, adart);
       for ( ++it; it.cont(); ++it)
       {
         vec = typename LCC::Traits::Construct_sum_of_vectors()
@@ -145,12 +149,12 @@ namespace CGAL {
   struct Barycenter_functor<LCC, 1, dim>
   {
     static typename LCC::Point run(const LCC& amap,
-                                   typename LCC::Dart_const_handle adart)
+                                   typename LCC::Dart_const_descriptor adart)
     {
-      CGAL_static_assertion(1<=LCC::dimension);
-      CGAL_assertion(adart != LCC::null_handle);
-      typename LCC::Dart_const_handle d2=amap.other_extremity(adart);
-      if (d2==amap.null_handle) return amap.point(adart);
+      static_assert(1<=LCC::dimension);
+      CGAL_assertion(adart != LCC::null_descriptor);
+      typename LCC::Dart_const_descriptor d2=amap.other_extremity(adart);
+      if (d2==amap.null_descriptor) return amap.point(adart);
       return typename LCC::Traits::Construct_midpoint()
         (amap.point(adart),
          amap.point(d2));
@@ -162,26 +166,43 @@ namespace CGAL {
   struct Barycenter_functor<LCC, 2, dim>
   {
     static typename LCC::Point run(const LCC& amap,
-                                   typename LCC::Dart_const_handle adart)
+                                   typename LCC::Dart_const_descriptor adart)
     {
-      CGAL_static_assertion(2<=LCC::dimension);
-      CGAL_assertion(adart != LCC::null_handle);
+      static_assert(2<=LCC::dimension);
+      CGAL_assertion(adart != LCC::null_descriptor);
+
+      // We go to the beginning of the face (first dart, case of open face)
+      typename LCC::Dart_const_descriptor start=adart;
+      while ( amap.is_previous_exist(start) && amap.previous(start)!=adart )
+        start = amap.previous(start);
 
       typename LCC::Vector vec
         (typename LCC::Traits::Construct_vector()(CGAL::ORIGIN,
-                                                  amap.point(adart)));
+                                                  amap.point(start)));
+
+      if ((!amap.is_previous_exist(adart) && !amap.is_next_exist(adart)) ||
+          amap.next(adart)==adart)
+        return typename LCC::Traits::Construct_translated_point()
+            (CGAL::ORIGIN, vec);  // case of face with only one edge
+
       unsigned int nb = 1;
 
-        typename LCC::template Dart_of_cell_range<2,2>::const_iterator
-          vhit  = amap.template darts_of_cell<2,2>(adart).begin(),
-          vhend = amap.template darts_of_cell<2,2>(adart).end();
-      for( ++vhit; vhit!=vhend; ++vhit )
+      // Now we advance to process each edge
+      adart=amap.next(start); // Because the first vertex was already sum up
+      do
       {
         vec = typename LCC::Traits::Construct_sum_of_vectors()
           (vec, typename LCC::Traits::Construct_vector()(CGAL::ORIGIN,
-                                                         amap.point(vhit) ));
+                                                         amap.point(adart)));
         ++nb;
+        if (amap.is_next_exist(adart) && amap.next(adart)!=start)
+          adart=amap.next(adart);
+        else
+          adart=start;
       }
+      while(adart!=start);
+
+      CGAL_assertion(nb>1);
       return typename LCC::Traits::Construct_translated_point()
         (CGAL::ORIGIN, typename LCC::Traits::Construct_scaled_vector()
          (vec, 1.0/nb));

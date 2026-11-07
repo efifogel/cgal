@@ -6,10 +6,19 @@
 #include <CGAL/Mesh_criteria_3.h>
 #include <CGAL/Polyhedral_mesh_domain_with_features_3.h>
 #include <CGAL/make_mesh_3.h>
+#include <CGAL/SMDS_3/Dump_c3t3.h>
 
 #include <sstream>
 
-template <typename K>
+template <typename Range> class Non_copyable_range_view {
+  Range& r;
+public:
+  Non_copyable_range_view(Range& r) : r(r) {}
+  auto begin() const { return r.begin(); }
+  auto end() const { return r.end(); }
+};
+
+template <typename K, typename Concurrency_tag = CGAL::Sequential_tag>
 struct Polyhedron_tester : public Tester<K>
 {
   void polyhedron() const
@@ -19,13 +28,16 @@ struct Polyhedron_tester : public Tester<K>
     typedef typename CGAL::Mesh_polyhedron_3<K>::type MeshPolyhedron_3;
 
     // Triangulation
-    typedef typename CGAL::Mesh_triangulation_3<Mesh_domain>::type Tr;
+    typedef typename CGAL::Mesh_triangulation_3<
+      Mesh_domain,
+      typename CGAL::Kernel_traits<Mesh_domain>::Kernel,
+      Concurrency_tag>::type Tr;
     typedef CGAL::Mesh_complex_3_in_triangulation_3<Tr,
       typename Mesh_domain::Corner_index,
-      typename Mesh_domain::Curve_segment_index> C3t3;
+      typename Mesh_domain::Curve_index> C3t3;
 
     // Criteria
-    typedef CGAL::Mesh_criteria_3<Tr> Mesh_criteria;
+    typedef CGAL::Mesh_criteria_3<C3t3> Mesh_criteria;
 
     MeshPolyhedron_3 P;
 
@@ -50,7 +62,10 @@ struct Polyhedron_tester : public Tester<K>
     // Mesh criteria
     using namespace CGAL::parameters;
     const double cs = 0.408248;
-    Mesh_criteria criteria(edge_size = cs/2.0,
+    Mesh_criteria criteria(
+#ifndef CGAL_MESH_3_USE_DEFAULT_EDGE_SIZE
+                           edge_size = cs/2.0,
+#endif // see test_meshing_with_default_edge_size.cpp
                            facet_angle = 25,
                            facet_size = cs,
                            facet_distance = cs/10.0,
@@ -59,11 +74,46 @@ struct Polyhedron_tester : public Tester<K>
     // Mesh generation
     C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria);
 
+    // test initial_points with a tuple-like object
+    using Weighted_point = typename K::Weighted_point_3;
+    using Index = typename Mesh_domain::Index;
+    struct Initial_point
+    {
+      Weighted_point weighted_point;
+      int dimension;
+      Index index;
+    };
+    std::vector<Initial_point> initial_points = { Initial_point{ Weighted_point(.5, .5, .5), 3, Index{}} };
+    c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, CGAL::parameters::initial_points(initial_points));
+
+    // test initial_points with a non-copyable range
+    Non_copyable_range_view initial_points_view{ initial_points };
+    c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria, CGAL::parameters::initial_points(initial_points_view));
+
+    // test initial_points_generator with a non-const generator generating tuple-like object
+    auto initial_points_generator = [](auto oit, const int) mutable {
+      *oit++ = Initial_point{ Weighted_point(.5, .5, .5), 3, Index{} };
+      return oit;
+    };
+    c3t3 = CGAL::make_mesh_3<C3t3>(domain, criteria,
+        CGAL::parameters::initial_points_generator(initial_points_generator));
+
+    CGAL::remove_far_points_in_mesh_3(c3t3);
+
     double vol = 1/6.;
     this->verify_c3t3_volume(c3t3, vol*0.95, vol*1.05);
-
+#ifdef CGAL_MESH_3_USE_DEFAULT_EDGE_SIZE
+    this->verify_c3t3(c3t3,domain,Polyhedral_tag(),
+                      55, 70, 110, 135, 85, 130);
+#else // not CGAL_MESH_3_USE_DEFAULT_EDGE_SIZE
     this->verify_c3t3(c3t3,domain,Polyhedral_tag(),
                       55, 65, 110, 125, 85, 120);
+#endif // not CGAL_MESH_3_USE_DEFAULT_EDGE_SIZE
+
+#ifndef DUMP_FILES_PREFIX
+#  define DUMP_FILES_PREFIX "unit_tetrahedron"
+#endif// see test_meshing_with_default_edge_size.cpp
+    CGAL::dump_c3t3(c3t3, DUMP_FILES_PREFIX);
   }
 };
 
@@ -72,6 +122,12 @@ int main() {
   Polyhedron_tester<K> test_epic;
   std::cerr << "Mesh generation from a polyhedron:\n";
   test_epic.polyhedron();
+
+#ifdef CGAL_LINKED_WITH_TBB
+  Polyhedron_tester<K, CGAL::Parallel_tag> test_epic_p;
+  std::cerr << "Parallel mesh generation from a polyhedron:\n";
+  test_epic_p.polyhedron();
+#endif
 
   return EXIT_SUCCESS;
 }

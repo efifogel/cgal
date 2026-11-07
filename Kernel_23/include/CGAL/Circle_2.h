@@ -1,23 +1,15 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Andreas Fabri
@@ -27,10 +19,10 @@
 #define CGAL_CIRCLE_2_H
 
 #include <CGAL/assertions.h>
-#include <boost/type_traits/is_same.hpp>
 #include <CGAL/Kernel/Return_base_tag.h>
 #include <CGAL/Bbox_2.h>
 #include <CGAL/Dimension.h>
+#include <CGAL/number_utils.h>
 
 namespace CGAL {
 
@@ -39,11 +31,13 @@ class Circle_2 : public R_::Kernel_base::Circle_2
 {
   typedef typename R_::FT                    FT;
   typedef typename R_::Point_2               Point_2;
+  typedef typename R_::Segment_2             Segment_2;
+  typedef typename R_::Iso_rectangle_2       Iso_rectangle_2;
   typedef typename R_::Kernel_base::Circle_2 RCircle_2;
   typedef typename R_::Aff_transformation_2  Aff_transformation_2;
 
   typedef Circle_2                           Self;
-  CGAL_static_assertion((boost::is_same<Self, typename R_::Circle_2>::value));
+  static_assert(std::is_same<Self, typename R_::Circle_2>::value);
 
 public:
 
@@ -69,8 +63,11 @@ public:
   Circle_2(const RCircle_2& t)
     : RCircle_2(t) {}
 
+  Circle_2(RCircle_2&& t)
+    : RCircle_2(std::move(t)) {}
+
   Circle_2(const Point_2 &center, const FT &squared_radius,
-	   const Orientation &orientation)
+           const Orientation &orientation)
     : RCircle_2(typename R::Construct_circle_2()(Return_base_tag(), center, squared_radius, orientation)) {}
 
   Circle_2(const Point_2 &center, const FT &squared_radius)
@@ -80,7 +77,7 @@ public:
     : RCircle_2(typename R::Construct_circle_2()(Return_base_tag(), p, q, r)) {}
 
   Circle_2(const Point_2 & p, const Point_2 & q,
-	   const Orientation &orientation)
+           const Orientation &orientation)
     : RCircle_2(typename R::Construct_circle_2()(Return_base_tag(), p, q, orientation)) {}
 
   Circle_2(const Point_2 & p, const Point_2 & q)
@@ -95,19 +92,20 @@ public:
   Circle_2(const Point_2 & center)
     : RCircle_2(typename R::Construct_circle_2()(Return_base_tag(), center, FT(0), COUNTERCLOCKWISE)) {}
 
-  typename cpp11::result_of<typename R::Construct_center_2(Circle_2)>::type
+  decltype(auto)
   center() const
   {
     return R().construct_center_2_object()(*this);
   }
 
-  typename cpp11::result_of<typename R::Compute_squared_radius_2(Circle_2)>::type
+  decltype(auto)
   squared_radius() const
   {
     return R().compute_squared_radius_2_object()(*this);
   }
 
-  Orientation orientation() const
+  typename R::Orientation
+  orientation() const
   {
     // This make_certain(), the uncertain orientation of circles, the orientation
     // of circles, are all yucky.
@@ -134,7 +132,7 @@ public:
   }
 
   typename R::Boolean
-  has_on_bounded_side(const Point_2 &p) const
+  has_on_bounded_side(const Point_2& p) const
   {
     return bounded_side(p) == ON_BOUNDED_SIDE;
   }
@@ -143,6 +141,18 @@ public:
   has_on_unbounded_side(const Point_2 &p) const
   {
     return bounded_side(p) == ON_UNBOUNDED_SIDE;
+  }
+
+  typename R::Boolean
+  has_on_unbounded_side(const Iso_rectangle_2& r) const
+  {
+    return R().has_on_unbounded_side_2_object()(*this, r);
+  }
+
+  typename R::Boolean
+  has_on_unbounded_side(const Segment_2& s) const
+  {
+    return R().has_on_unbounded_side_2_object()(*this, s);
   }
 
   typename R::Boolean
@@ -172,26 +182,14 @@ public:
   {
     //return R().construct_opposite_circle_2_object()(*this);
     return Circle_2(center(),
-		    squared_radius(),
-		    CGAL::opposite(orientation()) );
+                    squared_radius(),
+                    CGAL::opposite(orientation()) );
   }
 
   Bbox_2
   bbox() const
   {
     return R().construct_bbox_2_object()(*this);
-  }
-
-  typename R::Boolean
-  operator==(const Circle_2 &c) const
-  {
-    return R().equal_2_object()(*this, c);
-  }
-
-  typename R::Boolean
-  operator!=(const Circle_2 &c) const
-  {
-    return !(*this == c);
   }
 
   Circle_2 transform(const Aff_transformation_2 &t) const
@@ -228,7 +226,7 @@ template <class R >
 std::ostream&
 insert(std::ostream& os, const Circle_2<R>& c)
 {
-    switch(os.iword(IO::mode)) {
+    switch(IO::get_mode(os)) {
     case IO::ASCII :
         os << c.center() << ' ' << c.squared_radius() << ' '
            << static_cast<int>(c.orientation());
@@ -269,11 +267,11 @@ std::istream&
 extract(std::istream& is, Circle_2<R>& c)
 {
     typename R::Point_2 center;
-    typename R::FT squared_radius;
-    int o;
-    switch(is.iword(IO::mode)) {
+    typename R::FT squared_radius(0);
+    int o=0;
+    switch(IO::get_mode(is)) {
     case IO::ASCII :
-        is >> center >> squared_radius >> o;
+        is >> center >> IO::iformat(squared_radius) >> o;
         break;
     case IO::BINARY :
         is >> center;
@@ -281,12 +279,13 @@ extract(std::istream& is, Circle_2<R>& c)
         is >> o;
         break;
     default:
+        is.setstate(std::ios::failbit);
         std::cerr << "" << std::endl;
-        std::cerr << "Stream must be in ascii or binary mode" << std::endl;
+        std::cerr << "Stream must be in ASCII or binary mode" << std::endl;
         break;
     }
     if (is)
-	c = Circle_2<R>(center, squared_radius, static_cast<Orientation>(o));
+        c = Circle_2<R>(center, squared_radius, static_cast<Orientation>(o));
     return is;
 }
 

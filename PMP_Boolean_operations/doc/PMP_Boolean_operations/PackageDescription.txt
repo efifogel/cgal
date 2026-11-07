@@ -1,0 +1,99 @@
+/// \defgroup PkgPMPBooleanOperationsRef Reference Manual
+/// \defgroup PkgPMPBooleanOperationsConcepts Concepts
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_corefinement_grp Corefinement and Autorefinement
+/// Functions to corefine triangulated surface meshes and triangle soups.
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_boolop_grp Boolean Operations on Triangle Meshes
+/// Functions to compute the union, difference, and intersection of triangle meshes.
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_boolop_soup_grp Boolean Operations on Triangle Soups
+/// Functions to compute Boolean operations on possibly non-manifold inputs, and/or whose output is possibly non-manifold
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_clip_grp Clipping and Splitting
+/// Functions to clip and split meshes using planes, boxes, or other meshes.
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_slicing_grp Slicing
+/// Functions to split meshes using planes.
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/// \defgroup PMP_kernel_grp Mesh Kernel
+/// Functions to compute kernel of polyhedra.
+/// \ingroup PkgPMPBooleanOperationsRef
+
+/*!
+\addtogroup PkgPMPBooleanOperationsRef
+
+\cgalPkgDescriptionBegin{Boolean Operations on Meshes, PkgPMPBooleanOperations}
+\cgalPkgPicture{pmp-boolop-icon.png}
+
+\cgalPkgSummaryBegin
+\cgalPkgAuthors{Sébastien Loriot, Léo Valque, and Ilker O. Yaz}
+\cgalPkgDesc{This package provides a collection of methods and classes to compute
+Boolean operations on meshes (union, intersection, and difference), clipping and splitting
+of meshes using planes, boxes, or other meshes, and slicing of triangulated surfaces.}
+\cgalPkgManuals{Chapter_PMPBooleanOperations,PkgPMPBooleanOperationsRef}
+\cgalPkgSummaryEnd
+
+\cgalPkgShortInfoBegin
+\cgalPkgSince{4.7}
+\cgalPkgDependsOn{documented for each function}
+\cgalPkgBib{cgal:pmp-boolop}
+\cgalPkgLicense{\ref licensesGPL "GPL"}
+\cgalPkgDemo{CGAL Lab,CGALlab.zip}
+\cgalPkgShortInfoEnd
+
+\cgalPkgDescriptionEnd
+
+\cgalClassifedRefPages
+
+\cgalCRPSection{Parameters}
+
+Optional parameters of the functions of this package are implemented as \ref BGLNamedParameters.
+The page \ref bgl_namedparameters "Named Parameters" describes their usage.
+
+\cgalCRPSection{Corefinement}
+- `CGAL::Polygon_mesh_processing::corefine()`
+- `CGAL::Polygon_mesh_processing::autorefine_triangle_soup()`
+- `CGAL::Polygon_mesh_processing::autorefine()`
+
+\cgalCRPSection{Boolean Operations}
+- `CGAL::Polygon_mesh_processing::corefine_and_compute_union()`
+- `CGAL::Polygon_mesh_processing::corefine_and_compute_difference()`
+- `CGAL::Polygon_mesh_processing::corefine_and_compute_intersection()`
+- `CGAL::Polygon_mesh_processing::corefine_and_compute_boolean_operations()`
+- `CGAL::Polygon_mesh_processing::surface_intersection()` (deprecated)
+- `CGAL::Polygon_mesh_processing::intersection_polylines()`
+
+\cgalCRPSection{Boolean Operations on Triangle Soups (possibly non-manifold)}
+- `CGAL::Polygon_mesh_processing::compute_union_of_triangle_soups()`
+- `CGAL::Polygon_mesh_processing::compute_difference_of_triangle_soups()`
+- `CGAL::Polygon_mesh_processing::compute_intersection_of_triangle_soups()`
+
+\cgalCRPSection{Clipping and Splitting}
+- `CGAL::Polygon_mesh_processing::clip()`
+- `CGAL::Polygon_mesh_processing::split()`
+
+\cgalCRPSection{Slicing}
+- `CGAL::Polygon_mesh_slicer`
+- `CGAL::Polygon_mesh_processing::refine_with_plane()`
+- `CGAL::Polygon_mesh_processing::refine_mesh_at_isolevel()`
+
+\cgalCRPSection{%Kernel Computation}
+- `CGAL::Polygon_mesh_processing::kernel()`
+- `CGAL::Polygon_mesh_processing::has_empty_kernel()`
+- `CGAL::Polygon_mesh_processing::kernel_point()`
+
+\cgalCRPSection{See Also}
+- `CGAL::Polygon_mesh_processing::IO::read_polygon_mesh()`
+- `CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh()`
+- `CGAL::Polygon_mesh_processing::polygon_mesh_to_polygon_soup()`
+- `CGAL::Polygon_mesh_processing::triangulate_faces()`
+- `CGAL::Polygon_mesh_processing::do_intersect()`
+
+*/

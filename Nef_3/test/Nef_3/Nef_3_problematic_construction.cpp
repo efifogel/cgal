@@ -28,7 +28,8 @@
 #define CGAL_NEF3_SORT_OUTPUT 1
 
 
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Exact_integer.h>
+#include <CGAL/Exact_rational.h>
 #include <CGAL/Cartesian.h>
 #include <CGAL/Homogeneous.h>
 #include <CGAL/Nef_polyhedron_3.h>
@@ -40,8 +41,8 @@
 #include <string>
 
 
-typedef CGAL::Arithmetic_kernel::Integer NT;
-typedef CGAL::Arithmetic_kernel::Rational FNT;
+typedef CGAL::Exact_integer NT;
+typedef CGAL::Exact_rational FNT;
 
 
 template<typename Kernel>
@@ -50,7 +51,7 @@ class test {
   typedef CGAL::Nef_polyhedron_3<Kernel>                    Nef_polyhedron;
 
 private:
-  static const char* datadir;  
+  static const char* datadir;
 
   bool are_files_equal(const char* name1, const char* name2) {
     std::ifstream in1(name1);
@@ -63,8 +64,8 @@ private:
       in2 >> s2;
       if(s1 != s2) {
         std::cerr << s1 << std::endl;
-	std::cerr << s2 << std::endl;
-	OK = false;
+        std::cerr << s2 << std::endl;
+        OK = false;
       }
     }
     if(in2)
@@ -74,12 +75,12 @@ private:
       char c;
       std::ifstream err1(name1);
       while(err1.get(c))
-	std::cerr << c;
+        std::cerr << c;
       std::ifstream err2(name2);
       while(err2.get(c))
-	std::cerr << c;
+        std::cerr << c;
     }
-	
+
     return OK;
   }
 
@@ -125,7 +126,7 @@ int main() {
 #if defined( CGAL_USE_LEDA ) || defined ( CGAL_USE_GMP )
   typedef CGAL::Homogeneous<NT>              H_kernel;
   typedef CGAL::Cartesian<FNT>               C_kernel;
-  
+
   test<H_kernel>  test_H;
   test<C_kernel>  test_C;
 

@@ -1,57 +1,49 @@
 # Created by the script cgal_create_cmake_script
 # This is the CMake script for compiling a CGAL application.
 
+cmake_minimum_required(VERSION 3.12...3.31)
+project(Arithmetic_kernel_Tests)
 
-project( Arithmetic_kernel_test )
+find_package(CGAL REQUIRED)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
-endif()
+find_package(GMP)
 
+if(GMP_FOUND)
 
-find_package(CGAL QUIET COMPONENTS Core GMP MPFR MPFI)
+  include(CGAL_VersionUtils)
 
-if ( CGAL_FOUND )
+  get_dependency_version(GMP)
 
-  include( ${CGAL_USE_FILE} )
-  include( CGAL_VersionUtils )
-  
-  get_dependency_version( GMP )
+  is_version_less("${GMP_VERSION}" "4.2.0" _IS_GMP_VERSION_TO_LOW)
 
-  IS_VERSION_LESS("${GMP_VERSION}" "4.2.0" _IS_GMP_VERSION_TO_LOW)
-  
-  include_directories(../../include)
   include_directories(include)
 
-  include( CGAL_CreateSingleSourceCGALProgram )
+  find_package(MPFI QUIET)
 
-  if( MPFI_FOUND )
+  if(MPFI_FOUND)
+    include(${MPFI_USE_FILE})
+
     # for the testsuite, the version of MPFI shipped with RS is used; this
     # version needs GMP>=4.2, so we require this dependency only here and
     # not in FindMPFI.cmake
-    if( _IS_GMP_VERSION_TO_LOW )
-      message( STATUS
-        "MPFI tests need GMP>=4.2, some of the tests will not be compiled" )
-    else( _IS_GMP_VERSION_TO_LOW )
-      include( ${MPFI_USE_FILE} )
-      create_single_source_cgal_program( "GMP_arithmetic_kernel.cpp" )      
-    endif( _IS_GMP_VERSION_TO_LOW )
-  else( MPFI_FOUND )
-    message( STATUS
-      "MPFI is not present, some of the tests will not be compiled." )
-  endif( MPFI_FOUND )
+    if(_IS_GMP_VERSION_TO_LOW)
+      message(STATUS "NOTICE: MPFI tests need GMP>=4.2, some of the tests will not be compiled")
+    else(_IS_GMP_VERSION_TO_LOW)
+      include(${MPFI_USE_FILE})
+      create_single_source_cgal_program("GMP_arithmetic_kernel.cpp")
+    endif(_IS_GMP_VERSION_TO_LOW)
+  else(MPFI_FOUND)
+    message(STATUS "NOTICE: MPFI is not present, some of the tests will not be compiled.")
+  endif(MPFI_FOUND)
 
-  create_single_source_cgal_program( "Arithmetic_kernel.cpp" )
-  create_single_source_cgal_program( "LEDA_arithmetic_kernel.cpp" )
-  create_single_source_cgal_program( "CORE_arithmetic_kernel.cpp" )
-  create_single_source_cgal_program( "Get_arithmetic_kernel.cpp" )
+  create_single_source_cgal_program("Arithmetic_kernel.cpp")
+  create_single_source_cgal_program("LEDA_arithmetic_kernel.cpp")
+  create_single_source_cgal_program("CORE_arithmetic_kernel.cpp")
+  create_single_source_cgal_program("GMPXX_arithmetic_kernel.cpp")
+  create_single_source_cgal_program("Get_arithmetic_kernel.cpp")
 
 else()
-  
-    message(STATUS "This program requires the CGAL library, and will not be compiled.")
-  
-endif()
 
+  message("NOTICE: This project requires GMP support, and will not be compiled.")
+
+endif()

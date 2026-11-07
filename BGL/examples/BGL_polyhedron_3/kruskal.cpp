@@ -1,12 +1,10 @@
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Polyhedron_3.h>
-#include <CGAL/IO/Polyhedron_iostream.h>
-#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 
 #include <iostream>
 #include <list>
 
-#include <boost/graph/kruskal_min_spanning_tree.hpp>
+#include <CGAL/boost/graph/kruskal_min_spanning_tree.h>
 
 
 typedef CGAL::Simple_cartesian<double>                       Kernel;
@@ -34,22 +32,22 @@ kruskal(const Polyhedron& P)
   // associate indices to the vertices
   vertex_iterator vb, ve;
   int index = 0;
-  
-  // boost::tie assigns the first and second element of the std::pair
+
+  // std::tie assigns the first and second element of the std::pair
   // returned by boost::vertices to the variables vb and ve
-  for(boost::tie(vb, ve)=vertices(P); vb!=ve; ++vb){
+  for(std::tie(vb, ve)=vertices(P); vb!=ve; ++vb){
     vertex_index_pmap[*vb]= index++;
   }
 
-  
-  // We use the default edge weight which is the squared length of the edge
+
+  // We use the default edge weight which is the length of the edge
   // This property map is defined in graph_traits_Polyhedron_3.h
 
   // In the function call you can see a named parameter: vertex_index_map
   std::list<edge_descriptor> mst;
 
-  boost::kruskal_minimum_spanning_tree(P, 
-                                       std::back_inserter(mst), 
+  boost::kruskal_minimum_spanning_tree(P,
+                                       std::back_inserter(mst),
                                        boost::vertex_index_map(vertex_index_pmap));
 
   std::cout << "#VRML V2.0 utf8\n"
@@ -61,7 +59,7 @@ kruskal(const Polyhedron& P)
     "      coord Coordinate {\n"
     "        point [ \n";
 
-  for(boost::tie(vb, ve) = vertices(P); vb!=ve; ++vb){
+  for(std::tie(vb, ve) = vertices(P); vb!=ve; ++vb){
     std::cout <<  "        " << (*vb)->point() << "\n";
   }
 

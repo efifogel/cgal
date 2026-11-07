@@ -2,19 +2,11 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Lutz Kettner  <kettner@mpi-sb.mpg.de>
 //                 Andreas Meyer <ameyer@mpi-sb.mpg.de>
@@ -22,13 +14,14 @@
 #ifndef CGAL_BOX_INTERSECTION_D_SEGMENT_TREE_H
 #define CGAL_BOX_INTERSECTION_D_SEGMENT_TREE_H
 
+#include <CGAL/license/Box_intersection_d.h>
+
 #include <CGAL/basic.h>
 #include <CGAL/Box_intersection_d/box_limits.h>
 
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
-
 
 #include <algorithm>
 #include <iterator>
@@ -54,9 +47,11 @@ void all_pairs( ForwardIter1 p_begin, ForwardIter1 p_end,
     const int last_dim = Traits::dimension() - 1;
     for( ForwardIter1 p = p_begin; p != p_end; ++p ) {
         for( ForwardIter2 i = i_begin; i != i_end; ++i ) {
-            if ((complete_case && Traits::id(*p) >= Traits::id(*i))
-                || Traits::id(*p) == Traits::id(*i))
-                continue;
+            if constexpr(Traits::has_unique_box_traits)
+                if ((complete_case && Traits::id(*p) >= Traits::id(*i))
+                    || Traits::id(*p) == Traits::id(*i))
+                    continue;
+
             for( int dim = 0; dim <= last_dim; ++dim )
                 if( !Traits::does_intersect( *p, *i, dim ) )
                     goto no_intersection1;
@@ -90,14 +85,15 @@ void all_pairs( ForwardIter p_begin, ForwardIter p_end,
 }
 
 
-template< class RandomAccessIter1, class RandomAccessIter2,
+template< bool in_order = true, class RandomAccessIter1, class RandomAccessIter2,
           class Callback, class Traits >
 void one_way_scan( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
                    RandomAccessIter2 i_begin, RandomAccessIter2 i_end,
-                   Callback callback, Traits, int last_dim,
-                   bool in_order = true )
+                   Callback callback, Traits, int last_dim )
 {
     typedef typename Traits::Compare Compare;
+
+    // Putting a parallel sort here slows down the overall parallel algorithm
     std::sort( p_begin, p_end, Compare( 0 ) );
     std::sort( i_begin, i_end, Compare( 0 ) );
 
@@ -112,12 +108,21 @@ void one_way_scan( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
              p != p_end && Traits::is_lo_less_hi( *p, *i, 0 );
              ++p )
         {
-            if( Traits::id( *p ) == Traits::id( *i ) )
-                continue;
+
+            if constexpr(Traits::has_unique_box_traits)
+                if( Traits::id( *p ) == Traits::id( *i ) )
+                    continue;
+
             for( int dim = 1; dim <= last_dim; ++dim )
-                if( !Traits::does_intersect( *p, *i, dim ) )
-                    goto no_intersection;
-            if( in_order )
+                if constexpr( in_order )
+                {
+                    if( !Traits::does_intersect( *p, *i, dim ) )
+                        goto no_intersection;
+                }
+                else
+                    if( !Traits::does_intersect( *i, *p, dim ) )
+                        goto no_intersection;
+            if constexpr( in_order )
                 callback( *p, *i );
             else
                 callback( *i, *p );
@@ -128,13 +133,12 @@ void one_way_scan( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
 
 }
 
-template< class RandomAccessIter1, class RandomAccessIter2,
+template< bool in_order = true, class RandomAccessIter1, class RandomAccessIter2,
           class Callback, class Traits >
 void modified_two_way_scan(
     RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
     RandomAccessIter2 i_begin, RandomAccessIter2 i_end,
-    Callback callback, Traits, int last_dim,
-    bool in_order = true )
+    Callback callback, Traits, int last_dim)
 {
     typedef typename Traits::Compare Compare;
 
@@ -148,14 +152,15 @@ void modified_two_way_scan(
                  p != p_end && Traits::is_lo_less_hi( *p, *i_begin, 0 );
                  ++p )
             {
-                if( Traits::id( *p ) == Traits::id( *i_begin ) )
-                    continue;
+                if constexpr(Traits::has_unique_box_traits)
+                    if( Traits::id( *p ) == Traits::id( *i_begin ) )
+                        continue;
 
                 for( int dim = 1; dim <= last_dim; ++dim )
                     if( !Traits::does_intersect( *p, *i_begin, dim ) )
                         goto no_intersection1;
                 if( Traits::contains_lo_point( *i_begin, *p, last_dim ) ) {
-                    if( in_order )
+                    if constexpr( in_order )
                         callback( *p, *i_begin );
                     else
                         callback( *i_begin, *p );
@@ -169,13 +174,14 @@ void modified_two_way_scan(
                  i != i_end && Traits::is_lo_less_hi( *i, *p_begin, 0 );
                  ++i )
             {
-                if( Traits::id( *p_begin ) == Traits::id( *i ) )
-                    continue;
+                if constexpr(Traits::has_unique_box_traits)
+                    if( Traits::id( *p_begin ) == Traits::id( *i ) )
+                        continue;
                 for( int dim = 1; dim <= last_dim; ++dim )
                     if( !Traits::does_intersect( *p_begin, *i, dim ) )
                         goto no_intersection2;
                 if( Traits::contains_lo_point( *i, *p_begin, last_dim ) ) {
-                    if( in_order )
+                    if constexpr( in_order )
                         callback( *p_begin, *i );
                     else
                         callback( *i, *p_begin );
@@ -212,24 +218,19 @@ median_of_three( RandomAccessIter a, RandomAccessIter b, RandomAccessIter c,
 }
 
 
-template< class RandomAccessIter, class Predicate_traits >
+template< class RandomAccessIter, class Predicate_traits, class Generator>
 class Iterative_radon {
 
   RandomAccessIter begin;
-  std::ptrdiff_t size;
   Predicate_traits traits;
   int dim;
-
-  boost::rand48 rng;
-  boost::uniform_int<std::ptrdiff_t> dist;
-  boost::variate_generator<boost::rand48&, boost::uniform_int<std::ptrdiff_t> > generator;
+  Generator& generator;
 
 public:
 
-Iterative_radon( RandomAccessIter begin, RandomAccessIter end,
-                 Predicate_traits traits, int dim, int /*num_levels*/ )
-  : begin(begin), size(end-begin), traits(traits), dim(dim), 
-    rng(), dist(0,size-1), generator(rng,dist)
+  Iterative_radon( const RandomAccessIter& begin_, const Predicate_traits& traits_,
+                   int dim_, Generator& generator_)
+  : begin(begin_), traits(traits_), dim(dim_), generator(generator_)
   {}
 
   RandomAccessIter
@@ -252,7 +253,10 @@ RandomAccessIter
 iterative_radon( RandomAccessIter begin, RandomAccessIter end,
                  Predicate_traits traits, int dim, int num_levels )
 {
-  Iterative_radon<RandomAccessIter, Predicate_traits> IR(begin,end,traits,dim,num_levels);
+  typedef typename boost::variate_generator<boost::rand48&, boost::uniform_int<std::ptrdiff_t> > Generator;
+  boost::rand48 rng;
+  Generator generator(rng, boost::uniform_int<std::ptrdiff_t>(0, (end-begin)-1));
+  Iterative_radon<RandomAccessIter, Predicate_traits, Generator> IR(begin, traits, dim, generator);
   return IR(num_levels);
 }
 
@@ -275,7 +279,6 @@ split_points( RandomAccessIter begin, RandomAccessIter end,
 
 
 #if CGAL_BOX_INTERSECTION_DEBUG
- static int level = -1;
  #define CGAL_BOX_INTERSECTION_DUMP(msg) { \
    for( unsigned int i = level; i; --i ) \
      std::cout << "  "; \
@@ -316,6 +319,59 @@ void dump_box_numbers( ForwardIter begin, ForwardIter end, Traits /* traits */ )
     std::cout << std::endl;
 }
 
+
+template<class T>
+class Has_member_report
+{
+private:
+  template<class U, U>
+  class check {};
+
+  template<class C>
+  static auto f(int) -> decltype(std::declval<C>().report(0) == true, char());
+
+  template<class C>
+  static int f(...);
+public:
+  static const bool value = (sizeof(f<T>(0)) == sizeof(char));
+};
+
+template <class T>
+inline constexpr bool Has_member_report_v = Has_member_report<T>::value;
+
+template <typename Callback>
+inline
+std::enable_if_t<Has_member_report<Callback>::value, bool>
+report_impl(Callback callback, int dim)
+{
+  return callback.report(dim);
+}
+
+template <typename Callback>
+inline
+std::enable_if_t<!Has_member_report<Callback>::value, bool>
+report_impl(const Callback&, int)
+{
+  return false;
+}
+
+template <typename Callback>
+inline
+std::enable_if_t<Has_member_report<Callback>::value, void>
+progress_impl(Callback callback, double d)
+{
+  callback.progress(d);
+}
+
+template <typename Callback>
+inline
+std::enable_if_t<!Has_member_report<Callback>::value, void>
+progress_impl(const Callback&, double)
+{}
+
+
+
+
 template< class T >
 struct Counter {
    T& value;
@@ -323,13 +379,14 @@ struct Counter {
    ~Counter() { --value; }
 };
 
-template< class RandomAccessIter1, class RandomAccessIter2,
+template< bool in_order,
+          class RandomAccessIter1, class RandomAccessIter2,
           class Callback, class T, class Predicate_traits >
 void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
                    RandomAccessIter2 i_begin, RandomAccessIter2 i_end,
                    T lo, T hi,
                    Callback callback, Predicate_traits traits,
-                   std::ptrdiff_t cutoff, int dim, bool in_order )
+                   std::ptrdiff_t cutoff, int dim)
 {
     typedef typename Predicate_traits::Spanning   Spanning;
     typedef typename Predicate_traits::Lo_less    Lo_less;
@@ -338,9 +395,11 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
     const T inf = box_limits< T >::inf();
     const T sup = box_limits< T >::sup();
 
-#if CGAL_BOX_INTERSECTION_DEBUG
+    CGAL_STATIC_THREAD_LOCAL_VARIABLE(int, level, -1);
     Counter<int> bla( level );
-    CGAL_BOX_INTERSECTION_DUMP("range: [" << lo << "," << hi << ") dim " 
+
+    #if CGAL_BOX_INTERSECTION_DEBUG
+    CGAL_BOX_INTERSECTION_DUMP("range: [" << lo << "," << hi << ") dim "
                                           << dim << std::endl )
     CGAL_BOX_INTERSECTION_DUMP("intervals: " )
     //dump_box_numbers( i_begin, i_end, traits );
@@ -363,13 +422,20 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
     }
 #endif
 
-    if( p_begin == p_end || i_begin == i_end || lo >= hi )
+    if( p_begin == p_end || i_begin == i_end || lo >= hi ){
+      if(report_impl(callback, dim)){
+          progress_impl(callback, 1.0 / (1 << level));
+        }
         return;
+    }
 
     if( dim == 0 )  {
         CGAL_BOX_INTERSECTION_DUMP( "dim = 0. scanning ... " << std::endl )
-        one_way_scan( p_begin, p_end, i_begin, i_end,
-                      callback, traits, dim, in_order );
+        one_way_scan<in_order>( p_begin, p_end, i_begin, i_end,
+                                callback, traits, dim);
+        if(report_impl(callback,dim)){
+          progress_impl(callback, 1.0 / (1 << level));
+        }
         return;
     }
 
@@ -377,8 +443,11 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
         std::distance( i_begin, i_end ) < cutoff  )
     {
         CGAL_BOX_INTERSECTION_DUMP( "scanning ... " << std::endl )
-        modified_two_way_scan( p_begin, p_end, i_begin, i_end,
-                               callback, traits, dim, in_order );
+        modified_two_way_scan<in_order>(p_begin, p_end, i_begin, i_end,
+                                        callback, traits, dim);
+        if(report_impl(callback,dim)){
+          progress_impl(callback, 1.0 / (1 << level));
+        }
         return;
     }
 
@@ -386,13 +455,13 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
         std::partition( i_begin, i_end, Spanning( lo, hi, dim ) );
 
     if( i_begin != i_span_end ) {
-        CGAL_BOX_INTERSECTION_DUMP( "checking spanning intervals ... " 
+        CGAL_BOX_INTERSECTION_DUMP( "checking spanning intervals ... "
                                     << std::endl )
         // make two calls for roots of segment tree at next level.
-        segment_tree( p_begin, p_end, i_begin, i_span_end, inf, sup,
-                      callback, traits, cutoff, dim - 1,  in_order );
-        segment_tree( i_begin, i_span_end, p_begin, p_end, inf, sup,
-                      callback, traits, cutoff, dim - 1, !in_order );
+        segment_tree< in_order>(p_begin, p_end, i_begin, i_span_end, inf, sup,
+                                callback, traits, cutoff, dim - 1);
+        segment_tree<!in_order>(i_begin, i_span_end, p_begin, p_end, inf, sup,
+                                callback, traits, cutoff, dim - 1);
     }
 
     T mi;
@@ -401,10 +470,13 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
     if( p_mid == p_begin || p_mid == p_end )  {
         CGAL_BOX_INTERSECTION_DUMP( "unable to split points! ")
         //dump_points( p_begin, p_end, traits, dim );
-        CGAL_BOX_INTERSECTION_DUMP( "performing modified two_way_san ... " 
+        CGAL_BOX_INTERSECTION_DUMP( "performing modified two_way_san ... "
                                      << std::endl )
-        modified_two_way_scan( p_begin, p_end, i_span_end, i_end,
-                               callback, traits, dim, in_order );
+        modified_two_way_scan<in_order>(p_begin, p_end, i_span_end, i_end,
+                                        callback, traits, dim);
+        if(report_impl(callback,dim)){
+          progress_impl(callback, 1.0 / (1 << level));
+        }
         return;
     }
 
@@ -413,14 +485,14 @@ void segment_tree( RandomAccessIter1 p_begin, RandomAccessIter1 p_end,
     // left intervals have a low point strictly less than mi
     i_mid = std::partition( i_span_end, i_end, Lo_less( mi, dim ) );
     CGAL_BOX_INTERSECTION_DUMP("->left" << std::endl )
-    segment_tree( p_begin, p_mid, i_span_end, i_mid, lo, mi,
-                  callback, traits, cutoff, dim, in_order );
+    segment_tree<in_order>( p_begin, p_mid, i_span_end, i_mid, lo, mi,
+                  callback, traits, cutoff, dim);
     // separate right intervals.
     // right intervals have a high point strictly higher than mi
     i_mid = std::partition( i_span_end, i_end, Hi_greater( mi, dim ) );
     CGAL_BOX_INTERSECTION_DUMP("->right"<< std::endl )
-    segment_tree( p_mid, p_end, i_span_end, i_mid, mi, hi,
-                  callback, traits, cutoff, dim, in_order );
+    segment_tree<in_order>( p_mid, p_end, i_span_end, i_mid, mi, hi,
+                  callback, traits, cutoff, dim);
 }
 
 #if CGAL_BOX_INTERSECTION_DEBUG

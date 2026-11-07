@@ -1,55 +1,168 @@
 # Created by the script cgal_create_cmake_script
 # This is the CMake script for compiling a CGAL application.
 
+cmake_minimum_required(VERSION 3.12...3.31)
+project( Mesh_3_Tests )
 
-project( Mesh_3_test )
+find_package(CGAL REQUIRED COMPONENTS ImageIO)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
+# Use Eigen
+find_package(Eigen3 QUIET)
+include(CGAL_Eigen3_support)
+
+if (NOT TARGET CGAL::Eigen3_support)
+  message("NOTICE: This project requires the Eigen library, and will not be compiled.")
+  return()
 endif()
 
-find_package(CGAL QUIET COMPONENTS Core ImageIO)
+find_package(TBB QUIET)
+include(CGAL_TBB_support)
 
-if ( CGAL_FOUND )
+find_package(ITT QUIET)
 
-  include( ${CGAL_USE_FILE} )
+create_single_source_cgal_program("surface_mesh_to_tetrahedral_mesh.cpp")
+create_single_source_cgal_program( "test_boost_has_xxx.cpp" )
+create_single_source_cgal_program( "test_mesh_capsule_var_distance_bound.cpp" )
+create_single_source_cgal_program( "test_implicit_multi_domain_to_labeling_function_wrapper.cpp" )
+create_single_source_cgal_program( "test_criteria.cpp" )
+create_single_source_cgal_program( "test_domain_with_polyline_features.cpp" )
+create_single_source_cgal_program( "test_labeled_mesh_domain_3.cpp" )
+create_single_source_cgal_program( "test_mesh_criteria_creation.cpp" )
+create_single_source_cgal_program( "test_without_detect_features.cpp" )
 
-  include( CGAL_CreateSingleSourceCGALProgram )
+if(CGAL_ImageIO_USE_ZLIB)
+  create_single_source_cgal_program( "test_meshing_3D_image.cpp" )
+  create_single_source_cgal_program( "test_meshing_3D_image_with_features.cpp" )
+  create_single_source_cgal_program( "test_meshing_3D_gray_image.cpp" )
+  create_single_source_cgal_program( "test_min_size_criteria.cpp")
+else()
+  message(STATUS "NOTICE: The test 'test_meshing_3D_image' requires the ZLIB library, and will not be compiled.")
+endif()
 
-  include_directories (BEFORE ../../include)
-  include_directories (BEFORE ../../../AABB_tree/include)
+create_single_source_cgal_program( "test_meshing_implicit_function.cpp" )
+create_single_source_cgal_program( "test_meshing_polyhedral_complex.cpp" )
+create_single_source_cgal_program( "test_meshing_polyhedral_complex_with_manifold_and_min_size.cpp")
+create_single_source_cgal_program( "test_meshing_polyhedron.cpp" )
+create_single_source_cgal_program( "test_meshing_polylines_only.cpp" )
+create_single_source_cgal_program( "test_meshing_polyhedron_with_features.cpp" )
+create_single_source_cgal_program( "test_meshing_verbose.cpp" )
+create_single_source_cgal_program( "test_meshing_unit_tetrahedron.cpp" )
+create_single_source_cgal_program( "test_meshing_with_default_edge_size.cpp" )
+create_single_source_cgal_program( "test_meshing_determinism.cpp" )
+create_single_source_cgal_program( "test_meshing_without_features_determinism.cpp" )
+create_single_source_cgal_program( "test_mesh_3_issue_1554.cpp" )
+create_single_source_cgal_program( "test_mesh_3_issue_8773.cpp" )
+create_single_source_cgal_program( "test_meshing_with_one_step.cpp" )
+create_single_source_cgal_program( "test_meshing_with_one_step_with_features.cpp" )
+create_single_source_cgal_program( "test_mesh_cell_base_3.cpp")
+create_single_source_cgal_program( "test_min_edge_length.cpp")
+create_single_source_cgal_program( "test_max_edge_distance.cpp")
+create_single_source_cgal_program( "test_remeshing_polyhedron.cpp" )
+create_single_source_cgal_program( "test_meshing_experimental_compact_cell_base.cpp" )
 
-  create_single_source_cgal_program( "test_backward_compatibility.cpp" )
-  create_single_source_cgal_program( "test_boost_has_xxx.cpp" )
-  create_single_source_cgal_program( "test_c3t3.cpp" )
-  create_single_source_cgal_program( "test_implicit_multi_domain_to_labeling_function_wrapper.cpp" )
-  create_single_source_cgal_program( "test_mesh_3_implicit_vector_to_labeled_function_wrapper.cpp" )
-  create_single_source_cgal_program( "test_c3t3_io.cpp" )
-  create_single_source_cgal_program( "test_c3t3_with_features.cpp" )
-  create_single_source_cgal_program( "test_criteria.cpp" )
-  create_single_source_cgal_program( "test_domain_with_polyline_features.cpp" )
-  create_single_source_cgal_program( "test_mesh_3_labeled_mesh_domain_3.cpp" )
-  create_single_source_cgal_program( "test_mesh_implicit_domains.cpp" "implicit_functions.cpp" )
-  create_single_source_cgal_program( "test_labeled_mesh_domain_3.cpp" )
-  create_single_source_cgal_program( "test_mesh_criteria_creation.cpp" )
-  if(CGAL_ImageIO_USE_ZLIB)
-    create_single_source_cgal_program( "test_meshing_3D_image.cpp" )
-  else()
-    message(STATUS "test_meshing_3D_image requires the ZLIB library, and will not be compiled.")
+foreach(target
+    surface_mesh_to_tetrahedral_mesh
+    test_boost_has_xxx
+    test_mesh_capsule_var_distance_bound
+    test_implicit_multi_domain_to_labeling_function_wrapper
+    test_criteria
+    test_domain_with_polyline_features
+    test_labeled_mesh_domain_3
+    test_mesh_criteria_creation
+    test_without_detect_features
+    test_meshing_3D_image
+    test_meshing_3D_image_with_features
+    test_meshing_3D_gray_image
+    test_meshing_implicit_function
+    test_meshing_polyhedral_complex
+    test_meshing_polyhedron
+    test_meshing_polylines_only
+    test_meshing_polyhedron_with_features
+    test_meshing_verbose
+    test_meshing_unit_tetrahedron
+    test_meshing_with_default_edge_size
+    test_meshing_determinism
+    test_meshing_without_features_determinism
+    test_mesh_3_issue_1554
+    test_mesh_3_issue_8773
+    test_mesh_cell_base_3
+    test_meshing_with_one_step
+    test_meshing_with_one_step_with_features
+    test_min_edge_length
+    test_max_edge_distance
+    test_min_size_criteria
+    test_meshing_polyhedral_complex_with_manifold_and_min_size
+    test_remeshing_polyhedron
+    test_meshing_experimental_compact_cell_base
+    )
+  if(TARGET ${target})
+    target_link_libraries(${target} PRIVATE CGAL::Eigen3_support)
   endif()
-  create_single_source_cgal_program( "test_meshing_implicit_function.cpp" )
-  create_single_source_cgal_program( "test_meshing_polyhedron.cpp" )
-  create_single_source_cgal_program( "test_meshing_polylines_only.cpp" )
-  create_single_source_cgal_program( "test_meshing_polyhedron_with_features.cpp" )
-  create_single_source_cgal_program( "test_meshing_unit_tetrahedron.cpp" )
-  create_single_source_cgal_program( "test_robust_weighted_circumcenter.cpp" )
+endforeach()
 
-else()
-  
-    message(STATUS "This program requires the CGAL library, and will not be compiled.")
-  
+if(TARGET CGAL::TBB_support)
+  foreach(target
+      surface_mesh_to_tetrahedral_mesh
+      test_meshing_verbose
+      test_meshing_polyhedron_with_features
+      test_meshing_utilities.h
+      test_meshing_implicit_function
+      test_meshing_3D_image
+      test_meshing_3D_gray_image
+      test_meshing_unit_tetrahedron
+      test_meshing_polyhedron
+      test_meshing_polyhedral_complex
+      test_mesh_capsule_var_distance_bound
+      test_meshing_determinism
+      test_meshing_without_features_determinism
+      test_mesh_3_issue_1554
+      test_mesh_3_issue_8773
+      test_mesh_cell_base_3
+      test_min_edge_length
+      test_max_edge_distance
+      test_min_size_criteria
+      test_meshing_experimental_compact_cell_base
+      )
+    if(TARGET ${target})
+      target_link_libraries(${target} PRIVATE CGAL::TBB_support)
+    endif()
+  endforeach()
+
+  if(CGAL_ENABLE_TESTING)
+    set_property(TEST
+      "execution   of  surface_mesh_to_tetrahedral_mesh"
+      "execution   of  test_meshing_verbose"
+      "execution   of  test_meshing_polyhedron_with_features"
+      "execution   of  test_meshing_implicit_function"
+      "execution   of  test_meshing_unit_tetrahedron"
+      "execution   of  test_meshing_polyhedron"
+      "execution   of  test_meshing_polyhedral_complex"
+      "execution   of  test_mesh_capsule_var_distance_bound"
+      "execution   of  test_mesh_3_issue_1554"
+      "execution   of  test_mesh_3_issue_8773"
+      "execution   of  test_mesh_cell_base_3"
+      "execution   of  test_remeshing_polyhedron"
+      "execution   of  test_mesh_cell_base_3"
+      PROPERTY RUN_SERIAL 1)
+    if(TARGET test_meshing_3D_image)
+      set_property(TEST
+        "execution   of  test_meshing_3D_image"
+        "execution   of  test_meshing_3D_gray_image"
+        PROPERTY RUN_SERIAL 1)
+    endif()
+  endif()
 endif()
 
+if(TARGET ITT::ITT)
+  target_link_libraries(test_meshing_polyhedron_with_features PRIVATE ITT::ITT)
+  target_compile_definitions(test_meshing_polyhedron_with_features PRIVATE CGAL_MESH_3_USE_INTEL_ITT)
+  target_link_libraries(test_meshing_verbose PRIVATE ITT::ITT)
+  target_compile_definitions(test_meshing_verbose PRIVATE CGAL_MESH_3_USE_INTEL_ITT)
+endif()
+
+if(CGAL_ENABLE_TESTING)
+  set_tests_properties(
+    "execution   of  test_meshing_polyhedron_with_features"
+    "execution   of  test_meshing_verbose"
+    PROPERTIES RESOURCE_LOCK Mesh_3_Tests_IO)
+endif()

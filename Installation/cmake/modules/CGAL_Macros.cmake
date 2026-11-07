@@ -16,11 +16,9 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
   macro( cache_set var )
     set ( ${var} ${ARGN} CACHE INTERNAL "" )
-    set ( ${var} ${ARGN} CACHE INTERNAL "" )
   endmacro()
 
   macro( typed_cache_set type doc var )
-    set ( ${var} ${ARGN} CACHE ${type} ${doc} FORCE )
     set ( ${var} ${ARGN} CACHE ${type} ${doc} FORCE )
   endmacro()
 
@@ -145,6 +143,7 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
       message("Search dirs:")
       message("${search_dirs}")
     endif()
+    message( STATUS "USING COMPILER_VERSION = '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}'" )
   endfunction()
 
   macro( get_dependency_version LIB )
@@ -159,16 +158,22 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
       set ( ${LIB}_VERSION "unknown" )
 
-      try_run( ${LIB}_RUN_RES
-               ${LIB}_COMPILE_RES
-               "${CMAKE_BINARY_DIR}"
-               "${CGAL_INSTALLATION_PACKAGE_DIR}/config/support/print_${LIB}_version.cpp"
-               CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${${PKG}_INCLUDE_DIR};${${PKG}_DEPENDENCY_INCLUDE_DIR}"
-                           "-DLINK_LIBRARIES:STRING=${${PKG}_LIBRARIES};${${PKG}_DEPENDENCY_LIBRARIES}"
-                           "-DLINK_DIRECTORIES:STRING=${${PKG}_LIBRARIES_DIR};${${PKG}_DEPENDENCY_LIBRARIES_DIR}"
-               OUTPUT_VARIABLE ${LIB}_OUTPUT
-            )
-
+      if(NOT CMAKE_CROSSCOMPILING)
+        if(EXISTS "${CGAL_MODULES_DIR}/config/support/print_${LIB}_version.cpp")
+          try_run( ${LIB}_RUN_RES
+                   ${LIB}_COMPILE_RES
+                   "${CMAKE_BINARY_DIR}"
+                   "${CGAL_MODULES_DIR}/config/support/print_${LIB}_version.cpp"
+                   CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${${PKG}_INCLUDE_DIR};${${PKG}_DEPENDENCY_INCLUDE_DIR}"
+                               "-DLINK_LIBRARIES:STRING=${${PKG}_LIBRARIES};${${PKG}_DEPENDENCY_LIBRARIES}"
+                               "-DLINK_DIRECTORIES:STRING=${${PKG}_LIBRARIES_DIR};${${PKG}_DEPENDENCY_LIBRARIES_DIR}"
+                   OUTPUT_VARIABLE ${LIB}_OUTPUT
+                   )
+        endif()
+      else()
+        set(${LIB}_COMPILE_RES FALSE)
+        message(STATUS "CROSS-COMPILING!")
+      endif()
       if ( ${LIB}_COMPILE_RES )
 
         if ( ${LIB}_RUN_RES EQUAL "0" )
@@ -204,216 +209,13 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
   endmacro()
 
-  macro( use_lib )
-
-    set (lib "${ARGV0}")
-
-    set (vlib ${CGAL_EXT_LIB_${lib}_PREFIX} )
-
-    if ( ${vlib}_FOUND AND (NOT TARGET CGAL OR WITH_${lib}))
-
-      if ( NOT ${vlib}_SETUP ) # avoid double usage
-
-        if ( "${ARGC}" EQUAL "2" )
-
-          set (usefile "${ARGV1}")
-
-          include( ${usefile} )
-          message (STATUS "Configured ${lib} from UseLIB-file: ${usefile}")
-
-          # UseLIB-file has to set ${vlib}_SETUP to TRUE
-          # TODO EBEB what about Qt4, Qt3, zlib?
-
-        else()
-
-          ####message( STATUS "${lib} include:     ${${vlib}_INCLUDE_DIR}" )
-          include_directories ( SYSTEM ${${vlib}_INCLUDE_DIR} )
-
-          # TODO EBEB remove definitions?
-          ####message( STATUS "${lib} definitions: ${${vlib}_DEFINITIONS}" )
-          add_definitions( ${${vlib}_DEFINITIONS} "-DCGAL_USE_${vlib}" )
-
-          if ( ${vlib}_LIBRARIES )
-            ####message( STATUS "${lib} libraries:   ${${vlib}_LIBRARIES}" )
-            link_libraries( ${${vlib}_LIBRARIES} )
-          endif()
-
-          ####message (STATUS "Configured ${lib} in standard way")
-
-          set( ${vlib}_SETUP TRUE )
-
-        endif()
-
-      endif()
-
-      if (NOT ${vlib}_SETUP )
-
-         message( WARNING "${vlib} has not been set up" )
-
-      endif()
-
-    else()
-
-      if ( WITH_${lib} )
-        message( SEND_ERROR "Try to use ${lib} that is not found")
-      endif()
-
-    endif()
-
-  endmacro()
-
-
-  macro( use_component component)
-
-    message (STATUS "Requested component: ${component}")
-
-    if(WITH_CGAL_${component})
-      if(TARGET CGAL_${component})
-        add_to_list( CGAL_LIBRARIES CGAL_${component} )
-      else()
-        add_to_list( CGAL_LIBRARIES ${CGAL_${component}_LIBRARY} )
-      endif()
-      add_to_list( CGAL_3RD_PARTY_LIBRARIES  ${CGAL_${component}_3RD_PARTY_LIBRARIES}  )
-
-      add_to_list( CGAL_3RD_PARTY_INCLUDE_DIRS   ${CGAL_${component}_3RD_PARTY_INCLUDE_DIRS}   )
-      add_to_list( CGAL_3RD_PARTY_DEFINITIONS    ${CGAL_${component}_3RD_PARTY_DEFINITIONS}    )
-      add_to_list( CGAL_3RD_PARTY_LIBRARIES_DIRS ${CGAL_${component}_3RD_PARTY_LIBRARIES_DIRS} )
-
-      # Nothing to add for Core
-
-      if (${component} STREQUAL "ImageIO")
-        find_package( OpenGL )
-        find_package( ZLIB )
-      endif()
-
-      if (${component} STREQUAL "Qt3")
-        find_package( OpenGL )
-        find_package( Qt3-patched )
-      endif()
-
-      if (${component} STREQUAL "Qt4")
-        find_package( OpenGL )
-        find_package( Qt4 )
-      endif()
-
-    else(WITH_CGAL_${component})
-
-      # now we are talking about 3rd party libs
-
-      if ( ${component} STREQUAL "ALL_PRECONFIGURED_LIBS" )
-
-        if (CGAL_ALLOW_ALL_PRECONFIGURED_LIBS_COMPONENT)
-          message( STATUS "External libraries are all used")
-          foreach ( CGAL_3RD_PARTY_LIB ${CGAL_SUPPORTING_3RD_PARTY_LIBRARIES})
-            if (${CGAL_3RD_PARTY_LIB}_FOUND)
-              use_lib( ${CGAL_3RD_PARTY_LIB} ${${CGAL_3RD_PARTY_LIB}_USE_FILE})
-            endif()
-          endforeach()
-        else()
-          message( SEND_ERROR "Component ALL_PRECONFIGURED_LIBS only allow with CGAL_ALLOW_ALL_PRECONFIGURED_LIBS_COMPONENT=ON")
-        endif()
-
-      else()
-
-        list( FIND CGAL_CONFIGURED_LIBRARIES "CGAL_${component}" POSITION )
-        if ( "${POSITION}" EQUAL "-1" ) # if component is not a CGAL_<lib>
-
-          if (NOT DEFINED CGAL_EXT_LIB_${component}_PREFIX)
-            set(CGAL_EXT_LIB_${component}_PREFIX ${component})
-          endif()
-
-          set( vlib "${CGAL_EXT_LIB_${component}_PREFIX}" )
-
-          if ( NOT CGAL_IGNORE_PRECONFIGURED_${component} AND ${vlib}_FOUND)
-
-            ####message( STATUS "External library ${component} has been preconfigured")
-            use_lib( ${component} ${${vlib}_USE_FILE})
-
-          else()
-
-            ####message( STATUS "External library ${component} has not been preconfigured")
-            find_package( ${component} )
-            ####message( STATUS "External library ${vlib} after find")
-            if (${vlib}_FOUND)
-              ####message( STATUS "External library ${vlib} about to be used")
-              use_lib( ${component} ${${vlib}_USE_FILE})
-            endif()
-
-          endif()
-        else()
-
-          if (NOT WITH_CGAL_${component}) 
-            message(STATUS "NOTICE: The CGAL_${component} library seems to be required but is not build. Thus, it is expected that some executables will not be compiled.")
-          endif()
-
-        endif()
-
-      endif()
-
-    endif(WITH_CGAL_${component})
-
-  endmacro()
-
-  macro( use_essential_libs )
-
-    # Comment: This is subject to be changed in the future
-    #          - either more specific (giving precise include_dir- and link-order)
-    #          - or even less specific if order becomes less relevant
-    # Eric Berberich 2012/06/29
-
-    if(NOT CGAL_DISABLE_GMP)
-      if(RS_FOUND)
-        use_component( RS )
-      endif()
-
-      if(MPFI_FOUND)
-        use_component( MPFI )
-      endif()
-
-      if(MPFR_FOUND)
-        use_component( MPFR )
-      endif()
-
-      if (GMPXX_FOUND)
-        use_component( GMPXX )
-      endif()
-
-      if(GMP_FOUND)
-        use_component( GMP )
-      endif()
-    endif(NOT CGAL_DISABLE_GMP)
-
-    if(LEDA_FOUND)
-      use_component( LEDA )
-    endif()
-
-    if(NTL_FOUND)
-      use_component( NTL )
-    endif()
-  endmacro()
-
-
   function( cgal_setup_module_path )
     # Avoid to modify the modules path twice
     if(NOT CGAL_MODULE_PATH_IS_SET)
       # Where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ is checked
       set(CGAL_CMAKE_MODULE_PATH ${CGAL_MODULES_DIR})
 
-      # Use FindQt4 from CMake-2.8.1 if 2.6.2 <= CMake <= 2.8.1
-      if(CMAKE_VERSION)
-        is_version_less("2.6.1" "${CMAKE_VERSION}" CMAKE_VERSION_BETWEEN_2_6_2_AND_2_8_1)
-      else()
-        # It seems CMake <= 2.6.1 does not has that CMAKE_VERSION
-        set(CMAKE_VERSION_BETWEEN_2_6_2_AND_2_8_1 FALSE)
-      endif()
-      if(CMAKE_VERSION_BETWEEN_2_6_2_AND_2_8_1)
-        is_version_less(${CMAKE_VERSION} "2.8.2" CMAKE_VERSION_BETWEEN_2_6_2_AND_2_8_1)
-        if(CMAKE_VERSION_BETWEEN_2_6_2_AND_2_8_1)
-          set(CGAL_CMAKE_MODULE_PATH ${CGAL_CMAKE_MODULE_PATH} ${CGAL_MODULES_DIR}/2.6.2-to-2.8.1)
-        endif()
-      endif()
-
-      set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} PARENT_SCOPE)
+      set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 
       set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CGAL_CMAKE_MODULE_PATH})
 
@@ -425,49 +227,6 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
     endif()
   endfunction()
 
-  macro( create_CGALconfig_files )
-
-    # CGALConfig.cmake is platform specific so it is generated and stored in the binary folder.
-    configure_file("${CGAL_MODULES_DIR}/CGALConfig_binary.cmake.in"  "${CMAKE_BINARY_DIR}/CGALConfig.cmake"        @ONLY)
-
-    # There is also a version of CGALConfig.cmake that is prepared in case CGAL in installed in CMAKE_INSTALL_PREFIX.
-    configure_file("${CGAL_MODULES_DIR}/CGALConfig_install.cmake.in" "${CMAKE_BINARY_DIR}/config/CGALConfig.cmake" @ONLY)
-
-    #write prefix exceptions
-    file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "${SPECIAL_PREFIXES}\n")
-    file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "${SPECIAL_PREFIXES}")
-
-     foreach( lib ${CGAL_SUPPORTING_3RD_PARTY_LIBRARIES} )
-
-       list( FIND CGAL_ESSENTIAL_3RD_PARTY_LIBRARIES "${lib}" POSITION )
-       # if lib is essential or preconfiguration for an activated library ...
-       if ( ("${POSITION}" STRGREATER "-1") OR ( CGAL_ENABLE_PRECONFIG AND WITH_${lib} ))
-
-         set (vlib ${CGAL_EXT_LIB_${lib}_PREFIX} )
-         #the next 'if' is needed to avoid ${vlib} config variables to be overidden in case of a local configuration change
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "if (NOT CGAL_IGNORE_PRECONFIGURED_${lib})\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "  set( ${vlib}_FOUND           \"${${vlib}_FOUND}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "  set( ${vlib}_USE_FILE        \"${${vlib}_USE_FILE}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "  set( ${vlib}_INCLUDE_DIR     \"${${vlib}_INCLUDE_DIR}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "  set( ${vlib}_LIBRARIES       \"${${vlib}_LIBRARIES}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "  set( ${vlib}_DEFINITIONS     \"${${vlib}_DEFINITIONS}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/CGALConfig.cmake "endif()\n\n")
-
-
-         #the next 'if' is needed to avoid ${vlib} config variables to be overidden in case of a local configuration change
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "if (NOT CGAL_IGNORE_PRECONFIGURED_${lib})\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "  set( ${vlib}_FOUND           \"${${vlib}_FOUND}\")\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "  set( ${vlib}_USE_FILE        \"${${vlib}_USE_FILE}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "  set( ${vlib}_INCLUDE_DIR     \"${${vlib}_INCLUDE_DIR}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "  set( ${vlib}_LIBRARIES       \"${${vlib}_LIBRARIES}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "  set( ${vlib}_DEFINITIONS     \"${${vlib}_DEFINITIONS}\" )\n")
-         file( APPEND ${CMAKE_BINARY_DIR}/config/CGALConfig.cmake "endif()\n\n")
-       endif()
-
-     endforeach()
-
-  endmacro()
-
   macro ( fetch_env_var VAR )
     if ( "${${VAR}}" STREQUAL "" )
       set( ${VAR}_env_value "$ENV{${VAR}}" )
@@ -478,14 +237,13 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
     endif()
   endmacro()
 
-
 ## All the following macros are probably unused. -- Laurent Rineau, 2011/07/21
 
   # Composes a tagged list of libraries: a list with interpersed keywords or tags
   # indicating that all following libraries, up to the next tag, are to be linked only for the
   # corresponding build type. The 'general' tag indicates libraries that corresponds to all build types.
-  # 'optimized' corresponds to release builds and 'debug' to debug builds. Tags are case sensitve and
-  # the inital range of libraries listed before any tag is implicitely 'general'
+  # 'optimized' corresponds to release builds and 'debug' to debug builds. Tags are case sensitive and
+  # the initial range of libraries listed before any tag is implicitly 'general'
   #
   # This macro takes 3 lists of general, optimized and debug libraries, resp, and populates the list
   # given in the fourth argument.
@@ -525,9 +283,9 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
   # where the general, optimized and debug libraries are collected.
   #
   # The first parameter must be a string containing a semi-colon separated list of elements.
-  # It cannot be ommitted, but it can be an empty string ""
+  # It cannot be omitted, but it can be an empty string ""
   #
-  # TThe next three arguments must be the names of the variables containing the result, and they
+  # The next three arguments must be the names of the variables containing the result, and they
   # will be APPENDED (retaining any previous contents)
   #
   # If there is a last parameter whose value is "PERSISTENT" then the result variables are internal in the cache,
@@ -587,11 +345,11 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
   #
   #   tag_libraries( LIBS_1 SOME_UNDEFINED_VARIABLE_OR_EMPTY_LIST LIBS_R )
   #
-  # LIBS_R -> libA.so;libB.so  (implicitely 'general' since there is no tag)
+  # LIBS_R -> libA.so;libB.so  (implicitly 'general' since there is no tag)
   #
   #   tag_libraries( SOME_UNDEFINED_VARIABLE_OR_EMPTY_LIST LIBS_2 LIBS_R )
   #
-  # LIBS_R -> libC.so  (implicitely 'general' since there is no tag)
+  # LIBS_R -> libC.so  (implicitly 'general' since there is no tag)
   #
   macro( tag_libraries libs_general_or_optimized libs_general_or_debug libs )
 
@@ -613,7 +371,7 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
   # Appends the list of tagged libraries contained in the variable 'libA' to the list
   # of tagged libraries contained in the variable 'libR', properly redistributing each tagged subsequence.
   #
-  # The first argument is the name of the variable recieving the list. It will be APPENDED
+  # The first argument is the name of the variable receiving the list. It will be APPENDED
   # (retaining any previous contents).
   # The second parameter is a single string value containing the tagged
   # lists of libraries to append (as a semi-colon separated list). It can be empty, in which case noting is added.
@@ -679,56 +437,4 @@ if( NOT CGAL_MACROS_FILE_INCLUDED )
 
 endif()
 
-
-function(process_CGAL_subdirectory entry subdir type_name)
-  # For example, subdir can be "examples", type_name "example", and entry "Mesh_2"
-
-  if ( CGAL_BRANCH_BUILD )
-    string( REGEX REPLACE "${CMAKE_SOURCE_DIR}/.*/${subdir}/" "" ENTRY_DIR_NAME "${entry}" )
-  else()
-    string( REGEX REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" ENTRY_DIR_NAME "${entry}" )
-  endif()
-
-  if( NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}") # out-of-source
-    make_directory("${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-  endif()
-
-  set(ADD_SUBDIR TRUE)
-
-  if(EXISTS ${entry}/../../dont_submit)
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${ENTRY_DIR_NAME}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${subdir}/${ENTRY_DIR_NAME}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-    file(STRINGS ${entry}/../../dont_submit dont_submit_grep REGEX "^${subdir}/?\$")
-    if(dont_submit_grep)
-      set(ADD_SUBDIR FALSE)
-    endif()
-  endif()
-
-  if(ADD_SUBDIR)
-    message("\n-- Configuring ${subdir} in ${subdir}/${ENTRY_DIR_NAME}")
-    if(EXISTS ${entry}/CMakeLists.txt)
-      add_subdirectory( ${entry} ${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME} )
-    else()
-      if(CGAL_CREATE_CMAKE_SCRIPT)
-#        message("bah ${CGAL_CREATE_CMAKE_SCRIPT} ${type_name} --source_dir ${entry}")
-        execute_process(
-          COMMAND bash ${CGAL_CREATE_CMAKE_SCRIPT} ${type_name} --source_dir "${entry}"
-          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}"
-          RESULT_VARIABLE RESULT_VAR OUTPUT_QUIET)
-        if(NOT RESULT_VAR)
-#          message("Subdir ${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-          add_subdirectory( "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}" "${CMAKE_BINARY_DIR}/${subdir}/${ENTRY_DIR_NAME}")
-        endif()
-      endif()
-    endif()
-  else()
-    message(STATUS "${subdir}/${ENTRY_DIR_NAME} is in dont_submit")
-  endif()
-endfunction()
-
+include(${CMAKE_CURRENT_LIST_DIR}/CGALHelpers.cmake)

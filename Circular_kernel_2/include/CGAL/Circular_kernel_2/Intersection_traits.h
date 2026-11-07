@@ -1,22 +1,15 @@
 // Copyright (c) 2013 GeometryFactory (France). All rights reserved.
 // All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Philipp Möller and Sebastien Loriot
@@ -24,12 +17,12 @@
 #ifndef CGAL_CIRCULAR_KERNEL_2_INTERSECTION_TRAITS_H
 #define CGAL_CIRCULAR_KERNEL_2_INTERSECTION_TRAITS_H
 
-//this include is needed to know the value of CGAL_INTERSECTION_VERSION
+#include <CGAL/license/Circular_kernel_2.h>
+
+
 #include <CGAL/Intersection_traits.h>
 
-#if !(CGAL_INTERSECTION_VERSION < 2)
-
-#include <boost/variant.hpp>
+#include <variant>
 
 namespace CGAL {
 
@@ -38,13 +31,23 @@ struct CK2_Intersection_traits
 {};
 
 // Intersection_traits for the circular kernel
+
+// The additional CGAL_ADDITIONAL_VARIANT_FOR_ICL ( = int) in the variant
+// has the only purpose to work around a bug of the Intel compiler,
+// which without it produces the error
+// /usr/include/boost/type_traits/has_nothrow_copy.hpp(36): internal error: bad pointer
+// template struct has_nothrow_copy_constructor : public integral_constant{};
+// See also https://github.com/CGAL/cgal/issues/1581
+
 template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Circle_2, typename CK::Circle_2>
 {
   typedef typename
-  boost::variant< typename CK::Circle_2,
+  std::variant< typename CK::Circle_2,
                   typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -52,9 +55,11 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Circular_arc_2, typename CK::Circular_arc_2>
 {
   typedef typename
-  boost::variant< typename CK::Circular_arc_2,
+  std::variant< typename CK::Circular_arc_2,
                   typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -62,9 +67,11 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_arc_2, typename CK::Line_arc_2>
 {
   typedef typename
-  boost::variant< typename CK::Line_arc_2,
+  std::variant< typename CK::Line_arc_2,
                   typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -72,8 +79,10 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_arc_2, typename CK::Circle_2>
 {
   typedef typename
-  boost::variant< typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+  std::variant< typename std::pair< typename CK::Circular_arc_point_2,
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -86,8 +95,10 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_arc_2, typename CK::Circular_arc_2>
 {
   typedef typename
-  boost::variant< typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+  std::variant< typename std::pair< typename CK::Circular_arc_point_2,
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -100,9 +111,11 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_arc_2, typename CK::Line_2>
 {
   typedef typename
-  boost::variant< typename CK::Line_arc_2,
+  std::variant< typename CK::Line_arc_2,
                   typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -115,8 +128,10 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_2, typename CK::Circular_arc_2>
 {
   typedef typename
-  boost::variant< typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+  std::variant< typename std::pair< typename CK::Circular_arc_point_2,
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -143,8 +158,10 @@ template<typename CK>
 struct CK2_Intersection_traits<CK, typename CK::Line_2, typename CK::Circle_2>
 {
   typedef typename
-  boost::variant< typename std::pair< typename CK::Circular_arc_point_2,
-                                      unsigned int > >
+  std::variant< typename std::pair< typename CK::Circular_arc_point_2,
+                                      unsigned int >
+                  CGAL_ADDITIONAL_VARIANT_FOR_ICL
+                  >
   type;
 };
 
@@ -153,17 +170,13 @@ struct CK2_Intersection_traits<CK, typename CK::Circle_2, typename CK::Line_2> :
     public CK2_Intersection_traits<CK, typename CK::Line_2, typename CK::Circle_2>
 {};
 
+template<typename CK>
+struct CK2_Intersection_traits<CK, typename CK::Line_2, typename CK::Line_2>
+{
+  typedef typename Intersection_traits<CK, typename CK::Line_2, typename CK::Line_2>::result_type type;
+};
+
 } //end of namespace CGAL
-
-#else
-
-#include <CGAL/Object.h>
-
-template <typename CK, typename T1, typename T2>
-struct CK2_Intersection_traits
-{ typedef CGAL::Object type; };
-
-#endif
 
 namespace CGAL{
 namespace internal{
@@ -176,33 +189,12 @@ namespace internal{
 // _could_ come with conversion overhead and so we rather go for
 // the real type.
 // Overloads for empty returns are also provided.
-#if CGAL_INTERSECTION_VERSION < 2
-  #if defined(CGAL_CFG_NO_CPP0X_RVALUE_REFERENCE)
-    template<typename, typename T>
-    inline
-    CGAL::Object ck2_intersection_return(const T& t) { return CGAL::make_object(t); }
-  #else
-    template<typename, typename T>
-    inline
-    CGAL::Object ck2_intersection_return(T&& t) { return CGAL::make_object(std::forward<T>(t)); }
-  #endif // CGAL_CFG_NO_CPP0X_RVALUE_REFERENCE
-  template<typename>
-  inline
-  CGAL::Object ck2_intersection_return() { return CGAL::Object(); }
-#else
-  #if defined(CGAL_CFG_NO_CPP0X_RVALUE_REFERENCE)
-    template<typename RT, typename T>
-    inline RT
-    ck2_intersection_return(const T& t) { return RT(t); }
-  #else
-    template<typename RT, typename T>
-    inline RT
-    ck2_intersection_return(T&& t) { return RT(std::forward<T>(t)); }
-  #endif // CGAL_CFG_NO_CPP0X_RVALUE_REFERENCE
+  template<typename RT, typename T>
+  inline RT
+  ck2_intersection_return(T&& t) { return RT(std::forward<T>(t)); }
   template<typename RT>
   inline RT
   ck2_intersection_return() { return RT(); }
-#endif // CGAL_INTERSECTION_VERSION < 2
 
 } } //end of namespace CGAL::internal
 

@@ -1,16 +1,16 @@
-/// \defgroup PkgAABB_tree AABB Tree Reference
+/// \defgroup PkgAABBTreeRef Reference Manual
 
-/// \defgroup PkgAABB_treeConcepts Concepts
-/// \ingroup PkgAABB_tree
+/// \defgroup PkgAABBTreeConcepts Concepts
+/// \ingroup PkgAABBTreeRef
 
 /*!
-\addtogroup PkgAABB_tree
-\cgalPkgDescriptionBegin{3D Fast Intersection and Distance Computation,PkgAABB_treeSummary}
+\addtogroup PkgAABBTreeRef
+\cgalPkgDescriptionBegin{2D and 3D Fast Intersection and Distance Computation,PkgAABBTree}
 \cgalPkgPicture{aabb-teaser-thumb.png}
 \cgalPkgSummaryBegin
-\cgalPkgAuthors{Pierre Alliez, St&eacute;phane Tayeb, Camille Wormser}
-\cgalPkgDesc{The AABB (axis-aligned bounding box) tree component offers a static data structure and algorithms to perform efficient intersection and distance queries on sets of finite 3D geometric objects.}
-\cgalPkgManuals{Chapter_3D_Fast_Intersection_and_Distance_Computation,PkgAABB_tree}
+\cgalPkgAuthors{Pierre Alliez, Stéphane Tayeb, and Camille Wormser}
+\cgalPkgDesc{The AABB (axis-aligned bounding box) tree component offers a static data structure and algorithms to perform efficient intersection and distance queries on sets of finite 2D and 3D geometric objects.}
+\cgalPkgManuals{Chapter_Fast_Intersection_and_Distance_Computation,PkgAABBTreeRef}
 \cgalPkgSummaryEnd
 \cgalPkgShortInfoBegin
 \cgalPkgSince{3.5}
@@ -22,20 +22,36 @@
 
 \cgalClassifedRefPages
 
-## Concepts ##
+\cgalCRPSection{Concepts}
 - `AABBPrimitive`
 - `AABBPrimitiveWithSharedData`
+- `AABBGeomTraits_2`
+- `AABBGeomTraits_3`
 - `AABBTraits`
-- `AABBGeomTraits`
+- `AABBRayIntersectionGeomTraits_2`
+- `AABBRayIntersectionGeomTraits_3`
+- `AABBRayIntersectionTraits`
 
-## Classes ##
-- `CGAL::AABB_traits<GeomTraits,Primitive>`
+\cgalCRPSection{Classes}
+- `CGAL::AABB_traits<GeomTraits,Primitive>` (deprecated, use `CGAL::AABB_traits_3<GeomTraits,Primitive>`)
+- `CGAL::AABB_traits_2<GeomTraits,Primitive>`
+- `CGAL::AABB_traits_3<GeomTraits,Primitive>`
 - `CGAL::AABB_tree<AT>`
 
-## Primitives ##
-- `CGAL::AABB_triangle_primitive<Iterator,CacheDatum>`
-- `CGAL::AABB_segment_primitive<Iterator,CacheDatum>`
-- `CGAL::AABB_primitive<Id,ObjectPropertyMap,PointPropertyMapPolyhedron,ExternalPropertyMaps,CacheDatum>`
-- `CGAL::AABB_halfedge_graph_segment_primitive<HalfedgeGraph,OneHalfedgeGraphPerTree,CacheDatum>`
-- `CGAL::AABB_face_graph_triangle_primitive<FaceGraph,OneFaceGraphPerTree,CacheDatum>`
+\cgalCRPSection{Primitives}
+- `CGAL::AABB_triangle_primitive_2<GeomTraits, Iterator, CacheDatum>`
+- `CGAL::AABB_indexed_triangle_primitive_2<GeomTraits, IndexIterator, PointRange, CacheDatum, PointMap>`
+- `CGAL::AABB_segment_primitive_2<GeomTraits, Iterator, CacheDatum>`
+- `CGAL::AABB_polyline_segment_primitive_2<GeomTraits, Iterator, PointRange, CacheDatum, PointMap>`
+- `CGAL::AABB_triangle_primitive<GeomTraits, Iterator, CacheDatum>` (deprecated, use `CGAL::AABB_triangle_primitive_3<GeomTraits, Iterator, CacheDatum>`)
+- `CGAL::AABB_triangle_primitive_3<GeomTraits, Iterator, CacheDatum>`
+- `CGAL::AABB_segment_primitive<GeomTraits, Iterator, CacheDatum>` (deprecated, use `CGAL::AABB_segment_primitive_3<GeomTraits, Iterator, CacheDatum>`)
+- `CGAL::AABB_segment_primitive_3<GeomTraits, Iterator, CacheDatum>`
+- `CGAL::AABB_primitive<Id,ObjectPropertyMap,PointPropertyMap,ExternalPropertyMaps,CacheDatum>`
+- `CGAL::AABB_halfedge_graph_segment_primitive<HalfedgeGraph,Vpm,OneHalfedgeGraphPerTree,CacheDatum>`
+- `CGAL::AABB_face_graph_triangle_primitive<FaceGraph,Vpm,OneFaceGraphPerTree,CacheDatum>`
+
+\cgalCRPSection{Functions}
+- `CGAL::AABB_trees::do_intersect()`
+- `CGAL::AABB_trees::all_pairs_of_intersecting_primitives()`
 */

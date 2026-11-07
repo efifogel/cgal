@@ -26,7 +26,7 @@ struct Truc
 {
   Truc(int v = 0) : value(v), /*value2(v), */p(NULL) {}
   void *   for_compact_container() const { return p; }
-  void * & for_compact_container()       { return p; }
+  void for_compact_container(void *ptr) { p = ptr; }
 
   int value;
   int value2;
@@ -47,12 +47,16 @@ inline void compute_the_thing(Truc &thing)
 }
 
 #ifdef CGAL_LINKED_WITH_TBB
+// For parallel_for
 template <typename Array_t>
 class Change_array_functor
 {
 public:
   Change_array_functor(Array_t &v)
     : m_v(v) {}
+
+  Change_array_functor(const Change_array_functor &caf)
+    : m_v(caf.m_v) {}
 
   void operator() (const tbb::blocked_range<size_t>& r) const
   {
@@ -65,12 +69,17 @@ private:
   Array_t &m_v;
 };
 
+// For parallel_for
+// Specialization for std::vector
 template <>
 class Change_array_functor<std::vector<Truc> >
 {
 public:
   Change_array_functor(std::vector<Truc> &v)
     : m_v(v) {}
+
+  Change_array_functor(const Change_array_functor &caf)
+    : m_v(caf.m_v) {}
 
   void operator() (const tbb::blocked_range<size_t>& r) const
   {
@@ -80,6 +89,17 @@ public:
 
 private:
   std::vector<Truc> &m_v;
+};
+
+// For parallel_do
+template <typename Array_t>
+class Change_array_functor_2
+{
+public:
+  void operator() (typename Array_t::value_type& truc) const
+  {
+    compute_the_thing(truc);
+  }
 };
 
 // Parallel_for
@@ -125,10 +145,7 @@ double change_array(Array_t &v, Parallel_do_tag)
   t.start();
   tbb::parallel_do(
     v.begin(), v.end(),
-    []( typename Array_t::value_type& truc ) // CJTODO: lambdas ok?
-    {
-      compute_the_thing(truc);
-    });
+    Change_array_functor_2<Array_t>());
   t.stop();
   std::cout << " done in " << t.time() << " seconds." << std::endl;
   return t.time();
@@ -144,7 +161,7 @@ double change_array(Array_t &v, Sequential_with_forward_access_tag)
   CGAL::Real_timer t;
   t.start();
   typename Array_t::iterator it = v.begin(), it_end = v.end();
-  
+
   for ( ; it != it_end ; ++it)
     compute_the_thing(*it);
 
@@ -196,14 +213,14 @@ void benchmark(Array_t &v)
   double seq_time_random = change_array(v, Sequential_with_random_access_tag());
   std::cout << "* Parallel_for algorithm => ";
   double parallel_for_time = change_array(v, Parallel_for_tag());
-  std::cout << "Speed-up parallel_for (operator[]) = " 
+  std::cout << "Speed-up parallel_for (operator[]) = "
     << seq_time_random/parallel_for_time << std::endl << std::endl;
-  
+
   std::cout << "* Sequential algorithm (forward access) => ";
   double seq_time_fw = change_array(v, Sequential_with_forward_access_tag());
   std::cout << "* Parallel_do algorithm => ";
   double parallel_do_time = change_array(v, Parallel_do_tag());
-  std::cout << "Speed-up parallel_do (iterators) = " 
+  std::cout << "Speed-up parallel_do (iterators) = "
     << seq_time_fw/parallel_do_time << std::endl << std::endl;
 }
 

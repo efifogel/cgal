@@ -1,42 +1,27 @@
 # This is the CMake script for compiling a CGAL application.
 
-project (GraphicsView)
+cmake_minimum_required(VERSION 3.12...3.31)
+project(GraphicsView_Demo)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
-endif()
+find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt6)
 
-find_package(CGAL COMPONENTS Qt4)
+find_package(Qt6 QUIET COMPONENTS Widgets)
 
-include(${CGAL_USE_FILE})
+if(CGAL_Qt6_FOUND AND Qt6_FOUND)
 
+  add_compile_definitions(QT_NO_KEYWORDS)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-set( QT_USE_QTXML    TRUE )
-set( QT_USE_QTMAIN   TRUE )
-set( QT_USE_QTSCRIPT  TRUE )
-set( QT_USE_QTOPENGL  TRUE )
+  qt_add_executable(min min.cpp)
 
-find_package(Qt4)
+  add_to_cached_list(CGAL_EXECUTABLE_TARGETS min)
 
-if ( CGAL_FOUND AND CGAL_Qt4_FOUND AND QT4_FOUND )
+  target_link_libraries(min PRIVATE CGAL::CGAL CGAL::CGAL_Qt6 Qt6::Widgets)
 
-  include(${QT_USE_FILE})
-
-
-  add_executable  ( min min.cpp )
-
-  add_to_cached_list( CGAL_EXECUTABLE_TARGETS min )
-
-  # Link with Qt libraries
-  target_link_libraries( min ${QT_LIBRARIES} )
-  # Link with CGAL
-  target_link_libraries( min ${CGAL_LIBRARIES}  ${CGAL_3RD_PARTY_LIBRARIES})
-
+  include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+  cgal_add_compilation_test(min)
 else()
 
-  message(STATUS "NOTICE: This demo requires CGAL and Qt4, and will not be compiled.")
+  message("NOTICE: This demo requires CGAL and Qt6, and will not be compiled.")
 
 endif()

@@ -1,24 +1,16 @@
-// Copyright (c) 2000  
+// Copyright (c) 2000
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Andreas Fabri
 
@@ -41,7 +33,7 @@ class TetrahedronC3
   typedef typename R_::Plane_3              Plane_3;
   typedef typename R_::Tetrahedron_3        Tetrahedron_3;
 
-  typedef cpp11::array<Point_3, 4>          Rep;
+  typedef std::array<Point_3, 4>          Rep;
   typedef typename R_::template Handle<Rep>::type  Base;
 
   Base base;
@@ -53,7 +45,7 @@ public:
 
   TetrahedronC3(const Point_3 &p, const Point_3 &q, const Point_3 &r,
                 const Point_3 &s)
-    : base(CGAL::make_array(p, q, r, s)) {}
+    : base{p, q, r, s} {}
 
   const Point_3 &    vertex(int i) const;
   const Point_3 &    operator[](int i) const;
@@ -119,10 +111,10 @@ vertex(int i) const
   else if (i>3) i=i%4;
   switch (i)
     {
-    case 0: return get(base)[0];
-    case 1: return get(base)[1];
-    case 2: return get(base)[2];
-    default: return get(base)[3];
+    case 0: return get_pointee_or_identity(base)[0];
+    case 1: return get_pointee_or_identity(base)[1];
+    case 2: return get_pointee_or_identity(base)[2];
+    default: return get_pointee_or_identity(base)[3];
     }
 }
 
@@ -151,7 +143,7 @@ oriented_side(const typename TetrahedronC3<R>::Point_3 &p) const
 {
   typename R::Orientation o = orientation();
   if (o != ZERO)
-    return enum_cast<Oriented_side>(bounded_side(p)) * o;
+    return enum_cast<typename R::Oriented_side>(bounded_side(p)) * o;
 
   CGAL_kernel_assertion (!is_degenerate());
   return ON_ORIENTED_BOUNDARY;

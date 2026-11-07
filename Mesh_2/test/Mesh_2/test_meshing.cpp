@@ -1,5 +1,5 @@
 // 154 515 565
-#include <CGAL/config.h>
+#include "test_dependencies.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #if CGAL_USE_CORE || CGAL_USE_LEDA
 #  include <CGAL/Exact_predicates_exact_constructions_kernel_with_sqrt.h>
@@ -9,7 +9,6 @@
 #include <CGAL/Delaunay_mesher_2.h>
 #include <CGAL/Delaunay_mesh_face_base_2.h>
 #include <CGAL/Delaunay_mesh_size_criteria_2.h>
-#include <CGAL/Delaunay_mesh_size_criteria_2.h>
 #include <CGAL/Delaunay_mesher_no_edge_refinement_2.h>
 
 #include <CGAL/IO/File_poly.h>
@@ -17,18 +16,6 @@
 #include <fstream>
 #include <iostream>
 #include <cassert>
-
-template <class CTr>
-typename CTr::size_type number_of_constrained_edges(const CTr& tr)
-{
-  typename CTr::size_type nedges = 0;
-  for(typename CTr::Finite_edges_iterator eit = tr.finite_edges_begin();
-      eit != tr.finite_edges_end();
-      ++eit)
-    if(tr.is_constrained(*eit))
-      ++nedges;
-  return nedges;
-}
 
 template <typename K, typename CDT>
 struct Tester2;
@@ -68,9 +55,9 @@ struct Tester2 {
 
     std::cerr << "Reading fish-and-rectangle.poly...";
     std::ifstream poly_file("fish-and-rectangle.poly");
-    CGAL::read_triangle_poly_file(cdt, poly_file, std::back_inserter(seeds));
+    CGAL::IO::read_triangle_poly_file(cdt, poly_file, std::back_inserter(seeds));
     assert(cdt.is_valid());
-    const size_type inititial_number_of_vertices = cdt.number_of_vertices();
+    [[maybe_unused]] const size_type initial_number_of_vertices = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices()
               << "\nNumber of seeds: " << seeds.size() << "\n\n";
 
@@ -81,9 +68,9 @@ struct Tester2 {
 
     std::cerr << "Meshing the triangulation with size 0...";
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 seeds.begin(), seeds.end(),
-                                 Criteria());
-    const size_type number_of_vertices0 = cdt.number_of_vertices();
+                                 CGAL::parameters::seeds(seeds)
+                                 .criteria(Criteria()));
+    [[maybe_unused]] const size_type number_of_vertices0 = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices() << "\n\n";
     assert( 64 <= cdt.number_of_vertices() &&
                     cdt.number_of_vertices() <= 72 );
@@ -91,8 +78,8 @@ struct Tester2 {
 
     std::cerr << "Meshing the triangulation with size 0.2...";
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 seeds.begin(), seeds.end(),
-                                 Criteria(0.125, 0.2));
+                                 CGAL::parameters::seeds(seeds)
+                                 .criteria(Criteria(0.125, 0.2)));
 
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices() << "\n\n";
     assert( 190 <= cdt.number_of_vertices() &&
@@ -100,9 +87,9 @@ struct Tester2 {
 
     std::cerr << "Meshing the triangulation with size 0.1...";
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 seeds.begin(), seeds.end(),
-                                 Criteria(0.125, 0.1));
-    const size_type number_of_vertices1 = cdt.number_of_vertices();
+                                 CGAL::parameters::seeds(seeds)
+                                 .criteria(Criteria(0.125, 0.1)));
+    [[maybe_unused]] const size_type number_of_vertices1 = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices() << "\n\n";
     assert( 580 <= cdt.number_of_vertices() &&
                     cdt.number_of_vertices() <= 640 );
@@ -113,26 +100,26 @@ struct Tester2 {
 
     std::cerr << "Meshing the triangulation with Delaunay_mesh_criteria_2<CDT>()...";
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 seeds.begin(), seeds.end(),
-                                 CGAL::Delaunay_mesh_criteria_2<CDT>());
-    const size_type number_of_vertices0bis = cdt.number_of_vertices();
+                                 CGAL::parameters::seeds(seeds).
+                                 criteria(CGAL::Delaunay_mesh_criteria_2<CDT>()));
+    [[maybe_unused]] const size_type number_of_vertices0bis = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices() << "\n\n";
-  
+
     assert( number_of_vertices0 == number_of_vertices0bis );
 
     cdt = cdt2;
     std::cerr << "Triangulation restored.\n";
     std::cerr << "Number of vertices: " << cdt.number_of_vertices() << "\n\n";
 
-    std::cerr << "2/ Comparaison between refine_Delaunay_mesh_2() and other"
+    std::cerr << "2/ Comparison between refine_Delaunay_mesh_2() and other"
               << " possibilities:\n\n";
 
     std::cerr << "Meshing the triangulation with size 0.1, with "
               << "refine_Delaunay_mesh_2()...";
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 seeds.begin(), seeds.end(),
-                                 Criteria(0.125, 0.1));
-    const size_type number_of_vertices1bis = cdt.number_of_vertices();
+                                 CGAL::parameters::seeds(seeds)
+                                 .criteria(Criteria(0.125, 0.1)));
+    [[maybe_unused]] const size_type number_of_vertices1bis = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices()
               << "\n\n";
 
@@ -147,8 +134,8 @@ struct Tester2 {
       mesher.set_seeds(seeds.begin(), seeds.end());
       mesher.refine_mesh();
     }
-    const size_type number_of_vertices2 = cdt.number_of_vertices();
-    std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices() 
+    [[maybe_unused]] const size_type number_of_vertices2 = cdt.number_of_vertices();
+    std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices()
               << "\n\n";
 
     assert(cdt.is_valid());
@@ -166,11 +153,11 @@ struct Tester2 {
       while(mesher.try_one_step_refine_mesh())
         ++step;
     }
-    const size_type number_of_vertices3 = cdt.number_of_vertices();
+    [[maybe_unused]] const size_type number_of_vertices3 = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices()
               << "\nNumber of steps: " << step << "\n\n";
 
-    assert( step + inititial_number_of_vertices >= number_of_vertices3 );
+    assert( step + initial_number_of_vertices >= number_of_vertices3 );
     assert( number_of_vertices3 == number_of_vertices2 );
 
     cdt = cdt2;
@@ -185,12 +172,12 @@ struct Tester2 {
       while(mesher.step_by_step_refine_mesh())
         ++step;
     }
-    const size_type number_of_vertices4 = cdt.number_of_vertices();
+    [[maybe_unused]] const size_type number_of_vertices4 = cdt.number_of_vertices();
     std::cerr << " done.\nNumber of vertices: " << cdt.number_of_vertices()
               << "\nNumber of steps: " << step << "\n\n";
 
     assert( number_of_vertices4 == number_of_vertices2 );
-    assert( number_of_vertices4 == step + inititial_number_of_vertices );
+    assert( number_of_vertices4 == step + initial_number_of_vertices );
 
     std::cerr << "Test the undocumented function:"
               << "  refine_Delaunay_mesh_2_without_edge_refinement\n"
@@ -203,9 +190,9 @@ struct Tester2 {
   }
 };
 
-struct K_e_i : public CGAL::Exact_predicates_inexact_constructions_kernel {};
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K_e_i;
 #if CGAL_USE_CORE || CGAL_USE_LEDA
-struct K_e_e : public CGAL::Exact_predicates_exact_constructions_kernel_with_sqrt {};
+typedef CGAL::Exact_predicates_exact_constructions_kernel_with_sqrt K_e_e;
 #endif
 
 int main()

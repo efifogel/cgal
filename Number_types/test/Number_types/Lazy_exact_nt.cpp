@@ -12,6 +12,7 @@
 #include <CGAL/Quotient.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 
+#include <CGAL/disable_warnings.h>
 
 #ifdef CGAL_USE_LEDA
 #  include <CGAL/leda_real.h>
@@ -81,7 +82,7 @@ typedef CGAL::Delaunay_triangulation_3<CGAL::Cartesian<my_NT> > Delaunay;
 
 int my_rand()
 {
-  return int(CGAL::default_random.get_double()*(1<<31));
+  return int(CGAL::get_default_random().get_double()*(1<<31));
 }
 
 void delaunay()
@@ -90,7 +91,7 @@ void delaunay()
   for (int i=0; i<100; i++)
     D.insert(Delaunay::Point(my_NT(my_rand()),
                              my_NT(my_rand()),
-			     my_NT(my_rand())));
+                             my_NT(my_rand())));
 }
 
 // Tests the precision of to_double()
@@ -112,7 +113,7 @@ void test_to_double()
   std::cout << "Approximated interval for 1 : " << tmp.approx() << std::endl;
 
   // Now we square it repeatedly (the interval is going to grow), and we check
-  // that to_double() stays reasonnably close to 1.
+  // that to_double() stays reasonably close to 1.
   for (int i = 0; i < 20; ++i) {
     tmp = CGAL_NTS square(tmp);
     double d = CGAL_NTS to_double(tmp);
@@ -150,7 +151,7 @@ int main ()
   // std::cout << "sign(sqrt(2)) = " << CGAL_NTS sign(CGAL_NTS sqrt(NT(2))) << std::endl;
   // std::cout << "sign(square(2)) = " << CGAL_NTS sign(CGAL_NTS square(NT(2))) << std::endl;
   // bool pipo = e < d;
-  std::cout << "sizeof(Exat_NT) = " << sizeof(Exact_NT) << std::endl;
+  std::cout << "sizeof(Exact_NT) = " << sizeof(Exact_NT) << std::endl;
   std::cout << "sizeof(Lazy_exact_nt) = " << sizeof(CGAL::Lazy_exact_nt<int>)
             << std::endl;
   predicates();

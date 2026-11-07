@@ -2,76 +2,67 @@
 # This is the CMake script for compiling a CGAL application.
 # cmake ../ -DCMAKE_BUILD_TYPE=Debug
 
-project (Linear_cell_complex_3_demo)
+cmake_minimum_required(VERSION 3.12...3.31)
+project(Linear_cell_complex_Demo)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
-endif()
+# Find includes in corresponding build directories
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 ## To add expensive tests
-# add_definitions("-DCGAL_CHECK_EXPENSIVE")
+# add_compile_definitions(CGAL_CHECK_EXPENSIVE)
+# add_definitions("-Wall -Wextra")
+# add_definitions(-fsanitize=address)
+# add_link_options(-fsanitize=address)
+# add_compile_definitions(_GLIBCXX_DEBUG)
 
 ## For profilling with gprof
-# add_definitions("-pg")
+# add_compile_definitions("-pg")
 # SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
 
 ## To add an is_valid test after each operation (only in debug mode)
-# add_definitions("-DCGAL_CMAP_TEST_VALID_REMOVALS")
-# add_definitions("-DCGAL_CMAP_TEST_VALID_CONTRACTIONS")
-# add_definitions("-DCGAL_CMAP_TEST_VALID_INSERTIONS")
+# add_compile_definitions(CGAL_CMAP_TEST_VALID_REMOVALS)
+# add_compile_definitions(CGAL_CMAP_TEST_VALID_CONTRACTIONS)
+# add_compile_definitions(CGAL_CMAP_TEST_VALID_INSERTIONS)
 
 # Option allowing to profile each operation of the demo (cout times on stdout).
-add_definitions(-DCGAL_PROFILE_LCC_DEMO)
+add_compile_definitions(CGAL_PROFILE_LCC_DEMO)
+
+add_compile_definitions(CMAP_WITH_INDEX) # to use cc with index (handle otherwise)
 
 ##################
-find_package(CGAL COMPONENTS Qt4)
-include(${CGAL_USE_FILE})
+find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt6)
 
-set( QT_USE_QTXML    TRUE )
-set( QT_USE_QTMAIN   TRUE )
-set( QT_USE_QTSCRIPT  TRUE )
-set( QT_USE_QTOPENGL  TRUE )
-find_package(Qt4)
+find_package(Qt6 COMPONENTS Widgets OpenGL)
 
-find_package(OpenGL)
-find_package(QGLViewer)
+if(NOT CGAL_Qt6_FOUND OR NOT Qt6_FOUND)
 
-if ( NOT (CGAL_FOUND AND CGAL_Qt4_FOUND AND QT4_FOUND AND
-      OPENGL_FOUND AND QGLVIEWER_FOUND) )
-
-  MESSAGE(STATUS "NOTICE: This demo requires CGAL, QGLViewer, OpenGL "
-    "and Qt4, and will not be compiled.")
+  message("NOTICE: This demo requires CGAL and Qt6, and will not be compiled.")
 
 else()
 
-include(${QT_USE_FILE})
-include_directories(${QGLVIEWER_INCLUDE_DIR})
-include_directories(BEFORE . ../../include/)
+  add_compile_definitions(CGAL_USE_BASIC_VIEWER QT_NO_KEYWORDS)
+  set(CMAKE_AUTOMOC ON)
+  set(CMAKE_AUTOUIC ON)
+  set(CMAKE_AUTORCC ON)
 
-# ui file, created wih Qt Designer
-qt4_wrap_ui(uis MainWindow.ui CreateMesh.ui CreateMenger.ui)
+  qt_add_executable(
+    Linear_cell_complex_3_demo
+    Linear_cell_complex_3_demo.cpp
+    Linear_cell_complex_3.qrc
+    MainWindow.cpp
+    Viewer.cpp
+    Linear_cell_complex_3_subdivision.cpp
+    Linear_cell_complex_pqq_subdivision.cpp
+    typedefs.h
+    import_moka.h
+    MainWindow.h
+    Viewer.h)
 
-# qrc files (resources files, that contain icons, at least)
-qt4_add_resources (RESOURCE_FILES ./Linear_cell_complex_3.qrc)
+  add_to_cached_list(CGAL_EXECUTABLE_TARGETS Linear_cell_complex_3_demo)
 
-qt4_automoc(MainWindow.cpp Viewer.cpp)
+  target_link_libraries(Linear_cell_complex_3_demo
+                        PRIVATE CGAL::CGAL CGAL::CGAL_Basic_viewer)
 
-add_executable(Linear_cell_complex_3_demo
-  Linear_cell_complex_3_demo.cpp MainWindow.cpp
-  Viewer.cpp Linear_cell_complex_3_subdivision.cpp
-  Linear_cell_complex_pqq_subdivision.cpp
-  ${uis} ${RESOURCE_FILES} )
-
-add_to_cached_list(CGAL_EXECUTABLE_TARGETS Linear_cell_complex_3_demo)
-
-target_link_libraries(Linear_cell_complex_3_demo ${CGAL_LIBRARIES}
-                                                 ${CGAL_3RD_PARTY_LIBRARIES})
-target_link_libraries(Linear_cell_complex_3_demo ${QT_LIBRARIES}
-                                                 ${QGLVIEWER_LIBRARIES} )
-target_link_libraries(Linear_cell_complex_3_demo ${OPENGL_gl_LIBRARY}
-                                                 ${OPENGL_glu_LIBRARY} )
-
+  include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+  cgal_add_compilation_test(Linear_cell_complex_3_demo)
 endif()

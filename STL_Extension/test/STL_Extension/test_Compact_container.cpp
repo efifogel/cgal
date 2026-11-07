@@ -1,23 +1,60 @@
 // test program for Compact_container.
 
-#include <CGAL/basic.h>
 #include <cassert>
 #include <cstddef>
-#include <list>
+#include <iostream>
+#include <ostream>
 #include <vector>
+#include <type_traits>
+
+#include <boost/iterator/filter_iterator.hpp>
+
+#include <CGAL/Default.h>
 #include <CGAL/Compact_container.h>
 #include <CGAL/Random.h>
-#include <CGAL/Testsuite/use.h>
+#include <CGAL/Time_stamper.h>
 
+#include <CGAL/tags.h>
 #include <CGAL/use.h>
+#include <CGAL/assertions.h>
 
+#include <CGAL/disable_warnings.h>
 
+template <typename Has_timestamp_ = CGAL::Tag_true>
 struct Node_1
 : public CGAL::Compact_container_base
 {
   bool operator==(const Node_1 &) const { return true; }
   bool operator!=(const Node_1 &) const { return false; }
   bool operator< (const Node_1 &) const { return false; }
+
+  // Erase counter (cf. Compact_container)
+  unsigned int erase_counter() const
+  {
+    return this->m_erase_counter;
+  }
+  void set_erase_counter(unsigned int c)
+  {
+    this->m_erase_counter = c;
+  }
+  void increment_erase_counter()
+  {
+    ++this->m_erase_counter;
+  }
+
+  /// For the determinism of Compact_container iterators
+  ///@{
+  typedef Has_timestamp_ Has_timestamp;
+
+  std::size_t time_stamp() const {
+    return time_stamp_;
+  }
+  void set_time_stamp(const std::size_t& ts) {
+    time_stamp_ = ts;
+  }
+  ///@}
+  int m_erase_counter;
+  std::size_t time_stamp_ = CGAL::Time_stamper<void>::invalid_time_stamp;
 };
 
 class Node_2
@@ -26,19 +63,20 @@ class Node_2
     Node_2 * p;
     void * p_cc;
   };
-  int      rnd;
 
 public:
 
+  int      rnd;
+
   Node_2()
-  : p(NULL), rnd(CGAL::default_random.get_int(0, 100)) {}
+  : p(nullptr), rnd(CGAL::get_default_random().get_int(0, 100)) {}
 
   bool operator==(const Node_2 &n) const { return rnd == n.rnd; }
   bool operator!=(const Node_2 &n) const { return rnd != n.rnd; }
   bool operator< (const Node_2 &n) const { return rnd <  n.rnd; }
 
   void *   for_compact_container() const { return p_cc; }
-  void * & for_compact_container()       { return p_cc; }
+  void for_compact_container(void *p)       { p_cc = p; }
 };
 
 template < class Cont >
@@ -50,6 +88,11 @@ inline bool check_empty(const Cont &c)
 template < class Cont >
 void test(const Cont &)
 {
+  static_assert(std::is_nothrow_move_constructible<Cont>::value,
+                "move cstr is missing");
+  static_assert(std::is_nothrow_move_assignable<Cont>::value,
+                "move assignment is missing");
+
   // Testing if all types are provided.
 
   typename Cont::value_type              t0;
@@ -199,19 +242,19 @@ void test(const Cont &)
   c11.reserve(v1.size());
   for(typename Vect::const_iterator it = v1.begin(); it != v1.end(); ++it)
     c11.insert(*it);
-  
+
   assert(c11.size() == v1.size());
   assert(c10 == c11);
 
-  // owns() and owns_dereferencable().
+  // owns() and owns_dereferenceable().
   for(typename Cont::const_iterator it = c9.begin(), end = c9.end(); it != end; ++it) {
     assert(c9.owns(it));
-    assert(c9.owns_dereferencable(it));
+    assert(c9.owns_dereferenceable(it));
     assert(! c10.owns(it));
-    assert(! c10.owns_dereferencable(it));
+    assert(! c10.owns_dereferenceable(it));
   }
   assert(c9.owns(c9.end()));
-  assert(! c9.owns_dereferencable(c9.end()));
+  assert(! c9.owns_dereferenceable(c9.end()));
 
 
   c9.erase(c9.begin(), c9.end());
@@ -241,19 +284,127 @@ void test_index(const Cont &C)
   }
 }
 
+template < class Cont >
+void test_time_stamps() {
+  Cont c1;
+  for (std::size_t i = 0 ; i < 10 ; ++i)
+    c1.emplace();
+  typename Cont::iterator it = c1.begin();
+  for (std::size_t i = 0 ; i < 10 ; ++i) {
+    assert(i == it++->time_stamp());
+  }
+  Cont c2(c1);
+  it = c2.begin();
+  for (std::size_t i = 0 ; i < 10 ; ++i) {
+    assert(i == it++->time_stamp());
+  }
+}
+
+class Zero_predicate
+{
+public:
+  template < class T >
+  bool operator()(const T & t) const
+  {
+    return t.rnd != 0;
+  }
+};
+
+
+template < class Cont >
+void test_filter(Cont &c1) {
+  for (std::size_t i = 0 ; i < 10 ; ++i)
+    c1.emplace();
+  std::cout << "Before filter" << std::endl;
+  for(auto it = c1.begin(); it != c1.end(); ++it) {
+    std::cout << (*it).rnd << std::endl;
+  }
+  std::cout << "set second entry to 0" << std::endl;
+  std::cout << "erase third entry" << std::endl;
+  typename Cont::iterator it = c1.begin();
+  ++it;
+  (*it).rnd = 0;
+  for(int i = 0; i < 8; ++i) {
+    ++it;
+  }
+
+  c1.erase(it);
+
+  for(auto it = c1.begin(); it != c1.end(); ++it) {
+    std::cout << (*it).rnd << std::endl;
+  }
+
+
+  typedef boost::filter_iterator<Zero_predicate, typename Cont::iterator> Zero_iterator;
+
+  Zero_iterator zit(Zero_predicate(), c1.begin(), c1.end());
+  Zero_iterator end(Zero_predicate(), c1.end(), c1.end());
+  std::cout << "Skip entries which are 0" << std::endl;
+  for (; zit != end; ++zit) {
+    std::cout << (*zit).rnd << std::endl;
+  }
+}
+
+struct Incomplete_struct;
+
 int main()
 {
-  CGAL::Compact_container<Node_1> C1;
-  CGAL::Compact_container<Node_2> C2;
-  test(C1);
-  test(C2);
 
-  CGAL::Compact_container<Node_2, CGAL::Default, CGAL::Constant_size_policy<1024> > C3;
-  CGAL::Compact_container<Node_2, CGAL::Default, CGAL::Addition_size_policy<14,16> > C4;
+  typedef Node_1<CGAL::Tag_true > T1;
+  typedef CGAL::Compact_container<T1> C1; //    with timestamps
 
-  test_index(C3);
-  test_index(C4);
+  typedef Node_1<CGAL::Tag_false> T2;
+  typedef CGAL::Compact_container<T2> C2; // without timestamps
 
+  typedef CGAL::Compact_container<T1,
+                                  CGAL::Default,
+                                  CGAL::Default,
+                                  CGAL::Time_stamper<T1> > C4;
+                                          //    with timestamps
+
+  typedef Node_2 T3;
+  typedef CGAL::Compact_container<T3> C3; // without timestamps
+
+  C1 c1;  test(c1);
+  C2 c2;  test(c2);
+  C3 c3;  test(c3);
+  C4 c4;  test(c4);
+
+  test_time_stamps<C4>();
+
+  // Check the time stamper policies
+  if(! std::is_base_of<CGAL::Time_stamper<T1>,
+     C1::Time_stamper>::value)
+  {
+    std::cerr << "Error timestamper of C1\n"; return 1;
+  }
+  if(! std::is_base_of<CGAL::No_time_stamp<T2>,
+     C2::Time_stamper>::value)
+  {
+    std::cerr << "Error timestamper of C2\n"; return 1;
+  }
+  if(! std::is_base_of<CGAL::No_time_stamp<T3>,
+     C3::Time_stamper>::value)
+  {
+    std::cerr << "Error timestamper of C3\n"; return 1;
+  }
+  if(! std::is_base_of<CGAL::Time_stamper<T1>,
+     C4::Time_stamper>::value)
+  {
+    std::cerr << "Error timestamper of C4\n"; return 1;
+  }
+
+  // Check that Compact_container does not require a complete type.
+  static_assert(sizeof(CGAL::Compact_container<Incomplete_struct>) > 0);
+
+  // Test increment policy
+  CGAL::Compact_container<Node_2, CGAL::Default, CGAL::Constant_size_policy<1024> > C5;
+  CGAL::Compact_container<Node_2, CGAL::Default, CGAL::Addition_size_policy<14,16> > C6;
+
+  test_index(C5);
+  test_index(C6);
+
+  test_filter(C5);
   return 0;
 }
 // EOF //

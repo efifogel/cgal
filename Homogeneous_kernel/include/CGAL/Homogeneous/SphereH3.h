@@ -1,23 +1,15 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Stefan Schirra
@@ -65,10 +57,10 @@ public:
       SphereH3(const Point_3&  p,
                const Orientation& o = COUNTERCLOCKWISE);
 
-      bool
+      typename R::Boolean
       operator==(const SphereH3<R>&) const;
 
-      bool
+      typename R::Boolean
       operator!=(const SphereH3<R>& s) const
       { return !(*this == s); }
 
@@ -78,32 +70,32 @@ public:
 
       Orientation orientation() const;
 
-      bool is_degenerate() const;
+      typename R::Boolean is_degenerate() const;
 
       SphereH3<R> opposite() const;
 
-      Oriented_side oriented_side(const Point_3& p) const;
+      typename R::Oriented_side oriented_side(const Point_3& p) const;
 
-      bool
+      typename R::Boolean
       has_on_boundary(const Point_3& p) const
       { return oriented_side(p)==ON_ORIENTED_BOUNDARY; }
 
-      bool
+      typename R::Boolean
       has_on_positive_side(const Point_3& p) const
       { return oriented_side(p)==ON_POSITIVE_SIDE; }
 
-      bool
+      typename R::Boolean
       has_on_negative_side(const Point_3& p) const
       { return oriented_side(p)==ON_NEGATIVE_SIDE; }
 
-      Bounded_side
+      typename R::Bounded_side
       bounded_side(const Point_3& p) const;
 
-      bool
+      typename R::Boolean
       has_on_bounded_side(const Point_3& p) const
       { return bounded_side(p)==ON_BOUNDED_SIDE; }
 
-      bool
+      typename R::Boolean
       has_on_unbounded_side(const Point_3& p) const
       { return bounded_side(p)==ON_UNBOUNDED_SIDE; }
 };
@@ -170,7 +162,7 @@ SphereH3<R>::SphereH3(const typename SphereH3<R>::Point_3& p,
 
 template <class R>
 CGAL_KERNEL_INLINE
-bool
+typename R::Boolean
 SphereH3<R>::operator==(const SphereH3<R>& s) const
 {
    return    ( orientation() == s.orientation())
@@ -182,39 +174,39 @@ template <class R>
 inline
 const typename SphereH3<R>::Point_3 &
 SphereH3<R>::center() const
-{ return get(base).template get<0>(); }
+{ return get_pointee_or_identity(base).template get<0>(); }
 
 template <class R>
 inline
 const typename SphereH3<R>::FT &
 SphereH3<R>::squared_radius() const
-{ return get(base).template get<1>(); }
+{ return get_pointee_or_identity(base).template get<1>(); }
 
 template <class R>
 inline
 Orientation
 SphereH3<R>::orientation() const
-{ return get(base).template get<2>(); }
+{ return get_pointee_or_identity(base).template get<2>(); }
 
 template <class R>
 inline
-bool
+typename R::Boolean
 SphereH3<R>::is_degenerate() const
 { return squared_radius() <= FT(0) ; }
 
 template <class R>
 CGAL_KERNEL_MEDIUM_INLINE
-Oriented_side
+typename R::Oriented_side
 SphereH3<R>::oriented_side(const typename SphereH3<R>::Point_3& p) const
-{ return Oriented_side(bounded_side(p) * orientation()); }
+{ return Oriented_side(static_cast<int>(bounded_side(p)) * static_cast<int>(orientation())); }
 
 template <class R>
 CGAL_KERNEL_INLINE
-Bounded_side
+typename R::Bounded_side
 SphereH3<R>::bounded_side(const typename SphereH3<R>::Point_3& p) const
 {
-  return Bounded_side(CGAL_NTS compare(squared_radius(),
-                                       squared_distance(center(),p)));
+  return enum_cast<Bounded_side>(CGAL_NTS compare(squared_radius(),
+                                          squared_distance(center(),p)));
 }
 
 template <class R>

@@ -1,24 +1,16 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Sylvain Pion
 //                 Stefan Schirra
@@ -26,8 +18,10 @@
 #ifndef CGAL_PREDICATES_SIGN_OF_DETERMINANT_H
 #define CGAL_PREDICATES_SIGN_OF_DETERMINANT_H
 
+#include <array>
 #include <CGAL/determinant.h>
 #include <CGAL/number_utils_classes.h>
+#include <CGAL/number_type_basic.h>
 
 namespace CGAL {
 
@@ -37,6 +31,7 @@ typename Sgn<RT>::result_type
 sign_of_determinant( const RT& a00,  const RT& a01,
                         const RT& a10,  const RT& a11)
 {
+  typedef typename Sgn<RT>::result_type Sign;
   return enum_cast<Sign>(CGAL_NTS compare( a00*a11, a10*a01));
 }
 
@@ -51,6 +46,21 @@ sign_of_determinant( const RT& a00,  const RT& a01,  const RT& a02,
                                          a10, a11, a12,
                                          a20, a21, a22));
 }
+
+template <class RT>
+inline
+std::array<typename Sgn<RT>::result_type,2>
+sign_of_determinants(const RT& a00, const RT& a01, const RT& a02, const RT& b02,
+                     const RT& a10, const RT& a11, const RT& a12, const RT& b12,
+                     const RT& a20, const RT& a21, const RT& a22, const RT& b22)
+{
+  std::array<RT,2> det = determinants(a00, a01, a02, b02,
+                                      a10, a11, a12, b12,
+                                      a20, a21, a22, b22);
+
+ return { CGAL_NTS sign(det[0]), CGAL_NTS sign(det[1]) };
+}
+
 
 template <class RT>
 inline

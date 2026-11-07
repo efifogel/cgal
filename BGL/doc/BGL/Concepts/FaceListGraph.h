@@ -5,36 +5,41 @@
 The concept `FaceListGraph` refines the concept `FaceGraph` and adds
 the requirement for traversal of all faces in a graph.
 
-\cgalRefines `FaceGraph`
-\cgalHasModel `CGAL::Polyhedron_3`
+\cgalAssociatedTypesBegin
 
-\cgalHeading{Notations}
+\cgalAssociatedTypeBegin{boost::graph_traits<FaceListGraph>::%face_iterator} A face iterator (obtained via `faces(g)`) provides access to all of the faces in a graph.
+A face iterator type must meet the requirements of `MultiPassInputIterator`. The value type of the
+face iterator must be the same as the face descriptor of the graph.
+\cgalAssociatedTypeEnd
 
-<dl>
-<dt>`G`</dt> 	<dd>A type that is a model of `FaceListGraph`.</dd>
-<dt>`g`</dt> 	<dd>An object of type `G`.</dd>
-</dl>
+\cgalAssociatedTypesEnd
 
-\cgalHeading{Associated Types}
+\cgalRefines{FaceGraph}
 
-Type              | Description
------------------ | -----------
-`boost::graph_traits<G>::%face_iterator`   | %Iterator over all faces.
-`boost::graph_traits<G>::%faces_size_type` | Unsigned integer type for number of faces.
+\cgalHasModelsBegin
+\cgalHasModelsBare{See \link PkgBGLTraits Boost Graph Traits Specializations \endlink}
+\cgalHasModelsEnd
 
-
-\cgalHeading{Valid Expressions}
-
-Expression        |  returns                                    | Description
------------------ | ---------------                             | -----------------------
-`faces(g)`        |  `std::pair<face_iterator, face_iterator>`  | An iterator range over all faces.
-`num_faces(g)`    |  `faces_size_type`                          | An upper bound of the number of faces of the graph.
-
-\attention `num_faces()` may return a number larger than `std::distance(faces(g).first, faces(g).second)`.
-This is the case for implementations only marking faces deleted in the face container.
-<!--
-This is for example the case for `CGAL::Surface_mesh` or `OpenMesh::PolyMesh_ArrayKernelT`. 
--->
-
+\sa \link PkgBGLConcepts Graph Concepts \endlink
 */
 class FaceListGraph{};
+
+
+/*! \relates FaceListGraph
+ * returns an iterator range over all faces.
+ */
+template <typename FaceListGraph>
+std::pair<boost::graph_traits<FaceListGraph>::face_iterator,
+          boost::graph_traits<FaceListGraph>::face_iterator>
+faces(const FaceListGraph& g);
+
+
+/*! \relates FaceListGraph
+  returns an upper bound of the number of faces of the graph.
+  \attention `num_faces()` may return a number larger than `std::distance(faces(g).first, faces(g).second)`.
+  This is the case for implementations only marking faces deleted in the face container.
+ */
+template <typename FaceListGraph>
+boost::graph_traits<FaceListGraph>::faces_size_type
+num_faces(const FaceListGraph& g);
+

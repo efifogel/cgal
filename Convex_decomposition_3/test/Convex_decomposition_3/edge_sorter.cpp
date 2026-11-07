@@ -1,8 +1,8 @@
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Exact_integer.h>
 #include<CGAL/Homogeneous.h>
 #include<CGAL/Convex_decomposition_3/Edge_sorter.h>
 
-typedef CGAL::Arithmetic_kernel::Integer  RT;
+typedef CGAL::Exact_integer  RT;
 typedef CGAL::Homogeneous<RT> Kernel;
 typedef Kernel::Point_3 Point_3;
 typedef Kernel::FT FT;
@@ -20,16 +20,22 @@ class LEdge {
   LEdge* t;
 public:
   LEdge(LVertex* v_) : v(v_) {}
-  ~LEdge() { if(v != NULL) delete v; v = NULL; }
+
+  ~LEdge()
+  {
+    delete v;
+    v = nullptr;
+  }
+
   LVertex* source() { return v; }
   LEdge* twin() { return t; }
   void set_twin(LEdge* t_) { t = t_; }
-  void reset_source() { v = NULL; }
+  void reset_source() { v = nullptr; }
 };
 
 template<typename Edget, typename Vertext>
 class Report_new_vertex {
-  
+
 public:
   Report_new_vertex() {}
   Edget* operator()(Edget* e, Point_3 ip) {
@@ -56,15 +62,15 @@ bool check_sorting(Iterator begin, Iterator end, Compare& compare)
 }
 
 typedef CGAL::Need_to_split<Kernel, std::less<Point_3> > SplitTest;
-typedef CGAL::Compare_halfedges_in_reflex_edge_sorter<LEdge*, std::less<Point_3> > 
+typedef CGAL::Compare_halfedges_in_reflex_edge_sorter<LEdge*, std::less<Point_3> >
   Compare_edges;
 typedef std::multiset<LEdge*, Compare_edges> Container;
 typedef Container::const_iterator Container_iterator;
 typedef CGAL::Generic_edge_sorter
-  <Point_3, std::less<FT>, SplitTest, Report_new_vertex<LEdge, LVertex>,  Container> 
+  <Point_3, std::less<FT>, SplitTest, Report_new_vertex<LEdge, LVertex>,  Container>
   GesSM;
 
-int main() 
+int main()
 {
   Container edges;
   Container_iterator ci;
@@ -133,7 +139,7 @@ int main()
   gesSM(edges, st, rnv);
   assert(check_sorting(edges.begin(), edges.end(), Less));
   assert(edges.size() == 2);
-  assert((*edges.begin())->source()->point() == Point_3(-2,-1,1)); 
+  assert((*edges.begin())->source()->point() == Point_3(-2,-1,1));
 
   edges.clear();
   edges.insert(e5);
@@ -141,7 +147,7 @@ int main()
   gesSM(edges, st, rnv);
   assert(check_sorting(edges.begin(), edges.end(), Less));
   assert(edges.size() == 2);
-  assert((*edges.begin())->source()->point() == Point_3(-2,-1,0)); 
+  assert((*edges.begin())->source()->point() == Point_3(-2,-1,0));
 
 
   edges.clear();
@@ -180,7 +186,7 @@ int main()
   gesSM(edges, st, rnv);
   assert(check_sorting(edges.begin(), edges.end(), Less));
   assert(edges.size() == 2);
-  assert((*edges.begin())->source()->point() == Point_3(-2,-1,0)); 
+  assert((*edges.begin())->source()->point() == Point_3(-2,-1,0));
 
   delete e0;
   delete e0b;

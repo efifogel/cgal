@@ -6,7 +6,7 @@
 \cgalConcept
 
 The concept `Periodic_2TriangulationTraits_2` is the first template parameter of the classes
-`Periodic_2_triangulation_2<Traits, Tds>`. This concept provides the types of
+`CGAL::Periodic_2_triangulation_2<Traits, Tds>`. This concept provides the types of
 the geometric primitives used in the triangulation and some function
 object types for the required predicates on those primitives.
 
@@ -18,13 +18,15 @@ predicates from `TriangulationTraits_2` can be used
 directly. For efficiency reasons we maintain for each functor the
 version without offsets.
 
-\cgalRefines ::TriangulationTraits_2
+\cgalRefines{TriangulationTraits_2}
 In addition to the requirements described for the traits class
-::TriangulationTraits_2, the geometric traits class of a
+`TriangulationTraits_2`, the geometric traits class of a
 Periodic triangulation must fulfill the following
 requirements:
 
-\cgalHasModel CGAL::Periodic_2_triangulation_traits_2
+\cgalHasModelsBegin
+\cgalHasModels{CGAL::Periodic_2_triangulation_traits_2}
+\cgalHasModelsEnd
 
 \sa `TriangulationTraits_2`
 \sa `CGAL::Periodic_2_triangulation_2<Traits,Tds>`
@@ -65,7 +67,7 @@ public:
   /*!
   A type representing an
   axis-aligned rectangle. It must be a model of
-  `Kernel::Iso_rectangle_2`.
+  `Kernel::IsoRectangle_2`.
   */
   typedef unspecified_type Iso_rectangle_2;
 
@@ -216,25 +218,17 @@ public:
 /// @}
 
 /// \name Creation
-/// Only a default constructor, copy constructor and an assignment
-/// operator are required. Note that further constructors can be
-/// provided.
 /// @{
 
   /*!
-  default constructor.
+  Default constructor.
   */
-  Periodic_2TriangulationTraits_2();
+  Periodic_2_triangulation_traits_2();
 
   /*!
-  Copy constructor
+  Copy constructor.
   */
-  Periodic_2TriangulationTraits_2(Periodic_2TriangulationTraits_2 gtr);
-
-  /*!
-  Assignment operator.
-  */
-  Periodic_2TriangulationTraits_2 operator=(Periodic_2TriangulationTraits_2 gtr);
+  Periodic_2_triangulation_traits_2(const Periodic_2_triangulation_traits_2& tr);
 
 /// @}
 
@@ -288,20 +282,17 @@ public:
 /// @{
 
   /*!
-  Sets the
-  fundamental domain. This is necessary to evaluate predicates
+  Sets the fundamental domain. This is necessary to evaluate predicates
   correctly.
   \pre `domain` represents a square.
   */
   void set_domain(Iso_rectangle_2 domain);
 
   /*!
-  Returns the
-  fundamental domain.
+  Returns the fundamental domain.
   */
   Iso_rectangle_2 get_domain() const;
 
 /// @}
 
 }; /* end Periodic_2TriangulationTraits_2 */
-

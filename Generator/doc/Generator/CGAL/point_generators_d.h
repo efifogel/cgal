@@ -1,7 +1,7 @@
 namespace CGAL {
 
 /*!
-\ingroup PkgGenerators
+\ingroup PkgGeneratorsRef
 
 generates a given number of points on a cubic grid in any dimension
 whose size is determined by the number of points to be generated.
@@ -40,16 +40,12 @@ Creator creator);
 The class `Random_points_in_ball_d` is an input iterator creating points uniformly
 distributed in an open ball in any dimension.
 
-\cgalModels `InputIterator`
-\cgalModels `PointGenerator`
+\cgalModels{InputIterator,PointGenerator}
 
-\sa `CGAL::cpp11::copy_n()`
-\sa `CGAL::Counting_iterator`
 \sa `CGAL::Random_points_in_disc_2<Point_2, Creator>`
 \sa `CGAL::Random_points_in_sphere_3<Point_3, Creator>`
 \sa `CGAL::Random_points_in_cube_d<Point_d>`
 \sa `CGAL::Random_points_on_sphere_d<Point_d>`
-
 */
 template< typename Point_d >
 class Random_points_in_ball_d {
@@ -95,7 +91,7 @@ i.e.\ \f$ |*g| < r\f$ . \f$ 2\cdot dim+1\f$ random numbers are needed from
 `rnd` for each point.
 
 */
-Random_points_in_ball_d(int dim, double r);
+Random_points_in_ball_d(int dim, double r=1.0, Random& rnd = get_default_random());
 
 /// @}
 
@@ -107,18 +103,14 @@ namespace CGAL {
 /*!
 
 The class `Random_points_in_cube_d` is an input iterator creating points uniformly
-distributed in an half-open cube.
+distributed in a half-open cube.
 
-\cgalModels `InputIterator`
-\cgalModels `PointGenerator`
+\cgalModels{InputIterator,PointGenerator}
 
-\sa `CGAL::cpp11::copy_n()`
-\sa `CGAL::Counting_iterator`
 \sa `CGAL::Random_points_in_square_2<Point_2, Creator>`
 \sa `CGAL::Random_points_in_cube_3<Point_3, Creator>`
 \sa `CGAL::Random_points_in_ball_d<Point_d>`
 \sa `CGAL::Random_points_on_sphere_d<Point_d>`
-
 */
 template< typename Point_d >
 class Random_points_in_cube_d {
@@ -166,7 +158,7 @@ For every point \f$ p = *g\f$ and for all \f$ i<dim\f$ we have \f$ -a \le p[i] <
 
 */
 Random_points_in_cube_d(int dim, double a, Random& rnd =
-default_random);
+get_default_random());
 
 /// @}
 
@@ -184,16 +176,12 @@ The generated points are computed using floating point arithmetic,
 whatever the Kernel is, thus they are on the sphere only up to
 rounding errors.
 
-\cgalModels `InputIterator`
-\cgalModels `PointGenerator`
+\cgalModels{InputIterator,PointGenerator}
 
-\sa `CGAL::cpp11::copy_n()`
-\sa `CGAL::Counting_iterator`
 \sa `CGAL::Random_points_on_circle_2<Point_2, Creator>`
 \sa `CGAL::Random_points_on_sphere_3<Point_3, Creator>`
 \sa `CGAL::Random_points_in_cube_d<Point_d>`
 \sa `CGAL::Random_points_in_ball_d<Point_d>`
-
 */
 template< typename Point_d >
 class Random_points_on_sphere_d {
@@ -239,8 +227,8 @@ i.e.\ \f$ |*g| == r\f$ . \f$ 2\cdot dim\f$ random numbers are needed from
 `rnd` for each point.
 
 */
-Random_points_on_sphere_d(int dim, double r, Random& rnd =
-default_random);
+Random_points_on_sphere_d(int dim, double r=1.0, Random& rnd =
+get_default_random());
 
 /// @}
 

@@ -3,53 +3,45 @@
  * Copyright (c) 1995-2004 Exact Computation Project
  * All rights reserved.
  *
- * This file is part of CORE (http://cs.nyu.edu/exact/core/).
- * You can redistribute it and/or modify it under the terms of the GNU
- * General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * Licensees holding a valid commercial license may use this file in
- * accordance with the commercial license agreement provided with the
- * software.
- *
- * This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
- * WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- *
+ * This file is part of CGAL (www.cgal.org).
  *
  * File: Real.h
- * 
- * Synopsis: The Real class is a superclass for all the number 
+ *
+ * Synopsis: The Real class is a superclass for all the number
  *           systems in the Core Library (int, long, float, double,
  *           BigInt, BigRat, BigFloat, etc)
- * 
- * Written by 
+ *
+ * Written by
  *       Koji Ouchi <ouchi@simulation.nyu.edu>
  *       Chee Yap <yap@cs.nyu.edu>
  *       Chen Li <chenli@cs.nyu.edu>
  *       Zilin Du <zilin@cs.nyu.edu>
- *       Sylvain Pion <pion@cs.nyu.edu> 
+ *       Sylvain Pion <pion@cs.nyu.edu>
  *
- * WWW URL: http://cs.nyu.edu/exact/
+ * WWW URL: https://cs.nyu.edu/exact/
  * Email: exact@cs.nyu.edu
  *
  * $URL$
  * $Id$
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  ***************************************************************************/
 #ifndef _CORE_REAL_H_
 #define _CORE_REAL_H_
-#include "RealRep.h"
 
-namespace CORE { 
+#include "RealRep.h"
+#include <CGAL/use.h>
+
+namespace CORE {
 // class Real
 typedef RCImpl<RealRep> RCReal;
 class Real : public RCReal {
 public:
   Real(int i=0) : RCReal(new RealLong(i)) {}
-  Real(unsigned int ui) : RCReal(NULL) {
+  Real(unsigned int ui) : RCReal(nullptr) {
     (ui<=INT_MAX) ? (rep=new RealLong(static_cast<int>(ui))) : (rep=new RealBigInt(ui));
   }
   Real(long l) : RCReal(new RealLong(l)) {}
-  Real(unsigned long ul) : RCReal(NULL) {
+  Real(unsigned long ul) : RCReal(nullptr) {
     (ul<=LONG_MAX) ? (rep=new RealLong(static_cast<long>(ul))) : (rep=new RealBigInt(ul));
   }
   Real(float f) : RCReal(new RealDouble(f)) {}
@@ -57,10 +49,10 @@ public:
   Real(const BigInt& I) : RCReal(new RealBigInt(I)) {}
   Real(const BigRat& R) : RCReal(new RealBigRat(R)) {}
   Real(const BigFloat& F) : RCReal(new RealBigFloat(F)) {}
-  Real(const char* s, const extLong& prec=defInputDigits) : RCReal(NULL) {
+  Real(const char* s, const extLong& prec=get_static_defInputDigits()) : RCReal(nullptr) {
     constructFromString(s, prec);
   }
-  Real(const std::string& s, const extLong& prec=defInputDigits) : RCReal(NULL){
+  Real(const std::string& s, const extLong& prec=get_static_defInputDigits()) : RCReal(nullptr){
     constructFromString(s.c_str(), prec);
   }
 
@@ -123,7 +115,7 @@ public:
     *this += 1;
     return t;
   }
-  /// right deccrement operator (i--)
+  /// right decrement operator (i--)
   Real operator--(int) {
     Real t(*this);
     *this -= 1;
@@ -134,12 +126,12 @@ public:
   /// \name String Conversion Functions
   //@{
   /// set value from <tt>const char*</tt>
-  void fromString(const char* s, const extLong& prec = defInputDigits) {
+  void fromString(const char* s, const extLong& prec = get_static_defInputDigits()) {
     *this = Real(s, prec);
   }
   /// convert to <tt>std::string</tt>
   /** give decimal string representation */
-  std::string toString(long prec=defOutputDigits, bool sci=false) const {
+  std::string toString(long prec=get_static_defOutputDigits(), bool sci=false) const {
     return rep->toString(prec, sci);
   }
   //@}
@@ -176,10 +168,11 @@ public:
   }
   //@}
 
-  /// \name Aprroximation Function
+  /// \name Approximation Function
   //@{
   /// approximation
-  Real approx(const extLong& r=defRelPrec, const extLong& a=defAbsPrec) const {
+  Real approx(const extLong& r=get_static_defRelPrec(),
+              const extLong& a=get_static_defAbsPrec()) const {
     return rep->approx(r, a);
   }
   //@}
@@ -284,12 +277,12 @@ const long halfLongMin = LONG_MIN /2;
 struct _real_add {
   template <class T>
   static Real eval(const T& a, const T& b) {
-    return a+b;
+    return T(a+b);
   }
   // specialized for two long values
   static Real eval(long a, long b) {
     if ((a > halfLongMax && b > halfLongMax) || (a < halfLongMin && b < halfLongMin))
-      return BigInt(a)+BigInt(b);
+      return BigInt(BigInt(a)+ BigInt(b));
     else
       return a+b;
   }
@@ -298,12 +291,12 @@ struct _real_add {
 struct _real_sub {
   template <class T>
   static Real eval(const T& a, const T& b) {
-    return a-b;
+    return T(a-b);
   }
   // specialized for two long values
   static Real eval(long a, long b) {
     if ((a > halfLongMax && b < halfLongMin) || (a < halfLongMin && b > halfLongMax))
-      return BigInt(a)-BigInt(b);
+      return BigInt(BigInt(a)-BigInt(b));
     else
       return a-b;
   }
@@ -312,12 +305,12 @@ struct _real_sub {
 struct _real_mul {
   template <class T>
   static Real eval(const T& a, const T& b) {
-    return a*b;
+    return T(a*b);
   }
   // specialized for two long values
   static Real eval(long a, long b) {
-    if (flrLg(a) + flrLg(b) >= static_cast<int>(LONG_BIT-2))
-      return BigInt(a)*BigInt(b);
+    if (flrLg(a) + flrLg(b) >= static_cast<int>(CORE_LONG_BIT-2))
+      return BigInt(BigInt(a)*BigInt(b));
     else
       return a*b;
   }
@@ -364,7 +357,7 @@ struct real_div {
         bf_a.approx(a.BigRatValue(), bf_b.MSB() - bf_b.flrLgErr() + 1, CORE_posInfty);
         return bf_a.div(bf_b, r);
       } else // both are BigRat
-        return a.BigRatValue()/b.BigRatValue();
+        return BigRat(a.BigRatValue() / b.BigRatValue());
     } else if (a.ID() == REAL_BIGFLOAT || b.ID() == REAL_BIGFLOAT
                || a.ID() == REAL_DOUBLE || b.ID() == REAL_DOUBLE) {
       return a.BigFloatValue().div(b.BigFloatValue(), r);
@@ -395,7 +388,7 @@ inline Real& Real::operator*=(const Real& rhs) {
   return *this;
 }
 inline Real& Real::operator/=(const Real& rhs) {
-  *this = real_div::eval(getRep(), rhs.getRep(), defRelPrec);
+  *this = real_div::eval(getRep(), rhs.getRep(), get_static_defRelPrec());
   return *this;
 }
 
@@ -413,7 +406,7 @@ inline Real operator*(const Real& x, const Real& y) {
 }
 // operator/
 inline Real operator/(const Real& x, const Real& y) {
-  return real_div::eval(x.getRep(), y.getRep(), defRelPrec);
+  return real_div::eval(x.getRep(), y.getRep(), get_static_defRelPrec());
 }
 // div w/ precision
 inline Real Real::div(const Real& x, const extLong& r) const {
@@ -478,19 +471,30 @@ inline Real power(const Real& r, unsigned long p) {
 }
 /// square root
 inline Real sqrt(const Real& x) {
-  return x.sqrt(defAbsPrec);
+  return x.sqrt(get_static_defAbsPrec());
 }
 
 // class Realbase_for (need defined after Real)
 // unary minus operator
 template <class T>
 inline Real Realbase_for<T>::operator-() const {
-  return -ker;
+  return T(- T(ker));
 }
 template <>
 inline Real RealLong::operator-() const {
-  return ker < -LONG_MAX ? -BigInt(ker) : -ker;
+  return ker < -LONG_MAX ? BigInt(- BigInt(ker)) : -ker;
+}
+
+inline void init_CORE() {
+  using RealRep = CORE::RealDouble;
+  CGAL_STATIC_THREAD_LOCAL_VARIABLE(MemoryPool<RealRep>*, pool_real_rep, &MemoryPool<RealRep>::global_allocator());
+  CGAL_USE(pool_real_rep);
 }
 
 } //namespace CORE
+
+#ifdef CGAL_HEADER_ONLY
+#include <CGAL/CORE/Real_impl.h>
+#endif // CGAL_HEADER_ONLY
+
 #endif // _CORE_REAL_H_

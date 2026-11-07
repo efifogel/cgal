@@ -3,7 +3,7 @@
 
 if( MPFI_FOUND AND NOT MPFI_SETUP )
 
-  if (GMP_FOUND AND MPFR_FOUND) 
+  if (GMP_FOUND AND MPFR_FOUND)
 
     message( STATUS "UseMPFI" )
     message( STATUS "MPFI include:      ${MPFI_INCLUDE_DIR}" )
@@ -18,9 +18,9 @@ if( MPFI_FOUND AND NOT MPFI_SETUP )
                 "-DINCLUDE_DIRECTORIES:
                  STRING=${MPFI_INCLUDE_DIR};${GMP_INCLUDE_DIR};${MPFR_INCLUDE_DIR}"
                "-DLINK_LIBRARIES:
-                 STRING=${MPFI_LIBRARIES};${GMP_LIBRARIES};${MPFR_LIBRARIES}"
+                 STRING=${MPFI_LIBRARIES};${MPFR_LIBRARIES};${GMP_LIBRARIES}"
                 "-DLINK_DIRECTORIES:
-                 STRING=${MPFI_LIBRARIES_DIR};${GMP_LIBRARIES_DIRS};${MPFR_LIBRARIES}"
+                 STRING=${MPFI_LIBRARIES_DIR};${MPFR_LIBRARIES_DIR};${GMP_LIBRARIES_DIR}"
              COMPILE_OUTPUT_VARIABLE MPFI_TEST_COMPILATION_OUTPUT
            )
 
@@ -30,11 +30,7 @@ if( MPFI_FOUND AND NOT MPFI_SETUP )
       add_definitions( ${MPFI_DEFINITIONS} "-DCGAL_USE_MPFI" )
       link_libraries( ${MPFI_LIBRARIES} )
     else( COMPILED_MPFI_TEST AND MPFI_TEST_RESULT EQUAL 0)
-      if (CGAL_ENABLE_PRECONFIG) 
-        message( STATUS "MPFI is incorrectly configured with CGAL" )
-      else()
-        message( STATUS "MPFI is incorrectly configured on this system" )
-      endif()
+      message( STATUS "MPFI is incorrectly configured on this system" )
       message( STATUS
         "Output of the failed MPFI test was:\n${MPFI_TEST_COMPILATION_OUTPUT}" )
       message( STATUS "End of the MPFI test output" )

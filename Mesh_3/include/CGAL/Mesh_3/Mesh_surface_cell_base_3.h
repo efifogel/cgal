@@ -2,18 +2,10 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Stéphane Tayeb
@@ -26,10 +18,17 @@
 #ifndef CGAL_MESH_3_MESH_SURFACE_CELL_BASE_3_H
 #define CGAL_MESH_3_MESH_SURFACE_CELL_BASE_3_H
 
+#include <CGAL/license/SMDS_3.h>
+
+
 #include <CGAL/Mesh_3/config.h>
 
 #include <CGAL/Regular_triangulation_cell_base_3.h>
-#include <CGAL/Mesh_3/io_signature.h>
+#include <CGAL/SMDS_3/io_signature.h>
+
+#ifdef CGAL_LINKED_WITH_TBB
+# include <atomic>
+#endif
 
 #ifdef _MSC_VER
 // Kill warning "C4351: new behavior: elements of array
@@ -43,14 +42,103 @@ namespace CGAL {
 namespace Mesh_3 {
 
 
+/************************************************
+// Class Mesh_surface_cell_base_3_base
+// Two versions: sequential / parallel
+************************************************/
+
+// Sequential
+template <typename Concurrency_tag>
+class Mesh_surface_cell_base_3_base
+{
+public:
+  Mesh_surface_cell_base_3_base()
+    : bits_(0) {}
+
+  /// Marks `facet` as visited.
+  void set_facet_visited (const int facet)
+  {
+    CGAL_precondition(facet>=0 && facet <4);
+    bits_ |= (1 << facet);
+  }
+
+  /// Marks `facet` as not visited.
+  void reset_visited (const int facet)
+  {
+    CGAL_precondition(facet>=0 && facet<4);
+    bits_ &= (15 & ~(1 << facet));
+  }
+
+  /// Returns `true` if `facet` is marked as visited.
+  bool is_facet_visited (const int facet) const
+  {
+    CGAL_precondition(facet>=0 && facet<4);
+    return ( (bits_ & (1 << facet)) != 0 );
+  }
+
+protected:
+  /// Stores visited facets (4 first bits)
+  char bits_;
+};
+
+#ifdef CGAL_LINKED_WITH_TBB
+// Parallel
+template<>
+class Mesh_surface_cell_base_3_base<Parallel_tag>
+{
+public:
+  Mesh_surface_cell_base_3_base()
+  {
+    bits_ = 0;
+  }
+
+  /// Marks `facet` as visited.
+  void set_facet_visited (const int facet)
+  {
+    CGAL_precondition(facet>=0 && facet<4);
+    char current_bits = bits_;
+    while (!bits_.compare_exchange_weak(current_bits, current_bits | char(1 << facet)) )
+    {
+      current_bits = bits_;
+    }
+  }
+
+  /// Marks `facet` as not visited.
+  void reset_visited (const int facet)
+  {
+    CGAL_precondition(facet>=0 && facet<4);
+    char current_bits = bits_;
+    char mask = char(15 & ~(1 << facet));
+    char wanted_value = current_bits & mask;
+    while(!bits_.compare_exchange_weak(current_bits, wanted_value)) {
+      current_bits = bits_;
+    }
+  }
+
+  /// Returns `true` if `facet` is marked as visited.
+  bool is_facet_visited (const int facet) const
+  {
+    CGAL_precondition(facet>=0 && facet<4);
+    return ( (bits_ & (1 << facet)) != 0 );
+  }
+
+protected:
+  /// Stores visited facets (4 first bits)
+  std::atomic<char> bits_;
+};
+#endif // CGAL_LINKED_WITH_TBB
+
+
 /**
  * @class Mesh_surface_cell_base_3
  */
 template <class GT,
           class MT,
-          class Cb = CGAL::Regular_triangulation_cell_base_3<GT> >
+          class Cb>
 class Mesh_surface_cell_base_3
-: public Cb
+: public Mesh_surface_cell_base_3_base<
+    typename Cb::Triangulation_data_structure::Concurrency_tag>
+, public Cb
 {
 public:
   // Indices
@@ -76,14 +164,15 @@ public:
     : Cb()
     , surface_index_table_()
     , surface_center_table_()
-    , bits_(0) { }
+  { }
 
   Mesh_surface_cell_base_3(Vertex_handle v0, Vertex_handle v1,
                            Vertex_handle v2, Vertex_handle v3)
     : Cb (v0, v1, v2, v3)
     , surface_index_table_()
     , surface_center_table_()
-    , bits_(0) { }
+    , surface_center_index_table_()
+  { }
 
   Mesh_surface_cell_base_3(Vertex_handle v0, Vertex_handle v1,
                            Vertex_handle v2, Vertex_handle v3,
@@ -92,71 +181,63 @@ public:
     : Cb (v0, v1, v2, v3, n0, n1, n2, n3)
     , surface_index_table_()
     , surface_center_table_()
-    , bits_(0) { }
+    , surface_center_index_table_()
+  { }
 
+  Mesh_surface_cell_base_3(const Mesh_surface_cell_base_3& rhs)
+      : Cb(rhs)
+      , surface_index_table_()
+      , surface_center_table_()
+      , surface_center_index_table_()
+  {
+    for(int i=0; i <4; i++){
+      surface_index_table_[i] = rhs.surface_index_table_[i];
+      surface_center_table_[i]= rhs.surface_center_table_[i];
+      surface_center_index_table_[i] = rhs.surface_center_index_table_[i];
+    }
+  }
 
   /// Destructor
   ~Mesh_surface_cell_base_3() { }
 
   // Default copy constructor and assignment operator are ok
 
-  /// Set surface index of \c facet to \c index
+  /// Sets surface index of `facet` to `index`
   void set_surface_patch_index(const int facet, const Surface_patch_index& index)
   {
     CGAL_precondition(facet>=0 && facet<4);
     surface_index_table_[facet] = index;
   }
 
-  /// Returns surface index of facet \c facet
+  /// Returns surface index of facet `facet`.
   Surface_patch_index surface_patch_index(const int facet) const
   {
     CGAL_precondition(facet>=0 && facet<4);
     return surface_index_table_[facet];
   }
 
-  /// Marks \c facet as visited
-  void set_facet_visited (const int facet)
-  {
-    CGAL_precondition(facet>=0 && facet <4);
-    bits_ |= (1 << facet);
-  }
-
-  /// Marks \c facet as not visited
-  void reset_visited (const int facet)
-  {
-    CGAL_precondition(facet>=0 && facet<4);
-    bits_ &= (15 & ~(1 << facet));
-  }
-
-  /// Returns \c true if \c facet is marked as visited
-  bool is_facet_visited (const int facet) const
-  {
-    CGAL_precondition(facet>=0 && facet<4);
-    return ( (bits_ & (1 << facet)) != 0 );
-  }
-
-  /// Sets surface center of \c facet to \c point
+  /// Sets surface center of `facet` to `point`.
   void set_facet_surface_center(const int facet, const Point& point)
   {
     CGAL_precondition(facet>=0 && facet<4);
     surface_center_table_[facet] = point;
   }
 
-  /// Returns surface center of \c facet
+  /// Returns surface center of `facet`.
   Point get_facet_surface_center(const int facet) const
   {
     CGAL_precondition(facet>=0 && facet<4);
     return surface_center_table_[facet];
   }
 
-  /// Sets surface center index of \c facet to \c index
+  /// Sets surface center index of `facet` to `index`.
   void set_facet_surface_center_index(const int facet, const Index& index)
   {
     CGAL_precondition(facet>=0 && facet<4);
     surface_center_index_table_[facet] = index;
   }
 
-  /// Returns surface center of \c facet
+  /// Returns surface center of `facet`.
   Index get_facet_surface_center_index(const int facet) const
   {
     CGAL_precondition(facet>=0 && facet<4);
@@ -169,17 +250,17 @@ public:
     CGAL_precondition(facet>=0 && facet<4);
     return ( Surface_patch_index() != surface_index_table_[facet]);
   }
-  
+
   // -----------------------------------
   // Backward Compatibility
   // -----------------------------------
 #ifndef CGAL_MESH_3_NO_DEPRECATED_SURFACE_INDEX
   typedef Surface_patch_index   Surface_index;
-  
+
   void set_surface_index(const int facet, const Surface_index& index)
   { set_surface_patch_index(facet,index); }
-  
-  /// Returns surface index of facet \c facet
+
+  /// Returns surface index of facet `facet`.
   Surface_index surface_index(const int facet) const
   { return surface_patch_index(facet); }
 #endif // CGAL_MESH_3_NO_DEPRECATED_SURFACE_INDEX
@@ -201,8 +282,6 @@ private:
   Point surface_center_table_[4];
   /// Stores surface center index of each facet of the cell
   Index surface_center_index_table_[4];
-  /// Stores visited facets (4 first bits)
-  char bits_;
 
 };  // end class Mesh_surface_cell_base_3
 
@@ -219,7 +298,7 @@ operator>>(std::istream &is, Mesh_surface_cell_base_3<GT, MT, Cb> &c)
   is >> static_cast<Cb&>(c);
   for(int i = 0; i < 4; ++i)
   {
-    if(is_ascii(is))
+    if(IO::is_ascii(is))
       is >> index;
     else
     {
@@ -239,8 +318,8 @@ operator<<(std::ostream &os,
   os << static_cast<const Cb&>(c);
   for(int i = 0; i < 4; ++i)
   {
-    if(is_ascii(os))
-      os << ' ' << c.surface_patch_index(i);
+    if(IO::is_ascii(os))
+      os << ' ' << IO::oformat(c.surface_patch_index(i));
     else
       write(os, c.surface_patch_index(i));
   }

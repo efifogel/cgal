@@ -56,8 +56,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1010</width>
-     <height>22</height>
+     <width>1100</width>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -112,7 +112,6 @@
      <string>Help</string>
     </property>
     <addaction name="actionDemo_Help"/>
-    <addaction name="actionAbout_T3_demo"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -553,11 +552,6 @@
    </property>
    <property name="statusTip">
     <string>Stop Animation</string>
-   </property>
-  </action>
-  <action name="actionAbout_T3_demo">
-   <property name="text">
-    <string>About T3_demo</string>
    </property>
   </action>
  </widget>

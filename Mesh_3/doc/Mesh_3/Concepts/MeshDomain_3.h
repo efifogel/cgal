@@ -1,5 +1,5 @@
 /*!
-\ingroup PkgMesh_3Concepts
+\ingroup PkgMesh3Concepts
 \cgalConcept
 
 The concept `MeshDomain_3` describes the knowledge required on the
@@ -29,9 +29,10 @@ A segment, ray or line is said to intersect properly the domain boundary
 if it includes points which are strictly inside
 and strictly outside the domain (resp. the subdomain).
 
-\cgalHasModel `CGAL::Polyhedral_mesh_domain_3<Polyhedron,IGT,TriangleAccessor>`
-\cgalHasModel `CGAL::Implicit_mesh_domain_3<Function,BGT>`
-\cgalHasModel `CGAL::Labeled_image_mesh_domain_3<Image,BGT>`
+\cgalHasModelsBegin
+\cgalHasModels{CGAL::Polyhedral_mesh_domain_3<Polyhedron,IGT>}
+\cgalHasModels{CGAL::Labeled_mesh_domain_3<BGT>}
+\cgalHasModelsEnd
 
 \sa `MeshVertexBase_3`
 \sa `MeshCellBase_3`
@@ -107,12 +108,12 @@ Assignable, DefaultConstructible and EqualityComparable.
 typedef unspecified_type Index;
 
 /*!
-Return type of `Construct_intersection` queries.
+Returns type of `Construct_intersection` queries.
 `int` represents the
 dimension of the lower dimensional face of the input complex on which the intersection
-point lies and `Index` is the index of this face.
+point lies and `%Index` is the index of this face.
 */
-typedef CGAL::cpp11::tuple<Point_3, Index, int> Intersection;
+typedef std::tuple<Point_3, Index, int> Intersection;
 
 /*!
 A function object to construct
@@ -121,15 +122,15 @@ following operators:
 
 `template<typename OutputIterator>`
 <br>
-`OutputIterator operator()(OutputIterator pts)`
+`OutputIterator operator()(OutputIterator pts) const`
 
 `template<typename OutputIterator>`
 <br>
-`OutputIterator operator()(int n, OutputIterator pts)`
+`OutputIterator operator()(OutputIterator pts, int n) const`
 
 Those two operators output a set of (`n`) surface points to the
 output iterator `pts`, as objects of type `std::pair<Point_3,
-Index>`. If `n` is not given, the functor must provide enough
+%Index>`. If `n` is not given, the functor must provide enough
 points to initialize the mesh generation process.
 */
 typedef unspecified_type Construct_initial_points;
@@ -139,7 +140,7 @@ A function object to query whether a point is in
 the input domain or not. In the positive case, it outputs the
 subdomain which includes the query point. Provides the operator:
 
-`boost::optional<Subdomain_index> operator()(Point_3 p)`
+`std::optional<Subdomain_index> operator()(Point_3 p)`
 */
 typedef unspecified_type Is_in_domain;
 
@@ -149,11 +150,11 @@ intersection queries between the surface patches of the domain and
 objects of type `Segment_3`, `Ray_3` or
 `Line_3`. Provides the operators:
 
-`boost::optional<Surface_patch_index> operator()(Segment_3 s)`
+`std::optional<Surface_patch_index> operator()(Segment_3 s)`
 
-`boost::optional<Surface_patch_index> operator()(Ray_3 r)`
+`std::optional<Surface_patch_index> operator()(Ray_3 r)`
 
-`boost::optional<Surface_patch_index> operator()(Line_3 l)`
+`std::optional<Surface_patch_index> operator()(Line_3 l)`
 
 The return type of the operators tell whether or not the query intersects a
 surface patch. In the positive case, it provides (through operator*()) the
@@ -171,10 +172,19 @@ intersection between an object of type `Segment_3`, `Ray_3` or
 `Intersection operator()(Ray_3 r)`
 
 `Intersection operator()(Line_3 l)`
-\pre do_intersect_surface(s/r/l) == true
+
+\pre `do_intersect_surface_object(s/r/l)` == `true`
 */
 typedef unspecified_type Construct_intersection;
 
+/// @}
+
+/// \name Bounding Box
+
+/// @{
+
+/// Returns a bounding box of the domain
+Bbox_3 bbox() const;
 /// @}
 
 /// \name Operations
@@ -184,12 +194,12 @@ typedef unspecified_type Construct_intersection;
 /*!
 
 */
-Construct_initial_points construct_initial_points_object();
+Construct_initial_points construct_initial_points_object() const;
 
 /*!
 
 */
-Is_in_domain is_in_domain_object();
+Is_in_domain is_in_domain_object() const;
 
 /*!
 
@@ -199,7 +209,7 @@ Do_intersect_surface do_intersect_surface_object();
 /*!
 
 */
-Construct_intersection construct_intersection_object();
+Construct_intersection construct_intersection_object() const;
 
 /// @}
 
@@ -217,19 +227,19 @@ Index index_from_surface_patch_index(Surface_patch_index surface_patch_index);
 Returns
 the index to be stored at a vertex lying in the subdomain identified by `subdomain_index`.
 */
-Index index_from_subdomain_index(Subdomain_index subdomain_index);
+Index index_from_subdomain_index(Subdomain_index subdomain_index) const;
 
 /*!
 Returns the `Surface_patch_index` of the surface patch
 where lies a vertex with dimension 2 and index `index`.
 */
-Surface_patch_index surface_patch_index(Index index);
+Surface_patch_index surface_patch_index(Index index) const;
 
 /*!
 Returns the index
 of the subdomain containing a vertex with dimension 3 and index `index`.
 */
-Subdomain_index subdomain_index(Index index);
+Subdomain_index subdomain_index(Index index) const;
 
 /// @}
 

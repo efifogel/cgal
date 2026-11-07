@@ -1,24 +1,16 @@
-// Copyright (c) 1997, 1998, 1999, 2000  
+// Copyright (c) 1997, 1998, 1999, 2000
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Andreas Fabri <Andreas.Fabri@sophia.inria.fr>
 //                 Lutz Kettner <kettner@mpi-sb.mpg.de>
@@ -32,9 +24,7 @@
 #include <algorithm>
 #include <memory>
 #include <cstddef>
-#include <boost/type_traits/remove_const.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-#include <boost/type_traits/remove_pointer.hpp>
+#include <functional>
 
 namespace CGAL {
 
@@ -43,7 +33,7 @@ namespace internal {
 // We give the vector container class a class based iterator implementation.
 // It ensures that iterator_traits work on compilers not supporting
 // partial specializations and it guarantees that default initialization
-// initializes the internal pointer to 0. Allows explicit construction 
+// initializes the internal pointer to 0. Allows explicit construction
 // from a pointer.
 
 template < class T, class Ref, class Ptr>
@@ -65,7 +55,7 @@ public:
 
     // Allows construction of const_iterator from iterator
     template < class A, class B, class C>
-    vector_iterator( const vector_iterator<A,B,C>& i) : ptr( &*i) {}
+    vector_iterator( const vector_iterator<A,B,C>& i) : ptr(i.operator->()) {}
 
     // OPERATIONS Forward Category
     // ---------------------------
@@ -117,32 +107,41 @@ public:
         tmp += n;
         return tmp.operator*();
     }
+    bool operator==( std::nullptr_t) const { return ptr == nullptr; }
+    bool operator!=( std::nullptr_t) const { return ptr != nullptr; }
     bool operator< ( const Self& i) const { return ( ptr < i.ptr); }
     bool operator> ( const Self& i) const { return i < *this;    }
     bool operator<=( const Self& i) const { return !(i < *this); }
     bool operator>=( const Self& i) const { return !(*this < i); }
 
     vector_iterator<  T,
-                      typename boost::remove_const<
-                        typename boost::remove_reference<Ref>::type
-                      >::type&,
-                      typename boost::remove_const<
-                          typename boost::remove_pointer<Ptr>::type
-                      >::type* >
+                      std::remove_const_t<
+                        std::remove_reference_t<Ref>
+                      >&,
+                      std::remove_const_t<
+                          std::remove_pointer_t<Ptr>
+                      >* >
     remove_const() const
     {
-      typedef typename boost::remove_const<
-                typename boost::remove_pointer<Ptr>::type
-              >::type* Ptr_no_c;
+      typedef std::remove_const_t<
+                std::remove_pointer_t<Ptr>
+              >* Ptr_no_c;
       return  vector_iterator< T,
-                     typename boost::remove_const<typename boost::remove_reference<Ref>::type>::type&,
+                     std::remove_const_t<std::remove_reference_t<Ref>>&,
                      Ptr_no_c>
               ( const_cast<Ptr_no_c>(ptr) );
     }
 };
 
+template < class T, class Ref, class Ptr>
+std::size_t hash_value(const vector_iterator<T, Ref, Ptr>& i)
+{
+  Ptr ptr = i.operator->();
+  return reinterpret_cast<std::size_t>(ptr)/ sizeof(T);
+}
+
 template < class T, class Ref, class Ptr> inline
-vector_iterator<T,Ref,Ptr> 
+vector_iterator<T,Ref,Ptr>
 operator+( std::ptrdiff_t n, vector_iterator<T,Ref,Ptr> i) {
     return i += n;
 }
@@ -157,13 +156,14 @@ public:
     // Note: the standard requires the following types to be equivalent
     // to T, T*, const T*, T&, const T&, size_t, and ptrdiff_t, respectively.
     // So we don't pass these types to the iterators explicitly.
-    typedef typename Allocator::value_type           value_type;
-    typedef typename Allocator::pointer              pointer;
-    typedef typename Allocator::const_pointer        const_pointer;
-    typedef typename Allocator::reference            reference;
-    typedef typename Allocator::const_reference      const_reference;
-    typedef typename Allocator::size_type            size_type;
-    typedef typename Allocator::difference_type      difference_type;
+  typedef typename std::allocator_traits<Allocator>::value_type            value_type;
+  typedef typename std::allocator_traits<Allocator>::pointer               pointer;
+  typedef typename std::allocator_traits<Allocator>::const_pointer         const_pointer;
+  typedef typename std::allocator_traits<Allocator>::size_type             size_type;
+  typedef typename std::allocator_traits<Allocator>::difference_type       difference_type;
+
+    typedef value_type&                              reference;
+    typedef const value_type&                        const_reference;
     typedef std::random_access_iterator_tag          iterator_category;
     typedef vector_iterator< T, reference, pointer>  iterator;
     typedef vector_iterator< T, const_reference, const_pointer>
@@ -174,11 +174,7 @@ public:
     typedef std::reverse_iterator<const_iterator>    const_reverse_iterator;
 
 protected:
-#ifndef _MSC_VER
-    // Somehow the static initialization does not work correctly for MSVC
-    // ---> strange linker errors
-    static
-#endif // _MSC_VER
+
     Allocator alloc;
 
     iterator start_;
@@ -186,8 +182,14 @@ protected:
     iterator end_of_storage;
 
     // ALLOCATION AND CONSTRUCTION HELPERS
-    void construct( iterator i, const T& x) { alloc.construct( &*i, x);}
-    void destroy( iterator i) { alloc.destroy( &*i); }
+    void construct( iterator i, const T& x) {
+      std::allocator_traits<Allocator>::construct(alloc,&*i, x);
+    }
+
+    void destroy( iterator i) {
+      std::allocator_traits<Allocator>::destroy(alloc,&*i);
+    }
+
     void destroy( iterator first, iterator last) {
         // destroy in reverse order than construction
         while ( last != first) {
@@ -196,7 +198,7 @@ protected:
         }
     }
     void deallocate() {
-        if ( &*start_)
+        if ( start_ != iterator() )
             alloc.deallocate( &*start_, end_of_storage - start_ );
     }
 
@@ -282,7 +284,7 @@ public:
         range_initialize( first, last, iterator_category());
     }
 
-    ~vector() { 
+    ~vector() {
         destroy( start_, finish);
         deallocate();
     }
@@ -392,7 +394,7 @@ public:
     }
 
     void resize( size_type new_size, const T& x) {
-        if (new_size < size()) 
+        if (new_size < size())
             erase( begin() + new_size, end());
         else
             insert( end(), new_size - size(), x);
@@ -416,7 +418,7 @@ protected:
             std::uninitialized_fill_n( &*result, n, x);
             return result;
         }
-        catch(...) { 
+        catch(...) {
             alloc.deallocate( &*result, n);
             throw;
         }
@@ -431,7 +433,7 @@ protected:
             std::uninitialized_copy( first, last, &*result);
             return result;
         }
-        catch(...) { 
+        catch(...) {
             alloc.deallocate( &*result, n);
             throw;
         }
@@ -498,11 +500,11 @@ protected:
                 iterator new_start = iterator( alloc.allocate(len));
                 iterator new_finish = new_start;
                 try {
-                    new_finish = iterator( 
+                    new_finish = iterator(
                         std::uninitialized_copy(start_, position,&*new_start));
                     new_finish = iterator(
                         std::uninitialized_copy( first, last, &*new_finish));
-                    new_finish = iterator( 
+                    new_finish = iterator(
                         std::uninitialized_copy(position,finish,&*new_finish));
                 }
                 catch(...) {
@@ -520,11 +522,6 @@ protected:
     }
 }; // class vector
 
-#ifndef _MSC_VER
-// init static member allocator object
-template <class T, class Alloc>
-Alloc vector< T, Alloc>::alloc = Alloc();
-#endif // _MSC_VER
 
 
 template <class T, class Alloc>
@@ -554,7 +551,7 @@ void vector<T, Alloc>::insert_aux( iterator position, const T& x) {
                 std::uninitialized_copy(position,finish,&*new_finish));
         }
         catch(...) {
-            destroy( new_start, new_finish); 
+            destroy( new_start, new_finish);
             alloc.deallocate( &*new_start, len);
             throw;
         }
@@ -587,7 +584,7 @@ void vector<T, Alloc>::insert( iterator position, size_type n, const T& x) {
                 std::fill(position, old_finish, x_copy);
             }
         } else {
-            const size_type old_size = size();        
+            const size_type old_size = size();
             const size_type len = old_size + (std::max)(old_size, n);
             iterator new_start = iterator( alloc.allocate(len));
             iterator new_finish = new_start;
@@ -596,7 +593,7 @@ void vector<T, Alloc>::insert( iterator position, size_type n, const T& x) {
                     std::uninitialized_copy( start_, position, &*new_start));
                 std::uninitialized_fill_n( &*new_finish, n, x);
                 new_finish += n;
-                new_finish = iterator( 
+                new_finish = iterator(
                     std::uninitialized_copy( position, finish, &*new_finish));
             }
             catch(...) {
@@ -616,5 +613,32 @@ void vector<T, Alloc>::insert( iterator position, size_type n, const T& x) {
 } // namespace internal
 
 } //namespace CGAL
+
+namespace std {
+
+#if defined(BOOST_MSVC)
+#  pragma warning(push)
+#  pragma warning(disable:4099) // For VC10 it is class hash
+#endif
+
+#ifndef CGAL_CFG_NO_STD_HASH
+
+  template < class T, class Ref, class Ptr>
+  struct hash<CGAL::internal::vector_iterator<T, Ref, Ptr> >
+    : public CGAL::cpp98::unary_function<CGAL::internal::vector_iterator<T, Ref, Ptr>, std::size_t>  {
+
+    std::size_t operator()(const CGAL::internal::vector_iterator<T, Ref, Ptr>& i) const
+    {
+      return CGAL::internal::hash_value(i);
+    }
+  };
+
+#endif // CGAL_CFG_NO_STD_HASH
+
+#if defined(BOOST_MSVC)
+#  pragma warning(pop)
+#endif
+
+} // namespace std
 
 #endif // CGAL_VECTOR_H //

@@ -2,34 +2,28 @@
 // All rights reserved.
 //
 // This file is part of CGAL (www.cgal.org).
-// You can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation,
-// either version 3 of the License, or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
 // $URL$
 // $Id$
-// 
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
+//
 //
 // Author(s)     : Laurent RINEAU, Stephane Tayeb
 
 #ifndef CGAL_MESH_3_MIN_DIHEDRAL_ANGLE_H
 #define CGAL_MESH_3_MIN_DIHEDRAL_ANGLE_H
 
-#include <CGAL/Mesh_3/dihedral_angle_3.h>
+#include <CGAL/license/Mesh_3.h>
+
+
 #include <cmath>
+#include <CGAL/Kernel_traits.h>
+#include <CGAL/utils.h>
+#include <CGAL/number_utils.h>
 
 namespace CGAL {
-
 namespace Mesh_3 {
 
-#ifdef CGAL_MESH_3_OLD_MINIMUM_DIHEDRAL_ANGLE 
-
 template <typename K>
 typename K::FT
 minimum_dihedral_angle(
@@ -37,74 +31,25 @@ minimum_dihedral_angle(
      const typename K::Point_3& p1,
      const typename K::Point_3& p2,
      const typename K::Point_3& p3,
-     K k = K())
+     const K& k = K())
 {
   typedef typename K::FT FT;
 
-  typename K::Compute_squared_distance_3 sq_distance = 
-    k.compute_squared_distance_3_object();
-  typename K::Compute_volume_3 volume = 
-    k.compute_volume_3_object();
-  typename K::Compute_area_3 area = 
-    k.compute_area_3_object();
-
-  FT a_012 = area(p0,p1,p2);
-  FT a_013 = area(p0,p1,p3);
-  FT a_123 = area(p1,p2,p3);
-  FT a_023 = area(p0,p2,p3);
-
-  FT min_quotient = 
-    CGAL::sqrt(sq_distance(p0, p1)) / a_012 / a_013;
-
-  min_quotient = 
-    (CGAL::min)(min_quotient,
-                CGAL::sqrt(sq_distance(p0, p2)) / a_012 / a_023);
-  min_quotient = 
-    (CGAL::min)(min_quotient,
-               CGAL::sqrt(sq_distance(p0, p3)) / a_013 / a_023);
-  min_quotient = 
-    (CGAL::min)(min_quotient,
-               CGAL::sqrt(sq_distance(p1, p2)) / a_012 / a_123);
-  min_quotient = 
-    (CGAL::min)(min_quotient,
-               CGAL::sqrt(sq_distance(p1, p3)) / a_013 / a_123);
-  min_quotient = 
-    (CGAL::min)(min_quotient,
-               CGAL::sqrt(sq_distance(p2, p3)) / a_023 / a_123);
-
-  const FT result (std::asin( FT(1.5) * volume(p0, p1, p2, p3) * min_quotient )
-    * FT(180) / FT(CGAL_PI));
-  
-  return CGAL::abs(result);
-}
-  
-#else // not CGAL_MESH_3_OLD_MINIMUM_DIHEDRAL_ANGLE 
-
-template <typename K>
-typename K::FT
-minimum_dihedral_angle(
-     const typename K::Point_3& p0,
-     const typename K::Point_3& p1,
-     const typename K::Point_3& p2,
-     const typename K::Point_3& p3,
-     K k = K())
-{
-  typedef typename K::FT FT;
-
-  typename K::Compute_determinant_3 determinant = 
+  typename K::Compute_determinant_3 determinant =
     k.compute_determinant_3_object();
   typename K::Construct_cross_product_vector_3 cp =
     k.construct_cross_product_vector_3_object();
-
   typename K::Compute_scalar_product_3 sp =
     k.compute_scalar_product_3_object();
+  typename K::Construct_vector_3 cv =
+    k.construct_vector_3_object();
 
-  typename K::Vector_3 v01 = p1-p0;
-  typename K::Vector_3 v02 = p2-p0;
-  typename K::Vector_3 v03 = p3-p0;
-  typename K::Vector_3 v12 = p2-p1;
-  typename K::Vector_3 v13 = p3-p1;
-  typename K::Vector_3 v23 = p3-p2;
+  typename K::Vector_3 v01 = cv(p0,p1);
+  typename K::Vector_3 v02 = cv(p0,p2);
+  typename K::Vector_3 v03 = cv(p0,p3);
+  typename K::Vector_3 v12 = cv(p1,p2);
+  typename K::Vector_3 v13 = cv(p1,p3);
+  typename K::Vector_3 v23 = cv(p2,p3);
 
   typename K::Vector_3 v_01_02 = cp(v01,v02);
   FT a_012 = v_01_02*v_01_02;
@@ -124,7 +69,7 @@ minimum_dihedral_angle(
   min_quotient = (CGAL::min)(min_quotient,
                              sp(v02,v02) / (a_012 * a_023));
   min_quotient = (CGAL::min)(min_quotient,
-                             (v03*v03) / (a_013 * a_023));
+                             sp(v03,v03) / (a_013 * a_023));
   min_quotient = (CGAL::min)(min_quotient,
                              sp(v12,v12) / (a_012 * a_123));
   min_quotient = (CGAL::min)(min_quotient,
@@ -137,11 +82,9 @@ minimum_dihedral_angle(
                    * FT(180) / FT(CGAL_PI));
 }
 
-#endif //  CGAL_MESH_3_OLD_MINIMUM_DIHEDRAL_ANGLE 
-
 template <typename K>
 typename K::FT
-minimum_dihedral_angle(const typename K::Tetrahedron_3& t, K k = K() )
+minimum_dihedral_angle(const typename K::Tetrahedron_3& t , const K& k = K())
 {
   return minimum_dihedral_angle(t[0],t[1],t[2],t[3],k);
 }
@@ -165,12 +108,12 @@ minimum_dihedral_angle_in_c3t3(const C3T3& c3t3)
       cit != c3t3.cells_in_complex_end();
       ++cit)
   {
-    min_angle = (std::min)(min_angle, 
+    min_angle = (std::min)(min_angle,
       minimum_dihedral_angle(c3t3.triangulation().tetrahedron(cit)));
   }
   return min_angle;
 }
-  
+
 
 } // end namespace Mesh_3
 } // end namespace CGAL

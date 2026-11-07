@@ -1,63 +1,38 @@
 # Created by the script cgal_create_cmake_script
 # This is the CMake script for compiling a CGAL application.
 
-project (GraphicsView)
+cmake_minimum_required(VERSION 3.12...3.31)
+project(Polygon_Demo)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-  cmake_policy(VERSION 2.8.4)
-else()
-  cmake_policy(VERSION 2.6)
+find_package(CGAL REQUIRED OPTIONAL_COMPONENTS Qt6)
+
+find_package(Eigen3 QUIET)
+include(CGAL_Eigen3_support)
+
+if(NOT TARGET CGAL::Eigen3_support)
+  message("NOTICE: This demo requires the Eigen library, and will not be compiled.")
+  return()
 endif()
 
-find_package(CGAL COMPONENTS Qt4 Core)
+find_package(Qt6 QUIET COMPONENTS Widgets)
 
-include(${CGAL_USE_FILE})
+if(CGAL_Qt6_FOUND AND Qt6_FOUND)
+  add_compile_definitions(QT_NO_KEYWORDS)
+  set(CMAKE_AUTOMOC ON)
+  set(CMAKE_AUTOUIC ON)
+  set(CMAKE_AUTORCC ON)
+  add_compile_definitions(CGAL_USE_CORE)
 
-set( QT_USE_QTXML    TRUE )
-set( QT_USE_QTMAIN   TRUE )
-set( QT_USE_QTSCRIPT  TRUE )
-set( QT_USE_QTOPENGL  TRUE )
+  qt_add_executable(Polygon_2 Polygon_2.cpp
+                    Polygon_2.ui Polygon_2.qrc)
 
-#find_package(Qt4)
+  add_to_cached_list(CGAL_EXECUTABLE_TARGETS Polygon_2)
 
-include_directories (BEFORE ../../include)
+  target_link_libraries(Polygon_2 PRIVATE CGAL::CGAL CGAL::CGAL_Qt6
+                                          CGAL::Eigen3_support Qt6::Widgets)
 
-if ( CGAL_FOUND AND CGAL_Qt4_FOUND AND QT4_FOUND )
-
-  if( CGAL_Core_FOUND)
-    add_definitions(-DCGAL_USE_CORE)
-  endif()
-
-  include(${QT_USE_FILE})
-  #--------------------------------
-  # Demo: Polygon_2
-  #--------------------------------
-  # UI files (Qt Designer files)
-  qt4_wrap_ui( DT_UI_FILES Polygon_2.ui )
-
-  # qrc files (resources files, that contain icons, at least)
-  qt4_add_resources ( DT_RESOURCE_FILES ./Polygon_2.qrc )
-
-  # use the Qt MOC preprocessor on classes that derives from QObject
-  qt4_generate_moc( Polygon_2.cpp "${CMAKE_CURRENT_BINARY_DIR}/Polygon_2.moc" )
-
-#  add_library( CGAL SHARED IMPORTED ) 
-#  SET_PROPERTY(TARGET CGAL PROPERTY IMPORTED_LOCATION ${CGAL_LIBRARY} )
-
-  # The executable itself.
-  add_executable  ( Polygon_2 Polygon_2.cpp Polygon_2.moc ${DT_UI_FILES} ${DT_RESOURCE_FILES} )
-
-  add_to_cached_list( CGAL_EXECUTABLE_TARGETS Polygon_2 )
-
-
-  # Link with Qt libraries
-  target_link_libraries( Polygon_2 ${QT_LIBRARIES} )
-  # And with CGAL libraries
-  target_link_libraries( Polygon_2 ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES} )
-
+  include(${CGAL_MODULES_DIR}/CGAL_add_test.cmake)
+  cgal_add_compilation_test(Polygon_2)
 else()
-
-  message(STATUS "NOTICE: This demo requires CGAL, CGAL_Core, and Qt4, and will not be compiled.")
-
+  message("NOTICE: This demo requires Qt6, and will not be compiled.")
 endif()

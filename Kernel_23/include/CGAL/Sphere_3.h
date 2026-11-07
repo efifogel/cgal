@@ -1,23 +1,15 @@
-// Copyright (c) 1999  
+// Copyright (c) 1999
 // Utrecht University (The Netherlands),
 // ETH Zurich (Switzerland),
 // INRIA Sophia-Antipolis (France),
 // Max-Planck-Institute Saarbruecken (Germany),
-// and Tel-Aviv University (Israel).  All rights reserved. 
+// and Tel-Aviv University (Israel).  All rights reserved.
 //
-// This file is part of CGAL (www.cgal.org); you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License as
-// published by the Free Software Foundation; either version 3 of the License,
-// or (at your option) any later version.
-//
-// Licensees holding a valid commercial license may use this file in
-// accordance with the commercial license agreement provided with the software.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-// WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+// This file is part of CGAL (www.cgal.org)
 //
 // $URL$
 // $Id$
+// SPDX-License-Identifier: LGPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
 // Author(s)     : Stefan Schirra
@@ -26,11 +18,13 @@
 #define CGAL_SPHERE_3_H
 
 #include <CGAL/assertions.h>
-#include <boost/type_traits/is_same.hpp>
+#include <CGAL/Coercion_traits.h>
 #include <CGAL/Kernel/Return_base_tag.h>
 #include <CGAL/Bbox_3.h>
 #include <CGAL/representation_tags.h>
 #include <CGAL/Dimension.h>
+
+#include <type_traits>
 
 namespace CGAL {
 
@@ -38,13 +32,14 @@ template <class R_>
 class Sphere_3 : public R_::Kernel_base::Sphere_3
 {
   typedef typename R_::FT                    FT;
-// http://www.cgal.org/Members/Manual_test/LAST/Developers_internal_manual/Developers_manual/Chapter_code_format.html#sec:programming_conventions
+// https://doc.cgal.org/latest/Manual/devman_code_format.html#secprogramming_conventions
   typedef typename R_::Point_3               Point_3_;
   typedef typename R_::Circle_3              Circle_3;
   typedef typename R_::Aff_transformation_3  Aff_transformation_3;
+  typedef typename R_::Iso_cuboid_3         Iso_cuboid_3;
 
   typedef Sphere_3                           Self;
-  CGAL_static_assertion((boost::is_same<Self, typename R_::Sphere_3>::value));
+  static_assert(std::is_same<Self, typename R_::Sphere_3>::value);
 
 public:
 
@@ -70,6 +65,9 @@ public:
   Sphere_3(const Rep& s)
    : Rep(s) {}
 
+  Sphere_3(Rep&& s)
+   : Rep(std::move(s)) {}
+
   Sphere_3(const Point_3_& p, const FT& sq_rad,
            const Orientation& o = COUNTERCLOCKWISE)
    : Rep(typename R::Construct_sphere_3()(Return_base_tag(), p, sq_rad, o)) {}
@@ -94,13 +92,13 @@ public:
 
   Sphere_3 orthogonal_transform(const Aff_transformation_3 &t) const;
 
-  typename cpp11::result_of<typename R::Construct_center_3( Sphere_3)>::type
+  decltype(auto)
   center() const
   {
     return R().construct_center_3_object()(*this);
   }
 
-  FT
+  decltype(auto)
   squared_radius() const
   {
     return R().compute_squared_radius_3_object()(*this);
@@ -133,14 +131,14 @@ public:
   has_on(const Point_3_ &p) const
   {
     return R().has_on_3_object()(*this, p);
-  }  
+  }
 
   typename R::Boolean
   has_on(const Circle_3 &c) const
   {
     return R().has_on_3_object()(*this, c);
   }
-  
+
   typename R::Boolean
   has_on_boundary(const Point_3_ &p) const
   {
@@ -158,6 +156,12 @@ public:
   has_on_unbounded_side(const Point_3_ &p) const
   {
     return bounded_side(p) == ON_UNBOUNDED_SIDE;
+  }
+
+  typename R::Boolean
+  has_on_unbounded_side(const Iso_cuboid_3& c) const
+  {
+    return R().has_on_unbounded_side_3_object()(*this, c);
   }
 
   typename R::Boolean
@@ -216,7 +220,7 @@ template <class R >
 std::ostream&
 insert(std::ostream& os, const Sphere_3<R>& c,const Cartesian_tag&)
 {
-    switch(os.iword(IO::mode)) {
+    switch(IO::get_mode(os)) {
     case IO::ASCII :
         os << c.center() << ' ' << c.squared_radius() << ' '
            << static_cast<int>(c.orientation());
@@ -248,7 +252,7 @@ template <class R >
 std::ostream&
 insert(std::ostream& os, const Sphere_3<R>& c, const Homogeneous_tag&)
 {
-    switch(os.iword(IO::mode)) {
+    switch(IO::get_mode(os)) {
     case IO::ASCII :
         os << c.center() << ' ' << c.squared_radius() << ' '
            << static_cast<int>(c.orientation());
@@ -289,9 +293,9 @@ std::istream&
 extract(std::istream& is, Sphere_3<R>& c, const Cartesian_tag&)
 {
     typename R::Point_3 center;
-    typename R::FT squared_radius;
+    typename R::FT squared_radius(0);
     int o=0;
-    switch(is.iword(IO::mode)) {
+    switch(IO::get_mode(is)) {
     case IO::ASCII :
         is >> center >> squared_radius >> o;
         break;
@@ -301,8 +305,9 @@ extract(std::istream& is, Sphere_3<R>& c, const Cartesian_tag&)
         is >> o;
         break;
     default:
+        is.setstate(std::ios::failbit);
         std::cerr << "" << std::endl;
-        std::cerr << "Stream must be in ascii or binary mode" << std::endl;
+        std::cerr << "Stream must be in ASCII or binary mode" << std::endl;
         break;
     }
     if (is)
@@ -317,8 +322,8 @@ extract(std::istream& is, Sphere_3<R>& c, const Homogeneous_tag&)
 {
     typename R::Point_3 center;
     typename R::FT squared_radius;
-    int o;
-    switch(is.iword(IO::mode)) {
+    int o=0;
+    switch(IO::get_mode(is)) {
     case IO::ASCII :
         is >> center >> squared_radius >> o;
         break;
@@ -328,8 +333,9 @@ extract(std::istream& is, Sphere_3<R>& c, const Homogeneous_tag&)
         is >> o;
         break;
     default:
+        is.setstate(std::ios::failbit);
         std::cerr << "" << std::endl;
-        std::cerr << "Stream must be in ascii or binary mode" << std::endl;
+        std::cerr << "Stream must be in ASCII or binary mode" << std::endl;
         break;
     }
     if (is)
