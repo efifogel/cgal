@@ -158,20 +158,46 @@
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContent">
+    <property name="styleSheet">
+     <string notr="true">QToolButton {
+  background-color: #f4f4f4;
+  border: 1px solid #b0b0b0;
+  border-radius: 3px;
+  padding: 1px;
+}
+QToolButton:hover {
+  background-color: white;
+  border-color: #505050;
+}
+QToolButton:checked, QToolButton:pressed {
+  background-color: #cfe3ff;
+  border-color: #3a7bd5;
+}
+QLabel#VisibleIcon, QLabel#DrawHeader {
+  background-color: #f4f4f4;
+  border: 1px solid #b0b0b0;
+  border-radius: 3px;
+}
+QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
+  background-color: white;
+  border-color: #505050;
+}</string>
+    </property>
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="0">
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
-          <property name="spacing">
-            <number>0</number>
-          </property>
+         <property name="spacing">
+          <number>0</number>
+         </property>
          <item>
-          <widget class="QToolBar" name="operationsTootBar0" >
-           <attribute name="toolBarArea" >
+          <!-- One toolbar for all traits; add new traits actions here. -->
+          <widget class="QToolBar" name="traitsToolBar">
+           <attribute name="toolBarArea">
             <enum>TopToolBarArea</enum>
            </attribute>
-           <attribute name="toolBarBreak" >
+           <attribute name="toolBarBreak">
             <bool>false</bool>
            </attribute>
            <property name="iconSize">
@@ -181,161 +207,63 @@
             </size>
            </property>
            <addaction name="actionInsertLinear"/>
-           </widget>
-         </item>
-         <item>
-          <widget class="QToolBar" name="operationsTootBar01" >
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
-           <property name="iconSize">
-            <size>
-             <width>32</width>
-             <height>32</height>
-            </size>
-           </property>
            <addaction name="actionInsertCircular"/>
+           <addaction name="actionInsertBezier"/>
+           <addaction name="actionInsertPolyline"/>
           </widget>
          </item>
          <item>
-          <widget class="QToolBar" name="operationsTootBar02" >
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
-           <property name="iconSize">
-            <size>
-             <width>32</width>
-             <height>32</height>
-            </size>
-           </property>
-           <addaction name="actionInsertBezier" />
-           </widget>
-         </item>
-         <item>
-          <widget class="QToolBar" name="operationsTootBar03" >
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
-           <property name="iconSize">
-            <size>
-             <width>32</width>
-             <height>32</height>
-            </size>
-           </property>
+          <spacer name="traitsToolBarSpacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Horizontal</enum>
            </property>
-           <addaction name="actionInsertPolyline" />
-           </widget>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>  
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <property name="spacing">
-          <number>2</number>
-         </property> 
+          <number>0</number>
+         </property>
          <item>
-          <widget class="QToolBar" name="operationsTootBar1" >
-           <attribute name="toolBarArea" >
+          <widget class="QToolBar" name="toolsToolBar">
+           <attribute name="toolBarArea">
             <enum>TopToolBarArea</enum>
            </attribute>
-           <attribute name="toolBarBreak" >
+           <attribute name="toolBarBreak">
             <bool>false</bool>
            </attribute>
-           <addaction name="actionAddColor"/>          
-         </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="operationsTootBar11" >
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
+           <addaction name="actionAddColor"/>
            <addaction name="actionMinusColor"/>
-          </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar2">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
            <addaction name="actionRecenter"/>
-          </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar21">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
            <addaction name="actionPAN"/>
-          </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar32">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
            <addaction name="actionDeleteAll"/>
-          </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar33">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
            <addaction name="actionAxis"/>
+           <addaction name="actionUndo"/>
+           <addaction name="actionNew"/>
           </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar34">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
-           <addaction name="actionUndo" />
-          </widget>
-        </item>
-        <item>
-          <widget class="QToolBar" name="OperationsToolBar35">
-           <attribute name="toolBarArea" >
-            <enum>TopToolBarArea</enum>
-           </attribute>
+         </item>
+         <item>
+          <spacer name="toolsToolBarSpacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Horizontal</enum>
            </property>
-           <attribute name="toolBarBreak" >
-            <bool>false</bool>
-           </attribute>
-           <addaction name="actionNew" />
-          </widget>
-        </item>
-       </layout>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
       </item>
       <item>
         <widget class="QScrollArea" name="scrollArea_2">
@@ -2172,11 +2100,11 @@
             </widget>
             <widget class="QLabel" name="VisibleIcon">
               <property name="geometry">  
-                <rect>  
-                  <x>80</x>  
-                  <y>0</y>  
-                  <width>40</width>  
-                  <height>35</height>   
+                <rect>
+                  <x>82</x>
+                  <y>2</y>
+                  <width>36</width>
+                  <height>30</height>
                 </rect> 
               </property>   
               <property name="sizePolicy" >
@@ -2191,17 +2119,20 @@
              <property name="pixmap">  
                 <pixmap>:/cgal/icons/resources/vis.bmp</pixmap>  
               </property> 
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
             </widget>
             <widget class="QLabel" name="DrawHeader" >  
               <property name="pixmap">  
                 <pixmap>:/cgal/icons/resources/draw.png</pixmap>  
               </property> 
               <property name="geometry">  
-                <rect>  
-                  <x>120</x>  
-                  <y>0</y>  
-                  <width>101</width>  
-                  <height>35</height>   
+                <rect>
+                  <x>121</x>
+                  <y>0</y>
+                  <width>38</width>
+                  <height>36</height>
                 </rect> 
               </property>   
               <property name="toolTip">
@@ -2213,6 +2144,9 @@
                 <verstretch>0</verstretch>  
                </sizepolicy>  
               </property> 
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
             </widget>
             <widget class="QToolButton" name="actionComplementH">
               <property name="geometry">
@@ -2234,15 +2168,6 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
              <property name="checkable" >
               <bool>true</bool>
@@ -2272,15 +2197,6 @@
                   <width>27</width>
                   <height>25</height>
                 </size>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
@@ -2317,15 +2233,6 @@
                   <height>25</height>
                 </size>
               </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
-              </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
                 <horstretch>0</horstretch>
@@ -2360,15 +2267,6 @@
                   <width>27</width>
                   <height>25</height>
                 </size>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
@@ -2405,15 +2303,6 @@
                   <height>25</height>
                 </size>
               </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
-              </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
                 <horstretch>0</horstretch>
@@ -2448,15 +2337,6 @@
                   <width>27</width>
                   <height>25</height>
                 </size>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
@@ -2493,15 +2373,6 @@
                   <height>25</height>
                 </size>
               </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
-              </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
                 <horstretch>0</horstretch>
@@ -2536,15 +2407,6 @@
                   <width>27</width>
                   <height>25</height>
                 </size>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
@@ -2596,15 +2458,6 @@
                   <width>33</width>
                   <height>33</height>  
                 </rect>
-              </property>
-              <property name="styleSheet">
-                <string notr="true">QToolButton {border:none;}  
-                                    QToolButton:hover {
-                                        border: 1px solid gray;
-                                        border-radius: 2px;
-                                        background-color: white;
-                                      }
-                </string>
               </property>
               <property name="IconSize">
                 <size>
