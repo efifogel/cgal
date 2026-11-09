@@ -65,6 +65,12 @@
 #include <array>
 #include <QButtonGroup>
 #include <QPushButton>
+#include <QDialog>
+#include <QBoxLayout>
+#include <QStyle>
+#include <QProxyStyle>
+#include <QPainter>
+#include <QStyleOption>
 #include <QMouseEvent>
 #include <QWindow>
 #include <QGuiApplication>
@@ -953,6 +959,35 @@ protected:
   }
 };
 
+// On dark desktop themes the outlines of check box squares and radio button
+// circles are hardly visible. Draw the indicator as usual (keeping the check
+// mark or dot), then draw its outline on top: a lighter square with slightly
+// rounded corners for a check box, and a white ring for a radio button.
+class Visible_indicator_style : public QProxyStyle {
+public:
+  void drawPrimitive(PrimitiveElement element, const QStyleOption* option,
+                     QPainter* painter,
+                     const QWidget* widget = nullptr) const override {
+    QProxyStyle::drawPrimitive(element, option, painter, widget);
+    if ((element != PE_IndicatorCheckBox) &&
+        (element != PE_IndicatorRadioButton))
+      return;
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing);
+    painter->setBrush(Qt::NoBrush);
+    QRectF rect = QRectF(option->rect).adjusted(0.5, 0.5, -0.5, -0.5);
+    if (element == PE_IndicatorCheckBox) {
+      painter->setPen(QPen(QColor(0xa0, 0xa0, 0xa0), 1));
+      painter->drawRoundedRect(rect, 2.5, 2.5);
+    }
+    else {
+      painter->setPen(QPen(Qt::white, 1));
+      painter->drawEllipse(rect);
+    }
+    painter->restore();
+  }
+};
+
 //The main page for displaying the window and all the icons
 class MainWindow : public CGAL::Qt::DemosMainWindow,
                    public Ui::Boolean_set_operations_2 {
@@ -1579,6 +1614,15 @@ MainWindow::MainWindow() :
   CGAL::set_error_behaviour(CGAL::CONTINUE);
 
   setupUi(this);
+
+  // Make the check boxes and radio buttons of the Operations panel visible on
+  // dark themes.
+  auto* indicator_style = new Visible_indicator_style;
+  indicator_style->setParent(this);
+  for (auto* box : sceneDockWidget->findChildren<QCheckBox*>())
+    box->setStyle(indicator_style);
+  for (auto* button : sceneDockWidget->findChildren<QRadioButton*>())
+    button->setStyle(indicator_style);
 
   // Exactly one bucket is the operand of the complement operation: make the
   // Complement column exclusive, so clicking the marked cell is a no-op.
@@ -7536,49 +7580,88 @@ void MainWindow::zoomToFit() {
     modelChanged();
 }
 
-// Show a message box with a "Don't show this message again" check box.
+// Show a message with a "Don't show this message again" check box.
 // aToggle is the Edit-menu action that controls whether the message is shown;
 // checking the box unchecks it (and its handler updates the flag).
+// This is a plain dialog rather than a QMessageBox, because QMessageBox
+// arranges its buttons according to the platform: here OK is always on the
+// left and Cancel (when offered) on the right, and the two look alike (neither
+// is the default button).
 // Return the button the user clicked (Escape and the close box count as
-// Cancel when it is offered).
+// Cancel when it is offered, and as OK otherwise).
 QMessageBox::StandardButton
 MainWindow::show_message(QMessageBox::Icon aIcon, const QString& aTitle,
                          const QString& aText, QAction* aToggle,
                          QMessageBox::StandardButtons aButtons) {
-  QMessageBox msgBox(aIcon, aTitle, aText, QMessageBox::NoButton, this);
-  // Give both buttons the same role, so that they keep the order in which
-  // they are added (OK, then Cancel) regardless of the platform's dialog
-  // button layout. Don't make either one the default button, so that they
-  // look the same.
-  QPushButton* ok_button = msgBox.addButton("OK", QMessageBox::AcceptRole);
-  QPushButton* cancel_button = nullptr;
-  if (aButtons.testFlag(QMessageBox::Cancel))
-    cancel_button = msgBox.addButton("Cancel", QMessageBox::AcceptRole);
-  msgBox.setEscapeButton(cancel_button ? cancel_button : ok_button);
+  // Declared before the dialog, so that it outlives the check box using it.
+  Visible_indicator_style indicator_style;
+  QDialog dialog(this);
+  dialog.setWindowTitle(aTitle);
+
+  // The same icons QMessageBox uses.
+  QStyle::StandardPixmap pixmap = QStyle::SP_MessageBoxInformation;
+  switch (aIcon) {
+   case QMessageBox::Warning: pixmap = QStyle::SP_MessageBoxWarning; break;
+   case QMessageBox::Critical: pixmap = QStyle::SP_MessageBoxCritical; break;
+   case QMessageBox::Question: pixmap = QStyle::SP_MessageBoxQuestion; break;
+   default: break;
+  }
+  int icon_size = style()->pixelMetric(QStyle::PM_MessageBoxIconSize);
+  auto* icon_label = new QLabel;
+  icon_label->setPixmap(style()->standardIcon(pixmap).pixmap(icon_size));
+  icon_label->setAlignment(Qt::AlignTop);
+  auto* message_row = new QHBoxLayout;
+  message_row->addWidget(icon_label);
+  message_row->addSpacing(12);
+  message_row->addWidget(new QLabel(aText), 1);
+
+  auto* check_box = new QCheckBox("Don't show this message again");
+  // Make the check box visible on dark themes, like those of the Operations
+  // panel.
+  check_box->setStyle(&indicator_style);
+
+  auto* ok_button = new QPushButton("OK");
+  QPushButton* cancel_button = aButtons.testFlag(QMessageBox::Cancel) ?
+    new QPushButton("Cancel") : nullptr;
+  auto* button_row = new QHBoxLayout;
+  if (cancel_button) {
+    button_row->addWidget(ok_button);
+    button_row->addStretch();
+    button_row->addWidget(cancel_button);
+  }
+  else {
+    button_row->addStretch();
+    button_row->addWidget(ok_button);
+  }
   for (auto* button : {ok_button, cancel_button}) {
     if (! button) continue;
     button->setAutoDefault(false);
     button->setDefault(false);
   }
-  // QMessageBox may size its text label slightly too narrow, clipping the
-  // text on the right; reserve the full text width plus some slack.
-  if (auto* label = msgBox.findChild<QLabel*>("qt_msgbox_label")) {
-    QFontMetrics fm(label->font());
-    label->setMinimumWidth(fm.horizontalAdvance(label->text()) +
-                           fm.averageCharWidth() * 4);
-  }
-  // The message box takes ownership of the check box.
-  msgBox.setCheckBox(new QCheckBox("Don't show this message again"));
-  // Center the message box over the canvas. (Under native Wayland the
-  // compositor places dialogs and ignores the requested position.)
-  msgBox.adjustSize();
+  QObject::connect(ok_button, &QPushButton::clicked, &dialog, &QDialog::accept);
+  if (cancel_button)
+    QObject::connect(cancel_button, &QPushButton::clicked,
+                     &dialog, &QDialog::reject);
+
+  auto* layout = new QVBoxLayout(&dialog);
+  layout->addLayout(message_row);
+  layout->addSpacing(6);
+  layout->addWidget(check_box);
+  layout->addSpacing(6);
+  layout->addLayout(button_row);
+  // Fit the dialog to its content (no clipped text, not resizable).
+  layout->setSizeConstraint(QLayout::SetFixedSize);
+
+  // Center the dialog over the canvas. (Under native Wayland the compositor
+  // places dialogs and ignores the requested position.)
+  dialog.adjustSize();
   QWidget* canvas = graphicsView->viewport();
   QPoint center = canvas->mapToGlobal(canvas->rect().center());
-  msgBox.move(center - msgBox.rect().center());
-  msgBox.exec();
-  if (msgBox.checkBox()->isChecked()) aToggle->setChecked(false);
-  return (cancel_button && (msgBox.clickedButton() == cancel_button)) ?
-    QMessageBox::Cancel : QMessageBox::Ok;
+  dialog.move(center - dialog.rect().center());
+
+  bool accepted = (dialog.exec() == QDialog::Accepted);
+  if (check_box->isChecked()) aToggle->setChecked(false);
+  return (cancel_button && ! accepted) ? QMessageBox::Cancel : QMessageBox::Ok;
 }
 
 // Warning: the Draw/Insert bucket, where the result is added, is not empty.
