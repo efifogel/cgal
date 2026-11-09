@@ -13,6 +13,8 @@
         <file>resources/copy.png</file>
         <file>resources/move.png</file>
         <file>resources/axis.png</file>
+        <file>resources/show_grid.png</file>
+        <file>resources/snap.png</file>
         <file>resources/undo.png</file>
         <file>resources/paste.png</file>
         <file>resources/draw.png</file>
