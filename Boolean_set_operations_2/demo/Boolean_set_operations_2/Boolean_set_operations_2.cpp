@@ -62,6 +62,9 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QDockWidget>
+#include <array>
+#include <QButtonGroup>
+#include <QPushButton>
 #include <QMouseEvent>
 #include <QWindow>
 #include <QGuiApplication>
@@ -966,6 +969,7 @@ private:
   size_t m_color_active;
   size_t m_color_move;
   bool empty_warn;
+  bool operand_error_warn;
   size_t m_color_visible;
   size_t m_color_cm;
   size_t m_color_complement;
@@ -1116,7 +1120,14 @@ slots:
 
   void on_actionMoveH_toggled(bool aChecked);
 
-  void show_not_empty_warning();
+  QMessageBox::StandardButton
+  show_message(QMessageBox::Icon aIcon, const QString& aTitle,
+               const QString& aText, QAction* aToggle,
+               QMessageBox::StandardButtons aButtons = QMessageBox::Ok);
+  bool show_not_empty_warning();
+  void show_operand_error();
+  bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
+  bool abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOperand);
 
   //showing colors when clicked on the checkbox
   void on_showBlue_toggled(bool a_check);
@@ -1557,6 +1568,7 @@ MainWindow::MainWindow() :
   m_visible_magenta(false), //default
   m_visible_aqua(false), //default
   empty_warn(true), // default
+  operand_error_warn(true), // default
   m_disjoint(false), //default
   m_pan(false),
   m_grid(false),
@@ -1567,6 +1579,14 @@ MainWindow::MainWindow() :
   CGAL::set_error_behaviour(CGAL::CONTINUE);
 
   setupUi(this);
+
+  // Exactly one bucket is the operand of the complement operation: make the
+  // Complement column exclusive, so clicking the marked cell is a no-op.
+  auto* complement_group = new QButtonGroup(this);
+  complement_group->setExclusive(true);
+  for (auto* box : {showBlueComp, showRedComp, showBlackComp, showBrownComp,
+                    showYellowComp, showMagentaComp, showAquaComp})
+    complement_group->addButton(box);
 
   // Fit the Visible and Draw/Insert header images into the same icon area as
   // the operation buttons next to them (27x25), keeping their aspect ratio.
@@ -1716,6 +1736,8 @@ MainWindow::MainWindow() :
                    SLOT(on_showColorBucket_toggled(bool)));
   QObject::connect(showConsole, SIGNAL(toggled(bool)), this,
                    SLOT(on_showConsole_toggled(bool)));
+  QObject::connect(actionErrorOperand, &QAction::toggled, this,
+                   [this](bool a_check) { operand_error_warn = a_check; });
   QObject::connect(actionWarnNotEmpty, &QAction::toggled, this,
                    [this](bool a_check) { empty_warn = a_check; });
   QObject::connect(showInfo, SIGNAL(toggled(bool)), this,
@@ -3351,7 +3373,6 @@ void MainWindow::on_actionMinusColor_triggered() {
   if (!(m_visible_yellow || m_visible_magenta || m_visible_aqua)) {
     states_stack.back().m_curve_sets[3].clear();
     //states_stack.back().m_curve_sets[7].clear();
-    m_color_active = 0;
 
     states_stack.back().brown_circular_sources().clear();
     states_stack.back().brown_linear_sources().clear();
@@ -3372,7 +3393,10 @@ void MainWindow::on_actionMinusColor_triggered() {
     moveBrown->setVisible(false);
     showBrownLabel->setVisible(false);
 
-    drawBlue->setChecked(true);
+    // If the removed bucket is marked for Draw/Insert or Complement,
+    // mark the first bucket instead.
+    if (m_color_active == 3) drawBlue->setChecked(true);
+    if (m_color_complement == 3) showBlueComp->setChecked(true);
 
     line10->setVisible(false);
 
@@ -3393,7 +3417,6 @@ void MainWindow::on_actionMinusColor_triggered() {
     actionMinusColor->setEnabled(false);
   } else if (!(m_visible_magenta || m_visible_aqua)) {
     states_stack.back().m_curve_sets[4].clear();
-    m_color_active = 0;
 
     states_stack.back().yellow_circular_sources().clear();
     states_stack.back().yellow_linear_sources().clear();
@@ -3414,7 +3437,10 @@ void MainWindow::on_actionMinusColor_triggered() {
     moveYellow->setVisible(false);
     showYellowLabel->setVisible(false);
 
-    drawBlue->setChecked(true);
+    // If the removed bucket is marked for Draw/Insert or Complement,
+    // mark the first bucket instead.
+    if (m_color_active == 4) drawBlue->setChecked(true);
+    if (m_color_complement == 4) showBlueComp->setChecked(true);
 
     line9->setVisible(false);
 
@@ -3434,7 +3460,6 @@ void MainWindow::on_actionMinusColor_triggered() {
     actionMinusColor->setText("Remove Brown");
   } else if (!m_visible_aqua) {
     states_stack.back().m_curve_sets[5].clear();
-    m_color_active = 0;
 
     states_stack.back().magenta_circular_sources().clear();
     states_stack.back().magenta_linear_sources().clear();
@@ -3455,7 +3480,10 @@ void MainWindow::on_actionMinusColor_triggered() {
     moveMagenta->setVisible(false);
     showMagentaLabel->setVisible(false);
 
-    drawBlue->setChecked(true);
+    // If the removed bucket is marked for Draw/Insert or Complement,
+    // mark the first bucket instead.
+    if (m_color_active == 5) drawBlue->setChecked(true);
+    if (m_color_complement == 5) showBlueComp->setChecked(true);
 
     line8->setVisible(false);
 
@@ -3475,7 +3503,6 @@ void MainWindow::on_actionMinusColor_triggered() {
     actionMinusColor->setText("Remove Yellow");
   } else {
     states_stack.back().m_curve_sets[6].clear();
-    m_color_active = 0;
 
     states_stack.back().aqua_circular_sources().clear();
     states_stack.back().aqua_linear_sources().clear();
@@ -3496,7 +3523,10 @@ void MainWindow::on_actionMinusColor_triggered() {
     moveAqua->setVisible(false);
     showAquaLabel->setVisible(false);
 
-    drawBlue->setChecked(true);
+    // If the removed bucket is marked for Draw/Insert or Complement,
+    // mark the first bucket instead.
+    if (m_color_active == 6) drawBlue->setChecked(true);
+    if (m_color_complement == 6) showBlueComp->setChecked(true);
 
     line7->setVisible(false);
 
@@ -5457,15 +5487,9 @@ void MainWindow::on_actionInsertLinear_toggled(bool aChecked) {
 //complement
 void MainWindow::on_actionComplementH_toggled(bool aChecked) {
   if (actionComplementH->isChecked()) {
-    // The complement is added to the Draw/Insert bucket. If that bucket is
-    // the (non-empty) one being complemented, the result would be the entire
-    // (clipped) plane, so abort without changing anything.
-    if ((m_color_active == m_color_complement) &&
-        ! states_stack.back().active_set(m_color_active).is_empty()) {
-      actionComplementH->setChecked(false);
-      if (empty_warn) show_not_empty_warning();
+    if (abort_for_draw_bucket(actionComplementH,
+                              m_color_complement == m_color_active))
       return;
-    }
 
     bool lDone = false;
     QCursor old = this->cursor();
@@ -5513,11 +5537,6 @@ void MainWindow::on_actionComplementH_toggled(bool aChecked) {
     }
     //m_circular_input->get_BoundingRect();
 
-    if (!states_stack.back().active_set(m_color_active).is_empty()) {
-      if (empty_warn) {
-        show_not_empty_warning();
-      }
-    }
 
     switch (m_color_active) {
      case 0:
@@ -5854,6 +5873,12 @@ void MainWindow::on_actionComplementH_toggled(bool aChecked) {
 //intersection
 void MainWindow::on_actionIntersectionH_toggled(bool aChecked) {
   if (actionIntersectionH->isChecked()) {
+    if (abort_for_draw_bucket(
+          actionIntersectionH,
+          draw_row_checked({showBlueInt, showRedInt, showBlackInt,
+                           showBrownInt, showYellowInt, showMagentaInt,
+                           showAquaInt})))
+      return;
     //std::cout<<"Intersection"<<endl;
     bool lDone = false;
     QCursor old = this->cursor();
@@ -5888,11 +5913,6 @@ void MainWindow::on_actionIntersectionH_toggled(bool aChecked) {
     states_stack.back().result_bezier_sources().clear();
     states_stack.back().result_polyline_sources().clear();
 
-    if (!states_stack.back().active_set(m_color_active).is_empty()) {
-      if (empty_warn) {
-        show_not_empty_warning();
-      }
-    }
     switch (m_color_active) {
      case 0:
       if (!states_stack.back().blue_set().is_empty() && m_blue_int)
@@ -6147,6 +6167,12 @@ void MainWindow::on_actionIntersectionH_toggled(bool aChecked) {
 //difference
 void MainWindow::on_actionDifferenceH_toggled(bool aChecked) {
   if (actionDifferenceH->isChecked()) {
+    if (abort_for_draw_bucket(
+          actionDifferenceH,
+          draw_row_checked({showBlueDiff, showRedDiff, showBlackDiff,
+                           showBrownDiff, showYellowDiff, showMagentaDiff,
+                           showAquaDiff})))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6224,11 +6250,6 @@ void MainWindow::on_actionDifferenceH_toggled(bool aChecked) {
       states_stack.back().result_bezier_sources().clear();
       states_stack.back().result_polyline_sources().clear();
 
-      if (!states_stack.back().active_set(m_color_active).is_empty()) {
-        if (empty_warn) {
-          show_not_empty_warning();
-        }
-      }
 
       switch (m_color_active) {
        case 0:
@@ -6420,6 +6441,12 @@ void MainWindow::on_actionDifferenceH_toggled(bool aChecked) {
 //symmetric difference
 void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool aChecked) {
   if (actionSymmetric_DifferenceH->isChecked()) {
+    if (abort_for_draw_bucket(
+          actionSymmetric_DifferenceH,
+          draw_row_checked({showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff,
+                           showBrownSym_Diff, showYellowSym_Diff, showMagentaSym_Diff,
+                           showAquaSym_Diff})))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6454,11 +6481,6 @@ void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool aChecked) {
     states_stack.back().result_bezier_sources().clear();
     states_stack.back().result_polyline_sources().clear();
 
-    if (!states_stack.back().active_set(m_color_active).is_empty()) {
-      if (empty_warn) {
-        show_not_empty_warning();
-      }
-    }
     switch (m_color_active) {
      case 0:
       if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
@@ -6737,6 +6759,12 @@ void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool aChecked) {
 //union
 void MainWindow::on_actionUnionH_toggled(bool aChecked) {
   if (actionUnionH->isChecked()) {
+    if (abort_for_draw_bucket(
+          actionUnionH,
+          draw_row_checked({showBlueUnion, showRedUnion, showBlackUnion,
+                           showBrownUnion, showYellowUnion, showMagentaUnion,
+                           showAquaUnion})))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6772,11 +6800,6 @@ void MainWindow::on_actionUnionH_toggled(bool aChecked) {
     states_stack.back().result_bezier_sources().clear();
     states_stack.back().result_polyline_sources().clear();
 
-    if (!states_stack.back().active_set(m_color_active).is_empty()) {
-      if (empty_warn) {
-        show_not_empty_warning();
-      }
-    }
 
     switch (m_color_active) {
      case 0:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
@@ -6909,6 +6932,9 @@ void MainWindow::on_actionUnionH_toggled(bool aChecked) {
 //copy
 void MainWindow::on_actionCopyH_toggled(bool aChecked) {
   if (actionCopyH->isChecked()) {
+    if (abort_for_draw_bucket(actionCopyH,
+                              m_color_copy == m_color_active))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6993,6 +7019,9 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
 //move
 void MainWindow::on_actionMoveH_toggled(bool aChecked) {
   if (actionMoveH->isChecked()) {
+    if (abort_for_draw_bucket(actionMoveH,
+                              m_color_move_ext == m_color_active))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -7168,6 +7197,12 @@ Polygon_with_holes_2 MainWindow::getMinkInputPolygon(size_t color) {
 //minkowski button clicked
 void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
   if (actionMinkowski_SumH->isChecked()) {
+    if (abort_for_draw_bucket(
+          actionMinkowski_SumH,
+          draw_row_checked({showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum,
+                           showBrownMink_Sum, showYellowMink_Sum, showMagentaMink_Sum,
+                           showAquaMink_Sum})))
+      return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -7195,11 +7230,6 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
       // DELETEALL_OP = 10
       // START_OP = 11*/
 
-      if (!states_stack.back().active_set(m_color_active).is_empty()) {
-        if (empty_warn) {
-          show_not_empty_warning();
-        }
-      }
 
       size_t count = 0;
       if (showBlueMink_Sum->isChecked()) count++;
@@ -7506,11 +7536,30 @@ void MainWindow::zoomToFit() {
     modelChanged();
 }
 
-//function to detect whether the bucket is occupied or not and throw warning
-void MainWindow::show_not_empty_warning() {
-  QMessageBox msgBox(QMessageBox::Warning, "Bucket Not Empty",
-                     "The Draw/Insert bucket is not empty.",
-                     QMessageBox::Ok, this);
+// Show a message box with a "Don't show this message again" check box.
+// aToggle is the Edit-menu action that controls whether the message is shown;
+// checking the box unchecks it (and its handler updates the flag).
+// Return the button the user clicked (Escape and the close box count as
+// Cancel when it is offered).
+QMessageBox::StandardButton
+MainWindow::show_message(QMessageBox::Icon aIcon, const QString& aTitle,
+                         const QString& aText, QAction* aToggle,
+                         QMessageBox::StandardButtons aButtons) {
+  QMessageBox msgBox(aIcon, aTitle, aText, QMessageBox::NoButton, this);
+  // Give both buttons the same role, so that they keep the order in which
+  // they are added (OK, then Cancel) regardless of the platform's dialog
+  // button layout. Don't make either one the default button, so that they
+  // look the same.
+  QPushButton* ok_button = msgBox.addButton("OK", QMessageBox::AcceptRole);
+  QPushButton* cancel_button = nullptr;
+  if (aButtons.testFlag(QMessageBox::Cancel))
+    cancel_button = msgBox.addButton("Cancel", QMessageBox::AcceptRole);
+  msgBox.setEscapeButton(cancel_button ? cancel_button : ok_button);
+  for (auto* button : {ok_button, cancel_button}) {
+    if (! button) continue;
+    button->setAutoDefault(false);
+    button->setDefault(false);
+  }
   // QMessageBox may size its text label slightly too narrow, clipping the
   // text on the right; reserve the full text width plus some slack.
   if (auto* label = msgBox.findChild<QLabel*>("qt_msgbox_label")) {
@@ -7527,8 +7576,56 @@ void MainWindow::show_not_empty_warning() {
   QPoint center = canvas->mapToGlobal(canvas->rect().center());
   msgBox.move(center - msgBox.rect().center());
   msgBox.exec();
-  // Keep the Edit-menu toggle in sync; its handler updates empty_warn.
-  if (msgBox.checkBox()->isChecked()) actionWarnNotEmpty->setChecked(false);
+  if (msgBox.checkBox()->isChecked()) aToggle->setChecked(false);
+  return (cancel_button && (msgBox.clickedButton() == cancel_button)) ?
+    QMessageBox::Cancel : QMessageBox::Ok;
+}
+
+// Warning: the Draw/Insert bucket, where the result is added, is not empty.
+// Uses the (blue) information icon, to set it apart from the (red) error.
+// Return true if the user chooses to continue.
+bool MainWindow::show_not_empty_warning() {
+  return show_message(QMessageBox::Information, "Warning: Bucket Not Empty",
+                      "The Draw/Insert bucket is not empty. "
+                      "Add the result to it?", actionWarnNotEmpty,
+                      QMessageBox::Ok | QMessageBox::Cancel) ==
+    QMessageBox::Ok;
+}
+
+// Error: the Draw/Insert bucket is a non-empty operand of the operation.
+void MainWindow::show_operand_error() {
+  show_message(QMessageBox::Critical, "Error: Operation Aborted",
+               "The result cannot be stored in a non-empty operand.",
+               actionErrorOperand);
+}
+
+// Whether the Draw/Insert bucket is marked in the given operation column.
+bool MainWindow::
+draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const {
+  return (m_color_active < aColumn.size()) &&
+    aColumn[m_color_active]->isChecked();
+}
+
+// Every operation stores its result in the Draw/Insert bucket. If that bucket
+// is not empty:
+// - If it is one of the operands, abort the operation and show an error
+//   (unless the user turned the error off).
+// - Otherwise, warn (unless the user turned the warning off), and abort the
+//   operation if the user cancels.
+// When aborting, uncheck the operation button. Return true if aborted.
+bool MainWindow::abort_for_draw_bucket(QAbstractButton* aOperation,
+                                       bool aIsOperand) {
+  if (states_stack.back().active_set(m_color_active).is_empty()) return false;
+  if (aIsOperand) {
+    aOperation->setChecked(false);
+    if (operand_error_warn) show_operand_error();
+    return true;
+  }
+  if (empty_warn && ! show_not_empty_warning()) {
+    aOperation->setChecked(false);
+    return true;
+  }
+  return false;
 }
 
 //resize button

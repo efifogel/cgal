@@ -77,6 +77,7 @@
       <addaction name="actionUndo"/>
       <addaction name="actionNew"/>
       <addaction name="separator"/>
+      <addaction name="actionErrorOperand"/>
       <addaction name="actionWarnNotEmpty"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -2761,6 +2762,17 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
   <action name="showConsole">
    <property name="text">
     <string>Console</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionErrorOperand">
+   <property name="text">
+    <string>Show Error When the Draw/Insert Bucket Is a Non-Empty Operand</string>
    </property>
    <property name="checkable">
     <bool>true</bool>
