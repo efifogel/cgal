@@ -90,6 +90,12 @@
     <addaction name="showColorBucket"/>
     <addaction name="showConsole"/>
     <addaction name="showInfo"/>
+    <addaction name="separator"/>
+    <addaction name="actionAxis"/>
+    <addaction name="actionGrid"/>
+    <addaction name="actionGridDenser"/>
+    <addaction name="actionGridSparser"/>
+    <addaction name="actionSnapToGrid"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
@@ -172,6 +178,10 @@ QToolButton:hover {
   background-color: white;
   border-color: #505050;
 }
+QToolButton:disabled {
+  background-color: #dcdcdc;
+  border-color: #b0b0b0;
+}
 QToolButton:checked, QToolButton:pressed {
   background-color: #cfe3ff;
   border-color: #3a7bd5;
@@ -249,6 +259,8 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
            <addaction name="actionPAN"/>
            <addaction name="actionDeleteAll"/>
            <addaction name="actionAxis"/>
+           <addaction name="actionGrid"/>
+           <addaction name="actionSnapToGrid"/>
            <addaction name="actionUndo"/>
            <addaction name="actionNew"/>
           </widget>
@@ -2845,7 +2857,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
       <normaloff>:/cgal/icons/minus</normaloff>:/cgal/icons/minus</iconset>
     </property>
     <property name="text">
-      <string>&amp;Bucket Removal Not Allowed</string>
+      <string>&amp;Minimum Number of Buckets Reached</string>
     </property>
   </action>
   <action name="actionDeleteAll">
@@ -2854,7 +2866,47 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
      <normaloff>:/cgal/icons/resources/check-off.png</normaloff>:/cgal/icons/resources/check-off.png</iconset>
    </property> 
    <property name="text">
-    <string>Delete all Buckets</string>
+    <string>Clear All Buckets</string>
+   </property>
+  </action>
+  <action name="actionGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Boolean_operations_2.qrc">
+     <normaloff>:/cgal/icons/resources/show_grid.png</normaloff>:/cgal/icons/resources/show_grid.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show &amp;Grid</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+G</string>
+   </property>
+  </action>
+  <action name="actionGridDenser">
+   <property name="text">
+    <string>&amp;Increase Grid Density</string>
+   </property>
+  </action>
+  <action name="actionGridSparser">
+   <property name="text">
+    <string>&amp;Decrease Grid Density</string>
+   </property>
+  </action>
+  <action name="actionSnapToGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Boolean_operations_2.qrc">
+     <normaloff>:/cgal/icons/resources/snap.png</normaloff>:/cgal/icons/resources/snap.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Snap to Grid</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+N</string>
    </property>
   </action>
   <action name="actionAxis" >
@@ -2866,7 +2918,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
      <normaloff>:/cgal/icons/resources/axis.png</normaloff>:/cgal/icons/resources/axis.png</iconset>
    </property>
    <property name="text" >
-    <string>&amp;Axis</string>
+    <string>Show &amp;Axes</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+A</string>

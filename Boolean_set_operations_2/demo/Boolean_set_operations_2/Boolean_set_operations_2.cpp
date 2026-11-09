@@ -44,6 +44,9 @@
 #include <QGraphicsScene>
 #include <QToolButton>
 #include <QActionGroup>
+#include <QMenu>
+#include <QGraphicsSceneMouseEvent>
+#include <cmath>
 #include <QSize>
 #include <QPen>
 #include <QtGui>
@@ -63,6 +66,7 @@
 #include <QTimer>
 #include <QDockWidget>
 #include <array>
+#include <algorithm>
 #include <QButtonGroup>
 #include <QPushButton>
 #include <QDialog>
@@ -961,10 +965,19 @@ protected:
 
 // On dark desktop themes the outlines of check box squares and radio button
 // circles are hardly visible. Draw the indicator as usual (keeping the check
-// mark or dot), then draw its outline on top: a lighter square with slightly
-// rounded corners for a check box, and a white ring for a radio button.
+// mark or dot), then draw its outline on top: a gray square with slightly
+// rounded corners for a check box, and a gray ring for a radio button. The
+// outline turns white while the cursor hovers over the button.
 class Visible_indicator_style : public QProxyStyle {
 public:
+  void polish(QWidget* widget) override {
+    QProxyStyle::polish(widget);
+    // Track hovering, so that State_MouseOver is set.
+    if (qobject_cast<QCheckBox*>(widget) ||
+        qobject_cast<QRadioButton*>(widget))
+      widget->setAttribute(Qt::WA_Hover);
+  }
+
   void drawPrimitive(PrimitiveElement element, const QStyleOption* option,
                      QPainter* painter,
                      const QWidget* widget = nullptr) const override {
@@ -972,20 +985,102 @@ public:
     if ((element != PE_IndicatorCheckBox) &&
         (element != PE_IndicatorRadioButton))
       return;
+    bool hover = option->state.testFlag(State_MouseOver) &&
+      option->state.testFlag(State_Enabled);
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
     painter->setBrush(Qt::NoBrush);
+    painter->setPen(QPen(hover ? QColor(Qt::white) : QColor(0x80, 0x80, 0x80),
+                         1));
     QRectF rect = QRectF(option->rect).adjusted(0.5, 0.5, -0.5, -0.5);
-    if (element == PE_IndicatorCheckBox) {
-      painter->setPen(QPen(QColor(0xa0, 0xa0, 0xa0), 1));
-      painter->drawRoundedRect(rect, 2.5, 2.5);
-    }
-    else {
-      painter->setPen(QPen(Qt::white, 1));
-      painter->drawEllipse(rect);
-    }
+    if (element == PE_IndicatorCheckBox)
+      painter->drawRoundedRect(rect, 1.5, 1.5);
+    else painter->drawEllipse(rect);
     painter->restore();
   }
+};
+
+// A scene that can draw a grid in its background, behind all items. Grid
+// lines that would be denser than a few pixels on screen are thinned out (by
+// factors of 10), so that zooming out does not fill the view with lines.
+class Grid_scene : public QGraphicsScene {
+public:
+  bool grid_visible() const { return m_grid_visible; }
+  void set_grid_visible(bool aVisible) { m_grid_visible = aVisible; update(); }
+
+  double grid_spacing() const { return m_grid_spacing; }
+  void set_grid_spacing(double aSpacing) {
+    m_grid_spacing = aSpacing;
+    update();
+  }
+
+  // The grid point nearest to aP.
+  QPointF snap(const QPointF& aP) const {
+    return QPointF(std::round(aP.x() / m_grid_spacing) * m_grid_spacing,
+                   std::round(aP.y() / m_grid_spacing) * m_grid_spacing);
+  }
+
+protected:
+  void drawBackground(QPainter* painter, const QRectF& rect) override {
+    QGraphicsScene::drawBackground(painter, rect);
+    if (! m_grid_visible || (m_grid_spacing <= 0)) return;
+    double scale = std::abs(painter->worldTransform().m11());
+    if (scale <= 0) return;
+    const double min_pixels = 6;
+    double step = m_grid_spacing;
+    while (step * scale < min_pixels) step *= 10;
+    QVector<QLineF> lines;
+    for (double x = std::ceil(rect.left() / step) * step; x <= rect.right();
+         x += step)
+      lines.append(QLineF(x, rect.top(), x, rect.bottom()));
+    for (double y = std::ceil(rect.top() / step) * step; y <= rect.bottom();
+         y += step)
+      lines.append(QLineF(rect.left(), y, rect.right(), y));
+    QPen pen(QColor(0xdc, 0xdc, 0xdc), 1);
+    pen.setCosmetic(true);
+    painter->save();
+    painter->setPen(pen);
+    painter->drawLines(lines);
+    painter->restore();
+  }
+
+private:
+  bool m_grid_visible = false;
+  double m_grid_spacing = 10;
+};
+
+// Snaps mouse positions in a Grid_scene to the nearest grid point. It is
+// installed on the application, so that it sees the scene's mouse events
+// before the scene's own event filters (the polygon input tools, which read
+// scenePos()).
+class Grid_snapper : public QObject {
+public:
+  Grid_snapper(Grid_scene* aScene, QObject* aParent) :
+    QObject(aParent), m_scene(aScene) {}
+
+  bool enabled() const { return m_enabled; }
+  void set_enabled(bool aEnabled) { m_enabled = aEnabled; }
+
+protected:
+  bool eventFilter(QObject* obj, QEvent* event) override {
+    if (! m_enabled || (obj != m_scene)) return false;
+    switch (event->type()) {
+     case QEvent::GraphicsSceneMousePress:
+     case QEvent::GraphicsSceneMouseMove:
+     case QEvent::GraphicsSceneMouseRelease:
+     case QEvent::GraphicsSceneMouseDoubleClick: {
+       auto* me = static_cast<QGraphicsSceneMouseEvent*>(event);
+       me->setScenePos(m_scene->snap(me->scenePos()));
+       break;
+     }
+     default: break;
+    }
+    return false;
+  }
+
+private:
+  Grid_scene* m_scene;
+  bool m_enabled = false;
 };
 
 //The main page for displaying the window and all the icons
@@ -994,7 +1089,7 @@ class MainWindow : public CGAL::Qt::DemosMainWindow,
   Q_OBJECT// removing it gives error ui not declared
 
 private:
-  QGraphicsScene m_scene;
+  Grid_scene m_scene;
   //keep it intact for now check it out
   bool m_circular_active;
   bool m_bezier_active;
@@ -1162,6 +1257,9 @@ slots:
   bool show_not_empty_warning();
   void show_operand_error();
   bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
+  void limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn,
+                             QAbstractButton* aBox, bool aChecked,
+                             QAbstractButton* aOperation);
   bool abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOperand);
 
   //showing colors when clicked on the checkbox
@@ -1624,6 +1722,47 @@ MainWindow::MainWindow() :
   for (auto* button : sceneDockWidget->findChildren<QRadioButton*>())
     button->setStyle(indicator_style);
 
+  // Grid: show/hide, spacing, and snapping of clicked points to the grid.
+  QObject::connect(actionGrid, &QAction::toggled, this,
+                   [this](bool a_check) { m_scene.set_grid_visible(a_check); });
+  auto* grid_snapper = new Grid_snapper(&m_scene, this);
+  qApp->installEventFilter(grid_snapper);
+  QObject::connect(actionSnapToGrid, &QAction::toggled, this,
+                   [grid_snapper](bool a_check)
+                   { grid_snapper->set_enabled(a_check); });
+  // Grid density: step through the spacings below. A denser grid has a
+  // smaller spacing. The menu items show the spacing they lead to, and are
+  // disabled at the ends of the range.
+  static const std::array<double, 7> spacings = {1, 2, 5, 10, 20, 50, 100};
+  auto update_density_actions = [this]() {
+    auto it = std::find(spacings.begin(), spacings.end(),
+                        m_scene.grid_spacing());
+    bool denser = (it != spacings.begin());
+    bool sparser = (it + 1 != spacings.end());
+    actionGridDenser->setEnabled(denser);
+    actionGridSparser->setEnabled(sparser);
+    actionGridDenser->setText(denser ?
+      QString("&Increase Grid Density (Spacing %1)").arg(*(it - 1)) :
+      QString("&Increase Grid Density"));
+    actionGridSparser->setText(sparser ?
+      QString("&Decrease Grid Density (Spacing %1)").arg(*(it + 1)) :
+      QString("&Decrease Grid Density"));
+  };
+  auto change_density = [this, update_density_actions](int aDirection) {
+    auto it = std::find(spacings.begin(), spacings.end(),
+                        m_scene.grid_spacing());
+    it += aDirection;
+    if ((it < spacings.begin()) || (it >= spacings.end())) return;
+    m_scene.set_grid_spacing(*it);
+    update_density_actions();
+    statusBar()->showMessage(QString("Grid spacing: %1").arg(*it), 3000);
+  };
+  QObject::connect(actionGridDenser, &QAction::triggered, this,
+                   [change_density]() { change_density(-1); });
+  QObject::connect(actionGridSparser, &QAction::triggered, this,
+                   [change_density]() { change_density(+1); });
+  update_density_actions();
+
   // Exactly one bucket is the operand of the complement operation: make the
   // Complement column exclusive, so clicking the marked cell is a no-op.
   auto* complement_group = new QButtonGroup(this);
@@ -1631,6 +1770,32 @@ MainWindow::MainWindow() :
   for (auto* box : {showBlueComp, showRedComp, showBlackComp, showBrownComp,
                     showYellowComp, showMagentaComp, showAquaComp})
     complement_group->addButton(box);
+
+  // The Difference, Symmetric Difference, and Minkowski Sum columns have at
+  // most two marked cells, and their operations are enabled only with exactly
+  // two.
+  using Column = std::array<QAbstractButton*, 7>;
+  const std::pair<Column, QAbstractButton*> two_operand_columns[] = {
+    {{showBlueDiff, showRedDiff, showBlackDiff, showBrownDiff,
+      showYellowDiff, showMagentaDiff, showAquaDiff},
+     actionDifferenceH},
+    {{showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff, showBrownSym_Diff,
+      showYellowSym_Diff, showMagentaSym_Diff, showAquaSym_Diff},
+     actionSymmetric_DifferenceH},
+    {{showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum, showBrownMink_Sum,
+      showYellowMink_Sum, showMagentaMink_Sum, showAquaMink_Sum},
+     actionMinkowski_SumH}
+  };
+  for (const auto& [column, operation] : two_operand_columns) {
+    for (auto* box : column)
+      QObject::connect(box, &QAbstractButton::toggled, this,
+                       [this, box, column, operation](bool checked) {
+                         limit_to_two_operands(column, box, checked,
+                                               operation);
+                       });
+    // Set the initial state of the operation.
+    limit_to_two_operands(column, column[0], false, operation);
+  }
 
   // Fit the Visible and Draw/Insert header images into the same icon area as
   // the operation buttons next to them (27x25), keeping their aspect ratio.
@@ -1648,8 +1813,9 @@ MainWindow::MainWindow() :
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphicsView->setScene(&m_scene);
   // Use a white canvas regardless of the desktop color scheme, so that the
-  // drawing area stands out from the surrounding widgets.
-  this->graphicsView->setBackgroundBrush(Qt::white);
+  // drawing area stands out from the surrounding widgets. (The scene, rather
+  // than the view, paints it, so that the scene can draw the grid over it.)
+  m_scene.setBackgroundBrush(Qt::white);
   this->graphicsView->setMouseTracking(true);
   this->graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   this->graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -3404,7 +3570,7 @@ void MainWindow::on_actionAddColor_triggered() {
     line0006->setGeometry(QRect(70, 0, 7, 275));
 
     actionAddColor->setEnabled(false);
-    actionAddColor->setText("Maximum Bucket Limit Reached");
+    actionAddColor->setText("Maximum Number of Buckets Reached");
     actionMinusColor->setText("Remove Aqua");
   }
 
@@ -3441,6 +3607,11 @@ void MainWindow::on_actionMinusColor_triggered() {
     // mark the first bucket instead.
     if (m_color_active == 3) drawBlue->setChecked(true);
     if (m_color_complement == 3) showBlueComp->setChecked(true);
+    // Unmark the removed bucket as an operand of the two-operand operations;
+    // this disables an operation that no longer has two operands.
+    showBrownDiff->setChecked(false);
+    showBrownSym_Diff->setChecked(false);
+    showBrownMink_Sum->setChecked(false);
 
     line10->setVisible(false);
 
@@ -3457,7 +3628,7 @@ void MainWindow::on_actionMinusColor_triggered() {
     line0007->setGeometry(QRect(380, 0, 7, 155));
     line0006->setGeometry(QRect(70, 0, 7, 155));
 
-    actionMinusColor->setText("Bucket Removal Not Allowed");
+    actionMinusColor->setText("Minimum Number of Buckets Reached");
     actionMinusColor->setEnabled(false);
   } else if (!(m_visible_magenta || m_visible_aqua)) {
     states_stack.back().m_curve_sets[4].clear();
@@ -3485,6 +3656,11 @@ void MainWindow::on_actionMinusColor_triggered() {
     // mark the first bucket instead.
     if (m_color_active == 4) drawBlue->setChecked(true);
     if (m_color_complement == 4) showBlueComp->setChecked(true);
+    // Unmark the removed bucket as an operand of the two-operand operations;
+    // this disables an operation that no longer has two operands.
+    showYellowDiff->setChecked(false);
+    showYellowSym_Diff->setChecked(false);
+    showYellowMink_Sum->setChecked(false);
 
     line9->setVisible(false);
 
@@ -3528,6 +3704,11 @@ void MainWindow::on_actionMinusColor_triggered() {
     // mark the first bucket instead.
     if (m_color_active == 5) drawBlue->setChecked(true);
     if (m_color_complement == 5) showBlueComp->setChecked(true);
+    // Unmark the removed bucket as an operand of the two-operand operations;
+    // this disables an operation that no longer has two operands.
+    showMagentaDiff->setChecked(false);
+    showMagentaSym_Diff->setChecked(false);
+    showMagentaMink_Sum->setChecked(false);
 
     line8->setVisible(false);
 
@@ -3571,6 +3752,11 @@ void MainWindow::on_actionMinusColor_triggered() {
     // mark the first bucket instead.
     if (m_color_active == 6) drawBlue->setChecked(true);
     if (m_color_complement == 6) showBlueComp->setChecked(true);
+    // Unmark the removed bucket as an operand of the two-operand operations;
+    // this disables an operation that no longer has two operands.
+    showAquaDiff->setChecked(false);
+    showAquaSym_Diff->setChecked(false);
+    showAquaMink_Sum->setChecked(false);
 
     line7->setVisible(false);
 
@@ -3980,7 +4166,7 @@ void MainWindow::on_actionNew_triggered() {
 
   actionAddColor->setEnabled(true);
   actionAddColor->setText("Add a Bucket");
-  actionMinusColor->setText("Bucket Removal Not Allowed");
+  actionMinusColor->setText("Minimum Number of Buckets Reached");
   VisibleHeader->setChecked(true);
   showClear->setChecked(false);
 
@@ -4061,8 +4247,8 @@ void MainWindow::on_actionDeleteAll_triggered() {
     states_stack.back().yellow_set().clear();
     states_stack.back().yellow_circular_sources().clear();
     states_stack.back().yellow_bezier_sources().clear();
-    states_stack.back().brown_linear_sources().clear();
-    states_stack.back().brown_polyline_sources().clear();
+    states_stack.back().yellow_linear_sources().clear();
+    states_stack.back().yellow_polyline_sources().clear();
     states_stack.back().magenta_set().clear();
     states_stack.back().magenta_circular_sources().clear();
     states_stack.back().magenta_bezier_sources().clear();
@@ -7447,7 +7633,8 @@ void MainWindow::on_actionAxis_triggered() {
     m_scene.removeItem(yAxis);
     m_grid = false;
   }
-  actionAxis->setChecked(false);
+  // Keep the button checked (highlighted) while the axes are shown.
+  actionAxis->setChecked(m_grid);
   m_scene.update();
   modelChanged();
 }
@@ -7680,6 +7867,25 @@ void MainWindow::show_operand_error() {
   show_message(QMessageBox::Critical, "Error: Operation Aborted",
                "The result cannot be stored in a non-empty operand.",
                actionErrorOperand);
+}
+
+// Difference, symmetric difference, and Minkowski sum take exactly two
+// operands. Called when a cell (aBox) of the operation column (aColumn) is
+// toggled: checking a third cell is undone (a no-op); unchecking is always
+// allowed. The operation button (aOperation) is enabled only when exactly two
+// cells are checked.
+void MainWindow::
+limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn,
+                      QAbstractButton* aBox, bool aChecked,
+                      QAbstractButton* aOperation) {
+  auto count = std::count_if(aColumn.begin(), aColumn.end(),
+                             [](QAbstractButton* box)
+                             { return box->isChecked(); });
+  if (aChecked && (count > 2)) {
+    aBox->setChecked(false);    // toggles again, and updates the operation
+    return;
+  }
+  aOperation->setEnabled(count == 2);
 }
 
 // Whether the Draw/Insert bucket is marked in the given operation column.
