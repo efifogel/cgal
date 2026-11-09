@@ -1090,6 +1090,9 @@ class MainWindow : public CGAL::Qt::DemosMainWindow,
 
 private:
   Grid_scene m_scene;
+  // The Intersection and Union columns (one cell per bucket).
+  std::array<QAbstractButton*, 7> m_intersection_column;
+  std::array<QAbstractButton*, 7> m_union_column;
   //keep it intact for now check it out
   bool m_circular_active;
   bool m_bezier_active;
@@ -1257,6 +1260,9 @@ slots:
   bool show_not_empty_warning();
   void show_operand_error();
   bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
+  void limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn,
+                            QAbstractButton* aBox, bool aChecked);
+  void keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn);
   void limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn,
                              QAbstractButton* aBox, bool aChecked,
                              QAbstractButton* aOperation);
@@ -1770,6 +1776,19 @@ MainWindow::MainWindow() :
   for (auto* box : {showBlueComp, showRedComp, showBlackComp, showBrownComp,
                     showYellowComp, showMagentaComp, showAquaComp})
     complement_group->addButton(box);
+
+  // In the Intersection and Union columns at least one bucket stays
+  // unchecked, to hold the result.
+  m_intersection_column = {showBlueInt, showRedInt, showBlackInt, showBrownInt,
+                           showYellowInt, showMagentaInt, showAquaInt};
+  m_union_column = {showBlueUnion, showRedUnion, showBlackUnion,
+                    showBrownUnion, showYellowUnion, showMagentaUnion,
+                    showAquaUnion};
+  for (const auto* column : {&m_intersection_column, &m_union_column})
+    for (auto* box : *column)
+      QObject::connect(box, &QAbstractButton::toggled, this,
+                       [this, box, column](bool checked)
+                       { limit_to_all_but_one(*column, box, checked); });
 
   // The Difference, Symmetric Difference, and Minkowski Sum columns have at
   // most two marked cells, and their operations are enabled only with exactly
@@ -3612,6 +3631,12 @@ void MainWindow::on_actionMinusColor_triggered() {
     showBrownDiff->setChecked(false);
     showBrownSym_Diff->setChecked(false);
     showBrownMink_Sum->setChecked(false);
+    // Unmark it as an intersection or union operand, and keep at least one
+    // remaining bucket unmarked, for the result.
+    showBrownInt->setChecked(false);
+    showBrownUnion->setChecked(false);
+    keep_one_unchecked(m_intersection_column);
+    keep_one_unchecked(m_union_column);
 
     line10->setVisible(false);
 
@@ -3661,6 +3686,12 @@ void MainWindow::on_actionMinusColor_triggered() {
     showYellowDiff->setChecked(false);
     showYellowSym_Diff->setChecked(false);
     showYellowMink_Sum->setChecked(false);
+    // Unmark it as an intersection or union operand, and keep at least one
+    // remaining bucket unmarked, for the result.
+    showYellowInt->setChecked(false);
+    showYellowUnion->setChecked(false);
+    keep_one_unchecked(m_intersection_column);
+    keep_one_unchecked(m_union_column);
 
     line9->setVisible(false);
 
@@ -3709,6 +3740,12 @@ void MainWindow::on_actionMinusColor_triggered() {
     showMagentaDiff->setChecked(false);
     showMagentaSym_Diff->setChecked(false);
     showMagentaMink_Sum->setChecked(false);
+    // Unmark it as an intersection or union operand, and keep at least one
+    // remaining bucket unmarked, for the result.
+    showMagentaInt->setChecked(false);
+    showMagentaUnion->setChecked(false);
+    keep_one_unchecked(m_intersection_column);
+    keep_one_unchecked(m_union_column);
 
     line8->setVisible(false);
 
@@ -3757,6 +3794,12 @@ void MainWindow::on_actionMinusColor_triggered() {
     showAquaDiff->setChecked(false);
     showAquaSym_Diff->setChecked(false);
     showAquaMink_Sum->setChecked(false);
+    // Unmark it as an intersection or union operand, and keep at least one
+    // remaining bucket unmarked, for the result.
+    showAquaInt->setChecked(false);
+    showAquaUnion->setChecked(false);
+    keep_one_unchecked(m_intersection_column);
+    keep_one_unchecked(m_union_column);
 
     line7->setVisible(false);
 
@@ -7867,6 +7910,33 @@ void MainWindow::show_operand_error() {
   show_message(QMessageBox::Critical, "Error: Operation Aborted",
                "The result cannot be stored in a non-empty operand.",
                actionErrorOperand);
+}
+
+// Intersection and union take one or more operands, but at least one bucket
+// must remain for the result. Called when a cell (aBox) of the operation
+// column (aColumn) is toggled: checking the last unchecked cell (of the
+// existing buckets) is undone (a no-op).
+void MainWindow::
+limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn,
+                     QAbstractButton* aBox, bool aChecked) {
+  if (! aChecked || aBox->isHidden()) return;
+  bool all_checked =
+    std::all_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box)
+                { return box->isHidden() || box->isChecked(); });
+  if (all_checked) aBox->setChecked(false);
+}
+
+// Restore the invariant above after a bucket is removed: if all (remaining)
+// buckets are checked, uncheck the last one.
+void MainWindow::
+keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn) {
+  QAbstractButton* last = nullptr;
+  for (auto* box : aColumn) {
+    if (box->isHidden()) continue;
+    if (! box->isChecked()) return;
+    last = box;
+  }
+  if (last) last->setChecked(false);
 }
 
 // Difference, symmetric difference, and Minkowski sum take exactly two
