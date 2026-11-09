@@ -61,6 +61,10 @@
 #include <QGraphicsPixmapItem>
 #include <QKeyEvent>
 #include <QTimer>
+#include <QDockWidget>
+#include <QMouseEvent>
+#include <QWindow>
+#include <QGuiApplication>
 
 #include <CGAL/auto_link/Qt.h>
 #include <CGAL/Qt/GraphicsViewInput.h>
@@ -920,6 +924,32 @@ typedef std::vector <State_current> state_container;
 typedef state_container::const_iterator state_const_iterator;
 typedef state_container::iterator state_iterator;
 
+// Lets the user move a floating dock widget by dragging its title bar under
+// Wayland. There, QDockWidget's own drag fails, because it grabs the mouse,
+// which Wayland allows only for popup windows ("This plugin supports grabbing
+// the mouse only for popup windows"). Instead, ask the compositor to move the
+// window.
+class Floating_dock_mover : public QObject {
+public:
+  explicit Floating_dock_mover(QObject* parent) : QObject(parent) {}
+
+protected:
+  bool eventFilter(QObject* obj, QEvent* event) override {
+    if (event->type() != QEvent::MouseButtonPress) return false;
+    auto* dock = qobject_cast<QDockWidget*>(obj);
+    if (! dock || ! dock->isFloating()) return false;
+    auto* me = static_cast<QMouseEvent*>(event);
+    if (me->button() != Qt::LeftButton) return false;
+    // Presses on the title-bar buttons go to the buttons themselves; a press
+    // outside the content widget is on the title bar.
+    QWidget* content = dock->widget();
+    if (content && content->geometry().contains(me->position().toPoint()))
+      return false;
+    QWindow* window = dock->windowHandle();
+    return window && window->startSystemMove();
+  }
+};
+
 //The main page for displaying the window and all the icons
 class MainWindow : public CGAL::Qt::DemosMainWindow,
                    public Ui::Boolean_set_operations_2 {
@@ -1538,6 +1568,15 @@ MainWindow::MainWindow() :
 
   setupUi(this);
 
+  // Fit the Visible and Draw/Insert header images into the same icon area as
+  // the operation buttons next to them (27x25), keeping their aspect ratio.
+  for (auto* label : {VisibleIcon, DrawHeader}) {
+    QPixmap pixmap = label->pixmap();
+    if (! pixmap.isNull())
+      label->setPixmap(pixmap.scaled(27, 25, Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation));
+  }
+
   //
   // Setup the m_scene and the view
   //
@@ -1616,6 +1655,14 @@ MainWindow::MainWindow() :
                    SLOT(processInput(CGAL::Object)));
 
   m_scene.installEventFilter(m_linear_input);
+
+  // Under Wayland, let the compositor move floating dock widgets.
+  if (QGuiApplication::platformName().startsWith("wayland")) {
+    auto* dock_mover = new Floating_dock_mover(this);
+    for (auto* dock : findChildren<QDockWidget*>())
+      dock->installEventFilter(dock_mover);
+  }
+
   QObject::connect(this->actionQuit, SIGNAL(triggered()), this,
                    SLOT(close()));
 
@@ -1669,6 +1716,8 @@ MainWindow::MainWindow() :
                    SLOT(on_showColorBucket_toggled(bool)));
   QObject::connect(showConsole, SIGNAL(toggled(bool)), this,
                    SLOT(on_showConsole_toggled(bool)));
+  QObject::connect(actionWarnNotEmpty, &QAction::toggled, this,
+                   [this](bool a_check) { empty_warn = a_check; });
   QObject::connect(showInfo, SIGNAL(toggled(bool)), this,
                    SLOT(on_showInfo_toggled(bool)));
 
@@ -5408,6 +5457,16 @@ void MainWindow::on_actionInsertLinear_toggled(bool aChecked) {
 //complement
 void MainWindow::on_actionComplementH_toggled(bool aChecked) {
   if (actionComplementH->isChecked()) {
+    // The complement is added to the Draw/Insert bucket. If that bucket is
+    // the (non-empty) one being complemented, the result would be the entire
+    // (clipped) plane, so abort without changing anything.
+    if ((m_color_active == m_color_complement) &&
+        ! states_stack.back().active_set(m_color_active).is_empty()) {
+      actionComplementH->setChecked(false);
+      if (empty_warn) show_not_empty_warning();
+      return;
+    }
+
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -7449,19 +7508,27 @@ void MainWindow::zoomToFit() {
 
 //function to detect whether the bucket is occupied or not and throw warning
 void MainWindow::show_not_empty_warning() {
-  QMessageBox msgBox;
-  msgBox.setText("Selected Bucket is Not Empty!!!");
-  msgBox.setIcon(QMessageBox::Warning);
-  msgBox.addButton(QMessageBox::Ok);
-  QCheckBox dontShowCheckBox("don't show this message again");
-  dontShowCheckBox.blockSignals(true);
-  msgBox.addButton(&dontShowCheckBox, QMessageBox::ResetRole);
-  int32_t userReply = msgBox.exec();
-  if (dontShowCheckBox.checkState() == Qt::Checked) {
-    empty_warn = false;
-  } else {
-    empty_warn = true;
+  QMessageBox msgBox(QMessageBox::Warning, "Bucket Not Empty",
+                     "The Draw/Insert bucket is not empty.",
+                     QMessageBox::Ok, this);
+  // QMessageBox may size its text label slightly too narrow, clipping the
+  // text on the right; reserve the full text width plus some slack.
+  if (auto* label = msgBox.findChild<QLabel*>("qt_msgbox_label")) {
+    QFontMetrics fm(label->font());
+    label->setMinimumWidth(fm.horizontalAdvance(label->text()) +
+                           fm.averageCharWidth() * 4);
   }
+  // The message box takes ownership of the check box.
+  msgBox.setCheckBox(new QCheckBox("Don't show this message again"));
+  // Center the message box over the canvas. (Under native Wayland the
+  // compositor places dialogs and ignores the requested position.)
+  msgBox.adjustSize();
+  QWidget* canvas = graphicsView->viewport();
+  QPoint center = canvas->mapToGlobal(canvas->rect().center());
+  msgBox.move(center - msgBox.rect().center());
+  msgBox.exec();
+  // Keep the Edit-menu toggle in sync; its handler updates empty_warn.
+  if (msgBox.checkBox()->isChecked()) actionWarnNotEmpty->setChecked(false);
 }
 
 //resize button
