@@ -2088,9 +2088,9 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <property name="geometry">
                 <rect>
                   <x>10</x>
-                  <y>15</y>
+                  <y>35</y>
                   <width>65</width>
-                  <height>40</height>  
+                  <height>30</height>  
                 </rect>
               </property>
               <property name="text" >
@@ -2449,7 +2449,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
                <x>535</x>
                <y>35</y>
                <width>140</width>
-               <height>22</height>  
+               <height>30</height>  
               </rect>
              </property>
               <property name="sizePolicy" >
