@@ -76,6 +76,8 @@
       <addaction name="actionDeleteAll"/>
       <addaction name="actionUndo"/>
       <addaction name="actionNew"/>
+      <addaction name="separator"/>
+      <addaction name="actionWarnNotEmpty"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2074,7 +2076,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
                 <rect>
                   <x>10</x>
                   <y>15</y>
-                  <width>101</width>
+                  <width>65</width>
                   <height>40</height>  
                 </rect>
               </property>
@@ -2101,10 +2103,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
             <widget class="QLabel" name="VisibleIcon">
               <property name="geometry">  
                 <rect>
-                  <x>82</x>
-                  <y>2</y>
-                  <width>36</width>
-                  <height>30</height>
+                  <x>75</x>
+                  <y>0</y>
+                  <width>33</width>
+                  <height>33</height>
                 </rect> 
               </property>   
               <property name="sizePolicy" >
@@ -2129,10 +2131,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               </property> 
               <property name="geometry">  
                 <rect>
-                  <x>121</x>
+                  <x>120</x>
                   <y>0</y>
-                  <width>38</width>
-                  <height>36</height>
+                  <width>33</width>
+                  <height>33</height>
                 </rect> 
               </property>   
               <property name="toolTip">
@@ -2759,6 +2761,17 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
   <action name="showConsole">
    <property name="text">
     <string>Console</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionWarnNotEmpty">
+   <property name="text">
+    <string>Warn When the Draw/Insert Bucket Is Not Empty</string>
    </property>
    <property name="checkable">
     <bool>true</bool>
