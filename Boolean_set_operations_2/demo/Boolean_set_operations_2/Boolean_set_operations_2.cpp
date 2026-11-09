@@ -1425,7 +1425,8 @@ private:
   //warning message for user
   bool ask_user_yesno(const char* aTitle, const char* aQuestion) {
     return QMessageBox::warning(this, aTitle, QString(aQuestion),
-                                "&Yes", "&No", QString(), 1, 1) == 0;
+                                QMessageBox::Yes | QMessageBox::No,
+                                QMessageBox::No) == QMessageBox::Yes;
   }
 
   //warning message for user
@@ -1543,6 +1544,9 @@ MainWindow::MainWindow() :
   m_scene.setItemIndexMethod(QGraphicsScene::NoIndex);
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphicsView->setScene(&m_scene);
+  // Use a white canvas regardless of the desktop color scheme, so that the
+  // drawing area stands out from the surrounding widgets.
+  this->graphicsView->setBackgroundBrush(Qt::white);
   this->graphicsView->setMouseTracking(true);
   this->graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   this->graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
