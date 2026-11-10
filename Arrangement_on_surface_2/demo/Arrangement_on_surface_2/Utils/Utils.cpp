@@ -119,27 +119,27 @@ operator()(const Point_2& p, const X_monotone_curve_2& c) const {
     FT min_dist(100000000);
     // AlgKernel ker;
 
-    int n = 100;
+    // Approximate the curve within one pixel, or within 1/100 of its extent
+    // if there is no view.
+    CGAL::Bbox_2 bb = this->m_traits.construct_bbox_2_object()(c);
+    double error = (std::max)(bb.xmax() - bb.xmin(), bb.ymax() - bb.ymin()) / 100;
     if (this->scene != nullptr && this->scene->views().size() != 0) {
-      // use the scene to approximate the resolution of the curve
       QGraphicsView* view = this->scene->views().first();
-      // assumes bounded curve
-      CGAL::Bbox_2 bb = this->m_traits.construct_bbox_2_object()(c);
-      int xmin = view->mapFromScene(bb.xmin(), bb.ymin()).x();
-      int xmax = view->mapFromScene(bb.xmax(), bb.ymin()).x();
-      n = xmax - xmin;
-      if (n < 2) { n = 2; }
+      double scale = std::abs(view->transform().m11());
+      if (scale > 0) error = 1 / scale;
     }
+    if (! (error > 0)) error = 1e-3;
 
-    std::vector<std::pair<double, double>> app_pts;
-    app_pts.reserve(n + 1);
-    c.polyline_approximation(n, std::back_inserter(app_pts));
+    using Approx_point = typename Traits::Approximate_2::Approximate_point_2;
+    std::vector<Approx_point> app_pts;
+    this->m_traits.approximate_2_object()(c, error,
+                                          std::back_inserter(app_pts));
     auto end_pts = app_pts.end();
     auto p_curr = app_pts.begin();
     auto p_next = p_curr + 1;
     do {
-      Point_2 p1(p_curr->first, p_curr->second);
-      Point_2 p2(p_next->first, p_next->second);
+      Point_2 p1(p_curr->x(), p_curr->y());
+      Point_2 p2(p_next->x(), p_next->y());
       Segment_2 seg(p1, p2);
 
       FT dist = CGAL::squared_distance(p, seg);

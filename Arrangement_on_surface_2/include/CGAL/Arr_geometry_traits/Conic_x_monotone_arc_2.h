@@ -21,6 +21,8 @@
 
 #include <ostream>
 
+#include <CGAL/Arr_geometry_traits/Conic_arc_2.h>
+
 namespace CGAL {
 
 /*! Representation of an x-monotone conic arc.
@@ -586,75 +588,6 @@ public:
     // Return the computed point.
     return Point_2(p.x(), y);
   }
-
-  /// \name Constructing points on the arc.
-  //@{
-
-  /*! obtains a polyline approximating the conic arc.
-   * \param n The maximal number of sample points.
-   * \param oi An output iterator, whose value-type is pair<double,double>
-   *           (representing an approximated point).
-   *           In case the arc is a line segment, there are 2 output points,
-   *           otherwise the arc is approximated by the polyline defined by
-   *           (p_0, p_1, ..., p_n), where p_0 and p_n are the left and right
-   *           endpoints of the arc, respectively.
-   */
-  template <typename OutputIterator>
-  OutputIterator polyline_approximation(size_t n, OutputIterator oi) const {
-    CGAL_precondition (n != 0);
-
-    const double x_left = CGAL::to_double (left().x());
-    const double y_left = CGAL::to_double (left().y());
-    const double x_right = CGAL::to_double (right().x());
-    const double y_right = CGAL::to_double (right().y());
-
-    if (this->m_orient == COLLINEAR) {
-      // In case of a line segment, return the two endpoints.
-      *oi++ = std::pair<double, double>(x_left, y_left);
-      *oi++ = std::pair<double, double>(x_right, y_right);
-      return oi;
-    }
-
-    // Otherwise, sample (n - 1) equally-spaced points in between.
-    const double app_r = CGAL::to_double(this->m_r);
-    const double app_s = CGAL::to_double(this->m_s);
-    const double app_t = CGAL::to_double(this->m_t);
-    const double app_u = CGAL::to_double(this->m_u);
-    const double app_v = CGAL::to_double(this->m_v);
-    const double app_w = CGAL::to_double(this->m_w);
-    const double x_jump = (x_right - x_left) / n;
-    double x, y;
-    const bool A_is_zero = (CGAL::sign(this->m_s) == ZERO);
-    double A = app_s, B, C;
-    double disc;
-    size_t i;
-
-    *oi++ = std::pair<double, double>(x_left, y_left);      // the left point
-    for (i = 1; i < n; ++i) {
-      x = x_left + x_jump*i;
-
-      // Solve the quadratic equation: A*x^2 + B*x + C = 0:
-      B = app_t*x + app_v;
-      C = (app_r*x + app_u)*x + app_w;
-
-      if (A_is_zero) y = -C / B;
-      else {
-        disc = B*B - 4*A*C;
-        if (disc < 0) disc = 0;
-
-        // We take either the root involving -sqrt(disc) or +sqrt(disc)
-        // based on the information flags.
-        y = (test_flag(PLUS_SQRT_DISC_ROOT)) ?
-          (std::sqrt(disc) - B) / (2*A) : -(B + std::sqrt (disc)) / (2*A);
-      }
-      *oi++ = std::pair<double, double>(x, y);
-    }
-    *oi++ = std::pair<double, double>(x_right, y_right);    // the right point
-
-    return oi;
-  }
-
-  //@}
 
   /// \name Constructing x-monotone arcs.
   //@{
@@ -1348,19 +1281,16 @@ private:
 
 };
 
-/*! exports an x-monotone conic arc.
+/*! exports an x-monotone conic arc. The coefficients are exported exactly.
  */
 template <typename Conic_arc_2>
 std::ostream& operator<<(std::ostream& os,
                          const Conic_x_monotone_arc_2<Conic_arc_2>& xcv)
 {
   // Output the supporting conic curve.
-  os << "{" << CGAL::to_double(xcv.r()) << "*x^2 + "
-     << CGAL::to_double(xcv.s()) << "*y^2 + "
-     << CGAL::to_double(xcv.t()) << "*xy + "
-     << CGAL::to_double(xcv.u()) << "*x + "
-     << CGAL::to_double(xcv.v()) << "*y + "
-     << CGAL::to_double(xcv.w()) << "}";
+  os << "{" << xcv.r() << "*x^2 + " << xcv.s() << "*y^2 + "
+     << xcv.t() << "*xy + " << xcv.u() << "*x + " << xcv.v() << "*y + "
+     << xcv.w() << "}";
 
   // Output the endpoints.
   os << " : (" << CGAL::to_double(xcv.source().x()) << ","
