@@ -52,6 +52,15 @@
 #include <QtGui>
 #include <QString>
 #include <QFileDialog>
+#include <QPlainTextEdit>
+#include <QFontDatabase>
+#include <QSaveFile>
+#include <charconv>
+#include <QLineEdit>
+#include <QRegularExpression>
+#include <algorithm>
+#include <map>
+#include <memory>
 #include <QInputDialog>
 #include <QWheelEvent>
 #include <QPainter>
@@ -279,6 +288,18 @@ struct Rep_base {
   virtual void difference(Rep_base const &aOther) = 0;
 
   virtual void symmetric_difference(Rep_base const &aOther) = 0;
+
+  // Bivariate operations: *this = aFirst op aSecond.
+  virtual void complement(Rep_base const &aOther) = 0;
+
+  virtual void intersect(Rep_base const &aFirst, Rep_base const &aSecond) = 0;
+
+  virtual void join(Rep_base const &aFirst, Rep_base const &aSecond) = 0;
+
+  virtual void difference(Rep_base const &aFirst, Rep_base const &aSecond) = 0;
+
+  virtual void symmetric_difference(Rep_base const &aFirst,
+                                    Rep_base const &aSecond) = 0;
 };
 
 //Class for initializing Rep class.
@@ -365,6 +386,52 @@ public:
   virtual void symmetric_difference(Rep_base const &aOther) {
     try {
       m_set.symmetric_difference(cast(aOther).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation symmetric difference");
+    }
+  }
+
+  virtual void complement(Rep_base const &aOther) {
+    try {
+      m_set.complement(cast(aOther).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation complement");
+    }
+  }
+
+  virtual void intersect(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation intersect");
+    }
+  }
+
+  virtual void join(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.join(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation union");
+    }
+  }
+
+  virtual void difference(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation difference");
+    }
+  }
+
+  virtual void symmetric_difference(Rep_base const &aFirst,
+                                    Rep_base const &aSecond) {
+    try {
+      m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set);
     }
     catch (...) {
       show_error("Exception thrown during boolean operation symmetric difference");
@@ -467,6 +534,52 @@ public:
   virtual void symmetric_difference(Rep_base const &aOther) {
     try {
       m_set.symmetric_difference(cast(aOther).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation symmetric difference");
+    }
+  }
+
+  virtual void complement(Rep_base const &aOther) {
+    try {
+      m_set.complement(cast(aOther).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation complement");
+    }
+  }
+
+  virtual void intersect(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation intersect");
+    }
+  }
+
+  virtual void join(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.join(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation union");
+    }
+  }
+
+  virtual void difference(Rep_base const &aFirst, Rep_base const &aSecond) {
+    try {
+      m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set);
+    }
+    catch (...) {
+      show_error("Exception thrown during boolean operation difference");
+    }
+  }
+
+  virtual void symmetric_difference(Rep_base const &aFirst,
+                                    Rep_base const &aSecond) {
+    try {
+      m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set);
     }
     catch (...) {
       show_error("Exception thrown during boolean operation symmetric difference");
@@ -605,6 +718,35 @@ public:
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->symmetric_difference(*aOther.get_polyline_rep());
   }
+
+  // Bivariate operations: *this = aFirst op aSecond (all of the same type).
+  void complement(Curve_set const &aOther) {
+    if (same_type(aOther)) m_rep->complement(*aOther.m_rep);
+  }
+
+  void intersect(Curve_set const &aFirst, Curve_set const &aSecond) {
+    if (same_type(aFirst) && same_type(aSecond))
+      m_rep->intersect(*aFirst.m_rep, *aSecond.m_rep);
+  }
+
+  void join(Curve_set const &aFirst, Curve_set const &aSecond) {
+    if (same_type(aFirst) && same_type(aSecond))
+      m_rep->join(*aFirst.m_rep, *aSecond.m_rep);
+  }
+
+  void difference(Curve_set const &aFirst, Curve_set const &aSecond) {
+    if (same_type(aFirst) && same_type(aSecond))
+      m_rep->difference(*aFirst.m_rep, *aSecond.m_rep);
+  }
+
+  void symmetric_difference(Curve_set const &aFirst,
+                            Curve_set const &aSecond) {
+    if (same_type(aFirst) && same_type(aSecond))
+      m_rep->symmetric_difference(*aFirst.m_rep, *aSecond.m_rep);
+  }
+
+  bool same_type(Curve_set const &aOther) const
+  { return m_rep && aOther.m_rep && (m_rep->type() == aOther.m_rep->type()); }
 
   void change_brush_color(QBrush aBrush) {
     m_brush = aBrush;
@@ -1083,6 +1225,246 @@ private:
   bool m_enabled = false;
 };
 
+// The Boolean operations on buckets.
+enum class Bucket_op { Complement, Intersection, Join, Difference,
+                       Symmetric_difference };
+
+// The names of the buckets in the program, by bucket index (the colors the
+// rows display).
+inline const char* bucket_name(std::size_t aIndex) {
+  static const char* names[] =
+    { "red", "black", "blue", "brown", "yellow", "magenta", "aqua" };
+  return (aIndex < 7) ? names[aIndex] : "result";
+}
+
+// The shortest decimal representation that reads back as the same double, so
+// that the program reproduces the exact coordinates.
+inline QString to_python(double aValue) {
+  char buffer[64];
+  auto res = std::to_chars(buffer, buffer + sizeof(buffer), aValue);
+  return QString::fromLatin1(buffer, int(res.ptr - buffer));
+}
+
+// A linear polygon as a Python expression. (Its curves are segments along
+// the boundary, in order; their sources are the vertices.)
+inline QString to_python(Linear_polygon const& aPolygon) {
+  QStringList points;
+  for (auto cit = aPolygon.curves_begin(); cit != aPolygon.curves_end(); ++cit)
+    points << QString("Point_2(%1, %2)")
+      .arg(to_python(CGAL::to_double(cit->source().x())),
+           to_python(CGAL::to_double(cit->source().y())));
+  return QString("Polygon_2([%1])").arg(points.join(", "));
+}
+
+// The console language: a small subset of Python, matching the CGALPY
+// bindings (Polygon_set_2, Polygon_2, Point_2):
+//   name = Polygon_set_2()            name = Polygon_set_2(other)
+//   name = Polygon_set_2(Polygon_2([Point_2(x, y), ...]))
+//   name.op(arg)   name.op(set1, set2)  (op: join, intersection, difference,
+//                                         symmetric_difference)
+//   name.complement()   name.complement(other)   name.clear()
+//   name.is_empty()   name.is_plane()   name.number_of_polygons_with_holes()
+//   del name
+// Statements may be separated by ';'; '#' starts a comment.
+struct Py_expr {
+  enum class Kind { Name, Polygon, Polygon_set };
+  Kind m_kind = Kind::Name;
+  QString m_name;                                   // Name
+  std::vector<std::pair<double, double>> m_points;  // Polygon
+  std::shared_ptr<Py_expr> m_arg;                   // Polygon_set (optional)
+};
+
+struct Py_statement {
+  enum class Kind { Assign, Call, Delete };
+  Kind m_kind = Kind::Call;
+  QString m_target;              // the assigned, called, or deleted name
+  QString m_method;              // Call
+  std::vector<Py_expr> m_args;   // Call arguments; Assign: the value
+};
+
+// The statement (or expression) as normalized Python text.
+inline QString to_python(Py_expr const& aExpr) {
+  switch (aExpr.m_kind) {
+   case Py_expr::Kind::Name: return aExpr.m_name;
+   case Py_expr::Kind::Polygon: {
+     QStringList points;
+     for (const auto& [x, y] : aExpr.m_points)
+       points << QString("Point_2(%1, %2)").arg(to_python(x), to_python(y));
+     return QString("Polygon_2([%1])").arg(points.join(", "));
+   }
+   case Py_expr::Kind::Polygon_set:
+    return QString("Polygon_set_2(%1)")
+      .arg(aExpr.m_arg ? to_python(*aExpr.m_arg) : QString());
+  }
+  return QString();
+}
+
+inline QString to_python(Py_statement const& aStatement) {
+  switch (aStatement.m_kind) {
+   case Py_statement::Kind::Assign:
+    return aStatement.m_target + " = " + to_python(aStatement.m_args[0]);
+   case Py_statement::Kind::Delete: return "del " + aStatement.m_target;
+   case Py_statement::Kind::Call: {
+     QStringList args;
+     for (const auto& arg : aStatement.m_args) args << to_python(arg);
+     return QString("%1.%2(%3)").arg(aStatement.m_target, aStatement.m_method,
+                                     args.join(", "));
+   }
+  }
+  return QString();
+}
+
+// A recursive-descent parser for the console language. Throws a
+// std::runtime_error with a message on a syntax error.
+class Py_parser {
+public:
+  explicit Py_parser(const QString& aLine) { tokenize(aLine); }
+
+  std::vector<Py_statement> parse() {
+    std::vector<Py_statement> statements;
+    while (! at_end()) {
+      if (accept(";")) continue;
+      statements.push_back(statement());
+      if (! at_end()) expect(";");
+    }
+    return statements;
+  }
+
+private:
+  enum class Tok { Ident, Number, Punct, End };
+  struct Token { Tok m_kind; QString m_text; };
+  std::vector<Token> m_tokens;
+  std::size_t m_pos = 0;
+
+  [[noreturn]] void error(const QString& aMessage) const
+  { throw std::runtime_error(aMessage.toStdString()); }
+
+  void tokenize(const QString& aLine) {
+    static const QRegularExpression number(
+      R"(^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)");
+    static const QRegularExpression ident(R"(^[A-Za-z_]\w*)");
+    int i = 0;
+    while (i < aLine.size()) {
+      QChar c = aLine[i];
+      if (c.isSpace()) { ++i; continue; }
+      if (c == '#') break;
+      QStringView rest = QStringView(aLine).mid(i);
+      auto m = ident.matchView(rest);
+      if (m.hasMatch()) {
+        m_tokens.push_back({Tok::Ident, m.captured(0)});
+        i += m.capturedLength(0);
+        continue;
+      }
+      m = number.matchView(rest);
+      if (m.hasMatch()) {
+        m_tokens.push_back({Tok::Number, m.captured(0)});
+        i += m.capturedLength(0);
+        continue;
+      }
+      if (QString("()[],.=;-+").contains(c)) {
+        m_tokens.push_back({Tok::Punct, QString(c)});
+        ++i;
+        continue;
+      }
+      error(QString("unexpected character '%1'").arg(c));
+    }
+    m_tokens.push_back({Tok::End, QString()});
+  }
+
+  const Token& peek(std::size_t aAhead = 0) const
+  { return m_tokens[std::min(m_pos + aAhead, m_tokens.size() - 1)]; }
+  bool at_end() const { return peek().m_kind == Tok::End; }
+  bool accept(const QString& aPunct) {
+    if ((peek().m_kind == Tok::Punct) && (peek().m_text == aPunct)) {
+      ++m_pos;
+      return true;
+    }
+    return false;
+  }
+  void expect(const QString& aPunct) {
+    if (! accept(aPunct))
+      error(QString("expected '%1'%2").arg(aPunct, near()));
+  }
+  QString near() const {
+    return at_end() ? QString(" at the end") :
+      QString(" before '%1'").arg(peek().m_text);
+  }
+  QString identifier() {
+    if (peek().m_kind != Tok::Ident) error("expected a name" + near());
+    return m_tokens[m_pos++].m_text;
+  }
+  double number() {
+    bool negative = false;
+    if (accept("-")) negative = true;
+    else accept("+");
+    if (peek().m_kind != Tok::Number) error("expected a number" + near());
+    double value = m_tokens[m_pos++].m_text.toDouble();
+    return negative ? -value : value;
+  }
+
+  Py_statement statement() {
+    Py_statement st;
+    QString name = identifier();
+    if (name == "del") {
+      st.m_kind = Py_statement::Kind::Delete;
+      st.m_target = identifier();
+      return st;
+    }
+    st.m_target = name;
+    if (accept("=")) {
+      st.m_kind = Py_statement::Kind::Assign;
+      st.m_args.push_back(expression());
+      return st;
+    }
+    expect(".");
+    st.m_kind = Py_statement::Kind::Call;
+    st.m_method = identifier();
+    expect("(");
+    if (! accept(")")) {
+      do st.m_args.push_back(expression()); while (accept(","));
+      expect(")");
+    }
+    return st;
+  }
+
+  Py_expr expression() {
+    Py_expr e;
+    QString name = identifier();
+    if (name == "Polygon_set_2") {
+      e.m_kind = Py_expr::Kind::Polygon_set;
+      expect("(");
+      if (! accept(")")) {
+        e.m_arg = std::make_shared<Py_expr>(expression());
+        expect(")");
+      }
+      return e;
+    }
+    if (name == "Polygon_2") {
+      e.m_kind = Py_expr::Kind::Polygon;
+      expect("(");
+      expect("[");
+      while (! accept("]")) {
+        if (identifier() != "Point_2") error("expected Point_2(x, y)");
+        expect("(");
+        double x = number();
+        expect(",");
+        double y = number();
+        expect(")");
+        e.m_points.emplace_back(x, y);
+        if (! accept(",")) { expect("]"); break; }
+      }
+      expect(")");
+      return e;
+    }
+    if ((name == "Point_2") || (peek().m_text == "("))
+      error(QString("unexpected '%1'; expected a polygon set name, "
+                    "Polygon_2([...]), or Polygon_set_2(...)").arg(name));
+    e.m_kind = Py_expr::Kind::Name;
+    e.m_name = name;
+    return e;
+  }
+};
+
 //The main page for displaying the window and all the icons
 class MainWindow : public CGAL::Qt::DemosMainWindow,
                    public Ui::Boolean_set_operations_2 {
@@ -1093,6 +1475,27 @@ private:
   // The Intersection and Union columns (one cell per bucket).
   std::array<QAbstractButton*, 7> m_intersection_column;
   std::array<QAbstractButton*, 7> m_union_column;
+  std::array<QAbstractButton*, 7> m_complement_column;
+  std::array<QAbstractButton*, 7> m_difference_column;
+  std::array<QAbstractButton*, 7> m_symmetric_difference_column;
+
+  // The program: the statements executed so far, each tagged with the size
+  // of the undo stack after its action, so that undo can drop them.
+  struct Program_line {
+    std::size_t m_state_count;
+    QString m_text;
+  };
+  std::vector<Program_line> m_program;
+  QPlainTextEdit* m_log = nullptr;
+  bool m_logging = true;      // whether actions are logged
+
+  // The console: its output, its input line and history, and the polygon
+  // sets (variables) other than the buckets, e.g., result.
+  QPlainTextEdit* m_console_output = nullptr;
+  QLineEdit* m_console_input = nullptr;
+  QStringList m_console_history;
+  int m_console_history_pos = 0;
+  std::map<QString, Curve_set> m_variables;
   //keep it intact for now check it out
   bool m_circular_active;
   bool m_bezier_active;
@@ -1260,6 +1663,23 @@ slots:
   bool show_not_empty_warning();
   void show_operand_error();
   bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
+  std::vector<std::size_t>
+  checked_buckets(const std::array<QAbstractButton*, 7>& aColumn) const;
+  void uncheck_operations_except(QAbstractButton* aOperation);
+  void clear_result();
+  void run_operation(Bucket_op aOp, const std::vector<std::size_t>& aOperands,
+                     QAbstractButton* aOperation);
+  void log_statements(const QStringList& aStatements, bool aSticky = false);
+  bool eventFilter(QObject* aObject, QEvent* aEvent) override;
+  bool bucket_exists(std::size_t aIndex) const;
+  std::size_t bucket_index(const QString& aName) const;
+  Curve_set* polygon_set(const QString& aName);
+  Linear_polygon_with_holes polygon(Py_expr const& aExpr) const;
+  QString execute(Py_statement const& aStatement);
+  void run_console_line(const QString& aLine);
+  void console_print(const QString& aText);
+  void trim_program_to_states();
+  void save_program();
   void limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn,
                             QAbstractButton* aBox, bool aChecked,
                             QAbstractButton* aOperation);
@@ -1729,6 +2149,66 @@ MainWindow::MainWindow() :
   for (auto* button : sceneDockWidget->findChildren<QRadioButton*>())
     button->setStyle(indicator_style);
 
+  // The Log panel: the program (the executed statements) and a button that
+  // saves it as a Python script.
+  {
+    auto* panel = new QWidget;
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(4, 4, 4, 4);
+    m_log = new QPlainTextEdit;
+    m_log->setReadOnly(true);
+    m_log->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_log->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    layout->addWidget(m_log);
+    auto* buttons = new QHBoxLayout;
+    buttons->addStretch();
+    auto* save_button = new QPushButton("Save Program...");
+    buttons->addWidget(save_button);
+    layout->addLayout(buttons);
+    if (QWidget* old_panel = infoDockWidget->widget()) old_panel->deleteLater();
+    infoDockWidget->setWidget(panel);
+    QObject::connect(save_button, &QPushButton::clicked, this,
+                     [this]() { save_program(); });
+  }
+
+  // The initial buckets.
+  log_statements({"red = Polygon_set_2()", "black = Polygon_set_2()",
+                  "blue = Polygon_set_2()"}, true);
+
+  // The Console panel: the output, and an input line with a prompt.
+  {
+    auto* panel = new QWidget;
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(4, 4, 4, 4);
+    QFont fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    m_console_output = new QPlainTextEdit;
+    m_console_output->setReadOnly(true);
+    m_console_output->setFont(fixed);
+    m_console_output->appendPlainText(
+      "Type Python-style statements on the polygon sets, e.g.,\n"
+      "  red.join(Polygon_2([Point_2(0, 0), Point_2(40, 0), Point_2(0, 30)]))\n"
+      "  blue.intersection(red, black)\n"
+      "  result = Polygon_set_2(red)");
+    layout->addWidget(m_console_output);
+    auto* input_row = new QHBoxLayout;
+    auto* prompt = new QLabel(">>>");
+    prompt->setFont(fixed);
+    input_row->addWidget(prompt);
+    m_console_input = new QLineEdit;
+    m_console_input->setFont(fixed);
+    input_row->addWidget(m_console_input);
+    layout->addLayout(input_row);
+    if (QWidget* old_panel = consoleDockWidget->widget())
+      old_panel->deleteLater();
+    consoleDockWidget->setWidget(panel);
+    QObject::connect(m_console_input, &QLineEdit::returnPressed, this, [this]() {
+      QString line = m_console_input->text();
+      m_console_input->clear();
+      run_console_line(line);
+    });
+    m_console_input->installEventFilter(this);
+  }
+
   // Grid: show/hide, spacing, and snapping of clicked points to the grid.
   QObject::connect(actionGrid, &QAction::toggled, this,
                    [this](bool a_check) { m_scene.set_grid_visible(a_check); });
@@ -1781,6 +2261,15 @@ MainWindow::MainWindow() :
   // In the Intersection and Union columns at least one bucket stays
   // unchecked, to hold the result, and the operations are enabled only with
   // at least one operand.
+  m_complement_column = {showBlueComp, showRedComp, showBlackComp,
+                         showBrownComp, showYellowComp, showMagentaComp,
+                         showAquaComp};
+  m_difference_column = {showBlueDiff, showRedDiff, showBlackDiff,
+                         showBrownDiff, showYellowDiff, showMagentaDiff,
+                         showAquaDiff};
+  m_symmetric_difference_column =
+    {showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff, showBrownSym_Diff,
+     showYellowSym_Diff, showMagentaSym_Diff, showAquaSym_Diff};
   m_intersection_column = {showBlueInt, showRedInt, showBlackInt, showBrownInt,
                            showYellowInt, showMagentaInt, showAquaInt};
   m_union_column = {showBlueUnion, showRedUnion, showBlackUnion,
@@ -3476,6 +3965,7 @@ void MainWindow::on_actionAddColor_triggered() {
   //these colors are not present by default
   if (!m_visible_brown) {
     m_visible_brown = true;
+    log_statements({"brown = Polygon_set_2()"}, true);
     showBrown->setVisible(true);
     drawBrown->setVisible(true);
     clearBrown->setVisible(true);
@@ -3508,6 +3998,7 @@ void MainWindow::on_actionAddColor_triggered() {
     actionMinusColor->setText("Remove Brown");
   } else if (!m_visible_yellow) {
     m_visible_yellow = true;
+    log_statements({"yellow = Polygon_set_2()"}, true);
     showYellow->setVisible(true);
     drawYellow->setVisible(true);
     clearYellow->setVisible(true);
@@ -3539,6 +4030,7 @@ void MainWindow::on_actionAddColor_triggered() {
     actionMinusColor->setText("Remove Yellow");
   } else if (!m_visible_magenta) {
     m_visible_magenta = true;
+    log_statements({"magenta = Polygon_set_2()"}, true);
     showMagenta->setVisible(true);
     drawMagenta->setVisible(true);
     clearMagenta->setVisible(true);
@@ -3570,6 +4062,7 @@ void MainWindow::on_actionAddColor_triggered() {
     actionMinusColor->setText("Remove Magenta");
   } else if (!m_visible_aqua) {
     m_visible_aqua = true;
+    log_statements({"aqua = Polygon_set_2()"}, true);
     showAqua->setVisible(true);
     drawAqua->setVisible(true);
     clearAqua->setVisible(true);
@@ -3610,6 +4103,7 @@ void MainWindow::on_actionAddColor_triggered() {
 //minus color button clicked
 void MainWindow::on_actionMinusColor_triggered() {
   if (!(m_visible_yellow || m_visible_magenta || m_visible_aqua)) {
+    log_statements({"del brown"}, true);
     states_stack.back().m_curve_sets[3].clear();
     //states_stack.back().m_curve_sets[7].clear();
 
@@ -3666,6 +4160,7 @@ void MainWindow::on_actionMinusColor_triggered() {
     actionMinusColor->setText("Minimum Number of Buckets Reached");
     actionMinusColor->setEnabled(false);
   } else if (!(m_visible_magenta || m_visible_aqua)) {
+    log_statements({"del yellow"}, true);
     states_stack.back().m_curve_sets[4].clear();
 
     states_stack.back().yellow_circular_sources().clear();
@@ -3720,6 +4215,7 @@ void MainWindow::on_actionMinusColor_triggered() {
 
     actionMinusColor->setText("Remove Brown");
   } else if (!m_visible_aqua) {
+    log_statements({"del magenta"}, true);
     states_stack.back().m_curve_sets[5].clear();
 
     states_stack.back().magenta_circular_sources().clear();
@@ -3774,6 +4270,7 @@ void MainWindow::on_actionMinusColor_triggered() {
 
     actionMinusColor->setText("Remove Yellow");
   } else {
+    log_statements({"del aqua"}, true);
     states_stack.back().m_curve_sets[6].clear();
 
     states_stack.back().aqua_circular_sources().clear();
@@ -3888,6 +4385,7 @@ void MainWindow::on_actionUndo_triggered() {
     }
 
     m_state_num = states_stack.size();
+    trim_program_to_states();
 
     // for confirming the num of each state during debugging
     // show_error("State num: "+to_string(states_stack.size()));
@@ -3899,7 +4397,17 @@ void MainWindow::on_actionUndo_triggered() {
 
 void MainWindow::on_actionNew_triggered() {
 
-  if (m_state_num > 1) get_new_state(6);
+  if (m_state_num > 1) {
+    get_new_state(6);
+    QStringList program;
+    for (std::size_t i = 0; i < 7; ++i)
+      if (bucket_exists(i) && ! states_stack.back().set(i).is_empty())
+        program << QString("%1.clear()").arg(bucket_name(i));
+    log_statements(program);
+  }
+  // Reset removes the added buckets.
+  for (std::size_t i = 6; i >= 3; --i)
+    if (bucket_exists(i)) log_statements({QString("del ") + bucket_name(i)}, true);
 
   for (Curve_set_iterator si = states_stack.back().m_curve_sets.begin();
        si != states_stack.back().m_curve_sets.end(); ++si)
@@ -4262,6 +4770,13 @@ void MainWindow::on_actionDeleteAll_triggered() {
     actionComplementH->setChecked(false);
 
     get_new_state(10);
+    {
+      QStringList program;
+      for (std::size_t i = 0; i < 7; ++i)
+        if (! states_stack.back().set(i).is_empty())
+          program << QString("%1.clear()").arg(bucket_name(i));
+      log_statements(program);
+    }
 
     /*operation_name
     // COMPLEMENT_OP = 0
@@ -4354,6 +4869,16 @@ void MainWindow::on_actionClearH_toggled(bool aChecked) {
     actionComplementH->setChecked(false);
 
     get_new_state(9);
+    {
+      QStringList program;
+      std::size_t i = 0;
+      for (auto* box : {clearBlue, clearRed, clearBlack, clearBrown,
+                        clearYellow, clearMagenta, clearAqua}) {
+        if (box->isChecked()) program << QString("%1.clear()").arg(bucket_name(i));
+        ++i;
+      }
+      log_statements(program);
+    }
 
     /*operation_name
     // COMPLEMENT_OP = 0
@@ -5768,1448 +6293,69 @@ void MainWindow::on_actionInsertLinear_toggled(bool aChecked) {
 }
 
 //complement
-void MainWindow::on_actionComplementH_toggled(bool aChecked) {
-  if (actionComplementH->isChecked()) {
-    if (abort_for_draw_bucket(actionComplementH,
-                              m_color_complement == m_color_active))
-      return;
-
-    bool lDone = false;
-    QCursor old = this->cursor();
-    this->setCursor(Qt::WaitCursor);
-    actionUnionH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
-    actionMoveH->setChecked(false);
-
-    get_new_state(0);
-    /*operation_name
-    //operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_DIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
-
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-
-    if (! m_circular_active && ! m_bezier_active && ! m_polyline_active) {
-      m_linear_input->get_BoundingRect();
-    }
-    else if (! m_bezier_active && !m_polyline_active) {
-      m_circular_input->get_BoundingRect();
-    }
-    else if (! m_polyline_active) {
-      m_bezier_input->get_BoundingRect();
-    }
-    else {
-      m_polyline_input->get_BoundingRect();
-    }
-    //m_circular_input->get_BoundingRect();
-
-
-    switch (m_color_active) {
-     case 0:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().blue_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 1:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().red_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 2:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().black_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 3:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().brown_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 4:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().yellow_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 5:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().magenta_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     case 6:
-      switch (m_color_complement) {
-       case 0:
-        if (!states_stack.back().blue_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().blue_set());
-        }
-        break;
-       case 1:
-        if (!states_stack.back().red_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().red_set());
-        }
-        break;
-       case 2:
-        if (!states_stack.back().black_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().black_set());
-        }
-        break;
-       case 3:
-        if (!states_stack.back().brown_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().brown_set());
-        }
-        break;
-       case 4:
-        if (!states_stack.back().yellow_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        }
-        break;
-       case 5:
-        if (!states_stack.back().magenta_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        }
-        break;
-       case 6:
-        if (!states_stack.back().aqua_set().is_empty()) {
-          states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        }
-        break;
-      }
-      states_stack.back().aqua_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      break;
-
-     default :break;
-    }
-    actionComplementH->setChecked(false);
-    lDone = true;
-    this->setCursor(old);
-    if (lDone) modelChanged();
-  }
+void MainWindow::on_actionComplementH_toggled(bool /* aChecked */) {
+  if (! actionComplementH->isChecked()) return;
+  auto operands = checked_buckets(m_complement_column);
+  bool is_operand = std::find(operands.begin(), operands.end(),
+                              m_color_active) != operands.end();
+  if (abort_for_draw_bucket(actionComplementH, is_operand)) return;
+  uncheck_operations_except(actionComplementH);
+  run_operation(Bucket_op::Complement, operands, actionComplementH);
 }
 
 //intersection
-void MainWindow::on_actionIntersectionH_toggled(bool aChecked) {
-  if (actionIntersectionH->isChecked()) {
-    if (abort_for_draw_bucket(
-          actionIntersectionH,
-          draw_row_checked({showBlueInt, showRedInt, showBlackInt,
-                           showBrownInt, showYellowInt, showMagentaInt,
-                           showAquaInt})))
-      return;
-    //std::cout<<"Intersection"<<endl;
-    bool lDone = false;
-    QCursor old = this->cursor();
-    this->setCursor(Qt::WaitCursor);
-
-    actionComplementH->setChecked(false);
-    actionUnionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
-    actionMoveH->setChecked(false);
-    get_new_state(1);
-
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_DIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
-
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
-
-    switch (m_color_active) {
-     case 0:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().blue_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().blue_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().blue_set());
-      states_stack.back().blue_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Blue"<<endl;
-      break;
-
-     case 1:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().red_set());
-      states_stack.back().red_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Red"<<endl;
-      break;
-
-     case 2:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().black_set());
-      states_stack.back().black_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Black"<<endl;
-      break;
-
-     case 3:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().brown_set());
-      states_stack.back().brown_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Brown"<<endl;
-      break;
-
-     case 4:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().yellow_set());
-      states_stack.back().yellow_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Yellow"<<endl;
-      break;
-
-     case 5:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().magenta_set());
-      states_stack.back().magenta_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Magenta"<<endl;
-      break;
-
-     case 6:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_int)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_int)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_int)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_int)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_int)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_int)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_int)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (m_blue_int) states_stack.back().result_set().intersect(states_stack.back().blue_set());
-      if (m_red_int) states_stack.back().result_set().intersect(states_stack.back().red_set());
-      if (m_black_int) states_stack.back().result_set().intersect(states_stack.back().black_set());
-      if (m_brown_int) states_stack.back().result_set().intersect(states_stack.back().brown_set());
-      if (m_yellow_int) states_stack.back().result_set().intersect(states_stack.back().yellow_set());
-      if (m_magenta_int) states_stack.back().result_set().intersect(states_stack.back().magenta_set());
-      if (m_aqua_int) states_stack.back().result_set().intersect(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().aqua_set());
-      states_stack.back().aqua_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      //std::cout<<"Aqua"<<endl;
-      break;
-
-     default:break;
-    }
-
-    actionIntersectionH->setChecked(false);
-    //cout<<"End of Intersection"<<endl;
-    lDone = true;
-    this->setCursor(old);
-    if (lDone) modelChanged();
-  }
+void MainWindow::on_actionIntersectionH_toggled(bool /* aChecked */) {
+  if (! actionIntersectionH->isChecked()) return;
+  auto operands = checked_buckets(m_intersection_column);
+  bool is_operand = std::find(operands.begin(), operands.end(),
+                              m_color_active) != operands.end();
+  if (abort_for_draw_bucket(actionIntersectionH, is_operand)) return;
+  uncheck_operations_except(actionIntersectionH);
+  run_operation(Bucket_op::Intersection, operands, actionIntersectionH);
 }
 
 //blue - red
 //difference
-void MainWindow::on_actionDifferenceH_toggled(bool aChecked) {
-  if (actionDifferenceH->isChecked()) {
-    if (abort_for_draw_bucket(
-          actionDifferenceH,
-          draw_row_checked({showBlueDiff, showRedDiff, showBlackDiff,
-                           showBrownDiff, showYellowDiff, showMagentaDiff,
-                           showAquaDiff})))
-      return;
-    bool lDone = false;
-    QCursor old = this->cursor();
-    this->setCursor(Qt::WaitCursor);
-
-    actionComplementH->setChecked(false);
-    actionUnionH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
-    actionMoveH->setChecked(false);
-
-    size_t count = 0;
-    if (showBlueDiff->isChecked()) count++;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-
-    if (count == 2) {
-      size_t color1 = 111;
-      size_t color2 = 1111;
-      if (showBlueDiff->isChecked()) color1 = 0;
-      if (showRedDiff->isChecked()) {
-        if (color1 < 1) color2 = 1;
-        else color1 = 1;
-      }
-
-      if (showBlackDiff->isChecked()) {
-        if (color1 < 2) color2 = 2;
-        else color1 = 2;
-      }
-
-      if (showBrownDiff->isChecked()) {
-        if (color1 < 3) color2 = 3;
-        else color1 = 3;
-      }
-
-      if (showYellowDiff->isChecked()) {
-        if (color1 < 4) color2 = 4;
-        else color1 = 4;
-      }
-
-      if (showMagentaDiff->isChecked()) {
-        if (color1 < 5) color2 = 5;
-        else color1 = 5;
-      }
-
-      if (showAquaDiff->isChecked()) {
-        if (color1 < 6) color2 = 6;
-        else color1 = 6;
-      }
-
-      get_new_state(3);
-
-      /*peration_name
-      // COMPLEMENT_OP = 0
-      // INTERSECTION_OP = 1
-      // UNION_OP = 2
-      // DIFFERENCE_OP = 3
-      // SYMMETRIC_dIFFERENCE_OP = 4
-      // MINKOWSKI_SUM_OP = 5
-      // RESET_OP = 6
-      // COPY_OP = 7
-      // MOVE_OP = 8
-      // CLEAR_OP = 9
-      // DELETEALL_OP = 10
-      // START_OP = 11*/
-
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-
-
-      switch (m_color_active) {
-       case 0:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-        else if (color1 == 6) states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-        if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-
-        states_stack.back().result_set().difference(states_stack.back().blue_set());
-        states_stack.back().blue_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 1:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().red_set());
-        states_stack.back().red_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 2:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().black_set());
-        states_stack.back().black_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 3:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().brown_set());
-        states_stack.back().brown_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 4:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        states_stack.back().yellow_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 5:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        states_stack.back().magenta_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-
-       case 6:
-        if (color1 == 0) states_stack.back().result_set().assign(states_stack.back().blue_set());
-        else if (color1 == 1) states_stack.back().result_set().assign(states_stack.back().red_set());
-        else if (color1 == 2) states_stack.back().result_set().assign(states_stack.back().black_set());
-        else if (color1 == 3) states_stack.back().result_set().assign(states_stack.back().brown_set());
-        else if (color1 == 4) states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        else if (color1 == 5) states_stack.back().result_set().assign(states_stack.back().magenta_set());
-
-        if (color2 == 0) states_stack.back().result_set().difference(states_stack.back().blue_set());
-        else if (color2 == 1) states_stack.back().result_set().difference(states_stack.back().red_set());
-        else if (color2 == 2) states_stack.back().result_set().difference(states_stack.back().black_set());
-        else if (color2 == 3) states_stack.back().result_set().difference(states_stack.back().brown_set());
-        else if (color2 == 4) states_stack.back().result_set().difference(states_stack.back().yellow_set());
-        else if (color2 == 5)
-          states_stack.back().result_set().difference(states_stack.back().magenta_set());
-        else if (color2 == 6) states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().result_set().difference(states_stack.back().aqua_set());
-        states_stack.back().aqua_set().join(states_stack.back().result_set());
-        states_stack.back().result_set().clear();
-        states_stack.back().result_linear_sources().clear();
-        states_stack.back().result_circular_sources().clear();
-        states_stack.back().result_polyline_sources().clear();
-        states_stack.back().result_bezier_sources().clear();
-        break;
-      }
-      lDone = true;
-    } else {
-      ask_user_ok("Difference Operation Error", "Operation valid for 2 colored polygon set\n");
-    }
+void MainWindow::on_actionDifferenceH_toggled(bool /* aChecked */) {
+  if (! actionDifferenceH->isChecked()) return;
+  auto operands = checked_buckets(m_difference_column);
+  if (operands.size() != 2) {
     actionDifferenceH->setChecked(false);
-    this->setCursor(old);
-    if (lDone) modelChanged();
+    ask_user_ok("Operation Error", "The difference takes exactly two buckets.\n");
+    return;
   }
+  bool is_operand = std::find(operands.begin(), operands.end(),
+                              m_color_active) != operands.end();
+  if (abort_for_draw_bucket(actionDifferenceH, is_operand)) return;
+  uncheck_operations_except(actionDifferenceH);
+  run_operation(Bucket_op::Difference, operands, actionDifferenceH);
 }
 
 //symmetric difference
-void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool aChecked) {
-  if (actionSymmetric_DifferenceH->isChecked()) {
-    if (abort_for_draw_bucket(
-          actionSymmetric_DifferenceH,
-          draw_row_checked({showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff,
-                           showBrownSym_Diff, showYellowSym_Diff, showMagentaSym_Diff,
-                           showAquaSym_Diff})))
-      return;
-    bool lDone = false;
-    QCursor old = this->cursor();
-    this->setCursor(Qt::WaitCursor);
-
-    actionComplementH->setChecked(false);
-    actionUnionH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
-    actionMoveH->setChecked(false);
-
-    get_new_state(4);
-
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_dIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
-
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
-
-    switch (m_color_active) {
-     case 0:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().blue_set());
-      states_stack.back().blue_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 1:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().red_set());
-      states_stack.back().red_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 2:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().black_set());
-      states_stack.back().black_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 3:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());\
-
-      states_stack.back().result_set().difference(states_stack.back().brown_set());
-      states_stack.back().brown_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 4:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().yellow_set());
-      states_stack.back().yellow_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 5:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().magenta_set());
-      states_stack.back().magenta_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 6:
-      if (!states_stack.back().blue_set().is_empty() && m_blue_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      else if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      else if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      else if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      else if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      else if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      else if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-
-      if (!states_stack.back().red_set().is_empty() && m_red_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().red_set());
-      if (!states_stack.back().black_set().is_empty() && m_black_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().black_set());
-      if (!states_stack.back().brown_set().is_empty() && m_brown_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().brown_set());
-      if (!states_stack.back().yellow_set().is_empty() && m_yellow_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().yellow_set());
-      if (!states_stack.back().magenta_set().is_empty() && m_magenta_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().magenta_set());
-      if (!states_stack.back().aqua_set().is_empty() && m_aqua_sym_diff)
-        states_stack.back().result_set().symmetric_difference(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().aqua_set());
-      states_stack.back().aqua_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-    }
-
+void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool /* aChecked */) {
+  if (! actionSymmetric_DifferenceH->isChecked()) return;
+  auto operands = checked_buckets(m_symmetric_difference_column);
+  if (operands.size() != 2) {
     actionSymmetric_DifferenceH->setChecked(false);
-    lDone = true;
-    this->setCursor(old);
-    if (lDone) modelChanged();
+    ask_user_ok("Operation Error", "The symmetric difference takes exactly two buckets.\n");
+    return;
   }
+  bool is_operand = std::find(operands.begin(), operands.end(),
+                              m_color_active) != operands.end();
+  if (abort_for_draw_bucket(actionSymmetric_DifferenceH, is_operand)) return;
+  uncheck_operations_except(actionSymmetric_DifferenceH);
+  run_operation(Bucket_op::Symmetric_difference, operands, actionSymmetric_DifferenceH);
 }
 
 //union
-void MainWindow::on_actionUnionH_toggled(bool aChecked) {
-  if (actionUnionH->isChecked()) {
-    if (abort_for_draw_bucket(
-          actionUnionH,
-          draw_row_checked({showBlueUnion, showRedUnion, showBlackUnion,
-                           showBrownUnion, showYellowUnion, showMagentaUnion,
-                           showAquaUnion})))
-      return;
-    bool lDone = false;
-    QCursor old = this->cursor();
-    this->setCursor(Qt::WaitCursor);
-
-    actionComplementH->setChecked(false);
-    //actionUnion->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
-    actionMoveH->setChecked(false);
-
-    get_new_state(2);
-
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_dIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
-
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
-
-
-    switch (m_color_active) {
-     case 0:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().blue_set());
-      states_stack.back().blue_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 1:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().red_set());
-      states_stack.back().red_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 2:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().black_set());
-      states_stack.back().black_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 3:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().brown_set());
-      states_stack.back().brown_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 4:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().yellow_set());
-      states_stack.back().yellow_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 5:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().magenta_set());
-      states_stack.back().magenta_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-
-     case 6:if (m_red_union) states_stack.back().result_set().assign(states_stack.back().red_set());
-      if (m_blue_union) states_stack.back().result_set().join(states_stack.back().blue_set());
-      if (m_black_union) states_stack.back().result_set().join(states_stack.back().black_set());
-      if (m_brown_union) states_stack.back().result_set().join(states_stack.back().brown_set());
-      if (m_magenta_union) states_stack.back().result_set().join(states_stack.back().magenta_set());
-      if (m_yellow_union) states_stack.back().result_set().join(states_stack.back().yellow_set());
-      if (m_aqua_union) states_stack.back().result_set().join(states_stack.back().aqua_set());
-
-      states_stack.back().result_set().difference(states_stack.back().aqua_set());
-      states_stack.back().aqua_set().join(states_stack.back().result_set());
-      states_stack.back().result_set().clear();
-      states_stack.back().result_linear_sources().clear();
-      states_stack.back().result_circular_sources().clear();
-      states_stack.back().result_polyline_sources().clear();
-      states_stack.back().result_bezier_sources().clear();
-      break;
-    }
-
-    actionUnionH->setChecked(false);
-    lDone = true;
-    this->setCursor(old);
-    if (lDone) modelChanged();
-  }
+void MainWindow::on_actionUnionH_toggled(bool /* aChecked */) {
+  if (! actionUnionH->isChecked()) return;
+  auto operands = checked_buckets(m_union_column);
+  bool is_operand = std::find(operands.begin(), operands.end(),
+                              m_color_active) != operands.end();
+  if (abort_for_draw_bucket(actionUnionH, is_operand)) return;
+  uncheck_operations_except(actionUnionH);
+  run_operation(Bucket_op::Join, operands, actionUnionH);
 }
 
 //copy
@@ -7230,6 +6376,9 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
     actionMoveH->setChecked(false);
 
     get_new_state(7);
+    if (m_color_copy < 7)
+      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active),
+                                                 bucket_name(m_color_copy))});
 
     /*operation_name
     // COMPLEMENT_OP = 0
@@ -7317,6 +6466,11 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
     actionCopyH->setChecked(false);
 
     get_new_state(8);
+    if (m_color_move_ext < 7)
+      log_statements({QString("%1.join(%2)")
+                      .arg(bucket_name(m_color_active),
+                           bucket_name(m_color_move_ext)),
+                      QString("%1.clear()").arg(bucket_name(m_color_move_ext))});
 
     /*operation_name
     // COMPLEMENT_OP = 0
@@ -7498,6 +6652,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
       actionSymmetric_DifferenceH->setChecked(false);
 
       get_new_state(5);
+      log_statements({"# Minkowski sum (not supported in the program yet)"});
 
       /*operation_name
       // COMPLEMENT_OP = 0
@@ -7979,6 +7134,502 @@ limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn,
   aOperation->setEnabled(count == 2);
 }
 
+// The buckets (indices) marked in the given operation column.
+std::vector<std::size_t> MainWindow::
+checked_buckets(const std::array<QAbstractButton*, 7>& aColumn) const {
+  std::vector<std::size_t> buckets;
+  for (std::size_t i = 0; i < aColumn.size(); ++i)
+    if (! aColumn[i]->isHidden() && aColumn[i]->isChecked())
+      buckets.push_back(i);
+  return buckets;
+}
+
+// Uncheck all operation buttons but the given one.
+void MainWindow::uncheck_operations_except(QAbstractButton* aOperation) {
+  for (QAbstractButton* button :
+         {static_cast<QAbstractButton*>(actionComplementH),
+          static_cast<QAbstractButton*>(actionIntersectionH),
+          static_cast<QAbstractButton*>(actionUnionH),
+          static_cast<QAbstractButton*>(actionDifferenceH),
+          static_cast<QAbstractButton*>(actionSymmetric_DifferenceH),
+          static_cast<QAbstractButton*>(actionMinkowski_SumH),
+          static_cast<QAbstractButton*>(actionCopyH),
+          static_cast<QAbstractButton*>(actionMoveH)})
+    if (button != aOperation) button->setChecked(false);
+}
+
+// Clear the scratch result set.
+void MainWindow::clear_result() {
+  auto& state = states_stack.back();
+  state.result_set().clear();
+  state.result_linear_sources().clear();
+  state.result_circular_sources().clear();
+  state.result_bezier_sources().clear();
+  state.result_polyline_sources().clear();
+}
+
+// Apply a Boolean operation to the operand buckets, and add the result to the
+// Draw/Insert bucket. The first two operands are combined with the bivariate
+// operation (target = first op second), and the remaining ones are folded in
+// one at a time. The complement is exact (unbounded). If the Draw/Insert
+// bucket is empty and not an operand, the result is computed directly into
+// it; otherwise into a temporary (result), which is then added to it. (The
+// bivariate operations overwrite their target, and the target must not alias
+// an operand.) The executed statements are logged, in Python (CGALPY) form.
+void MainWindow::run_operation(Bucket_op aOp,
+                               const std::vector<std::size_t>& aOperands,
+                               QAbstractButton* aOperation) {
+  if (aOperands.empty() ||
+      ((aOp == Bucket_op::Complement) && (aOperands.size() != 1))) {
+    aOperation->setChecked(false);
+    return;
+  }
+
+  // The operation codes of the undo stack.
+  std::size_t code = 0;
+  QString name;
+  switch (aOp) {
+   case Bucket_op::Complement: code = 0; name = "complement"; break;
+   case Bucket_op::Intersection: code = 1; name = "intersection"; break;
+   case Bucket_op::Join: code = 2; name = "join"; break;
+   case Bucket_op::Difference: code = 3; name = "difference"; break;
+   case Bucket_op::Symmetric_difference:
+    code = 4; name = "symmetric_difference"; break;
+  }
+
+  QCursor old = this->cursor();
+  this->setCursor(Qt::WaitCursor);
+  get_new_state(code);
+  clear_result();
+  auto& state = states_stack.back();
+  auto bucket = [&state](std::size_t aIndex) -> Curve_set&
+                { return state.set(aIndex); };
+  Curve_set& draw_bucket = state.active_set(m_color_active);
+  bool direct = draw_bucket.is_empty() &&
+    (std::find(aOperands.begin(), aOperands.end(), m_color_active) ==
+     aOperands.end());
+  Curve_set& result = direct ? draw_bucket : state.result_set();
+  const QString target = direct ? bucket_name(m_color_active) : "result";
+  QStringList program;
+
+  if (aOp == Bucket_op::Complement) {
+    result.complement(bucket(aOperands[0]));
+    if (! direct) program << "result = Polygon_set_2()";
+    program << QString("%1.complement(%2)")
+      .arg(target, bucket_name(aOperands[0]));
+  }
+  else if (aOperands.size() == 1) {
+    if (direct) {
+      result.join(bucket(aOperands[0]));
+      program << QString("%1.join(%2)").arg(target, bucket_name(aOperands[0]));
+    }
+    else {
+      result.assign(bucket(aOperands[0]));
+      program << QString("result = Polygon_set_2(%1)")
+        .arg(bucket_name(aOperands[0]));
+    }
+  }
+  else {
+    auto apply2 = [&](Curve_set const& aFirst, Curve_set const& aSecond) {
+      switch (aOp) {
+       case Bucket_op::Intersection: result.intersect(aFirst, aSecond); break;
+       case Bucket_op::Join: result.join(aFirst, aSecond); break;
+       case Bucket_op::Difference: result.difference(aFirst, aSecond); break;
+       case Bucket_op::Symmetric_difference:
+        result.symmetric_difference(aFirst, aSecond); break;
+       default: break;
+      }
+    };
+    auto apply1 = [&](Curve_set const& aOther) {
+      switch (aOp) {
+       case Bucket_op::Intersection: result.intersect(aOther); break;
+       case Bucket_op::Join: result.join(aOther); break;
+       case Bucket_op::Difference: result.difference(aOther); break;
+       case Bucket_op::Symmetric_difference:
+        result.symmetric_difference(aOther); break;
+       default: break;
+      }
+    };
+    apply2(bucket(aOperands[0]), bucket(aOperands[1]));
+    if (! direct) program << "result = Polygon_set_2()";
+    program << QString("%1.%2(%3, %4)").arg(target, name,
+                                             bucket_name(aOperands[0]),
+                                             bucket_name(aOperands[1]));
+    for (std::size_t i = 2; i < aOperands.size(); ++i) {
+      apply1(bucket(aOperands[i]));
+      program << QString("%1.%2(%3)").arg(target, name,
+                                          bucket_name(aOperands[i]));
+    }
+  }
+
+  if (! direct) {
+    draw_bucket.join(result);
+    program << QString("%1.join(result)").arg(bucket_name(m_color_active));
+  }
+  clear_result();
+
+  aOperation->setChecked(false);
+  this->setCursor(old);
+  log_statements(program);
+  modelChanged();
+}
+
+// Append statements to the program, and show them in the Log. Sticky
+// statements (the creation and deletion of buckets, which are not undoable
+// actions) are never dropped by undo.
+void MainWindow::log_statements(const QStringList& aStatements, bool aSticky) {
+  if (! m_logging) return;
+  for (const auto& statement : aStatements) {
+    m_program.push_back({aSticky ? 0 : states_stack.size(), statement});
+    if (m_log) m_log->appendPlainText(statement);
+  }
+}
+
+// Drop the statements of undone actions (those logged at a deeper undo stack
+// than the current one), and refresh the Log.
+void MainWindow::trim_program_to_states() {
+  auto it = std::remove_if(m_program.begin(), m_program.end(),
+                           [this](Program_line const& aLine)
+                           { return aLine.m_state_count > states_stack.size(); });
+  bool changed = (it != m_program.end());
+  m_program.erase(it, m_program.end());
+  if (! changed || ! m_log) return;
+  QStringList lines;
+  for (const auto& line : m_program) lines << line.m_text;
+  m_log->setPlainText(lines.join("\n"));
+}
+
+// Whether the bucket with the given index currently exists (is shown).
+bool MainWindow::bucket_exists(std::size_t aIndex) const {
+  switch (aIndex) {
+   case 0: case 1: case 2: return true;
+   case 3: return m_visible_brown;
+   case 4: return m_visible_yellow;
+   case 5: return m_visible_magenta;
+   case 6: return m_visible_aqua;
+   default: return false;
+  }
+}
+
+// The index of the bucket with the given name, or 7 if there is none.
+std::size_t MainWindow::bucket_index(const QString& aName) const {
+  for (std::size_t i = 0; i < 7; ++i)
+    if (aName == bucket_name(i)) return i;
+  return 7;
+}
+
+// The polygon set (an existing bucket or variable) with the given name, or
+// null.
+Curve_set* MainWindow::polygon_set(const QString& aName) {
+  std::size_t i = bucket_index(aName);
+  if (i < 7) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
+  auto it = m_variables.find(aName);
+  return (it == m_variables.end()) ? nullptr : &it->second;
+}
+
+// The polygon of a Polygon_2([...]) expression. It must be simple and
+// counterclockwise oriented (as the bindings require).
+Linear_polygon_with_holes MainWindow::polygon(Py_expr const& aExpr) const {
+  const auto& pts = aExpr.m_points;
+  if (pts.size() < 3)
+    throw std::runtime_error("a polygon needs at least 3 vertices");
+  CGAL::Polygon_2<Kernel> check;
+  for (const auto& [x, y] : pts) check.push_back(Kernel::Point_2(x, y));
+  if (! check.is_simple())
+    throw std::runtime_error("the polygon is not simple");
+  if (check.orientation() != CGAL::COUNTERCLOCKWISE)
+    throw std::runtime_error("the polygon is not counterclockwise oriented");
+  std::vector<Linear_curve> curves;
+  for (std::size_t i = 0; i < pts.size(); ++i) {
+    const auto& p = pts[i];
+    const auto& q = pts[(i + 1) % pts.size()];
+    curves.emplace_back(Kernel::Point_2(p.first, p.second),
+                        Kernel::Point_2(q.first, q.second));
+  }
+  return Linear_polygon_with_holes(Linear_polygon(curves.begin(),
+                                                  curves.end()));
+}
+
+// Execute one console statement. Return the text to print (for queries), or
+// an empty string. Throws a std::runtime_error with a message on an error.
+// Statements that change a polygon set are undoable actions, and are logged.
+QString MainWindow::execute(Py_statement const& aStatement) {
+  using Kind = Py_statement::Kind;
+  const QString& target = aStatement.m_target;
+  std::size_t index = bucket_index(target);
+  bool is_bucket = (index < 7);
+
+  auto set_of = [this](Py_expr const& aExpr) -> Curve_set& {
+    if (aExpr.m_kind != Py_expr::Kind::Name)
+      throw std::runtime_error(("expected a polygon set name instead of " +
+                                to_python(aExpr)).toStdString());
+    Curve_set* set = polygon_set(aExpr.m_name);
+    if (! set)
+      throw std::runtime_error(("name '" + aExpr.m_name +
+                                "' is not defined").toStdString());
+    return *set;
+  };
+  auto log = [this, &aStatement]() {
+    log_statements({to_python(aStatement)});
+  };
+
+  // del name
+  if (aStatement.m_kind == Kind::Delete) {
+    if (! is_bucket) {
+      if (m_variables.erase(target) == 0)
+        throw std::runtime_error(("name '" + target +
+                                  "' is not defined").toStdString());
+      log_statements({to_python(aStatement)}, true);
+      return QString();
+    }
+    // Only the last added bucket can be removed.
+    std::size_t last = 2;
+    for (std::size_t i = 3; i < 7; ++i) if (bucket_exists(i)) last = i;
+    if ((index < 3) || (index != last))
+      throw std::runtime_error(index < 3 ?
+        "the red, black, and blue buckets cannot be deleted" :
+        ("only the last bucket (" + QString(bucket_name(last)) +
+         ") can be deleted").toStdString());
+    on_actionMinusColor_triggered();      // logs "del <name>"
+    return QString();
+  }
+
+  // name = Polygon_set_2(...)
+  if (aStatement.m_kind == Kind::Assign) {
+    const Py_expr& value = aStatement.m_args[0];
+    if (value.m_kind != Py_expr::Kind::Polygon_set)
+      throw std::runtime_error("only polygon sets can be assigned, e.g., " +
+        (target + " = Polygon_set_2(" +
+         (value.m_kind == Py_expr::Kind::Name ? value.m_name : QString()) +
+         ")").toStdString() + " (copies the set)");
+    const Py_expr* arg = value.m_arg.get();
+    if (is_bucket && ! bucket_exists(index)) {
+      // Buckets are added in order.
+      std::size_t next = 3;
+      while ((next < 7) && bucket_exists(next)) ++next;
+      if (index != next)
+        throw std::runtime_error(("buckets are added in order; the next one "
+                                  "is " + QString(bucket_name(next)))
+                                 .toStdString());
+      m_logging = false;
+      on_actionAddColor_triggered();
+      m_logging = true;
+      if (! arg) {       // a new, empty bucket
+        log_statements({to_python(aStatement)}, true);
+        return QString();
+      }
+      log_statements({target + " = Polygon_set_2()"}, true);
+    }
+    get_new_state(13);
+    Curve_set* set = polygon_set(target);
+    if (! set) {
+      set = &m_variables.emplace(target, Curve_set(1, QPen(), QBrush()))
+        .first->second;
+    }
+    if (! arg) set->clear();
+    else if (arg->m_kind == Py_expr::Kind::Polygon) {
+      Linear_polygon_with_holes pgn = polygon(*arg);
+      set->clear();
+      set->linear().join(pgn);
+    }
+    else {
+      Curve_set& other = set_of(*arg);
+      if (&other != set) set->assign(other);
+    }
+    log();
+    return QString();
+  }
+
+  // name.method(args)
+  Curve_set* set = polygon_set(target);
+  if (! set)
+    throw std::runtime_error(("name '" + target + "' is not defined")
+                             .toStdString());
+  const QString& method = aStatement.m_method;
+  const auto& args = aStatement.m_args;
+  auto arity = [&](std::size_t aMin, std::size_t aMax) {
+    if ((args.size() < aMin) || (args.size() > aMax))
+      throw std::runtime_error((method + "() takes " +
+        ((aMin == aMax) ? QString::number(aMin) :
+         QString("%1 or %2").arg(aMin).arg(aMax)) + " argument(s)")
+        .toStdString());
+  };
+
+  // Queries.
+  if (method == "is_empty") {
+    arity(0, 0);
+    return set->is_empty() ? "True" : "False";
+  }
+  if (method == "is_plane") {
+    arity(0, 0);
+    return set->linear().is_plane() ? "True" : "False";
+  }
+  if (method == "number_of_polygons_with_holes") {
+    arity(0, 0);
+    return QString::number(set->linear().number_of_polygons_with_holes());
+  }
+
+  if (method == "clear") {
+    arity(0, 0);
+    get_new_state(13);
+    polygon_set(target)->clear();
+    log();
+    return QString();
+  }
+  if (method == "complement") {
+    arity(0, 1);
+    if (! args.empty()) {
+      Curve_set& other = set_of(args[0]);
+      if (&other == set)
+        throw std::runtime_error("use complement() to complement in place");
+    }
+    get_new_state(13);
+    set = polygon_set(target);
+    if (args.empty()) set->complement();
+    else set->complement(set_of(args[0]));
+    log();
+    return QString();
+  }
+
+  enum class Op { Join, Intersection, Difference, Symmetric_difference };
+  Op op;
+  if (method == "join") op = Op::Join;
+  else if (method == "intersection") op = Op::Intersection;
+  else if (method == "difference") op = Op::Difference;
+  else if (method == "symmetric_difference") op = Op::Symmetric_difference;
+  else
+    throw std::runtime_error(("unknown method '" + method + "'").toStdString());
+  arity(1, 2);
+
+  if (args.size() == 2) {
+    // The bivariate form overwrites the target, which must not be an operand.
+    if ((&set_of(args[0]) == set) || (&set_of(args[1]) == set))
+      throw std::runtime_error(("the target of " + method + "(a, b) must "
+                                "differ from a and b").toStdString());
+    get_new_state(13);
+    set = polygon_set(target);
+    Curve_set& a = set_of(args[0]);
+    Curve_set& b = set_of(args[1]);
+    switch (op) {
+     case Op::Join: set->join(a, b); break;
+     case Op::Intersection: set->intersect(a, b); break;
+     case Op::Difference: set->difference(a, b); break;
+     case Op::Symmetric_difference: set->symmetric_difference(a, b); break;
+    }
+    log();
+    return QString();
+  }
+
+  // One argument: a polygon set or a polygon.
+  if (args[0].m_kind == Py_expr::Kind::Polygon) {
+    Linear_polygon_with_holes pgn = polygon(args[0]);
+    get_new_state(13);
+    auto& lset = polygon_set(target)->linear();
+    switch (op) {
+     case Op::Join: lset.join(pgn); break;
+     case Op::Intersection: lset.intersection(pgn); break;
+     case Op::Difference: lset.difference(pgn); break;
+     case Op::Symmetric_difference: lset.symmetric_difference(pgn); break;
+    }
+    log();
+    return QString();
+  }
+  set_of(args[0]);      // check the name
+  get_new_state(13);
+  set = polygon_set(target);
+  Curve_set& other = set_of(args[0]);
+  switch (op) {
+   case Op::Join: set->join(other); break;
+   case Op::Intersection: set->intersect(other); break;
+   case Op::Difference: set->difference(other); break;
+   case Op::Symmetric_difference: set->symmetric_difference(other); break;
+  }
+  log();
+  return QString();
+}
+
+// The console input line: Up and Down browse the history, and Ctrl+<key>
+// combinations go to the input line rather than to the operation shortcuts
+// (Ctrl+C is complement, Ctrl+D difference, Ctrl+U union, ...), except Ctrl+Q.
+bool MainWindow::eventFilter(QObject* aObject, QEvent* aEvent) {
+  if ((aObject == m_console_input) && m_console_input) {
+    if (aEvent->type() == QEvent::ShortcutOverride) {
+      auto* ke = static_cast<QKeyEvent*>(aEvent);
+      if (ke->modifiers().testFlag(Qt::ControlModifier) &&
+          (ke->key() != Qt::Key_Q)) {
+        aEvent->accept();
+        return true;
+      }
+    }
+    if (aEvent->type() == QEvent::KeyPress) {
+      auto* ke = static_cast<QKeyEvent*>(aEvent);
+      if ((ke->key() == Qt::Key_Up) || (ke->key() == Qt::Key_Down)) {
+        int n = m_console_history.size();
+        int pos = m_console_history_pos + ((ke->key() == Qt::Key_Up) ? -1 : 1);
+        if ((pos >= 0) && (pos <= n)) {
+          m_console_history_pos = pos;
+          m_console_input->setText((pos < n) ? m_console_history[pos] :
+                                   QString());
+        }
+        return true;
+      }
+    }
+  }
+  return CGAL::Qt::DemosMainWindow::eventFilter(aObject, aEvent);
+}
+
+// Print to the console output.
+void MainWindow::console_print(const QString& aText) {
+  if (m_console_output) m_console_output->appendPlainText(aText);
+}
+
+// Parse and execute a console line.
+void MainWindow::run_console_line(const QString& aLine) {
+  console_print(">>> " + aLine);
+  if (! aLine.trimmed().isEmpty()) {
+    m_console_history << aLine;
+  }
+  m_console_history_pos = m_console_history.size();
+  if (m_circular_active || m_bezier_active || m_polyline_active) {
+    console_print("Error: the console supports linear polygons only");
+    return;
+  }
+  try {
+    auto statements = Py_parser(aLine).parse();
+    for (const auto& statement : statements) {
+      QString output = execute(statement);
+      if (! output.isEmpty()) console_print(output);
+    }
+  }
+  catch (std::exception& e) {
+    console_print(QString("Error: ") + e.what());
+  }
+  modelChanged();
+}
+
+// Save the program as a Python script for the CGALPY bindings.
+void MainWindow::save_program() {
+  QString file_name =
+    QFileDialog::getSaveFileName(this, "Save Program", "bso_program.py",
+                                 "Python files (*.py)");
+  if (file_name.isEmpty()) return;
+  QSaveFile file(file_name);
+  if (! file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    show_error("Cannot open " + file_name.toStdString() + " for writing");
+    return;
+  }
+  QTextStream out(&file);
+  out << "# Generated by the CGAL 2D Boolean Set Operations demo.\n"
+      << "from CGALPY_kerEpec_aos2Seg_bso2_pol2 import Ker, Pol2, Bso2\n\n"
+      << "Point_2 = Ker.Point_2\n"
+      << "Polygon_2 = Pol2.Polygon_2\n"
+      << "Polygon_set_2 = Bso2.Polygon_set_2\n\n";
+  for (const auto& line : m_program) out << line.m_text << "\n";
+  out.flush();
+  if (! file.commit())
+    show_error("Cannot write " + file_name.toStdString());
+}
+
 // Whether the Draw/Insert bucket is marked in the given operation column.
 bool MainWindow::
 draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const {
@@ -8214,10 +7865,15 @@ void MainWindow::processInput(CGAL::Object o) {
           }
           states_stack.back().active_set(m_color_active).linear().join(lCPWH);
           states_stack.back().active_linear_sources(m_color_active).push_back(lCPWH);
+          if (! m_linear_input->is_mink())
+            log_statements({QString("%1.join(%2)")
+                            .arg(bucket_name(m_color_active), to_python(lLI))});
         } else {
           states_stack.back().result_set().linear().join(lCPWH);
           states_stack.back().result_linear_sources().push_back(lCPWH);
           if (m_linear_input->ishole()) {
+            log_statements({QString("%1.difference(%2)")
+                            .arg(bucket_name(m_color_active), to_python(lLI))});
             states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
             states_stack.back().result_set().clear();
             states_stack.back().result_linear_sources().clear();

@@ -2548,7 +2548,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <set>Qt::LeftDockWidgetArea|Qt::BottomDockWidgetArea</set>
    </property>
    <property name="windowTitle">
-    <string>Information</string>
+    <string>Log</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -2806,7 +2806,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
   </action>
   <action name="showInfo">
    <property name="text">
-    <string>Info</string>
+    <string>Log</string>
    </property>
    <property name="checkable">
     <bool>true</bool>

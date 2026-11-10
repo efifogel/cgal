@@ -106,6 +106,12 @@ void Piecewise_region_graphics_item_bezier<R,D,P>::update_region_bbox( Piecewise
 template <class R, class D, class P>
 void Piecewise_region_graphics_item_bezier<R,D,P>::draw_region( Piecewise_region const& aRegion, QPainterPath& aPath )
 {
+  // An unbounded region (e.g., a complement) has no outer boundary; use a
+  // huge rectangle instead, so that the area outside its holes is filled
+  // (the path uses the odd-even fill rule).
+  if (aRegion.is_unbounded())
+    aPath.addRect(QRectF(QPointF(-15500000, -10000000),
+                         QPointF(15500000, 10000000)));
   this->draw_boundary( aRegion.outer_boundary(), aPath ) ;//This added for qt5 version !
   
   for( Hole_const_iterator hit = aRegion.holes_begin(); hit != aRegion.holes_end(); ++ hit )
