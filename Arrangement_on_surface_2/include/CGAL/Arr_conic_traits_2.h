@@ -114,9 +114,9 @@ private:
   using Shared_alg_kernel = std::shared_ptr<Alg_kernel>;
   using Shared_nt_traits = std::shared_ptr<Nt_traits>;
 
-  const Shared_rat_kernel m_rat_kernel;
-  const Shared_alg_kernel m_alg_kernel;
-  const Shared_nt_traits m_nt_traits;
+  Shared_rat_kernel m_rat_kernel;
+  Shared_alg_kernel m_alg_kernel;
+  Shared_nt_traits m_nt_traits;
 
   mutable Intersection_map m_inter_map; // Mapping conic pairs to their
                                         // intersection points.
