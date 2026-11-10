@@ -1261,7 +1261,8 @@ slots:
   void show_operand_error();
   bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
   void limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn,
-                            QAbstractButton* aBox, bool aChecked);
+                            QAbstractButton* aBox, bool aChecked,
+                            QAbstractButton* aOperation);
   void keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn);
   void limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn,
                              QAbstractButton* aBox, bool aChecked,
@@ -1778,17 +1779,26 @@ MainWindow::MainWindow() :
     complement_group->addButton(box);
 
   // In the Intersection and Union columns at least one bucket stays
-  // unchecked, to hold the result.
+  // unchecked, to hold the result, and the operations are enabled only with
+  // at least one operand.
   m_intersection_column = {showBlueInt, showRedInt, showBlackInt, showBrownInt,
                            showYellowInt, showMagentaInt, showAquaInt};
   m_union_column = {showBlueUnion, showRedUnion, showBlackUnion,
                     showBrownUnion, showYellowUnion, showMagentaUnion,
                     showAquaUnion};
-  for (const auto* column : {&m_intersection_column, &m_union_column})
+  const std::pair<const std::array<QAbstractButton*, 7>*, QAbstractButton*>
+    multi_operand_columns[] = {{&m_intersection_column, actionIntersectionH},
+                               {&m_union_column, actionUnionH}};
+  for (const auto& [column, operation] : multi_operand_columns) {
     for (auto* box : *column)
       QObject::connect(box, &QAbstractButton::toggled, this,
-                       [this, box, column](bool checked)
-                       { limit_to_all_but_one(*column, box, checked); });
+                       [this, box, column, operation](bool checked) {
+                         limit_to_all_but_one(*column, box, checked,
+                                              operation);
+                       });
+    // Set the initial state of the operation.
+    limit_to_all_but_one(*column, (*column)[0], false, operation);
+  }
 
   // The Difference, Symmetric Difference, and Minkowski Sum columns have at
   // most two marked cells, and their operations are enabled only with exactly
@@ -7915,15 +7925,26 @@ void MainWindow::show_operand_error() {
 // Intersection and union take one or more operands, but at least one bucket
 // must remain for the result. Called when a cell (aBox) of the operation
 // column (aColumn) is toggled: checking the last unchecked cell (of the
-// existing buckets) is undone (a no-op).
+// existing buckets) is undone (a no-op). The operation button (aOperation)
+// is enabled only when at least one cell (of the existing buckets) is
+// checked.
 void MainWindow::
 limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn,
-                     QAbstractButton* aBox, bool aChecked) {
-  if (! aChecked || aBox->isHidden()) return;
-  bool all_checked =
-    std::all_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box)
-                { return box->isHidden() || box->isChecked(); });
-  if (all_checked) aBox->setChecked(false);
+                     QAbstractButton* aBox, bool aChecked,
+                     QAbstractButton* aOperation) {
+  if (aChecked && ! aBox->isHidden()) {
+    bool all_checked =
+      std::all_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box)
+                  { return box->isHidden() || box->isChecked(); });
+    if (all_checked) {
+      aBox->setChecked(false);  // toggles again, and updates the operation
+      return;
+    }
+  }
+  bool any_checked =
+    std::any_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box)
+                { return ! box->isHidden() && box->isChecked(); });
+  aOperation->setEnabled(any_checked);
 }
 
 // Restore the invariant above after a bucket is removed: if all (remaining)
