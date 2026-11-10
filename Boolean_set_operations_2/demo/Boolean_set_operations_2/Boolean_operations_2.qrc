@@ -21,6 +21,8 @@
         <file>resources/add_bucket.svg</file>
     	<file>resources/insert_circle.xpm</file>
         <file>resources/insert_polyline.xpm</file>
+        <file>resources/insert_conic.png</file>
+        <file>resources/insert_algebraic.png</file>
     	<file>resources/demo_conic_circle.xpm</file>
         <file>resources/insert_bezier.xpm</file>
     	<file>resources/intersection.xpm</file>

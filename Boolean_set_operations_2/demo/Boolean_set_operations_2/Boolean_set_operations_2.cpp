@@ -44,6 +44,8 @@
 #include <QGraphicsScene>
 #include <QToolButton>
 #include <QActionGroup>
+#include <QPainterPath>
+#include <QToolBar>
 #include <QMenu>
 #include <QGraphicsSceneMouseEvent>
 #include <cmath>
@@ -1687,6 +1689,7 @@ slots:
   void log_statements(const QStringList& aStatements, bool aSticky = false);
   bool eventFilter(QObject* aObject, QEvent* aEvent) override;
   void update_unbounded_rect();
+  QIcon curve_tool_icon(bool aCircle);
   bool bucket_exists(std::size_t aIndex) const;
   std::size_t bucket_index(const QString& aName) const;
   Curve_set* polygon_set(const QString& aName);
@@ -2407,6 +2410,42 @@ MainWindow::MainWindow() :
   m_linear_input = new CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>(this, &m_scene);
   m_circular_input = new CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>(this, &m_scene);
   m_polyline_input = new CGAL::Qt::Graphics_view_polyline_input<Kernel>(this, &m_scene);
+
+  // The curve tool bar, underneath the curve families: the ways to construct
+  // curves of the selected family.
+  {
+    using Circular_input =
+      CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>;
+    auto* bar = new QToolBar;
+    bar->setIconSize(QSize(24, 24));
+    auto* group = new QActionGroup(this);
+    auto* arcs = bar->addAction(curve_tool_icon(false),
+                                "Line Segments and Circular Arcs");
+    arcs->setToolTip("Line Segments and Circular Arcs: click at each vertex; "
+                     "press and drag to bend a piece into an arc through the "
+                     "cursor; right-click to close (drag to bend the last "
+                     "piece)");
+    auto* circle = bar->addAction(curve_tool_icon(true), "Circle");
+    circle->setToolTip("Circle: press at the center and drag to the radius");
+    for (auto* action : {arcs, circle}) {
+      action->setCheckable(true);
+      group->addAction(action);
+    }
+    arcs->setChecked(true);
+    QObject::connect(circle, &QAction::toggled, this, [this](bool aChecked) {
+      m_circular_input->set_mode(aChecked ? Circular_input::Circle_mode :
+                                 Circular_input::Arcs);
+    });
+    // Keep the height of the bar when it shows no buttons.
+    bar->setMinimumHeight(bar->sizeHint().height());
+    auto show_tools = [arcs, circle](bool aCircular) {
+      arcs->setVisible(aCircular);
+      circle->setVisible(aCircular);
+    };
+    show_tools(actionInsertCircular->isChecked());
+    QObject::connect(actionInsertCircular, &QAction::toggled, this, show_tools);
+    verticalLayout->insertWidget(1, bar);
+  }
 
 
   //connecting GUI and the code base
@@ -4433,7 +4472,7 @@ void MainWindow::on_actionNew_triggered() {
 
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphicsView->setScene(&m_scene);
-  this->graphicsView->fitInView(m_scene.sceneRect());
+  this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
   this->graphicsView->scale(2.5, 2.5);
 
   states_stack.back().result_set().clear();
@@ -6954,7 +6993,7 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
     // currentScale = 0.0;
     this->graphicsView->setDragMode(QGraphicsView::NoDrag);
     this->graphicsView->setSceneRect(-1500000, -1000000, 3100000, 2000000);
-    this->graphicsView->fitInView(m_scene.sceneRect());
+    this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
   }
   if (m_scene.width() <= 1500000) {
     if (event->angleDelta().y() > 0) {
@@ -6962,7 +7001,7 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
                            -m_scene.sceneRect().height() * scaleFactor / 2,
                            m_scene.sceneRect().width() * scaleFactor,
                            m_scene.sceneRect().height() * scaleFactor);
-      this->graphicsView->fitInView(m_scene.sceneRect());
+      this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
       this->graphicsView->scale(2.5, 2.5);
       // show_warning(to_string(m_scene.sceneRect().height())+" "+to_string(m_scene.sceneRect().width()));
     } else if (currentScale > scaleMin) {
@@ -6970,11 +7009,44 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
                            -m_scene.sceneRect().height() / (scaleFactor * 2),
                            m_scene.sceneRect().width() / scaleFactor,
                            m_scene.sceneRect().height() / scaleFactor);
-      this->graphicsView->fitInView(m_scene.sceneRect());
+      this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
       this->graphicsView->scale(2.5, 2.5);
     }
   }
   modelChanged();
+}
+
+// The icons of the curve tool bar: a boundary of a segment and an arc, or a
+// circle with its center and radius.
+QIcon MainWindow::curve_tool_icon(bool aCircle) {
+  const qreal ratio = 2;
+  QPixmap pixmap(QSize(24, 24) * ratio);
+  pixmap.setDevicePixelRatio(ratio);
+  pixmap.fill(Qt::transparent);
+  QPainter painter(&pixmap);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setPen(QPen(QColor(6, 131, 2), 2));
+  painter.setBrush(Qt::NoBrush);
+  QList<QPointF> vertices;
+  if (aCircle) {
+    painter.drawEllipse(QPointF(12, 12), 9, 9);
+    painter.setPen(QPen(QColor(64, 64, 64), 1.5, Qt::DashLine));
+    painter.drawLine(QPointF(12, 12), QPointF(18.4, 5.6));
+    vertices << QPointF(12, 12);
+  }
+  else {
+    QPainterPath path(QPointF(3, 20));
+    path.lineTo(7, 9);
+    path.arcTo(QRectF(7, 2, 14, 14), 180, -180);
+    path.lineTo(17, 20);
+    painter.drawPath(path);
+    vertices << QPointF(3, 20) << QPointF(7, 9) << QPointF(21, 9)
+             << QPointF(17, 20);
+  }
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QColor(255, 7, 0));
+  for (const auto& p : vertices) painter.drawEllipse(p, 2, 2);
+  return QIcon(pixmap);
 }
 
 //zoom to fit button
@@ -7699,7 +7771,7 @@ bool MainWindow::abort_for_draw_bucket(QAbstractButton* aOperation,
 
 //resize button
 void MainWindow::resizeEvent(QResizeEvent *e) {
-  this->graphicsView->fitInView(m_scene.sceneRect());
+  this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
   this->graphicsView->scale(2.5, 2.5);
   modelChanged();
 }

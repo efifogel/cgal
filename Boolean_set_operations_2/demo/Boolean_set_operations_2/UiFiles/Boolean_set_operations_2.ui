@@ -161,7 +161,7 @@
     <set>Qt::BottomDockWidgetArea</set>
    </property>
    <property name="windowTitle">
-    <string>Operations</string>
+    <string/>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -221,8 +221,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
            </property>
            <addaction name="actionInsertLinear"/>
            <addaction name="actionInsertCircular"/>
+           <addaction name="actionInsertConic"/>
            <addaction name="actionInsertBezier"/>
            <addaction name="actionInsertPolyline"/>
+           <addaction name="actionInsertAlgebraic"/>
           </widget>
          </item>
          <item>
@@ -2688,10 +2690,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
      <normaloff>:/cgal/icons/resources/insert_polygon.xpm</normaloff>:/cgal/icons/resources/insert_polygon.xpm</iconset>
    </property>
    <property name="text">
-    <string>Draw Linear polygon</string>
+    <string>Linear Polygons</string>
    </property>
    <property name="toolTip" >
-    <string>Draw Linear Polygon</string>
+    <string>Linear Polygons</string>
    </property>
   </action>
   <action name="actionInsertCircular">
@@ -2706,10 +2708,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
      <normaloff>:/cgal/icons/resources/insert_circle.xpm</normaloff>:/cgal/icons/resources/insert_circle.xpm</iconset>
    </property>
    <property name="text">
-    <string>Draw Line segments and circular arcs</string>
+    <string>Line Segments and Circular Arcs</string>
    </property>
    <property name="toolTip" >
-    <string>Draw Line segments and circular arcs</string>
+    <string>Line Segments and Circular Arcs</string>
    </property>
   </action>
   <action name="actionVisible">
@@ -2992,6 +2994,42 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Q</string>
    </property>
   </action>
+  <action name="actionInsertConic">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Boolean_operations_2.qrc">
+     <normaloff>:/cgal/icons/resources/insert_conic.png</normaloff>:/cgal/icons/resources/insert_conic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Conic Arcs</string>
+   </property>
+   <property name="toolTip">
+    <string>Conic Arcs (not available yet)</string>
+   </property>
+  </action>
+  <action name="actionInsertAlgebraic">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Boolean_operations_2.qrc">
+     <normaloff>:/cgal/icons/resources/insert_algebraic.png</normaloff>:/cgal/icons/resources/insert_algebraic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Algebraic Curves</string>
+   </property>
+   <property name="toolTip">
+    <string>Algebraic Curves (not available yet)</string>
+   </property>
+  </action>
   <action name="actionInsertBezier" >
    <property name="checkable" >
     <bool>true</bool>
@@ -3005,10 +3043,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     </iconset>
    </property>
    <property name="text" >
-    <string>Draw Bezier Polygon</string>
+    <string>Bezier Polygons</string>
    </property>
    <property name="toolTip" >
-    <string>Draw Bezier Polygon</string>
+    <string>Bezier Polygons</string>
    </property>
   </action>
   <action name="actionInsertPolyline" >
@@ -3024,10 +3062,10 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     </iconset>
    </property>
    <property name="text" >
-    <string>Draw Polylines</string>
+    <string>Polylines</string>
    </property>
    <property name="toolTip" >
-    <string>Draw Polylines </string>
+    <string>Polylines</string>
    </property>
   </action>
  </widget>
