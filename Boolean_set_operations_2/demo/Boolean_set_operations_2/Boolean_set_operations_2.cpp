@@ -273,6 +273,9 @@ struct Rep_base {
 
   virtual QRectF bounding_rect() const { return gi()->boundingRect(); }
 
+  // The area that unbounded sets are drawn over has changed.
+  virtual void unbounded_rect_changed() = 0;
+
   virtual bool is_empty() const = 0;
 
   virtual void clear() = 0;
@@ -321,6 +324,11 @@ public:
   virtual CGAL::Qt::GraphicsItem *gi() const { return m_GI; }
 
   virtual CGAL::Qt::GraphicsItem *gi() { return m_GI; }
+
+  virtual QRectF bounding_rect() const { return m_GI->curves_rect(); }
+
+  virtual void unbounded_rect_changed()
+  { if (m_GI->is_unbounded()) m_GI->modelChanged(); }
 
   virtual void set_pen(QPen const &aPen) { m_GI->setPen(aPen); }
 
@@ -470,6 +478,11 @@ public:
   virtual CGAL::Qt::GraphicsItem *gi() const { return m_GI; }
 
   virtual CGAL::Qt::GraphicsItem *gi() { return m_GI; }
+
+  virtual QRectF bounding_rect() const { return m_GI->curves_rect(); }
+
+  virtual void unbounded_rect_changed()
+  { if (m_GI->is_unbounded()) m_GI->modelChanged(); }
 
   virtual void set_pen(QPen const &aPen) { m_GI->setPen(aPen); }
 
@@ -656,6 +669,8 @@ public:
   CGAL::Qt::GraphicsItem *gi() { return m_rep->gi(); }
 
   QRectF bounding_rect() const { return m_rep->bounding_rect(); }
+
+  void unbounded_rect_changed() { m_rep->unbounded_rect_changed(); }
 
   bool is_empty() const { return !m_rep || m_rep->is_empty(); }
 
@@ -1671,6 +1686,7 @@ slots:
                      QAbstractButton* aOperation);
   void log_statements(const QStringList& aStatements, bool aSticky = false);
   bool eventFilter(QObject* aObject, QEvent* aEvent) override;
+  void update_unbounded_rect();
   bool bucket_exists(std::size_t aIndex) const;
   std::size_t bucket_index(const QString& aName) const;
   Curve_set* polygon_set(const QString& aName);
@@ -2350,6 +2366,9 @@ MainWindow::MainWindow() :
   //The navigation adds zooming and translation functionality to the
   //QGraphicsView.
   this->addNavigation(this->graphicsView);
+  // Every change of the view (zoom, pan, resize) ends in a repaint, where the
+  // area that unbounded sets are drawn over is updated.
+  this->graphicsView->viewport()->installEventFilter(this);
 
   //setting the menus
   this->setupStatusBar();
@@ -4397,17 +4416,16 @@ void MainWindow::on_actionUndo_triggered() {
 
 void MainWindow::on_actionNew_triggered() {
 
-  if (m_state_num > 1) {
-    get_new_state(6);
-    QStringList program;
-    for (std::size_t i = 0; i < 7; ++i)
-      if (bucket_exists(i) && ! states_stack.back().set(i).is_empty())
-        program << QString("%1.clear()").arg(bucket_name(i));
-    log_statements(program);
-  }
-  // Reset removes the added buckets.
-  for (std::size_t i = 6; i >= 3; --i)
-    if (bucket_exists(i)) log_statements({QString("del ") + bucket_name(i)}, true);
+  if (m_state_num > 1) get_new_state(6);
+
+  // Reset starts a new program, which constructs the existing buckets.
+  m_program.clear();
+  if (m_log) m_log->clear();
+  QStringList program;
+  for (std::size_t i = 0; i < 7; ++i)
+    if (bucket_exists(i))
+      program << QString("%1 = Polygon_set_2()").arg(bucket_name(i));
+  log_statements(program, true);
 
   for (Curve_set_iterator si = states_stack.back().m_curve_sets.begin();
        si != states_stack.back().m_curve_sets.end(); ++si)
@@ -4874,7 +4892,8 @@ void MainWindow::on_actionClearH_toggled(bool aChecked) {
       std::size_t i = 0;
       for (auto* box : {clearBlue, clearRed, clearBlack, clearBrown,
                         clearYellow, clearMagenta, clearAqua}) {
-        if (box->isChecked()) program << QString("%1.clear()").arg(bucket_name(i));
+        if (box->isChecked() && bucket_exists(i))
+          program << QString("%1.clear()").arg(bucket_name(i));
         ++i;
       }
       log_statements(program);
@@ -7552,6 +7571,9 @@ QString MainWindow::execute(Py_statement const& aStatement) {
 // combinations go to the input line rather than to the operation shortcuts
 // (Ctrl+C is complement, Ctrl+D difference, Ctrl+U union, ...), except Ctrl+Q.
 bool MainWindow::eventFilter(QObject* aObject, QEvent* aEvent) {
+  if ((aObject == graphicsView->viewport()) &&
+      (aEvent->type() == QEvent::Paint))
+    update_unbounded_rect();
   if ((aObject == m_console_input) && m_console_input) {
     if (aEvent->type() == QEvent::ShortcutOverride) {
       auto* ke = static_cast<QKeyEvent*>(aEvent);
@@ -7576,6 +7598,22 @@ bool MainWindow::eventFilter(QObject* aObject, QEvent* aEvent) {
     }
   }
   return CGAL::Qt::DemosMainWindow::eventFilter(aObject, aEvent);
+}
+
+// Set the area that unbounded sets (e.g., complements) are drawn over to the
+// visible area of the view, enlarged a bit so that the edges of the fill
+// never show.
+void MainWindow::update_unbounded_rect() {
+  QRectF rect = graphicsView->mapToScene(graphicsView->viewport()->rect()).
+    boundingRect();
+  double margin = 0.05 * std::max(rect.width(), rect.height());
+  rect.adjust(-margin, -margin, margin, margin);
+  QRectF& linear_rect = CGAL::Qt::Piecewise_graphics_item_base::unbounded_rect();
+  if ((rect == linear_rect) || states_stack.empty()) return;
+  linear_rect = rect;
+  CGAL::Qt::Piecewise_graphics_item_base_bezier::unbounded_rect() = rect;
+  for (auto& curve_set : states_stack.back().m_curve_sets)
+    curve_set.unbounded_rect_changed();
 }
 
 // Print to the console output.
