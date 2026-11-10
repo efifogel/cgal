@@ -57,7 +57,23 @@ public:
     update();
   }
 
-  QRectF boundingRect() const { return m_bounding_rect; }
+  // An unbounded set is painted all over, so its bounding rectangle must
+  // cover it all, or else Qt repaints only parts of it.
+  QRectF boundingRect() const
+  { return m_unbounded ? unbounded_rect() : m_bounding_rect; }
+
+  // The bounding rectangle of the curves, e.g., for zooming to fit.
+  QRectF curves_rect() const { return m_bounding_rect; }
+
+  bool is_unbounded() const { return m_unbounded; }
+
+  // The area that unbounded sets (e.g., complements) are drawn over, which
+  // the application keeps a bit larger than the visible area of the view.
+  static QRectF& unbounded_rect()
+  {
+    static QRectF s_rect(-320, -210, 640, 420);
+    return s_rect;
+  }
 
   void paint(QPainter* aPainter, const QStyleOptionGraphicsItem* aOption,
              QWidget* aWidget);
@@ -82,6 +98,7 @@ protected:
       else      bbox =         aBbox;
     }
     boost::optional<Bbox_2> bbox;
+    bool unbounded = false;
   };
 
   virtual bool isModelEmpty() const = 0;
@@ -93,6 +110,7 @@ protected:
 protected:
   //qt5 drawing tools
   QRectF m_bounding_rect;
+  bool m_unbounded = false;
   QBrush m_brush;
   QPen m_pen;
 };
@@ -121,7 +139,13 @@ paint(QPainter* aPainter,
 void Piecewise_graphics_item_base::updateBoundingBox()
 {
   //if there is any data to draw
-  if (!isModelEmpty()) {
+  if (isModelEmpty()) {
+    if (m_unbounded) {
+      prepareGeometryChange();
+      m_unbounded = false;
+    }
+  }
+  else {
     //"Prepares the item for a geometry change
     prepareGeometryChange();
     //update();
@@ -129,6 +153,7 @@ void Piecewise_graphics_item_base::updateBoundingBox()
     Bbox_builder l_bbox_builder;
 
     update_bbox(l_bbox_builder);
+    m_unbounded = l_bbox_builder.unbounded;
 
     //if bbox exits convert it to qt applicable
     if (l_bbox_builder.bbox) {
