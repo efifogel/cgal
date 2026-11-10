@@ -27,6 +27,7 @@
 #include <cmath>
 #include <fstream>
 #include <atomic>
+#include <array>
 #include <memory>
 #include <map>
 
@@ -1864,7 +1865,7 @@ public:
       // Compute the error; abort if it is below the threshold
       auto l = std::sqrt(dx*dx + dy*dy);
       auto e = std::abs((xm*dy - ym*dx + x2*y1 - x1*y2) / l);
-      if (e < error) return oi;
+      if (! (e >= error)) return oi;     // also when e is NaN
 
       double x, y;
       transform(xm, ym, x, y);
@@ -1965,7 +1966,7 @@ public:
       // Compute the error and abort if it is below the threshold
       auto l = std::sqrt(dx*dx + dy*dy);
       auto e = std::abs((xm*dy - ym*dx + x2*y1 - x1*y2) / l);
-      if (e < error) return oi;
+      if (! (e >= error)) return oi;     // also when e is NaN
 
       // Compute the actual (transformed) point
       double x, y;
@@ -3901,6 +3902,23 @@ public:
     return m;
   }
 
+  /*! obtains double approximations of the coefficients of the conic that
+   * supports the given arc divided (exactly) by the largest absolute value
+   * among them. The coefficients, or products of them, may exceed the range of
+   * double, while the scaled coefficients define the same conic.
+   */
+  static std::array<double, 6> scaled_coefficients(const Curve_2& arc) {
+    const Integer* coeffs[6] =
+      { &arc.r(), &arc.s(), &arc.t(), &arc.u(), &arc.v(), &arc.w() };
+    Integer max_abs(0);
+    for (auto* c : coeffs) if (CGAL::abs(*c) > max_abs) max_abs = CGAL::abs(*c);
+    std::array<double, 6> res;
+    for (std::size_t i = 0; i < 6; ++i)
+      res[i] = CGAL::is_zero(max_abs) ? 0.0 :
+        CGAL::to_double(Rational(*coeffs[i]) / Rational(max_abs));
+    return res;
+  }
+
   /*! applies the inverse of the rotation given by the sin and cosine of the
    * rotation angle to the given conic arc.
    */
@@ -3908,12 +3926,7 @@ public:
                      double cost, double sint,
                      double& r_m, double& s_m, double& t_m,
                      double& u_m, double& v_m, double& w_m) const {
-    auto r = CGAL::to_double(xcv.r());
-    auto s = CGAL::to_double(xcv.s());
-    auto t = CGAL::to_double(xcv.t());
-    auto u = CGAL::to_double(xcv.u());
-    auto v = CGAL::to_double(xcv.v());
-    auto w = CGAL::to_double(xcv.w());
+    auto [r, s, t, u, v, w] = scaled_coefficients(xcv);
 
     r_m = r * cost*cost + t*cost*sint + s*sint*sint;
     t_m = 0;
@@ -3939,12 +3952,8 @@ public:
                        double& r_m, double& s_m, double& t_m,
                        double& u_m, double& v_m, double& w_m,
                        double& cost, double& sint) const {
-    auto r = CGAL::to_double(xcv.r());
-    auto s = CGAL::to_double(xcv.s());
-    auto t = CGAL::to_double(xcv.t());
-    // auto u = CGAL::to_double(xcv.u());
-    // auto v = CGAL::to_double(xcv.v());
-    // auto w = CGAL::to_double(xcv.w());
+    auto c = scaled_coefficients(xcv);
+    double r = c[0], s = c[1], t = c[2];
     // std::cout << r << "," << s << "," << t << ","
     //           << u << "," << v << "," << w << std::endl;
 

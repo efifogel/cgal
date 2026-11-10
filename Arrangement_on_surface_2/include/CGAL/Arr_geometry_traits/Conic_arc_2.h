@@ -1691,19 +1691,16 @@ public:
   //@}
 };
 
-/*! exports a conic arc.
+/*! exports a conic arc. The coefficients are exported exactly.
  */
 template <typename Rat_kernel, typename Alg_kernel, typename Nt_traits>
 std::ostream&
 operator<< (std::ostream& os,
             const Conic_arc_2<Rat_kernel, Alg_kernel, Nt_traits>& arc)
 {
-  os << "{" << CGAL::to_double(arc.r()) << "*x^2 + "
-     << CGAL::to_double(arc.s()) << "*y^2 + "
-     << CGAL::to_double(arc.t()) << "*xy + "
-     << CGAL::to_double(arc.u()) << "*x + "
-     << CGAL::to_double(arc.v()) << "*y + "
-     << CGAL::to_double(arc.w()) << "}";
+  os << "{" << arc.r() << "*x^2 + " << arc.s() << "*y^2 + "
+     << arc.t() << "*xy + " << arc.u() << "*x + " << arc.v() << "*y + "
+     << arc.w() << "}";
 
   if (arc.is_full_conic()) os << " - Full curve";
   else {
