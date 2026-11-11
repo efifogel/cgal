@@ -50,29 +50,20 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
   add_executable(Boolean_set_operations_2
     Boolean_set_operations_2.cpp
     # MainWindow.cpp
-    # include/MainWindow.h
     include/Typedefs.h
-    include/QT5/Boundary_pieces_graphics_item.h
-    include/QT5/Circular_polygons.h
-    include/QT5/Graphics_view_circular_polygon_input.h
-    include/QT5/Piecewise_boundary_graphics_item.h
-    include/QT5/Piecewise_graphics_item_base.h
-    include/QT5/Piecewise_region_graphics_item.h
-    include/QT5/Piecewise_set_graphics_item.h
-    include/QT5/Graphics_view_linear_polygon_input.h
-    include/QT5/Graphics_view_polyline_input.h
-    include/QT5/Linear_polygons.h
-    include/QT5/Polyline_curves.h
-    include/QT5/General_polygon_2.h
-    include/QT5/General_polygon_set_2.h
-    include/QT5/General_polygon_set_on_surface_2.h
-    include/QT5/Gps_circle_segment_traits_2.h
-    include/QT5/Gps_segment_traits_2.h
-    include/QT5/Gps_traits_2.h
-    include/QT5/connect_holes.h
-    include/QT5/Polygon_set_2.h
-    include/QT5/Conic_Curves.h
-    include/QT5/Graphics_view_conic_input.h
+    include/Qt6/Boundary_pieces_graphics_item.h
+    include/Qt6/Circular_polygons.h
+    include/Qt6/Graphics_view_circular_polygon_input.h
+    include/Qt6/Piecewise_boundary_graphics_item.h
+    include/Qt6/Piecewise_graphics_item_base.h
+    include/Qt6/Piecewise_region_graphics_item.h
+    include/Qt6/Piecewise_set_graphics_item.h
+    include/Qt6/Graphics_view_linear_polygon_input.h
+    include/Qt6/Graphics_view_polyline_input.h
+    include/Qt6/Linear_polygons.h
+    include/Qt6/Polyline_curves.h
+    include/Qt6/Conic_Curves.h
+    include/Qt6/Graphics_view_conic_input.h
     ${UI_HEADERS}
     ${CGAL_Qt6_RESOURCE_FILES})
 

@@ -12,9 +12,27 @@
 // This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //
-// Author(s) : Saar Katz <kats.saar@gmail.com>
+// $URL$
+// $Id$
+// SPDX-License-Identifier: GPL-3.0+
+//
+// Author(s) : Efi Fogel <efifogel@gmail.com>
+//             Ronnie Gandhi <ronniegandhi19999@gmail.com>
 
-#ifndef CGAL_MAINWINDOW_H
-#define CGAL_MAINWINDOW_H
+#ifndef CGAL_QT6_MINKOWSKI_SUM_H
+#define CGAL_QT6_MINKOWSKI_SUM_H
 
-#endif // CGAL_MAINWINDOW_H
+#include <CGAL/minkowski_sum_2.h>
+#include <list>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Boolean_set_operations_2.h>
+
+namespace CGAL {
+namespace Qt {
+
+class MinkowskiSum {};
+
+} // namespace Qt
+} // namespace CGAL
+
+#endif
