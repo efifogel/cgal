@@ -701,6 +701,11 @@ public:
    */
   Polyline_polygon_set& polyline() { return get_polyline_rep()->set(); }
 
+  /*! obtains the set of a given type, e.g., Linear_polygon_set.
+   */
+  template <typename Set>
+  Set& get();
+
 public:
   //drawing tools
   QPen m_pen;
@@ -708,6 +713,12 @@ public:
   // a container which deletes an object when last shared_ptr gets deleted or re-initiated
   boost::shared_ptr<Rep_base> m_rep;
 };
+
+template <> Linear_polygon_set& Curve_set::get<Linear_polygon_set>() { return linear(); }
+template <> Circular_polygon_set& Curve_set::get<Circular_polygon_set>() { return circular(); }
+template <> Bezier_polygon_set& Curve_set::get<Bezier_polygon_set>() { return bezier(); }
+template <> Polyline_polygon_set& Curve_set::get<Polyline_polygon_set>() { return polyline(); }
+template <> Conic_polygon_set& Curve_set::get<Conic_polygon_set>() { return conic(); }
 
 using Curve_set_container = std::vector<Curve_set>;
 using Curve_set_const_iterator = Curve_set_container::const_iterator;
@@ -939,8 +950,56 @@ private:
 };
 
 // The Boolean operations on buckets.
-enum class Bucket_op { Complement, Intersection, Join, Difference,
-                       Symmetric_difference };
+enum class Bucket_op { Complement, Intersection, Join, Difference, Symmetric_difference };
+
+/*! obtains the name of a Boolean operation in the program (the method of Polygon_set_2).
+ */
+inline const char* method_name(Bucket_op aOp) {
+  switch (aOp) {
+   case Bucket_op::Complement: return "complement";
+   case Bucket_op::Intersection: return "intersection";
+   case Bucket_op::Join: return "join";
+   case Bucket_op::Difference: return "difference";
+   case Bucket_op::Symmetric_difference: return "symmetric_difference";
+  }
+  return "";
+}
+
+/*! replaces a set with the result of a Boolean operation (other than the complement) on two sets.
+ */
+inline void apply(Bucket_op aOp, Curve_set& rSet, const Curve_set& aFirst, const Curve_set& aSecond) {
+  switch (aOp) {
+   case Bucket_op::Intersection: rSet.intersect(aFirst, aSecond); break;
+   case Bucket_op::Join: rSet.join(aFirst, aSecond); break;
+   case Bucket_op::Difference: rSet.difference(aFirst, aSecond); break;
+   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aFirst, aSecond); break;
+   default: break;
+  }
+}
+
+/*! applies a Boolean operation (other than the complement) to a set and another set, in place.
+ */
+inline void apply(Bucket_op aOp, Curve_set& rSet, const Curve_set& aOther) {
+  switch (aOp) {
+   case Bucket_op::Intersection: rSet.intersect(aOther); break;
+   case Bucket_op::Join: rSet.join(aOther); break;
+   case Bucket_op::Difference: rSet.difference(aOther); break;
+   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aOther); break;
+   default: break;
+  }
+}
+
+/*! applies a Boolean operation (other than the complement) to a linear set and a polygon, in place.
+ */
+inline void apply(Bucket_op aOp, Linear_polygon_set& rSet, const Linear_polygon_with_holes& aPolygon) {
+  switch (aOp) {
+   case Bucket_op::Intersection: rSet.intersection(aPolygon); break;
+   case Bucket_op::Join: rSet.join(aPolygon); break;
+   case Bucket_op::Difference: rSet.difference(aPolygon); break;
+   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aPolygon); break;
+   default: break;
+  }
+}
 
 /*! obtains the name of a bucket in the program (the color of its row), by its index.
  */
@@ -1534,6 +1593,29 @@ public slots:
    */
   QString execute(const Py_statement& aStatement);
 
+  /*! obtains the polygon set (an existing bucket or variable) with a given name. Throws a std::runtime_error if there
+   * is none.
+   */
+  Curve_set& existing_set(const QString& aName);
+
+  /*! obtains the polygon set named by an expression. Throws a std::runtime_error if the expression is not a name of a
+   * polygon set.
+   */
+  Curve_set& named_set(const Py_expr& aExpr);
+
+  /*! executes a console statement that deletes a polygon set: del name.
+   */
+  void execute_delete(const Py_statement& aStatement);
+
+  /*! executes a console statement that assigns a polygon set: name = Polygon_set_2(...).
+   */
+  void execute_assign(const Py_statement& aStatement);
+
+  /*! executes a console statement that calls a method of a polygon set: name.method(args). \return the text to print
+   * (for queries), or an empty string.
+   */
+  QString execute_call(const Py_statement& aStatement);
+
   /*! parses and executes a console line.
    */
   void run_console_line(const QString& aLine);
@@ -1603,6 +1685,10 @@ public slots:
    */
   void set_number_of_buckets(std::size_t aNumber);
 
+  /*! restores the initial marks of the Operations panel.
+   */
+  void reset_marks();
+
   /*! obtains the first bucket marked in a given column, if any.
    */
   std::optional<std::size_t> checked_bucket(const Column& aColumn) const;
@@ -1646,7 +1732,7 @@ public slots:
 
   /*! obtains the (linear) polygon with holes of a given bucket, an operand of a Minkowski sum.
    */
-  Polygon_with_holes_2 get_mink_input_polygon(size_t color);
+  Polygon_with_holes_2 get_mink_input_polygon(std::size_t aIndex);
 
   /*! reads linear polygons from a file. \return false if the file cannot be read.
    */
@@ -1664,9 +1750,6 @@ public slots:
    */
   bool read_bezier(QString aFileName);
 
-  /*! reads a Bezier curve, given by its control points, from a stream.
-   */
-  Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat);
 
 signals:
   /*! signals that the model changed.
@@ -1674,6 +1757,20 @@ signals:
   void changed();
 
 private:
+  /*! adds a polygon of a given curve family, constructed by its input, to the Draw/Insert bucket (as an undoable
+   * action), or to the scratch result set while a bounding rectangle is constructed.
+   */
+  template <typename Set>
+  void add_constructed_polygon(Curve_type aType, typename Set::Polygon_2 aPolygon, bool aToResult);
+
+  /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has a format line (DOUBLE for
+   * coordinates given as doubles), the number of polygons with holes, and for each one the number of its boundaries
+   * followed by the boundaries (the outer one first), each read by a given function. \return false if the file cannot
+   * be read.
+   */
+  template <typename Set, typename Read_boundary>
+  bool read_polygons(const QString& aFileName, const char* aKind, Read_boundary aReadBoundary);
+
   /*! pushes a new state, a copy of the current one, onto the undo stack before an operation is applied. (Starting
    * pushes empty sets.)
    */
@@ -2369,6 +2466,28 @@ void MainWindow::undo() {
   }
 }
 
+void MainWindow::reset_marks() {
+  // The initial marks: all buckets are visible, the first one is the Draw/Insert bucket and the complement operand,
+  // and the first two are the operands of the other operations. (Unmark the other operands first, so that marking the
+  // first two is not undone.)
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+    m_show_column[i]->setChecked(true);
+    for (const Column* column : {&m_copy_column, &m_move_column, &m_clear_column})
+      (*column)[i]->setChecked(false);
+  }
+  const Column* operand_columns[] = {&m_intersection_column, &m_union_column, &m_difference_column,
+                                     &m_symmetric_difference_column, &m_minkowski_sum_column};
+  for (const Column* column : operand_columns) {
+    for (std::size_t i = 2; i < number_of_buckets; ++i) (*column)[i]->setChecked(false);
+  }
+  for (const Column* column : operand_columns) {
+    for (std::size_t i = 0; i < 2; ++i) (*column)[i]->setChecked(true);
+  }
+  m_draw_column[0]->setChecked(true);
+  m_complement_column[0]->setChecked(true);
+  showResult->setChecked(false);
+}
+
 void MainWindow::new_program() {
   if (m_state_num > 1) get_new_state(State_op::Reset);
 
@@ -2427,25 +2546,7 @@ void MainWindow::new_program() {
 
   actionDifferenceH->setEnabled(true);
 
-  // The initial marks: all buckets are visible, the first one is the Draw/Insert bucket and the complement operand,
-  // and the first two are the operands of the other operations. (Unmark the other operands first, so that marking the
-  // first two is not undone.)
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
-    m_show_column[i]->setChecked(true);
-    for (const Column* column : {&m_copy_column, &m_move_column, &m_clear_column})
-      (*column)[i]->setChecked(false);
-  }
-  const Column* operand_columns[] = {&m_intersection_column, &m_union_column, &m_difference_column,
-                                     &m_symmetric_difference_column, &m_minkowski_sum_column};
-  for (const Column* column : operand_columns) {
-    for (std::size_t i = 2; i < number_of_buckets; ++i) (*column)[i]->setChecked(false);
-  }
-  for (const Column* column : operand_columns) {
-    for (std::size_t i = 0; i < 2; ++i) (*column)[i]->setChecked(true);
-  }
-  m_draw_column[0]->setChecked(true);
-  m_complement_column[0]->setChecked(true);
-  showResult->setChecked(false);
+  reset_marks();
 
   set_number_of_buckets(min_number_of_buckets);
   VisibleHeader->setChecked(true);
@@ -2517,438 +2618,90 @@ void MainWindow::open_bezier()
 void MainWindow::open_polyline()
 { open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data", tr("Polyline Curve files (*.mps)"))); }
 
-bool MainWindow::read_linear(QString aFileName) {
-  bool rOK = false;
-
-  std::ifstream in_file(qPrintable(aFileName));
-  if (in_file) {
-    try {
-      using Gps_traits = Linear_traits;
-      using Linear_X_monotone_curve = typename Gps_traits::X_monotone_curve_2;
-      using Linear_curve = typename Gps_traits::Curve_2;
-      using Linear_curve_vector = std::vector<Linear_curve>;
-      using Linear_X_monotone_curve = typename Gps_traits::X_monotone_curve_2;
-      using Linear_polygon = typename Gps_traits::Polygon_2;
-      using Linear_point = typename Gps_traits::Point_2;
-      using Point = typename Kernel::Point_2;
-      using FT = typename Kernel::FT;
-      Linear_curve_vector mLinearPolygonPieces;
-
-      std::string format;
-      std::getline(in_file, format);
-
-      bool lDoubleFormat = (format.length() >= 6 && format.substr(0, 6) == "DOUBLE");
-
-      //number of linear polygon with holes
-      unsigned int n_regions;
-      in_file >> n_regions;
-
-      for (unsigned int r = 0; r < n_regions; ++r) {
-        //number of linear polygon including holes
-        unsigned int n_boundaries;
-        in_file >> n_boundaries;
-
-        std::vector<Linear_polygon> Linear_polygons;
-
-        for (unsigned int r = 0; r < n_boundaries; ++r) {
-          // number of points in linear polygon
-          unsigned int n_points;
-          in_file >> n_points;
-          std::vector<Point> points;
-
-          std::vector<Linear_X_monotone_curve> xcvs;
-          Gps_traits traits;
-          auto make_x_monotone = traits.make_x_monotone_2_object();
-          using Pnt = typename Gps_traits::Point_2;
-          using Xcv = typename Gps_traits::X_monotone_curve_2;
-          using Make_x_monotone_result = std::variant<Pnt, Xcv>;
-
-          for (unsigned int j = 0; j < n_points; ++j) {
-            double x, y;
-            in_file >> x >> y;
-            points.push_back(Point(x, y));
-            if (j > 0) {
-              mLinearPolygonPieces.push_back(Linear_curve(points[points.size() - 2], points[points.size() - 1]));
-            }
-          }
-          points.clear();
-
-          for (auto it = mLinearPolygonPieces.begin(); it != mLinearPolygonPieces.end(); ++it) {
-            std::vector<Make_x_monotone_result> x_objs;
-
-            make_x_monotone(*it, std::back_inserter(x_objs));
-            for (auto i = 0; i < x_objs.size(); ++i) {
-              auto* xcv = std::get_if<Linear_X_monotone_curve>(&x_objs[i]);
-              CGAL_assertion(xcv != nullptr);
-              xcvs.push_back(*xcv);
-            }
-          }
-
-          if (xcvs.size() > 0) {
-            const Linear_point& first_point = xcvs.front().source();
-            const Linear_point& last_point = xcvs.back().target();
-            FT fxs = first_point.x();
-            FT fys = first_point.y();
-            FT lxs = last_point.x();
-            FT lys = last_point.y();
-            xcvs.push_back(Linear_X_monotone_curve(Point(lxs, lys), Point(fxs, fys)));
-            //for (auto &i:xcvs)
-
-            Linear_polygon lp(xcvs.begin(), xcvs.end());
-            CGAL::Orientation orient = lp.orientation();
-            if (orient == CGAL::CLOCKWISE) {
-              lp.reverse_orientation();
-            }
-            Linear_polygon_with_holes lCPWH(lp);
-
-            if (r == 0) {
-              get_new_state(State_op::Draw);
-              states_stack.back().set(m_color_active).linear().join(lCPWH);
-            }
-            else {
-              states_stack.back().result_set().clear();
-              states_stack.back().result_set().linear().join(lCPWH);
-              states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
-              states_stack.back().result_set().clear();
-            }
-            mLinearPolygonPieces.clear();
-          }
-        }
-        rOK = true;
-      }
-    }
-    catch (...) {
-      show_warning("Exception ocurred during reading of linear polygon set.");
-    }
+/*! obtains the x-monotone curves of given curves.
+ */
+template <typename Traits, typename InputIterator>
+std::vector<typename Traits::X_monotone_curve_2> x_monotone_curves(InputIterator aBegin, InputIterator aEnd) {
+  using Point = typename Traits::Point_2;
+  using X_monotone_curve = typename Traits::X_monotone_curve_2;
+  Traits traits;
+  auto make_x_monotone = traits.make_x_monotone_2_object();
+  std::vector<std::variant<Point, X_monotone_curve>> objects;
+  for (auto it = aBegin; it != aEnd; ++it) make_x_monotone(*it, std::back_inserter(objects));
+  std::vector<X_monotone_curve> xcvs;
+  for (const auto& object : objects) {
+    if (const auto* xcv = std::get_if<X_monotone_curve>(&object)) xcvs.push_back(*xcv);
   }
-  return rOK;
+  return xcvs;
 }
 
-bool MainWindow::read_circular(QString aFileName) {
-  bool rOK = false;
-
-  std::ifstream in_file(qPrintable(aFileName));
-  if (in_file) {
-    try {
-      using Gps_traits = CGAL::Gps_circle_segment_traits_2<Kernel>;
-      using Circular_curve = typename Gps_traits::Curve_2;
-      using Circular_X_monotone_curve = typename Gps_traits::X_monotone_curve_2;
-      using Circular_polygon = typename Gps_traits::Polygon_2;
-      using Arc_point = typename Circular_polygon::Point_2;
-      using FT = typename Kernel::FT;
-      using Vector = typename Kernel::Vector_2;
-      using Point = typename Kernel::Point_2;
-      using Circle = typename Kernel::Circle_2;
-
-      using Circular_curve_vector = std::vector<Circular_curve>;
-
-      Circular_curve_vector mCircularPolygonPieces;
-
-      std::string format;
-      std::getline(in_file, format);
-
-      bool lDoubleFormat = (format.length() >= 6 && format.substr(0, 6) == "DOUBLE");
-
-      //number of linear polygon with holes
-      unsigned int n_regions;
-      in_file >> n_regions;
-
-      for (unsigned int r = 0; r < n_regions; ++r) {
-        //number of linear polygon including holes
-        unsigned int n_boundaries;
-        in_file >> n_boundaries;
-
-        std::vector<Circular_polygon> Circular_polygons;
-
-        for (unsigned int r = 0; r < n_boundaries; ++r) {
-          // number of points in linear polygon
-          unsigned int n_points;
-          in_file >> n_points;
-          std::vector<Point> points;
-
-          std::vector<Circular_X_monotone_curve> xcvs;
-          Gps_traits traits;
-          auto make_x_monotone = traits.make_x_monotone_2_object();
-          using Pnt = typename Gps_traits::Point_2;
-          using Xcv = typename Gps_traits::X_monotone_curve_2;
-          using Make_x_monotone_result = std::variant<Pnt, Xcv>;
-
-          for (unsigned int j = 0; j < n_points; ++j) {
-            unsigned int bulge;
-            in_file >> bulge;
-            if (bulge) {
-              double sx, sy, mx, my, tx, ty;
-
-              in_file >> sx >> sy;
-              in_file >> mx >> my;
-              in_file >> tx >> ty;
-
-              mCircularPolygonPieces.push_back(Circular_curve(Point(sx, sy), Point(mx, my), Point(tx, ty)));
-            }
-            else { //3576.382857 3576.382064
-              double sx, sy, tx, ty;
-
-              in_file >> sx >> sy;
-              in_file >> tx >> ty;
-
-              mCircularPolygonPieces.push_back(Circular_curve(Point(sx, sy), Point(tx, ty)));
-            }
-          }
-
-          if (mCircularPolygonPieces.size() > 0) {
-            Gps_traits traits;
-            auto make_x_monotone = traits.make_x_monotone_2_object();;
-
-            std::vector<Circular_X_monotone_curve> xcvs;
-            for (auto it = mCircularPolygonPieces.begin(); it != mCircularPolygonPieces.end(); ++it) {
-              std::vector<Make_x_monotone_result> x_objs;
-              make_x_monotone(*it, std::back_inserter(x_objs));
-
-              auto* xcv = std::get_if<Circular_X_monotone_curve>(&x_objs[0]);
-              for (auto i = 0; i < x_objs.size(); ++i) {
-                auto* xcv = std::get_if<Circular_X_monotone_curve>(&x_objs[i]);
-                CGAL_assertion(xcv != nullptr);
-                xcvs.push_back(*xcv);
-              }
-            }
-            if (xcvs.size() > 0) {
-              Circular_polygon cp(xcvs.begin(), xcvs.end());
-
-              CGAL::Orientation orient = cp.orientation();
-
-              if (orient == CGAL::CLOCKWISE) {
-                cp.reverse_orientation();
-              }
-
-              Circular_polygon_with_holes lCPWH(cp);
-
-              if (r == 0) {
-                get_new_state(State_op::Draw);
-                states_stack.back().set(m_color_active).circular().join(lCPWH);
-              }
-              else {
-                states_stack.back().result_set().clear();
-                states_stack.back().result_set().circular().join(lCPWH);
-                states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
-                states_stack.back().result_set().clear();
-              }
-            }
-            mCircularPolygonPieces.clear();
-          }
-        }
-        rOK = true;
-      }
-    }
-    catch (...) {
-      show_warning("Exception occured during reading of circular polygon set.");
-    }
+/*! reads the vertices of a boundary: their number followed by their coordinates.
+ */
+std::vector<Kernel::Point_2> read_vertices(std::istream& aIs) {
+  unsigned int n_points;
+  aIs >> n_points;
+  std::vector<Kernel::Point_2> points;
+  for (unsigned int i = 0; i < n_points; ++i) {
+    double x, y;
+    aIs >> x >> y;
+    points.emplace_back(x, y);
   }
-  return rOK;
+  return points;
 }
 
-bool MainWindow::read_polyline(QString aFileName) {
-  bool rOK = false;
-
-  std::ifstream in_file(qPrintable(aFileName));
-  if (in_file) {
-    try {
-      using Gps_traits = Polyline_traits;
-      using Polyline_X_monotone_curve = typename Gps_traits::X_monotone_curve_2;
-      using Polyline_curve = typename Gps_traits::Curve_2;
-      using Polyline_X_monotone_curve = typename Gps_traits::X_monotone_curve_2;
-      using Polyline_polygon = typename Gps_traits::Polygon_2;
-      using Polyline_point = typename Gps_traits::Point_2;
-      using Point = typename Kernel::Point_2;
-      using FT = typename Kernel::FT;
-      using Polyline_curve_vector = std::vector<Polyline_curve>;
-
-      using Segment_traits_2 = CGAL::Arr_segment_traits_2<Kernel>;
-      using Base = CGAL::Gps_traits_2<CGAL::Arr_polycurve_traits_2<Segment_traits_2>>;
-      using X_monotone_subcurve_2 = typename Base::X_monotone_subcurve_2;
-
-      Polyline_curve_vector mPolylinePolygonPieces;
-
-      std::string format;
-      std::getline(in_file, format);
-
-      bool lDoubleFormat = (format.length() >= 6 && format.substr(0, 6) == "DOUBLE");
-
-      unsigned int n_regions;
-      in_file >> n_regions;
-
-      for (unsigned int r = 0; r < n_regions; ++r) {
-
-        unsigned int n_boundaries;
-        in_file >> n_boundaries;
-
-        std::vector<Polyline_polygon> Polyline_polygons;
-
-        for (unsigned int r = 0; r < n_boundaries; ++r) {
-
-          unsigned int n_points;
-          in_file >> n_points;
-          std::vector<Point> points;
-
-          std::vector<Polyline_X_monotone_curve> xcvs;
-          Gps_traits traits;
-          auto make_x_monotone = traits.make_x_monotone_2_object();
-          using Pnt = typename Gps_traits::Point_2;
-          using Xcv = typename Gps_traits::X_monotone_curve_2;
-          using Make_x_monotone_result = std::variant<Pnt, Xcv>;
-
-          for (unsigned int j = 0; j < n_points; ++j) {
-            double x, y;
-            in_file >> x >> y;
-            points.push_back(Point(x, y));
-            int pt_pos = 0;
-            if (points.size() > 1) {
-              Gps_traits x;
-              X_monotone_subcurve_2 seg = x.subcurve_traits_2()->
-                construct_x_monotone_curve_2_object()(points[points.size()-2], points[points.size()-1]);
-
-              mPolylinePolygonPieces.push_back(Polyline_curve(seg));
-            }
-          }
-          points.clear();
-
-          for (auto it = mPolylinePolygonPieces.begin();
-               it != mPolylinePolygonPieces.end(); ++it) {
-            std::vector<Make_x_monotone_result> x_objs;
-
-            make_x_monotone(*it, std::back_inserter(x_objs));
-            for (auto i = 0; i < x_objs.size(); ++i) {
-              auto* xcv = std::get_if<Polyline_X_monotone_curve>(&x_objs[i]);
-              CGAL_assertion(xcv != nullptr);
-              xcvs.push_back(*xcv);
-            }
-          }
-          if (xcvs.size() > 0) {
-            const Polyline_point& first_point = xcvs.front()[0].source();
-            const Polyline_point& last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
-            FT fxs = first_point.x();
-            FT fys = first_point.y();
-            FT lxs = last_point.x();
-            FT lys = last_point.y();
-
-            Gps_traits x;
-            X_monotone_subcurve_2 seg = x.subcurve_traits_2()->
-              construct_x_monotone_curve_2_object()(Point(lxs, lys), Point(fxs, fys));
-
-            xcvs.push_back(Polyline_X_monotone_curve(seg));
-            //for(auto &i:xcvs)
-
-            Polyline_polygon pp(xcvs.begin(), xcvs.end());
-            CGAL::Orientation orient = pp.orientation();
-            Polyline_polygon_with_holes PPWH(pp);
-            if (orient == CGAL::CLOCKWISE) {
-              pp.reverse_orientation();
-            }
-            if (r == 0) {
-              get_new_state(State_op::Draw);
-              states_stack.back().set(m_color_active).polyline().join(PPWH);
-            }
-            else {
-              states_stack.back().result_set().clear();
-              states_stack.back().result_set().polyline().join(PPWH);
-              states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
-              states_stack.back().result_set().clear();
-            }
-            mPolylinePolygonPieces.clear();
-          }
-        }
-        rOK = true;
-      }
-    }
-    catch (...) {
-      show_warning("Exception ocurred during reading of linear polygon set.");
-    }
+/*! reads the boundary of a linear polygon: its vertices. \return the x-monotone curves of the boundary.
+ */
+std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
+  auto points = read_vertices(aIs);
+  std::vector<Linear_curve> curves;
+  for (std::size_t i = 0; i < points.size(); ++i) {
+    const auto& p = points[i];
+    const auto& q = points[(i + 1) % points.size()];
+    if (p != q) curves.emplace_back(p, q);
   }
-  return rOK;
+  return x_monotone_curves<Linear_traits>(curves.begin(), curves.end());
 }
 
-bool MainWindow::read_bezier(QString aFileName) {
-
-  bool rOK = false;
-
-  std::ifstream in_file(qPrintable(aFileName));
-
-  if (in_file) {
-    try {
-      std::string format;
-      std::getline(in_file, format);
-
-      bool lDoubleFormat = (format.length() >= 6 && format.substr(0, 6) == "DOUBLE");
-
-      // Read the number of bezier polygon with holes
-      unsigned int n_regions;
-      in_file >> n_regions;
-
-      for (unsigned int r = 0; r < n_regions; ++r) {
-        Bezier_polygon_vector bezier_polygons;
-        // Read the number of bezier curves.
-        unsigned int n_boundaries;
-        in_file >> n_boundaries;
-
-        for (unsigned int b = 0; b < n_boundaries; ++b) {
-          // Read the number of bezier curves.
-          unsigned int n_curves;
-          in_file >> n_curves;
-
-          // Read the curves one by one, and construct the general polygon these curve form (the outer boundary and the
-          // holes inside it).
-
-          std::vector<Bezier_X_monotone_curve> xcvs;
-
-          for (unsigned int k = 0; k < n_curves; ++k) {
-            // Read the current curve and subdivide it into x-monotone subcurves.
-
-            using Pnt = typename Bezier_traits::Point_2;
-            using Xcv = typename Bezier_traits::X_monotone_curve_2;
-            using Make_x_monotone_result = std::variant<Pnt, Xcv>;
-            Bezier_X_monotone_curve xcv;
-            Bezier_traits traits;
-            std::vector<Make_x_monotone_result> x_objs;
-            auto make_x_monotone = traits.make_x_monotone_2_object();
-
-            Bezier_curve b = read_bezier_curve(in_file, lDoubleFormat);
-            if (b.number_of_control_points() >= 2) {
-              make_x_monotone(b, std::back_inserter(x_objs));
-
-              for (auto i = 0; i < x_objs.size(); ++i) {
-                auto* xcv = std::get_if<Bezier_X_monotone_curve>(&x_objs[i]);
-                CGAL_assertion(xcv != nullptr);
-                xcvs.push_back(*xcv);
-              }
-            }
-          }
-
-          Bezier_polygon pgn(xcvs.begin(), xcvs.end());
-
-          CGAL::Orientation orient = pgn.orientation();
-          if (orient == CGAL::CLOCKWISE) pgn.reverse_orientation();
-
-          if (b == 0) {
-            get_new_state(State_op::Draw);
-            states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(pgn));
-          }
-          else {
-            states_stack.back().result_set().clear();
-            states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(pgn));
-            states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
-            states_stack.back().result_set().clear();
-          }
-        }
-        rOK = true;
-      }
-    }
-    catch (const std::exception& e) {
-      undo();
-    }
+/*! reads the boundary of a polygon bounded by polylines: its vertices. \return the x-monotone curves of the boundary.
+ */
+std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
+  auto points = read_vertices(aIs);
+  Polyline_traits traits;
+  auto construct_segment = traits.subcurve_traits_2()->construct_x_monotone_curve_2_object();
+  std::vector<Polyline_curve> curves;
+  for (std::size_t i = 0; i < points.size(); ++i) {
+    const auto& p = points[i];
+    const auto& q = points[(i + 1) % points.size()];
+    if (p != q) curves.emplace_back(construct_segment(p, q));
   }
-  return rOK;
+  return x_monotone_curves<Polyline_traits>(curves.begin(), curves.end());
 }
 
-Bezier_curve MainWindow::read_bezier_curve(std::istream& is, bool aDoubleFormat) {
+/*! reads the boundary of a polygon bounded by segments and circular arcs: the number of its curves followed by the
+ * curves, each given by a flag (1 for an arc) followed by its source, a point in its interior (for an arc), and its
+ * target. \return the x-monotone curves of the boundary.
+ */
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
+  using Point = Kernel::Point_2;
+  unsigned int n_curves;
+  aIs >> n_curves;
+  std::vector<Circular_curve> curves;
+  for (unsigned int i = 0; i < n_curves; ++i) {
+    unsigned int is_arc;
+    double sx, sy, mx, my, tx, ty;
+    aIs >> is_arc >> sx >> sy;
+    if (is_arc) aIs >> mx >> my;
+    aIs >> tx >> ty;
+    if (is_arc) curves.emplace_back(Point(sx, sy), Point(mx, my), Point(tx, ty));
+    else curves.emplace_back(Point(sx, sy), Point(tx, ty));
+  }
+  return x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
+}
+
+/*! reads a Bezier curve: the number of its control points followed by their coordinates, as doubles (rounded to
+ * 1/1000) or as rationals. Repeated control points and control points collinear with their neighbors are dropped.
+ */
+Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat) {
   // Read the number of control points.
   unsigned int n;
   is >> n;
@@ -2995,222 +2748,149 @@ Bezier_curve MainWindow::read_bezier_curve(std::istream& is, bool aDoubleFormat)
   return Bezier_curve(ctrl_pts2.begin(), ctrl_pts2.end());
 }
 
-/*! saves a linear polygon set to a file. \return false if the file cannot be written.
+/*! reads the boundary of a Bezier polygon: the number of its curves followed by the curves. \return the x-monotone
+ * curves of the boundary.
  */
-bool save_linear(QString aFileName, Linear_polygon_set& rSet) {
+std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& aIs, bool aDoubleFormat) {
+  unsigned int n_curves;
+  aIs >> n_curves;
+  std::vector<Bezier_curve> curves;
+  for (unsigned int i = 0; i < n_curves; ++i) {
+    Bezier_curve curve = read_bezier_curve(aIs, aDoubleFormat);
+    if (curve.number_of_control_points() >= 2) curves.push_back(curve);
+  }
+  return x_monotone_curves<Bezier_traits>(curves.begin(), curves.end());
+}
+
+template <typename Set, typename Read_boundary>
+bool MainWindow::read_polygons(const QString& aFileName, const char* aKind, Read_boundary aReadBoundary) {
+  std::ifstream in_file(qPrintable(aFileName));
+  if (! in_file) return false;
   bool rOK = false;
+  try {
+    std::string format;
+    std::getline(in_file, format);
+    bool double_format = (format.substr(0, 6) == "DOUBLE");
 
-  Linear_polygon_set lps;
-  using Point = typename Kernel::Point_2;
-  std::list<Polygon_2> pgns;
-
-  std::ofstream out_file(qPrintable(aFileName));
-  if (out_file) {
-    out_file << "DOUBLE" << std::endl;
-    std::vector<Linear_polygon_with_holes> lpwh_container;
-    rSet.polygons_with_holes(std::back_inserter(lpwh_container));
-
-    out_file << lpwh_container.size() << std::endl;
-
-    for (auto rit = lpwh_container.begin(); rit != lpwh_container.end(); ++rit) {
-      Linear_polygon_with_holes lpwh = *rit;
-
-      out_file << " " << (1 + lpwh.number_of_holes()) << std::endl;
-
-      int cc = lpwh.outer_boundary().size();
-      int lc = cc - 1;
-      out_file << "  " << cc << std::endl;
-      int i = 0;
-
-      for (auto cit = lpwh.outer_boundary().curves_begin(); cit != lpwh.outer_boundary().curves_end(); ++cit, ++i) {
-        auto pt = cit->source();
-        out_file << "   " << CGAL::to_double(pt.x()) << " " << CGAL::to_double(pt.y()) << std::endl;
-      }
-
-      for (auto hit = lpwh.holes_begin(); hit != lpwh.holes_end(); ++hit) {
-        int cc = hit->size();
-        int lc = cc - 1;
-        out_file << "  " << cc << std::endl;
-        int i = 0;
-
-        for (auto cit = hit->curves_begin(); cit != hit->curves_end(); ++cit, ++i) {
-          auto pt = cit->source();
-          out_file << "   " << CGAL::to_double(pt.x()) << " " << CGAL::to_double(pt.y()) << std::endl;
+    unsigned int n_regions;
+    in_file >> n_regions;
+    for (unsigned int r = 0; r < n_regions; ++r) {
+      unsigned int n_boundaries;
+      in_file >> n_boundaries;
+      for (unsigned int b = 0; b < n_boundaries; ++b) {
+        auto xcvs = aReadBoundary(in_file, double_format);
+        if (xcvs.empty()) continue;
+        typename Set::Polygon_2 pgn(xcvs.begin(), xcvs.end());
+        if (pgn.orientation() == CGAL::CLOCKWISE) pgn.reverse_orientation();
+        typename Set::Polygon_with_holes_2 pwh(pgn);
+        // The first boundary is the outer one; the others are holes.
+        if (b == 0) {
+          get_new_state(State_op::Draw);
+          states_stack.back().set(m_color_active).get<Set>().join(pwh);
         }
+        else states_stack.back().set(m_color_active).get<Set>().difference(Set(pwh));
       }
       rOK = true;
     }
   }
-  return rOK;
-}
-
-/*! saves a set of polygons bounded by segments and circular arcs to a file. \return false if the file cannot be
- * written.
- */
-bool save_circular(QString aFileName, Circular_polygon_set& rSet) {
-  bool rOK = false;
-  std::ofstream out_file(qPrintable(aFileName));
-
-  if (out_file) {
-    out_file << "DOUBLE" << std::endl;
-    std::vector<Circular_polygon_with_holes> cpwh_container;
-    rSet.polygons_with_holes(std::back_inserter(cpwh_container));
-    out_file << cpwh_container.size() << std::endl;
-
-    for (auto rit = cpwh_container.begin(); rit != cpwh_container.end(); ++rit) {
-      Circular_polygon_with_holes cpwh = *rit;
-      out_file << " " << (1 + cpwh.number_of_holes()) << std::endl;
-      int cc = cpwh.outer_boundary().size();
-      int lc = cc - 1;
-      out_file << "  " << cc << std::endl;
-      int i = 0;
-
-      for (auto cit = cpwh.outer_boundary().curves_begin(); cit != cpwh.outer_boundary().curves_end(); ++cit, ++i) {
-        auto pt = cit->source();
-        if (cit->is_circular()) {
-          out_file << "   1" << std::endl;
-          out_file << "    " << CGAL::to_double(pt.x()) << " " << CGAL::to_double(pt.y()) << std::endl;
-
-          double r, mx, my, tx, ty, cx, cy, sx, sy, st, tnx, tny, frmst;
-          r = sqrt(CGAL::to_double(cit->supporting_circle().squared_radius())); //radius r
-          sx = CGAL::to_double(cit->source().x()); // source x()
-          sy = CGAL::to_double(cit->source().y()); // source y()
-          tx = CGAL::to_double(cit->target().x()); // target x()
-          ty = CGAL::to_double(cit->target().y()); // target y()
-          cx = CGAL::to_double(cit->supporting_circle().center().x()); // center x()
-          cy = CGAL::to_double(cit->supporting_circle().center().y()); // center y()
-          st = sqrt((sx - tx) * (sx - tx) + (sy - ty) * (sy - ty)); //Source to target euclides distance ST
-          tnx = tx - cx; // origin shifting to center
-          tny = ty - cy; // origin shifting to center
-          frmst = sqrt((4 * r * r) - (st * st)); // intermediate value
-
-          if (cit->supporting_circle().orientation() == CGAL::CLOCKWISE) {
-            mx = (((frmst * tnx) - (st * tny)) / (2 * r)) + cx;
-            my = (((st * tnx) + (frmst * tny)) / (2 * r)) + cy;
-          }
-          else {
-            mx = (((tnx * frmst) + (tny * st)) / (2 * r)) + cx;
-            my = (((tny * frmst) - (st * tnx)) / (2 * r)) + cy;
-          }
-
-          out_file << "    " << mx << " " << my << std::endl;
-        }
-        else {
-          out_file << "   0" << std::endl;
-          out_file << "    " << CGAL::to_double(pt.x()) << " "
-                   << CGAL::to_double(pt.y()) << std::endl;
-        }
-        pt = cit->target();
-        out_file << "    " << CGAL::to_double(pt.x()) << " " << CGAL::to_double(pt.y()) << std::endl;
-      }
-
-      for (auto hit = cpwh.holes_begin(); hit != cpwh.holes_end(); ++hit) {
-        int cc = hit->size();
-        int lc = cc - 1;
-        out_file << "  " << cc << std::endl;
-        int i = 0;
-
-        for (auto cit = hit->curves_begin(); cit != hit->curves_end();
-             ++cit, ++i) {
-          auto pt = cit->source();
-          if (cit->is_circular()) {
-            out_file << "   1" << std::endl;
-            out_file << "    " << CGAL::to_double(pt.x()) << " "
-                     << CGAL::to_double(pt.y()) << std::endl;
-
-            double r, mx, my, tx, ty, cx, cy, sx, sy, st, tnx, tny, frmst;
-            r = sqrt(CGAL::to_double(cit->supporting_circle().squared_radius())); //radius r
-            sx = CGAL::to_double(cit->source().x()); // source x()
-            sy = CGAL::to_double(cit->source().y()); // source y()
-            tx = CGAL::to_double(cit->target().x()); // target x()
-            ty = CGAL::to_double(cit->target().y()); // target y()
-            cx = CGAL::to_double(cit->supporting_circle().center().x()); // center x()
-            cy = CGAL::to_double(cit->supporting_circle().center().y()); // center y()
-            st = sqrt((sx - tx) * (sx - tx) + (sy - ty) * (sy - ty)); //Source to target euclides distance ST
-            tnx = tx - cx; // origin shifting to center
-            tny = ty - cy; // origin shifting to center
-            frmst = sqrt((4 * r * r) - (st * st)); // intermediate value
-
-            if (cit->supporting_circle().orientation() == CGAL::CLOCKWISE) {
-              mx = (((frmst * tnx) - (st * tny)) / (2 * r)) + cx;
-              my = (((st * tnx) + (frmst * tny)) / (2 * r)) + cy;
-            }
-            else {
-              mx = (((tnx * frmst) + (tny * st)) / (2 * r)) + cx;
-              my = (((tny * frmst) - (st * tnx)) / (2 * r)) + cy;
-            }
-
-            out_file << "    " << mx << " " << my << std::endl;
-          }
-          else {
-            out_file << "   0" << std::endl;
-            out_file << "    " << CGAL::to_double(pt.x()) << " "
-                     << CGAL::to_double(pt.y()) << std::endl;
-          }
-          pt = cit->target();
-          out_file << "    " << CGAL::to_double(pt.x()) << " " << CGAL::to_double(pt.y()) << std::endl;
-        }
-      }
-      rOK = true;
-    }
+  catch (...) {
+    show_warning(std::string("Exception occurred during reading of ") + aKind + " polygon set.");
   }
   return rOK;
 }
 
-/*! saves a set of polygons bounded by polylines to a file. \return false if the file cannot be written.
- */
-bool save_polyline(QString aFileName, Polyline_polygon_set& rSet) {
-  bool rOK = false;
-
-  Polyline_polygon_set pps;
-  using Point = typename Kernel::Point_2;
-  std::list<Polygon_2> pgns;
-
-  std::ofstream out_file(qPrintable(aFileName));
-  if (out_file) {
-    out_file << "DOUBLE" << std::endl;
-    std::vector<Polyline_polygon_with_holes> lpwh_container;
-    rSet.polygons_with_holes(std::back_inserter(lpwh_container));
-
-    out_file << lpwh_container.size() << std::endl;
-
-    for (auto rit = lpwh_container.begin(); rit != lpwh_container.end(); ++rit) {
-      Polyline_polygon_with_holes lpwh = *rit;
-
-      out_file << " " << (1 + lpwh.number_of_holes()) << std::endl;
-
-      int cc = lpwh.outer_boundary().size();
-      int lc = cc - 1;
-      out_file << "  " << cc << std::endl;
-      int i = 0;
-
-      for (auto cit = lpwh.outer_boundary().curves_begin(); cit != lpwh.outer_boundary().curves_end(); ++cit, ++i) {
-        auto it = cit->points_begin();
-        out_file << " " << CGAL::to_double((*it).x()) << " "
-                 << CGAL::to_double((*it).y()) << std::endl;
-      }
-
-      for (auto hit = lpwh.holes_begin(); hit != lpwh.holes_end(); ++hit) {
-        int cc = hit->size();
-        int lc = cc - 1;
-        out_file << "  " << cc << std::endl;
-        int i = 0;
-
-        for (auto cit = hit->curves_begin(); cit != hit->curves_end();
-             ++cit, ++i) {
-          auto it = cit->points_begin();
-          out_file << " " << CGAL::to_double((*it).x()) << " " << CGAL::to_double((*it).y()) << std::endl;
-        }
-      }
-      rOK = true;
-    }
-  }
-  return rOK;
+bool MainWindow::read_linear(QString aFileName) {
+  return read_polygons<Linear_polygon_set>(aFileName, "linear", read_linear_boundary);
 }
 
-/*! writes a Bezier polygon, given by the control points of its curves, to a stream.
+bool MainWindow::read_circular(QString aFileName) {
+  return read_polygons<Circular_polygon_set>(aFileName, "circular", read_circular_boundary);
+}
+
+bool MainWindow::read_polyline(QString aFileName) {
+  return read_polygons<Polyline_polygon_set>(aFileName, "polyline", read_polyline_boundary);
+}
+
+bool MainWindow::read_bezier(QString aFileName) {
+  return read_polygons<Bezier_polygon_set>(aFileName, "Bezier", read_bezier_boundary);
+}
+
+/*! saves a polygon set to a file: a format line, the number of polygons with holes, and for each one the number of its
+ * boundaries followed by the boundaries (the outer one first), each written by a given function. \return false if the
+ * file cannot be written.
  */
-void save_bezier_polygon(std::ostream& out_file, const Bezier_polygon& aBP) {
+template <typename Set, typename Write_boundary>
+bool save_polygons(const QString& aFileName, const Set& aSet, Write_boundary aWriteBoundary) {
+  std::ofstream out_file(qPrintable(aFileName));
+  if (! out_file) return false;
+  std::vector<typename Set::Polygon_with_holes_2> pwhs;
+  aSet.polygons_with_holes(std::back_inserter(pwhs));
+  out_file << "DOUBLE" << std::endl << pwhs.size() << std::endl;
+  for (const auto& pwh : pwhs) {
+    out_file << " " << (1 + pwh.number_of_holes()) << std::endl;
+    aWriteBoundary(out_file, pwh.outer_boundary());
+    for (auto hit = pwh.holes_begin(); hit != pwh.holes_end(); ++hit) aWriteBoundary(out_file, *hit);
+  }
+  return bool(out_file);
+}
+
+/*! writes the boundary of a linear polygon: the number of its vertices followed by their coordinates.
+ */
+void write_linear_boundary(std::ostream& aOs, const Linear_polygon& aBoundary) {
+  aOs << "  " << aBoundary.size() << std::endl;
+  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit)
+    aOs << "   " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
+}
+
+/*! writes the boundary of a polygon bounded by polylines: the number of its curves followed by the coordinates of their
+ * first points.
+ */
+void write_polyline_boundary(std::ostream& aOs, const Polyline_polygon& aBoundary) {
+  aOs << "  " << aBoundary.size() << std::endl;
+  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit) {
+    auto it = cit->points_begin();
+    aOs << " " << CGAL::to_double(it->x()) << " " << CGAL::to_double(it->y()) << std::endl;
+  }
+}
+
+/*! obtains the midpoint of a circular arc.
+ */
+std::pair<double, double> arc_midpoint(const Circular_X_monotone_curve& aArc) {
+  double r = std::sqrt(CGAL::to_double(aArc.supporting_circle().squared_radius()));
+  double sx = CGAL::to_double(aArc.source().x());
+  double sy = CGAL::to_double(aArc.source().y());
+  double tx = CGAL::to_double(aArc.target().x());
+  double ty = CGAL::to_double(aArc.target().y());
+  double cx = CGAL::to_double(aArc.supporting_circle().center().x());
+  double cy = CGAL::to_double(aArc.supporting_circle().center().y());
+  double st = std::sqrt((sx - tx) * (sx - tx) + (sy - ty) * (sy - ty));    // the length of the chord
+  double tnx = tx - cx;                                                     // the target relative to the center
+  double tny = ty - cy;
+  double frmst = std::sqrt((4 * r * r) - (st * st));
+  if (aArc.supporting_circle().orientation() == CGAL::CLOCKWISE)
+    return {(((frmst * tnx) - (st * tny)) / (2 * r)) + cx, (((st * tnx) + (frmst * tny)) / (2 * r)) + cy};
+  return {(((tnx * frmst) + (tny * st)) / (2 * r)) + cx, (((tny * frmst) - (st * tnx)) / (2 * r)) + cy};
+}
+
+/*! writes the boundary of a polygon bounded by segments and circular arcs: the number of its curves followed by the
+ * curves, each given by a flag (1 for an arc) followed by its source, its midpoint (for an arc), and its target.
+ */
+void write_circular_boundary(std::ostream& aOs, const Circular_polygon& aBoundary) {
+  aOs << "  " << aBoundary.size() << std::endl;
+  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit) {
+    aOs << "   " << (cit->is_circular() ? 1 : 0) << std::endl;
+    aOs << "    " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
+    if (cit->is_circular()) {
+      auto [mx, my] = arc_midpoint(*cit);
+      aOs << "    " << mx << " " << my << std::endl;
+    }
+    aOs << "    " << CGAL::to_double(cit->target().x()) << " " << CGAL::to_double(cit->target().y()) << std::endl;
+  }
+}
+
+/*! writes the boundary of a Bezier polygon: the number of its curves followed by their control points.
+ */
+void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& aBP) {
   using Bezier_rat_point_vector = std::vector<Bezier_rat_point>;
 
   int cc = aBP.size();
@@ -3238,60 +2918,27 @@ void save_bezier_polygon(std::ostream& out_file, const Bezier_polygon& aBP) {
   }
 }
 
-/*! saves a Bezier polygon set to a file: the number of polygons with holes, followed by their boundaries. \return false
- * if the file cannot be written.
- */
-bool save_bezier_result(QString aFileName, const Bezier_polygon_set& aSet) {
-  bool rOK = false;
-  std::ofstream out_file(qPrintable(aFileName));
-  if (out_file) {
-    out_file << "DOUBLE" << std::endl;
-    std::vector<Bezier_polygon_with_holes> bpwh_container;
-    aSet.polygons_with_holes(std::back_inserter(bpwh_container));
-    out_file << bpwh_container.size() << std::endl;
-
-    for (auto rit = bpwh_container.begin(); rit != bpwh_container.end(); ++rit) {
-      Bezier_polygon_with_holes bpwh = *rit;
-      out_file << " " << (1 + bpwh.number_of_holes()) << std::endl;
-      save_bezier_polygon(out_file, bpwh.outer_boundary());
-      for (auto hit = bpwh.holes_begin(); hit != bpwh.holes_end(); ++hit)
-        save_bezier_polygon(out_file, *hit);
-
-      rOK = true;
-    }
-  }
-  return rOK;
-}
-
 void MainWindow::save_draw_bucket() {
-  auto& bucket = states_stack.back().set(m_color_active);
-  switch (m_curve_type) {
-   case Curve_type::Linear:
-    if (! save_linear(QFileDialog::getSaveFileName(this, tr("Save Result Linear Polygon Set"), "/data/index.lps",
-                                                  tr("Linear Curve files (*.lps)")), bucket.linear()))
-      show_error("Cannot save linear polygon set.");
-    break;
-
-   case Curve_type::Circular:
-    if (! save_circular(QFileDialog::getSaveFileName(this, tr("Save Result Circular Polygon Set"), "/data/index.cps",
-                                                    tr("Circular Curve files (*.cps)")), bucket.circular()))
-      show_error("Cannot save circular polygon set.");
-    break;
-
-   case Curve_type::Bezier:
-    if (! save_bezier_result(QFileDialog::getSaveFileName(this, tr("Save Result Bezier Polygon Set"), "/data/index.bps",
-                                                         tr("Bezier Curve files (*.bps)")), bucket.bezier()))
-      show_error("Cannot save bezier polygon set.");
-    break;
-
-   case Curve_type::Polyline:
-    if (! save_polyline(QFileDialog::getSaveFileName(this, tr("Save Result Polyline Polygon Set"), "/data/index.mps",
-                                                    tr("Polyline Curve files (*.mps)")), bucket.polyline()))
-      show_error("Cannot save polyline polygon set.");
-    break;
-
-   case Curve_type::Conic: show_error("Saving conic polygon sets is not supported yet."); break;
+  if (m_curve_type == Curve_type::Conic) {
+    show_error("Saving conic polygon sets is not supported yet.");
+    return;
   }
+  const auto& selected = family(m_curve_type);
+  QString name = capitalized(selected.m_name);
+  QString file_name = QFileDialog::getSaveFileName(this, "Save " + name + " Polygon Set",
+                                                   QString("/data/index") + selected.m_extension,
+                                                   QString("%1 Curve files (*%2)").arg(name, selected.m_extension));
+  if (file_name.isEmpty()) return;
+  auto& bucket = states_stack.back().set(m_color_active);
+  bool saved = false;
+  switch (m_curve_type) {
+   case Curve_type::Linear: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
+   case Curve_type::Circular: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
+   case Curve_type::Bezier: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
+   case Curve_type::Polyline: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
+   default: break;
+  }
+  if (! saved) show_error("Cannot save " + std::string(selected.m_name) + " polygon set.");
 }
 
 void MainWindow::switch_set_type(Curve_set& aSet, Curve_type aType) {
@@ -3448,55 +3095,25 @@ void MainWindow::apply_move(bool aChecked) {
   }
 }
 
-Polygon_with_holes_2 MainWindow::get_mink_input_polygon(size_t color) {
-  Linear_polygon_set lps;
-  using Pgn_with_holes_container = std::vector<Linear_polygon_with_holes>;
-  using Point = typename Kernel::Point_2;
-  std::list<Polygon_2> pgns;
+Polygon_with_holes_2 MainWindow::get_mink_input_polygon(std::size_t aIndex) {
+  const auto& lps = states_stack.back().set(aIndex).linear();
+  if (lps.number_of_polygons_with_holes() > 1) m_disjoint = true;
+  if (m_disjoint) return Polygon_with_holes_2();
 
-  lps = states_stack.back().set(color).linear();
-
-  Pgn_with_holes_container res(lps.number_of_polygons_with_holes());
-  res.begin() = lps.polygons_with_holes(res.begin());
-
-  Linear_polygon_with_holes temp;
-  Polygon_with_holes_2 pwh;
-  Polygon_2 p;
-
-  if (lps.number_of_polygons_with_holes() > 1) {
-    m_disjoint = true;
-  }
-
-  if (! m_disjoint) {
-    for (auto it = res.begin(); it != res.end(); ++it) {
-      temp = *it;
-      for (auto vit = temp.outer_boundary().curves_begin(); vit != temp.outer_boundary().curves_end(); vit++) {
-        auto pt = vit->source();
-        p.push_back(Point(CGAL::to_double(pt.x()), CGAL::to_double(pt.y())));
-      }
-      if (p.orientation() == CGAL::CLOCKWISE) {
-        p.reverse_orientation();
-      }
-
-      pgns.push_back(p);
-
-      for (auto hi = temp.holes_begin(); hi != temp.holes_end(); ++hi) {
-        Polygon_2 hole;
-        auto vti = *hi;
-        for (auto hit = vti.curves_begin(); hit != vti.curves_end(); hit++) {
-          auto pti = hit->source();
-          hole.push_back(Point(CGAL::to_double(pti.x()), CGAL::to_double(pti.y())));
-        }
-        if (hole.orientation() == CGAL::COUNTERCLOCKWISE) {
-          hole.reverse_orientation();
-        }
-        pgns.push_back(hole);
-      }
-    }
-    auto pit = pgns.begin();
-    return Polygon_with_holes_2(pgns.front(), ++pit, pgns.end());
-  }
-  return pwh;
+  // Converts a boundary to a polygon of a given orientation.
+  auto to_polygon = [](const Linear_polygon& aBoundary, CGAL::Orientation aOrientation) {
+    Polygon_2 pgn;
+    for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit)
+      pgn.push_back(Kernel::Point_2(CGAL::to_double(cit->source().x()), CGAL::to_double(cit->source().y())));
+    if (pgn.orientation() == CGAL::opposite(aOrientation)) pgn.reverse_orientation();
+    return pgn;
+  };
+  std::vector<Linear_polygon_with_holes> pwhs;
+  lps.polygons_with_holes(std::back_inserter(pwhs));
+  const auto& pwh = pwhs.front();
+  std::vector<Polygon_2> holes;
+  for (auto hit = pwh.holes_begin(); hit != pwh.holes_end(); ++hit) holes.push_back(to_polygon(*hit, CGAL::CLOCKWISE));
+  return Polygon_with_holes_2(to_polygon(pwh.outer_boundary(), CGAL::COUNTERCLOCKWISE), holes.begin(), holes.end());
 }
 
 void MainWindow::apply_minkowski_sum(bool aChecked) {
@@ -3518,20 +3135,11 @@ void MainWindow::apply_minkowski_sum(bool aChecked) {
       get_new_state(State_op::Minkowski_sum);
       log_statements({"# Minkowski sum (not supported in the program yet)"});
 
-
       // The two checked buckets, in order.
       auto operands = checked_buckets(m_minkowski_sum_column);
 
       if (operands.size() == 2) {
-
-        using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
-        using Point_2 = Kernel::Point_2;
-
         Polygon_with_holes_2 p0, p1;
-
-        // Compute the Minkowski sum using the decomposition approach.
-        CGAL::Small_side_angle_bisector_decomposition_2<Kernel> ssab_decomp;
-
         if (! states_stack.back().set(operands[0]).is_empty()) {
           p0 = get_mink_input_polygon(operands[0]);
           if (! states_stack.back().set(operands[1]).is_empty()) p1 = get_mink_input_polygon(operands[1]);
@@ -3937,14 +3545,14 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
   }
 
   State_op code = State_op::Complement;
-  QString name;
   switch (aOp) {
-   case Bucket_op::Complement: code = State_op::Complement; name = "complement"; break;
-   case Bucket_op::Intersection: code = State_op::Intersection; name = "intersection"; break;
-   case Bucket_op::Join: code = State_op::Union; name = "join"; break;
-   case Bucket_op::Difference: code = State_op::Difference; name = "difference"; break;
-   case Bucket_op::Symmetric_difference: code = State_op::Symmetric_difference; name = "symmetric_difference"; break;
+   case Bucket_op::Complement: code = State_op::Complement; break;
+   case Bucket_op::Intersection: code = State_op::Intersection; break;
+   case Bucket_op::Join: code = State_op::Union; break;
+   case Bucket_op::Difference: code = State_op::Difference; break;
+   case Bucket_op::Symmetric_difference: code = State_op::Symmetric_difference; break;
   }
+  const QString name = method_name(aOp);
 
   QCursor old = this->cursor();
   this->setCursor(Qt::WaitCursor);
@@ -3977,31 +3585,11 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
     }
   }
   else {
-    auto apply2 = [&](const Curve_set& aFirst, const Curve_set& aSecond) {
-      switch (aOp) {
-       case Bucket_op::Intersection: result.intersect(aFirst, aSecond); break;
-       case Bucket_op::Join: result.join(aFirst, aSecond); break;
-       case Bucket_op::Difference: result.difference(aFirst, aSecond); break;
-       case Bucket_op::Symmetric_difference:
-        result.symmetric_difference(aFirst, aSecond); break;
-       default: break;
-      }
-    };
-    auto apply1 = [&](const Curve_set& aOther) {
-      switch (aOp) {
-       case Bucket_op::Intersection: result.intersect(aOther); break;
-       case Bucket_op::Join: result.join(aOther); break;
-       case Bucket_op::Difference: result.difference(aOther); break;
-       case Bucket_op::Symmetric_difference:
-        result.symmetric_difference(aOther); break;
-       default: break;
-      }
-    };
-    apply2(bucket(aOperands[0]), bucket(aOperands[1]));
+    apply(aOp, result, bucket(aOperands[0]), bucket(aOperands[1]));
     if (! direct) program << "result = Polygon_set_2()";
     program << QString("%1.%2(%3, %4)").arg(target, name, bucket_name(aOperands[0]), bucket_name(aOperands[1]));
     for (std::size_t i = 2; i < aOperands.size(); ++i) {
-      apply1(bucket(aOperands[i]));
+      apply(aOp, result, bucket(aOperands[i]));
       program << QString("%1.%2(%3)").arg(target, name, bucket_name(aOperands[i]));
     }
   }
@@ -4074,88 +3662,87 @@ Linear_polygon_with_holes MainWindow::polygon(const Py_expr& aExpr) const {
 }
 
 QString MainWindow::execute(const Py_statement& aStatement) {
-  using Kind = Py_statement::Kind;
+  switch (aStatement.m_kind) {
+   case Py_statement::Kind::Delete: execute_delete(aStatement); return QString();
+   case Py_statement::Kind::Assign: execute_assign(aStatement); return QString();
+   case Py_statement::Kind::Call: break;
+  }
+  return execute_call(aStatement);
+}
+
+Curve_set& MainWindow::existing_set(const QString& aName) {
+  Curve_set* set = polygon_set(aName);
+  if (! set) throw std::runtime_error(("name '" + aName + "' is not defined").toStdString());
+  return *set;
+}
+
+Curve_set& MainWindow::named_set(const Py_expr& aExpr) {
+  if (aExpr.m_kind != Py_expr::Kind::Name)
+    throw std::runtime_error(("expected a polygon set name instead of " + to_python(aExpr)).toStdString());
+  return existing_set(aExpr.m_name);
+}
+
+void MainWindow::execute_delete(const Py_statement& aStatement) {
   const QString& target = aStatement.m_target;
   std::size_t index = bucket_index(target);
-  bool is_bucket = (index < number_of_buckets);
+  if (index == number_of_buckets) {
+    if (m_variables.erase(target) == 0)
+      throw std::runtime_error(("name '" + target + "' is not defined").toStdString());
+    log_statements({to_python(aStatement)}, true);
+    return;
+  }
+  // Only the last added bucket can be removed.
+  std::size_t last = m_number_of_buckets - 1;
+  if ((index < min_number_of_buckets) || (index != last))
+    throw std::runtime_error(index < min_number_of_buckets ? "the red, black, and blue buckets cannot be deleted" :
+      ("only the last bucket (" + QString(bucket_name(last)) + ") can be deleted").toStdString());
+  remove_bucket();      // logs "del <name>"
+}
 
-  auto set_of = [this](const Py_expr& aExpr) -> Curve_set& {
-    if (aExpr.m_kind != Py_expr::Kind::Name)
-      throw std::runtime_error(("expected a polygon set name instead of " + to_python(aExpr)).toStdString());
-    Curve_set* set = polygon_set(aExpr.m_name);
-    if (! set)
-      throw std::runtime_error(("name '" + aExpr.m_name + "' is not defined").toStdString());
-    return *set;
-  };
-  auto log = [this, &aStatement]() {
-    log_statements({to_python(aStatement)});
-  };
-
-  // del name
-  if (aStatement.m_kind == Kind::Delete) {
-    if (! is_bucket) {
-      if (m_variables.erase(target) == 0)
-        throw std::runtime_error(("name '" + target + "' is not defined").toStdString());
+void MainWindow::execute_assign(const Py_statement& aStatement) {
+  const QString& target = aStatement.m_target;
+  std::size_t index = bucket_index(target);
+  const Py_expr& value = aStatement.m_args[0];
+  if (value.m_kind != Py_expr::Kind::Polygon_set)
+    throw std::runtime_error("only polygon sets can be assigned, e.g., " + (target + " = Polygon_set_2(" +
+       (value.m_kind == Py_expr::Kind::Name ? value.m_name : QString()) + ")").toStdString() + " (copies the set)");
+  const Py_expr* arg = value.m_arg.get();
+  if ((index < number_of_buckets) && ! bucket_exists(index)) {
+    // Buckets are added in order.
+    std::size_t next = m_number_of_buckets;
+    if (index != next)
+      throw std::runtime_error(("buckets are added in order; the next one is " + QString(bucket_name(next)))
+                               .toStdString());
+    m_logging = false;
+    add_bucket();
+    m_logging = true;
+    if (! arg) {       // a new, empty bucket
       log_statements({to_python(aStatement)}, true);
-      return QString();
+      return;
     }
-    // Only the last added bucket can be removed.
-    std::size_t last = m_number_of_buckets - 1;
-    if ((index < min_number_of_buckets) || (index != last))
-      throw std::runtime_error(index < min_number_of_buckets ? "the red, black, and blue buckets cannot be deleted" :
-        ("only the last bucket (" + QString(bucket_name(last)) + ") can be deleted").toStdString());
-    remove_bucket();      // logs "del <name>"
-    return QString();
+    log_statements({target + " = Polygon_set_2()"}, true);
   }
-
-  // name = Polygon_set_2(...)
-  if (aStatement.m_kind == Kind::Assign) {
-    const Py_expr& value = aStatement.m_args[0];
-    if (value.m_kind != Py_expr::Kind::Polygon_set)
-      throw std::runtime_error("only polygon sets can be assigned, e.g., " + (target + " = Polygon_set_2(" +
-         (value.m_kind == Py_expr::Kind::Name ? value.m_name : QString()) + ")").toStdString() + " (copies the set)");
-    const Py_expr* arg = value.m_arg.get();
-    if (is_bucket && ! bucket_exists(index)) {
-      // Buckets are added in order.
-      std::size_t next = m_number_of_buckets;
-      if (index != next)
-        throw std::runtime_error(("buckets are added in order; the next one " "is " + QString(bucket_name(next)))
-                                 .toStdString());
-      m_logging = false;
-      add_bucket();
-      m_logging = true;
-      if (! arg) {       // a new, empty bucket
-        log_statements({to_python(aStatement)}, true);
-        return QString();
-      }
-      log_statements({target + " = Polygon_set_2()"}, true);
-    }
-    get_new_state(State_op::Console);
-    Curve_set* set = polygon_set(target);
-    if (! set) {
-      set = &m_variables.emplace(target, Curve_set(Curve_type::Linear, QPen(), QBrush()))
-        .first->second;
-    }
-    if (! arg) set->clear();
-    else if (arg->m_kind == Py_expr::Kind::Polygon) {
-      Linear_polygon_with_holes pgn = polygon(*arg);
-      set->clear();
-      set->linear().join(pgn);
-    }
-    else {
-      Curve_set& other = set_of(*arg);
-      if (&other != set) set->assign(other);
-    }
-    log();
-    return QString();
-  }
-
-  // name.method(args)
+  get_new_state(State_op::Console);
   Curve_set* set = polygon_set(target);
-  if (! set)
-    throw std::runtime_error(("name '" + target + "' is not defined").toStdString());
+  if (! set) set = &m_variables.emplace(target, Curve_set(Curve_type::Linear, QPen(), QBrush())).first->second;
+  if (! arg) set->clear();
+  else if (arg->m_kind == Py_expr::Kind::Polygon) {
+    Linear_polygon_with_holes pgn = polygon(*arg);
+    set->clear();
+    set->linear().join(pgn);
+  }
+  else {
+    Curve_set& other = named_set(*arg);
+    if (&other != set) set->assign(other);
+  }
+  log_statements({to_python(aStatement)});
+}
+
+QString MainWindow::execute_call(const Py_statement& aStatement) {
+  const QString& target = aStatement.m_target;
   const QString& method = aStatement.m_method;
   const auto& args = aStatement.m_args;
+  Curve_set* set = &existing_set(target);
   auto arity = [&](std::size_t aMin, std::size_t aMax) {
     if ((args.size() < aMin) || (args.size() > aMax))
       throw std::runtime_error((method + "() takes " + ((aMin == aMax) ? QString::number(aMin) :
@@ -4176,81 +3763,47 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     return QString::number(set->linear().number_of_polygons_with_holes());
   }
 
+  // Actions; each one is undoable, so the sets are obtained again after the new state is pushed.
   if (method == "clear") {
     arity(0, 0);
     get_new_state(State_op::Console);
-    polygon_set(target)->clear();
-    log();
-    return QString();
+    existing_set(target).clear();
   }
-  if (method == "complement") {
+  else if (method == "complement") {
     arity(0, 1);
-    if (! args.empty()) {
-      Curve_set& other = set_of(args[0]);
-      if (&other == set)
-        throw std::runtime_error("use complement() to complement in place");
-    }
+    if (! args.empty() && (&named_set(args[0]) == set))
+      throw std::runtime_error("use complement() to complement in place");
     get_new_state(State_op::Console);
-    set = polygon_set(target);
-    if (args.empty()) set->complement();
-    else set->complement(set_of(args[0]));
-    log();
-    return QString();
+    if (args.empty()) existing_set(target).complement();
+    else existing_set(target).complement(named_set(args[0]));
   }
-
-  enum class Op { Join, Intersection, Difference, Symmetric_difference };
-  Op op;
-  if (method == "join") op = Op::Join;
-  else if (method == "intersection") op = Op::Intersection;
-  else if (method == "difference") op = Op::Difference;
-  else if (method == "symmetric_difference") op = Op::Symmetric_difference;
-  else
-    throw std::runtime_error(("unknown method '" + method + "'").toStdString());
-  arity(1, 2);
-
-  if (args.size() == 2) {
-    // The bivariate form overwrites the target, which must not be an operand.
-    if ((&set_of(args[0]) == set) || (&set_of(args[1]) == set))
-      throw std::runtime_error(("the target of " + method + "(a, b) must " "differ from a and b").toStdString());
-    get_new_state(State_op::Console);
-    set = polygon_set(target);
-    Curve_set& a = set_of(args[0]);
-    Curve_set& b = set_of(args[1]);
-    switch (op) {
-     case Op::Join: set->join(a, b); break;
-     case Op::Intersection: set->intersect(a, b); break;
-     case Op::Difference: set->difference(a, b); break;
-     case Op::Symmetric_difference: set->symmetric_difference(a, b); break;
+  else {
+    std::optional<Bucket_op> op;
+    for (auto candidate : {Bucket_op::Intersection, Bucket_op::Join, Bucket_op::Difference,
+                           Bucket_op::Symmetric_difference}) {
+      if (method == method_name(candidate)) op = candidate;
     }
-    log();
-    return QString();
-  }
-
-  // One argument: a polygon set or a polygon.
-  if (args[0].m_kind == Py_expr::Kind::Polygon) {
-    Linear_polygon_with_holes pgn = polygon(args[0]);
-    get_new_state(State_op::Console);
-    auto& lset = polygon_set(target)->linear();
-    switch (op) {
-     case Op::Join: lset.join(pgn); break;
-     case Op::Intersection: lset.intersection(pgn); break;
-     case Op::Difference: lset.difference(pgn); break;
-     case Op::Symmetric_difference: lset.symmetric_difference(pgn); break;
+    if (! op) throw std::runtime_error(("unknown method '" + method + "'").toStdString());
+    arity(1, 2);
+    if (args.size() == 2) {
+      // The bivariate form overwrites the target, which must not be an operand.
+      if ((&named_set(args[0]) == set) || (&named_set(args[1]) == set))
+        throw std::runtime_error(("the target of " + method + "(a, b) must differ from a and b").toStdString());
+      get_new_state(State_op::Console);
+      apply(*op, existing_set(target), named_set(args[0]), named_set(args[1]));
     }
-    log();
-    return QString();
+    else if (args[0].m_kind == Py_expr::Kind::Polygon) {
+      Linear_polygon_with_holes pgn = polygon(args[0]);
+      get_new_state(State_op::Console);
+      apply(*op, existing_set(target).linear(), pgn);
+    }
+    else {
+      named_set(args[0]);      // check the name
+      get_new_state(State_op::Console);
+      apply(*op, existing_set(target), named_set(args[0]));
+    }
   }
-  set_of(args[0]);      // check the name
-  get_new_state(State_op::Console);
-  set = polygon_set(target);
-  Curve_set& other = set_of(args[0]);
-  switch (op) {
-   case Op::Join: set->join(other); break;
-   case Op::Intersection: set->intersect(other); break;
-   case Op::Difference: set->difference(other); break;
-   case Op::Symmetric_difference: set->symmetric_difference(other); break;
-  }
-  log();
+  log_statements({to_python(aStatement)});
   return QString();
 }
 
@@ -4489,94 +4042,48 @@ void MainWindow::about_demo() {
   mb.exec();
 }
 
+template <typename Set>
+void MainWindow::add_constructed_polygon(Curve_type aType, typename Set::Polygon_2 aPolygon, bool aToResult) {
+  if (! ensure_curve_type(aType)) return;
+  if (aPolygon.orientation() == CGAL::CLOCKWISE) aPolygon.reverse_orientation();
+  typename Set::Polygon_with_holes_2 pwh(aPolygon);
+  if (aToResult) {
+    states_stack.back().result_set().get<Set>().join(pwh);
+    return;
+  }
+  get_new_state(State_op::Draw);
+  states_stack.back().set(m_color_active).get<Set>().join(pwh);
+}
+
 void MainWindow::process_input(CGAL::Object o) {
-  std::pair<Bezier_polygon, Bezier_boundary_source> lBI;
-  Linear_polygon lLI;
-  Circular_polygon lCI;
-  Polyline_polygon lPI;
-  Conic_polygon lConicPI;
   try {
-    if (CGAL::assign(lConicPI, o)) {
-      if (ensure_curve_type(Curve_type::Conic)) {
-        if (lConicPI.orientation() == CGAL::CLOCKWISE)
-          lConicPI.reverse_orientation();
-        get_new_state(State_op::Draw);
-        states_stack.back().set(m_color_active).conic().
-          join(Conic_polygon_with_holes(lConicPI));
+    if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o))
+      add_constructed_polygon<Conic_polygon_set>(Curve_type::Conic, *pgn, false);
+    else if (auto* bezier = CGAL::object_cast<std::pair<Bezier_polygon, Bezier_boundary_source>>(&o))
+      add_constructed_polygon<Bezier_polygon_set>(Curve_type::Bezier, bezier->first,
+                                                  m_bezier_input->is_bounding_rect());
+    else if (auto* pgn = CGAL::object_cast<Circular_polygon>(&o))
+      add_constructed_polygon<Circular_polygon_set>(Curve_type::Circular, *pgn, m_circular_input->is_bounding_rect());
+    else if (auto* pgn = CGAL::object_cast<Polyline_polygon>(&o))
+      add_constructed_polygon<Polyline_polygon_set>(Curve_type::Polyline, *pgn, m_polyline_input->is_bounding_rect());
+    else if (auto* pgn = CGAL::object_cast<Linear_polygon>(&o)) {
+      // A linear polygon may also be a hole to subtract, or a part of a Minkowski sum (not an action on its own).
+      if (! ensure_curve_type(Curve_type::Linear)) return;
+      Linear_polygon lLI = *pgn;
+      if (lLI.orientation() == CGAL::CLOCKWISE) lLI.reverse_orientation();
+      Linear_polygon_with_holes lCPWH(lLI);
+      if (! m_linear_input->is_bounding_rect() && ! m_linear_input->ishole()) {
+        if (! m_linear_input->is_mink()) get_new_state(State_op::Draw);
+        states_stack.back().set(m_color_active).linear().join(lCPWH);
+        if (! m_linear_input->is_mink())
+          log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
       }
-    }
-    else if (CGAL::assign(lBI, o)) {
-      if (ensure_curve_type(Curve_type::Bezier)) {
-        CGAL::Orientation o = lBI.first.orientation();
-        if (o == CGAL::CLOCKWISE)
-          lBI.first.reverse_orientation();
-
-        if (! m_bezier_input->is_bounding_rect()) {
-          get_new_state(State_op::Draw);
-          states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
-        }
-        else {
-          states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(lBI.first));
-        }
-      }
-    }
-    else if (CGAL::assign(lLI, o)) {
-      if (ensure_curve_type(Curve_type::Linear)) {
-        CGAL::Orientation orient = lLI.orientation();
-        if (orient == CGAL::CLOCKWISE) {
-          lLI.reverse_orientation();
-        }
-        Linear_polygon_with_holes lCPWH(lLI);
-
-        if (! m_linear_input->is_bounding_rect() && ! m_linear_input->ishole()) {
-          if (! m_linear_input->is_mink()) {
-            get_new_state(State_op::Draw);
-          }
-          states_stack.back().set(m_color_active).linear().join(lCPWH);
-          if (! m_linear_input->is_mink())
-            log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
-        }
-        else {
-          states_stack.back().result_set().linear().join(lCPWH);
-          if (m_linear_input->ishole()) {
-            log_statements({QString("%1.difference(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
-            states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
-            states_stack.back().result_set().clear();
-          }
-        }
-      }
-    }
-    else if (CGAL::assign(lCI, o)) {
-      if (ensure_curve_type(Curve_type::Circular)) {
-        CGAL::Orientation o = lCI.orientation();
-        if (o == CGAL::CLOCKWISE)
-          lCI.reverse_orientation();
-
-        Circular_polygon_with_holes lCPWH(lCI);
-
-        if (! m_circular_input->is_bounding_rect()) {
-          get_new_state(State_op::Draw);
-          states_stack.back().set(m_color_active).circular().join(lCPWH);
-        }
-        else {
-          states_stack.back().result_set().circular().join(lCPWH);
-        }
-      }
-    }
-    else if (CGAL::assign(lPI, o)) {
-      if (ensure_curve_type(Curve_type::Polyline)) {
-        CGAL::Orientation o = lPI.orientation();
-        if (o == CGAL::CLOCKWISE)
-          lPI.reverse_orientation();
-
-        Polyline_polygon_with_holes lPPWH(lPI);
-
-        if (! m_polyline_input->is_bounding_rect()) {
-          get_new_state(State_op::Draw);
-          states_stack.back().set(m_color_active).polyline().join(lPPWH);
-        }
-        else {
-          states_stack.back().result_set().polyline().join(lPPWH);
+      else {
+        states_stack.back().result_set().linear().join(lCPWH);
+        if (m_linear_input->ishole()) {
+          log_statements({QString("%1.difference(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
+          states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
+          states_stack.back().result_set().clear();
         }
       }
     }
