@@ -28,6 +28,8 @@
 #include <CGAL/Qt/Converter.h>
 #include <CGAL/Arr_Bezier_curve_traits_2.h>
 
+#include <algorithm>
+
 #include <QPolygonF>
 #include <QPointF>
 #include <QGraphicsLineItem>
@@ -342,12 +344,20 @@ public:
     mOngoingPieceGI->modelChanged();
   }
 
-  /*! adds the curve under construction to the polygon, and starts the next curve.
+  /*! determines whether a curve is degenerate, that is, its endpoints coincide.
+   */
+  static bool is_degenerate(const Bezier_curve& aCurve) {
+    return aCurve.control_point(0) == aCurve.control_point(aCurve.number_of_control_points() - 1);
+  }
+
+  /*! adds the curve under construction to the polygon (unless it is degenerate), and starts the next curve.
    */
   void CommitOngoingPiece(const Point& aP) {
     if (! ongoing_piece()) return;
-    mBezierPolygonPieces.push_back(*ongoing_piece());
-    mBezierGI->modelChanged();
+    if (! is_degenerate(*ongoing_piece())) {
+      mBezierPolygonPieces.push_back(*ongoing_piece());
+      mBezierGI->modelChanged();
+    }
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mP0 = mP1;
@@ -390,12 +400,13 @@ public:
     }
   }
 
-  /*! closes the boundary with a curve that ends at the first vertex.
+  /*! closes the boundary with a curve that ends at the first vertex (unless the last vertex is the first).
    */
   void CloseCurrBundary() {
     if ((mBezierPolygonPieces.size() == 0) || (ongoing_piece() == NULL) || m_last_bezier) return;
     std::vector<Point> lControlPoints(ongoing_piece()->control_points_begin(), ongoing_piece()->control_points_end());
     lControlPoints.back() = mBezierPolygonPieces.front().control_point(0);
+    if (lControlPoints.front() == lControlPoints.back()) return;
     mBezierPolygonPieces.push_back(Bezier_curve(lControlPoints.begin(), lControlPoints.end()));
     mBezierGI->modelChanged();
   }
@@ -416,9 +427,16 @@ public:
     HideHandles();
   }
 
-  /*! emits the polygon, together with its curves.
+  /*! emits the polygon, together with its curves. A polygon bounded by fewer than three segments, or by a single curve,
+   * is dropped.
    */
   void GenerateBezierPolygon() {
+    m_last = false;
+    m_last_bezier = false;
+    auto n = mBezierPolygonPieces.size();
+    bool linear = std::all_of(mBezierPolygonPieces.begin(), mBezierPolygonPieces.end(),
+                              [](const Bezier_curve& cv) { return cv.number_of_control_points() == 2; });
+    if ((n < 2) || (linear && (n < 3))) return;
     Traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
     using Make_x_monotone_result = std::variant<typename Traits::Point_2, Bezier_X_monotone_curve>;
@@ -435,8 +453,6 @@ public:
     }
 
     if (xcvs.size() == 0) return;
-    m_last = false;
-    m_last_bezier = false;
     Bezier_polygon bp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<std::pair<Bezier_polygon, Bezier_curve_vector>>(std::make_pair(bp,
                                                                                               mBezierPolygonPieces))));

@@ -29,6 +29,8 @@
 #include <CGAL/Qt/Converter.h>
 #include <CGAL/Arr_circle_segment_traits_2.h>
 
+#include <algorithm>
+
 #include <QPolygonF>
 #include <QPointF>
 #include <QGraphicsLineItem>
@@ -354,12 +356,14 @@ public:
     mOngoingPieceGI->modelChanged();
   }
 
-  /*! adds the piece under construction to the polygon, and starts the next piece.
+  /*! adds the piece under construction to the polygon (unless its endpoints coincide), and starts the next piece.
    */
   void CommitOngoingPiece(const Point& aP) {
     if (! ongoing_piece()) return;
-    mCircularPolygonPieces.push_back(*ongoing_piece());
-    mCircularGI->modelChanged();
+    if (! ongoing_piece()->source().equals(ongoing_piece()->target())) {
+      mCircularPolygonPieces.push_back(*ongoing_piece());
+      mCircularGI->modelChanged();
+    }
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mP0 = mP1;
@@ -418,10 +422,13 @@ public:
     HideHandle();
   }
 
-  /*! closes the polygon with a segment from its last vertex to its first (unless the closing piece is an arc), and
-   * emits it.
+  /*! closes the polygon with a segment from its last vertex to its first (unless the closing piece is an arc or the
+   * vertices coincide), and emits it. A polygon bounded by fewer than three segments, or by a single curve, is dropped.
    */
   void GenerateCircularPolygon() {
+    bool closed = m_last_circular;
+    m_last = false;
+    m_last_circular = false;
     if (mCircularPolygonPieces.size() == 0) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
@@ -431,9 +438,6 @@ public:
     for (auto it = mCircularPolygonPieces.begin(); it != mCircularPolygonPieces.end(); ++it) {
       std::vector<Make_x_monotone_result> x_objs;
       make_x_monotone(*it, std::back_inserter(x_objs));
-
-      auto* xcv = std::get_if<Circular_X_monotone_curve>(&x_objs[0]);
-      if ((*xcv).is_linear() && mCircularPolygonPieces.size() == 1) return;
       for (std::size_t i = 0; i < x_objs.size(); ++i) {
         auto* xcv = std::get_if<Circular_X_monotone_curve>(&x_objs[i]);
         CGAL_assertion(xcv != nullptr);
@@ -442,9 +446,9 @@ public:
     }
     if (xcvs.size() == 0) return;
 
-    if (! m_last_circular) {
-      const Arc_point& first_point = xcvs.front().source();
-      const Arc_point& last_point = xcvs.back().target();
+    const Arc_point first_point = xcvs.front().source();
+    const Arc_point last_point = xcvs.back().target();
+    if (! closed && ! last_point.equals(first_point)) {
       CGAL_assertion(! first_point.x().is_extended() && ! first_point.y().is_extended());
       CGAL_assertion(! last_point.x().is_extended() && ! last_point.y().is_extended());
       FT fxs = first_point.x().alpha();
@@ -454,9 +458,8 @@ public:
       xcvs.push_back(Circular_X_monotone_curve(Point(lxs, lys), Point(fxs, fys)));
     }
 
-    m_last = false;
-    m_last_circular = false;
-
+    bool linear = std::all_of(xcvs.begin(), xcvs.end(), [](const auto& xcv) { return xcv.is_linear(); });
+    if ((xcvs.size() < 2) || (linear && (xcvs.size() < 3))) return;
     Circular_polygon cp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<Circular_polygon>(cp)));
   }

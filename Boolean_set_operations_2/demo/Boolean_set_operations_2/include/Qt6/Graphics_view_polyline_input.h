@@ -317,12 +317,21 @@ public:
     mOngoingPieceGI->modelChanged();
   }
 
-  /*! adds the edge under construction to the polygon, and starts the next edge.
+  /*! determines whether a piece is degenerate, that is, its endpoints coincide.
+   */
+  static bool is_degenerate(const Polyline_curve& aPiece) {
+    auto n = aPiece.number_of_subcurves();
+    return (n == 0) || (aPiece[0].source() == aPiece[n - 1].target());
+  }
+
+  /*! adds the edge under construction to the polygon (unless it is degenerate), and starts the next edge.
    */
   void CommitOngoingPiece(const Point& aP) {
     if (! ongoing_piece()) return;
-    mPolylinePolygonPieces.push_back(*ongoing_piece());
-    mPolylineGI->modelChanged();
+    if (! is_degenerate(*ongoing_piece())) {
+      mPolylinePolygonPieces.push_back(*ongoing_piece());
+      mPolylineGI->modelChanged();
+    }
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mP0 = mP1;
@@ -344,6 +353,14 @@ public:
     }
   }
 
+  /*! obtains the number of segments of given x-monotone polylines.
+   */
+  static std::size_t number_of_edges(const std::vector<Polyline_X_monotone_curve>& aXcvs) {
+    std::size_t n = 0;
+    for (const auto& xcv : aXcvs) n += xcv.number_of_subcurves();
+    return n;
+  }
+
   /*! completes the polygon under construction.
    */
   void CommitCurrPolylinePolygon() {
@@ -356,9 +373,12 @@ public:
     HideHandle();
   }
 
-  /*! closes the polygon with an edge from its last vertex to its first (unless it is closed already), and emits it.
+  /*! closes the polygon with an edge from its last vertex to its first (unless they coincide), and emits it.
    */
   void GeneratePolylinePolygon() {
+    bool closed = m_last_polyline;
+    m_last = false;
+    m_last_polyline = false;
     if (mPolylinePolygonPieces.size() == 0) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
@@ -378,9 +398,9 @@ public:
     }
     if (xcvs.size() == 0) return;
 
-    if (! m_last_polyline) {
-      const Polyline_point& first_point = xcvs.front()[0].source();
-      const Polyline_point& last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
+    const Polyline_point first_point = xcvs.front()[0].source();
+    const Polyline_point last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
+    if (! closed && (last_point != first_point)) {
       FT fxs = first_point.x();
       FT fys = first_point.y();
       FT lxs = last_point.x();
@@ -390,8 +410,7 @@ public:
         x.subcurve_traits_2()->construct_x_monotone_curve_2_object()(Point(lxs, lys), Point(fxs, fys));
       xcvs.push_back(Polyline_X_monotone_curve(seg));
     }
-    m_last = false;
-    m_last_polyline = false;
+    if (number_of_edges(xcvs) < 3) return;
     Polyline_polygon pp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<Polyline_polygon>(pp)));
   }
@@ -411,6 +430,9 @@ public:
   /*! closes the polygon, used for the complement, and emits it. The x-coordinates of the closing edge are negated.
    */
   void GenerateComplementPolylinePolygon() {
+    bool closed = m_last_polyline;
+    m_last = false;
+    m_last_polyline = false;
     if (mPolylinePolygonPieces.size() == 0) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
@@ -430,9 +452,9 @@ public:
     }
     if (xcvs.size() == 0) return;
 
-    if (! m_last_polyline) {
-      const Polyline_point& first_point = xcvs.front()[0].source();
-      const Polyline_point& last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
+    const Polyline_point first_point = xcvs.front()[0].source();
+    const Polyline_point last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
+    if (! closed && (last_point != first_point)) {
       FT fxs = first_point.x();
       FT fys = first_point.y();
       FT lxs = last_point.x();
@@ -444,10 +466,7 @@ public:
         x.subcurve_traits_2()->construct_x_monotone_curve_2_object()(Point(fxs, fys), Point(lxs, lys));
       xcvs.push_back(Polyline_X_monotone_curve(seg));
     }
-
-    m_last = false;
-    m_last_polyline = false;
-
+    if (number_of_edges(xcvs) < 3) return;
     Polyline_polygon pp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<Polyline_polygon>(pp)));
   }
