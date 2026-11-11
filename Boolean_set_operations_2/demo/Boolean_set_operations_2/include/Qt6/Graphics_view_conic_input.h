@@ -7,10 +7,10 @@
 // $Id$
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
-// Author(s): Efi Fogel <efifogel@gmail.com>
+// Author(s) : Efi Fogel <efifogel@gmail.com>
 
-#ifndef CGAL_QT_GRAPHICS_VIEW_CONIC_INPUT_H
-#define CGAL_QT_GRAPHICS_VIEW_CONIC_INPUT_H
+#ifndef CGAL_QT6_GRAPHICS_VIEW_CONIC_INPUT_H
+#define CGAL_QT6_GRAPHICS_VIEW_CONIC_INPUT_H
 
 #include <cmath>
 #include <optional>
@@ -37,34 +37,34 @@
 #include <CGAL/Arr_geometry_traits/Conic_intersections_2.h>
 
 #include "Typedefs.h"
-#include "QT5/Conic_Curves.h"
+#include "Qt6/Conic_Curves.h"
 
 namespace CGAL {
 namespace Qt {
 
-// Constructs polygons bounded by conic arcs. A boundary is a cyclic sequence
-// of conics; every vertex is an intersection point of two consecutive conics,
-// and every conic contributes the arc between its two vertices. Full circles
-// and full ellipses are constructed directly.
+/*! Constructs polygons bounded by conic arcs. A boundary is a cyclic sequence of conics; every vertex is an
+ * intersection point of two consecutive conics, and every conic contributes the arc between its two vertices. Full
+ * circles and full ellipses are constructed directly.
+ */
 class Graphics_view_conic_input : public GraphicsViewInput {
 public:
-  typedef Conic_rational Rational;
-  typedef Conic_integer Integer;
-  typedef Conic_algebraic Algebraic;
-  typedef Conic_shape::Kind Kind;
+  using Rational = Conic_rational;
+  using Integer = Conic_integer;
+  using Algebraic = Conic_algebraic;
+  using Kind = Conic_shape::Kind;
 
-  // The tools. The first three add a conic to the boundary under
-  // construction; the last two construct a full curve.
+  // The tools. The first three add a conic to the boundary under construction; the last two construct a full curve.
   enum Mode { LINE, CIRCLE, ELLIPSE, FULL_CIRCLE, FULL_ELLIPSE };
 
+  /*! constructs from the parent object and the scene.
+   */
   Graphics_view_conic_input(QObject* aParent, QGraphicsScene* aScene) :
     GraphicsViewInput(aParent),
     m_scene(aScene),
     m_curves_item(new QGraphicsPathItem),
     m_arcs_item(new QGraphicsPathItem),
     m_preview_item(new QGraphicsPathItem),
-    m_markers_item(new QGraphicsPathItem)
-  {
+    m_markers_item(new QGraphicsPathItem) {
     for (auto* item : items()) {
       item->setZValue(10);
       m_scene->addItem(item);
@@ -72,19 +72,24 @@ public:
     set_pen(QPen(QColor(255, 0, 0), 0));
   }
 
+  /*! sets the pen of the curves under construction.
+   */
   void set_pen(const QPen& aPen) {
     m_pen = aPen;
     m_pen.setCosmetic(true);
     update_preview();
   }
 
+  /*! sets the tool, and discards the clicks of the previous one.
+   */
   void set_mode(Mode aMode) {
     m_mode = aMode;
     m_clicks.clear();
     update_preview();
   }
 
-  // Discard everything under construction.
+  /*! discards everything under construction.
+   */
   void Reset() {
     m_conics.clear();
     m_vertices.clear();
@@ -97,25 +102,25 @@ public:
     update_preview();
   }
 
+  /*! handles the mouse and key events of the scene.
+   * \return true if the event is handled.
+   */
   bool eventFilter(QObject* aObject, QEvent* aEvent) {
     switch (aEvent->type()) {
-     case QEvent::GraphicsSceneMousePress:
-      return mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-     case QEvent::GraphicsSceneMouseRelease:
-      return mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+     case QEvent::GraphicsSceneMousePress: return mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+     case QEvent::GraphicsSceneMouseRelease: return mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
      case QEvent::GraphicsSceneMouseMove:
       m_cursor = static_cast<QGraphicsSceneMouseEvent*>(aEvent)->scenePos();
       update_preview();
       return false;
-     case QEvent::KeyPress:
-      return key_press(static_cast<QKeyEvent*>(aEvent));
+     case QEvent::KeyPress: return key_press(static_cast<QKeyEvent*>(aEvent));
      default: break;
     }
     return QObject::eventFilter(aObject, aEvent);
   }
 
-  // Ask for the coefficients of a conic, and add it to the boundary or
-  // construct the full curve.
+  /*! asks for the coefficients of a conic, and adds it to the boundary or constructs the full curve.
+   */
   void enter_coefficients(QWidget* aParent) {
     QDialog dialog(aParent);
     dialog.setWindowTitle("Conic Coefficients");
@@ -135,13 +140,10 @@ public:
     add_button->setChecked(true);
     layout->addRow(add_button);
     layout->addRow(full_button);
-    auto* buttons =
-      new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     layout->addRow(buttons);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog,
-                     &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog,
-                     &QDialog::reject);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
     Rational c[6];
     auto check = [&]() {
@@ -150,15 +152,13 @@ public:
       std::string error;
       std::optional<Kind> kind;
       if (ok) kind = classify(c, error);
-      kind_label->setText(! ok ? QString("Invalid number") :
-                          kind ? kind_name(*kind) : QString(error.c_str()));
+      kind_label->setText(! ok ? QString("Invalid number") : kind ? kind_name(*kind) : QString(error.c_str()));
       bool is_ellipse = kind && (*kind == Conic_shape::ELLIPSE);
       full_button->setEnabled(is_ellipse);
       if (! is_ellipse && full_button->isChecked()) add_button->setChecked(true);
       buttons->button(QDialogButtonBox::Ok)->setEnabled(kind.has_value());
     };
-    for (auto* edit : edits)
-      QObject::connect(edit, &QLineEdit::textChanged, &dialog, check);
+    for (auto* edit : edits) QObject::connect(edit, &QLineEdit::textChanged, &dialog, check);
     check();
     if (dialog.exec() != QDialog::Accepted) return;
     for (int i = 0; i < 6; ++i) m_last_coefficients[i] = edits[i]->text();
@@ -169,28 +169,32 @@ public:
 private:
   enum State { IDLE, PICK_VERTEX, PICK_CLOSING_VERTEX, PICK_ARC };
 
+  /*! A conic: its exact coefficients and its double-precision shape.
+   */
   struct Conic {
     Rational m_c[6];
     Conic_shape m_shape;
   };
 
-  std::vector<QGraphicsPathItem*> items() const
-  { return {m_curves_item, m_arcs_item, m_preview_item, m_markers_item}; }
+  /*! obtains the graphics items.
+   */
+  std::vector<QGraphicsPathItem*> items() const { return {m_curves_item, m_arcs_item, m_preview_item, m_markers_item}; }
 
-  static Rational to_rational(QPointF aP, int aI)
-  { return Rational(aI == 0 ? aP.x() : aP.y()); }
+  /*! converts a coordinate (0 for x, 1 for y) of a scene point to a rational number exactly.
+   */
+  static Rational to_rational(QPointF aP, int aI) { return Rational(aI == 0 ? aP.x() : aP.y()); }
 
-  // Parse an integer, a decimal number, or a fraction exactly.
+  /*! parses an integer, a decimal number, or a fraction exactly.
+   * \return false if the text is not a number.
+   */
   static bool parse_rational(const QString& aText, Rational& rQ) {
-    static const QRegularExpression re
-      ("^\\s*([+-]?)(\\d*)(?:\\.(\\d*))?(?:/(\\d+))?\\s*$");
+    static const QRegularExpression re("^\\s*([+-]?)(\\d*)(?:\\.(\\d*))?(?:/(\\d+))?\\s*$");
     auto m = re.match(aText);
     if (! m.hasMatch()) return false;
     QString whole = m.captured(2), frac = m.captured(3), den = m.captured(4);
     if (whole.isEmpty() && frac.isEmpty()) return false;
     if (! den.isEmpty() && ! frac.isEmpty()) return false;
-    Integer num((whole + frac).isEmpty() ? std::string("0") :
-                (whole + frac).toStdString());
+    Integer num((whole + frac).isEmpty() ? std::string("0") : (whole + frac).toStdString());
     Integer d = 1;
     for (int i = 0; i < frac.size(); ++i) d *= 10;
     if (! den.isEmpty()) d = Integer(den.toStdString());
@@ -200,6 +204,8 @@ private:
     return true;
   }
 
+  /*! obtains the name of a kind of conics.
+   */
   static QString kind_name(Kind aKind) {
     switch (aKind) {
      case Conic_shape::LINE: return "Line";
@@ -210,11 +216,11 @@ private:
     return QString();
   }
 
-  // The kind of a non-degenerate conic, or an error.
-  static std::optional<Kind> classify(const Rational* aC, std::string& rError)
-  {
-    const Rational &r = aC[0], &s = aC[1], &t = aC[2], &u = aC[3],
-      &v = aC[4], &w = aC[5];
+  /*! obtains the kind of a non-degenerate conic.
+   * \return the kind, or nullopt (and an error message) if the conic is degenerate.
+   */
+  static std::optional<Kind> classify(const Rational* aC, std::string& rError) {
+    const Rational& r = aC[0], &s = aC[1], &t = aC[2], &u = aC[3], &v = aC[4], &w = aC[5];
     if (CGAL::is_zero(r) && CGAL::is_zero(s) && CGAL::is_zero(t)) {
       if (CGAL::is_zero(u) && CGAL::is_zero(v)) {
         rError = "Not a curve";
@@ -238,8 +244,10 @@ private:
     return Conic_shape::ELLIPSE;
   }
 
-  static std::optional<Conic> make_conic(const Rational* aC,
-                                         std::string& rError) {
+  /*! constructs a conic from its coefficients.
+   * \return the conic, or nullopt (and an error message) if the conic is degenerate.
+   */
+  static std::optional<Conic> make_conic(const Rational* aC, std::string& rError) {
     auto kind = classify(aC, rError);
     if (! kind) return std::nullopt;
     Conic conic;
@@ -252,7 +260,8 @@ private:
     return conic;
   }
 
-  // The coefficients of the circle with the given center through aP.
+  /*! obtains the coefficients of the circle with a given center through a given point.
+   */
   static void circle(QPointF aCenter, QPointF aP, Rational* rC) {
     Rational cx = to_rational(aCenter, 0), cy = to_rational(aCenter, 1);
     Rational dx = to_rational(aP, 0) - cx, dy = to_rational(aP, 1) - cy;
@@ -261,10 +270,11 @@ private:
     rC[5] = cx*cx + cy*cy - (dx*dx + dy*dy);
   }
 
-  // The coefficients of the ellipse with the given center, one of its axes
-  // ending at aA, and the other semi-axis the distance of aB from that axis:
-  // q*xi^2 + |d|^4*eta^2 = |d|^4*q, where xi and eta are the coordinates along
-  // d = aA - aCenter and its normal, and q = (normal . (aB - aCenter))^2.
+  /*! obtains the coefficients of the ellipse with a given center, one of its axes ending at aA, and the other
+   * semi-axis the distance of aB from that axis: q*xi^2 + |d|^4*eta^2 = |d|^4*q, where xi and eta are the coordinates
+   * along d = aA - aCenter and its normal, and q = (normal . (aB - aCenter))^2.
+   * \return false if there is no such ellipse.
+   */
   static bool ellipse(QPointF aCenter, QPointF aA, QPointF aB, Rational* rC) {
     Rational cx = to_rational(aCenter, 0), cy = to_rational(aCenter, 1);
     Rational dx = to_rational(aA, 0) - cx, dy = to_rational(aA, 1) - cy;
@@ -284,7 +294,9 @@ private:
     return true;
   }
 
-  // The coefficients of the line through two points.
+  /*! obtains the coefficients of the line through two points.
+   * \return false if the points coincide.
+   */
   static bool line(QPointF aP, QPointF aQ, Rational* rC) {
     Rational px = to_rational(aP, 0), py = to_rational(aP, 1);
     Rational qx = to_rational(aQ, 0), qy = to_rational(aQ, 1);
@@ -294,77 +306,82 @@ private:
     return true;
   }
 
+  /*! determines whether two conics are the same, that is, whether their coefficients are proportional.
+   */
   static bool same_conic(const Conic& aC1, const Conic& aC2) {
-    // Proportional coefficients.
     int k = 0;
     while (CGAL::is_zero(aC1.m_c[k])) ++k;
     if (CGAL::is_zero(aC2.m_c[k])) return false;
     Rational f = aC2.m_c[k] / aC1.m_c[k];
-    for (int i = 0; i < 6; ++i) if (aC2.m_c[i] != f * aC1.m_c[i]) return false;
+    for (int i = 0; i < 6; ++i) {
+      if (aC2.m_c[i] != f * aC1.m_c[i]) return false;
+    }
     return true;
   }
 
+  /*! determines whether two points are equal.
+   */
   static bool equal(const Conic_point& aP, const Conic_point& aQ)
   { return Conic_alg_kernel().compare_xy_2_object()(aP, aQ) == CGAL::EQUAL; }
 
-  static QPointF to_qt(const Conic_point& aP)
-  { return QPointF(CGAL::to_double(aP.x()), CGAL::to_double(aP.y())); }
+  /*! converts a point to a scene point.
+   */
+  static QPointF to_qt(const Conic_point& aP) { return QPointF(CGAL::to_double(aP.x()), CGAL::to_double(aP.y())); }
 
-  // The (exact) intersection points of two conics.
-  static std::vector<Conic_point> intersections(const Conic& aC1,
-                                                const Conic& aC2) {
+  /*! obtains the (exact) intersection points of two conics.
+   */
+  static std::vector<Conic_point> intersections(const Conic& aC1, const Conic& aC2) {
     Conic_nt_traits nt;
     Integer a[6], b[6];
     nt.convert_coefficients(aC1.m_c, aC1.m_c + 6, a);
     nt.convert_coefficients(aC2.m_c, aC2.m_c + 6, b);
-    auto degree = [](const Integer* c)
-    { return (CGAL::is_zero(c[0]) && CGAL::is_zero(c[1]) &&
-              CGAL::is_zero(c[2])) ? 1 : 2; };
+    auto degree = [](const Integer* c) {
+      return (CGAL::is_zero(c[0]) && CGAL::is_zero(c[1]) && CGAL::is_zero(c[2])) ? 1 : 2;
+    };
     int deg_a = degree(a), deg_b = degree(b);
     Algebraic xs[4], ys[4];
-    int n_xs = compute_resultant_roots(nt, a[0], a[1], a[2], a[3], a[4], a[5],
-                                       deg_a, b[0], b[1], b[2], b[3], b[4],
-                                       b[5], deg_b, xs);
-    int n_ys = compute_resultant_roots(nt, a[1], a[0], a[2], a[4], a[3], a[5],
-                                       deg_a, b[1], b[0], b[2], b[4], b[3],
-                                       b[5], deg_b, ys);
-    auto on = [&nt](const Integer* c, const Algebraic& x, const Algebraic& y)
-    {
-      return CGAL::is_zero(nt.convert(c[0])*x*x + nt.convert(c[1])*y*y +
-                           nt.convert(c[2])*x*y + nt.convert(c[3])*x +
+    int n_xs =
+      compute_resultant_roots(nt, a[0], a[1], a[2], a[3], a[4], a[5], deg_a, b[0], b[1], b[2], b[3], b[4], b[5], deg_b,
+                              xs);
+    int n_ys =
+      compute_resultant_roots(nt, a[1], a[0], a[2], a[4], a[3], a[5], deg_a, b[1], b[0], b[2], b[4], b[3], b[5], deg_b,
+                              ys);
+    auto on = [&nt](const Integer* c, const Algebraic& x, const Algebraic& y) {
+      return CGAL::is_zero(nt.convert(c[0])*x*x + nt.convert(c[1])*y*y + nt.convert(c[2])*x*y + nt.convert(c[3])*x +
                            nt.convert(c[4])*y + nt.convert(c[5]));
     };
     std::vector<Conic_point> res;
-    for (int i = 0; i < n_xs; ++i)
-      for (int j = 0; j < n_ys; ++j)
-        if (on(a, xs[i], ys[j]) && on(b, xs[i], ys[j]))
-          res.push_back(Conic_point(xs[i], ys[j]));
+    for (int i = 0; i < n_xs; ++i) {
+      for (int j = 0; j < n_ys; ++j) {
+        if (on(a, xs[i], ys[j]) && on(b, xs[i], ys[j])) res.push_back(Conic_point(xs[i], ys[j]));
+      }
+    }
     return res;
   }
 
-  void message(const QString& aText) {
-    QMessageBox::warning(qobject_cast<QWidget*>(parent()), "Conic Arcs",
-                         aText);
-  }
+  /*! shows a warning.
+   */
+  void message(const QString& aText) { QMessageBox::warning(qobject_cast<QWidget*>(parent()), "Conic Arcs", aText); }
 
-  // Emit the polygon bounded by the given full ellipse.
+  /*! emits the polygon bounded by the full ellipse of the given coefficients.
+   */
   void generate_full(const Rational* aC) {
     std::string error;
     auto conic = make_conic(aC, error);
     if (! conic || (conic->m_shape.kind() != Conic_shape::ELLIPSE)) {
-      message(conic ? QString("A full curve must be an ellipse") :
-              QString(error.c_str()));
+      message(conic ? QString("A full curve must be an ellipse") : QString(error.c_str()));
       return;
     }
     Conic_traits traits;
-    Conic_curve cv = traits.construct_curve_2_object()
-      (aC[0], aC[1], aC[2], aC[3], aC[4], aC[5]);
+    Conic_curve cv = traits.construct_curve_2_object()(aC[0], aC[1], aC[2], aC[3], aC[4], aC[5]);
     std::vector<Conic_X_monotone_curve> xcvs;
     if (! append_x_monotone(traits, cv, xcvs)) return;
-    emit(generate(CGAL::make_object(Conic_polygon(xcvs.begin(),
-                                                  xcvs.end()))));
+    emit(generate(CGAL::make_object(Conic_polygon(xcvs.begin(), xcvs.end()))));
   }
 
+  /*! subdivides a conic arc into x-monotone arcs, and appends them to a given vector.
+   * \return false if the arc is invalid.
+   */
   bool append_x_monotone(const Conic_traits& aTraits, const Conic_curve& aCv,
                          std::vector<Conic_X_monotone_curve>& rXcvs) {
     if (! aCv.is_valid()) {
@@ -373,13 +390,14 @@ private:
     }
     std::vector<std::variant<Conic_point, Conic_X_monotone_curve>> objs;
     aTraits.make_x_monotone_2_object()(aCv, std::back_inserter(objs));
-    for (const auto& obj : objs)
-      if (auto* xcv = std::get_if<Conic_X_monotone_curve>(&obj))
-        rXcvs.push_back(*xcv);
+    for (const auto& obj : objs) {
+      if (auto* xcv = std::get_if<Conic_X_monotone_curve>(&obj)) rXcvs.push_back(*xcv);
+    }
     return true;
   }
 
-  // Add a conic to the boundary under construction.
+  /*! adds a conic to the boundary under construction.
+   */
   void add_conic(const Rational* aC) {
     std::string error;
     auto conic = make_conic(aC, error);
@@ -397,13 +415,12 @@ private:
       update_preview();
       return;
     }
-    // The new vertex is an intersection of the last two conics, other than
-    // the previous vertex.
+    // The new vertex is an intersection of the last two conics, other than the previous vertex.
     auto points = intersections(m_conics[m_conics.size() - 2], m_conics.back());
     m_candidates.clear();
-    for (const auto& p : points)
-      if (m_vertices.empty() || ! equal(p, m_vertices.back()))
-        m_candidates.push_back(p);
+    for (const auto& p : points) {
+      if (m_vertices.empty() || ! equal(p, m_vertices.back())) m_candidates.push_back(p);
+    }
     if (m_candidates.empty()) {
       message("The conic does not meet the previous conic");
       remove_last_conic();
@@ -414,18 +431,21 @@ private:
     update_preview();
   }
 
+  /*! removes the last conic of the boundary under construction.
+   */
   void remove_last_conic() {
     if (m_conics.empty()) return;
     m_conics.pop_back();
     m_ccw.pop_back();
-    if (m_vertices.size() >= m_conics.size() && ! m_vertices.empty())
-      m_vertices.pop_back();
+    if (m_vertices.size() >= m_conics.size() && ! m_vertices.empty()) m_vertices.pop_back();
     // The arc of the (now) last conic is no longer determined.
     if (! m_ccw.empty()) m_ccw.back() = -1;
     m_state = IDLE;
     update_preview();
   }
 
+  /*! sets the next vertex to a given candidate.
+   */
   void choose_vertex(std::size_t aI) {
     m_vertices.push_back(m_candidates[aI]);
     m_candidates.clear();
@@ -439,7 +459,9 @@ private:
     next_arc();
   }
 
-  // The endpoints of the arc of the i-th conic, if known.
+  /*! obtains the endpoints of the arc of the i-th conic.
+   * \return false if they are not known yet.
+   */
   bool endpoints(std::size_t aI, Conic_point& rS, Conic_point& rT) const {
     std::size_t n = m_conics.size();
     if (aI == 0) {
@@ -448,15 +470,15 @@ private:
       rT = m_vertices[0];
       return true;
     }
-    if (aI >= m_vertices.size() + ((m_closing && (aI == n - 1)) ? 1 : 0))
-      return false;
+    if (aI >= m_vertices.size() + ((m_closing && (aI == n - 1)) ? 1 : 0)) return false;
     rS = m_vertices[aI - 1];
     rT = (m_closing && (aI == n - 1)) ? m_close_vertex : m_vertices[aI];
     return true;
   }
 
-  // Check that the arc of the i-th conic exists; queue a choice between the
-  // two arcs of an ellipse.
+  /*! checks that the arc of the i-th conic exists, and queues a choice between the two arcs of an ellipse.
+   * \return false if there is no such arc.
+   */
   bool check_arc(std::size_t aI) {
     Conic_point s, t;
     endpoints(aI, s, t);
@@ -471,11 +493,15 @@ private:
     return shape.arc(to_qt(s), to_qt(t), true, arc, mid);
   }
 
+  /*! asks for the next arc choice, or completes the polygon if the boundary is closed and no choice is pending.
+   */
   void next_arc() {
     if (! m_arc_queue.empty()) m_state = PICK_ARC;
     else if (m_closing) finish();
   }
 
+  /*! closes the boundary: the last vertex is an intersection of the last and the first conics.
+   */
   void close() {
     if (m_conics.size() < 2) {
       message("A boundary needs at least two conics");
@@ -483,9 +509,9 @@ private:
     }
     auto points = intersections(m_conics.back(), m_conics.front());
     m_candidates.clear();
-    for (const auto& p : points)
-      if (! equal(p, m_vertices.back()) && ! equal(p, m_vertices.front()))
-        m_candidates.push_back(p);
+    for (const auto& p : points) {
+      if (! equal(p, m_vertices.back()) && ! equal(p, m_vertices.front())) m_candidates.push_back(p);
+    }
     if (m_candidates.empty()) {
       message("The last conic does not meet the first conic");
       return;
@@ -495,6 +521,8 @@ private:
     update_preview();
   }
 
+  /*! closes the boundary at a given candidate.
+   */
   void close_at(std::size_t aI) {
     m_close_vertex = m_candidates[aI];
     m_candidates.clear();
@@ -511,9 +539,11 @@ private:
     update_preview();
   }
 
-  // The arc of the i-th conic, or nullopt if it is not determined yet.
-  std::optional<QPolygonF> arc(std::size_t aI, QPointF* rMid = nullptr,
-                               int aCcw = -1) const {
+  /*! obtains the arc of the i-th conic (and its middle point). On an ellipse, aCcw (if not negative) overrides the
+   * chosen arc.
+   * \return the arc, or nullopt if it is not determined yet.
+   */
+  std::optional<QPolygonF> arc(std::size_t aI, QPointF* rMid = nullptr, int aCcw = -1) const {
     Conic_point s, t;
     if (! endpoints(aI, s, t)) return std::nullopt;
     const auto& shape = m_conics[aI].m_shape;
@@ -521,20 +551,22 @@ private:
     if (shape.is_bounded() && (ccw < 0)) return std::nullopt;
     QPolygonF res;
     QPointF mid;
-    if (! shape.arc(to_qt(s), to_qt(t), ccw != 0, res, mid))
-      return std::nullopt;
+    if (! shape.arc(to_qt(s), to_qt(t), ccw != 0, res, mid)) return std::nullopt;
     if (rMid) *rMid = mid;
     return res;
   }
 
+  /*! obtains the distance of a point from (the vertices of) a polyline.
+   */
   static double distance(const QPolygonF& aPolyline, QPointF aP) {
     double best = std::numeric_limits<double>::max();
-    for (const auto& q : aPolyline)
-      best = std::min(best, std::hypot(q.x() - aP.x(), q.y() - aP.y()));
+    for (const auto& q : aPolyline) best = std::min(best, std::hypot(q.x() - aP.x(), q.y() - aP.y()));
     return best;
   }
 
-  // Which of the two arcs of the ellipse waiting for a choice is nearer.
+  /*! determines which of the two arcs of the ellipse waiting for a choice is nearer to a point.
+   * \return 1 for the counterclockwise arc, and 0 for the clockwise one.
+   */
   int nearer_arc(QPointF aP) const {
     std::size_t i = m_arc_queue.front();
     auto ccw = arc(i, nullptr, 1), cw = arc(i, nullptr, 0);
@@ -542,7 +574,8 @@ private:
     return (distance(*ccw, aP) <= distance(*cw, aP)) ? 1 : 0;
   }
 
-  // Construct the arcs and emit the polygon.
+  /*! constructs the arcs and emits the polygon.
+   */
   void finish() {
     Conic_traits traits;
     auto ctr = traits.construct_curve_2_object();
@@ -562,10 +595,8 @@ private:
         }
         // The arc turns from its source, through its middle, to its target.
         QPointF ps = to_qt(s), pt = to_qt(t);
-        double cross = (mid.x() - ps.x()) * (pt.y() - ps.y()) -
-          (mid.y() - ps.y()) * (pt.x() - ps.x());
-        CGAL::Orientation orient =
-          (cross > 0) ? CGAL::COUNTERCLOCKWISE : CGAL::CLOCKWISE;
+        double cross = (mid.x() - ps.x()) * (pt.y() - ps.y()) - (mid.y() - ps.y()) * (pt.x() - ps.x());
+        CGAL::Orientation orient = (cross > 0) ? CGAL::COUNTERCLOCKWISE : CGAL::CLOCKWISE;
         const Rational* c = conic.m_c;
         cv = ctr(c[0], c[1], c[2], c[3], c[4], c[5], orient, s, t);
       }
@@ -576,18 +607,26 @@ private:
     emit(generate(CGAL::make_object(pgn)));
   }
 
-  // Index of the candidate vertex nearest the given point.
+  /*! obtains the index of the candidate vertex nearest to a point.
+   */
   std::size_t nearest_candidate(QPointF aP) const {
     std::size_t best = 0;
     double best_d = std::numeric_limits<double>::max();
     for (std::size_t i = 0; i < m_candidates.size(); ++i) {
       QPointF q = to_qt(m_candidates[i]);
       double d = std::hypot(q.x() - aP.x(), q.y() - aP.y());
-      if (d < best_d) { best_d = d; best = i; }
+      if (d < best_d) {
+        best_d = d;
+        best = i;
+      }
     }
     return best;
   }
 
+  /*! handles a mouse press. A right press closes the boundary; a left press picks a vertex or an arc, or is passed to
+   * the current tool.
+   * \return true if the event is handled.
+   */
   bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
     QPointF p = aEvent->scenePos();
     m_cursor = p;
@@ -612,12 +651,13 @@ private:
     return true;
   }
 
+  /*! handles a mouse release, which completes a circle, a line, or an ellipse.
+   * \return true if the event is handled.
+   */
   bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
     if (aEvent->button() != ::Qt::LeftButton) return false;
-    // A circle is defined by pressing at its center and releasing at its
-    // boundary.
-    if (((m_mode == CIRCLE) || (m_mode == FULL_CIRCLE)) &&
-        (m_clicks.size() == 1)) {
+    // A circle is defined by pressing at its center and releasing at its boundary.
+    if (((m_mode == CIRCLE) || (m_mode == FULL_CIRCLE)) && (m_clicks.size() == 1)) {
       QPointF center = m_clicks[0], p = aEvent->scenePos();
       m_clicks.clear();
       if (std::hypot(p.x() - center.x(), p.y() - center.y()) < 2) {
@@ -630,30 +670,24 @@ private:
       else add_conic(c);
       update_preview();
     }
-    // A line is defined by pressing at one of its points and releasing at
-    // another. A release (almost) at the first point defines no line; then a
-    // second click defines it instead.
+    // A line is defined by pressing at one of its points and releasing at another. A release (almost) at the first
+    // point defines no line; then a second click defines it instead.
     if ((m_mode == LINE) && (m_clicks.size() == 1)) {
       QPointF p0 = m_clicks[0], p = aEvent->scenePos();
-      if (std::hypot(p.x() - p0.x(), p.y() - p0.y()) < 3 * pixel())
-        return true;
+      if (std::hypot(p.x() - p0.x(), p.y() - p0.y()) < 3 * pixel()) return true;
       m_clicks.clear();
       Rational c[6];
       if (line(p0, p, c)) add_conic(c);
       update_preview();
     }
-    // An ellipse is defined by clicking at its center, pressing at the end of
-    // one semi-axis, and releasing at the width of the other semi-axis. A
-    // release (almost) on the line of the first semi-axis defines no ellipse;
-    // then a third click defines it instead.
-    if (((m_mode == ELLIPSE) || (m_mode == FULL_ELLIPSE)) &&
-        (m_clicks.size() == 2)) {
+    // An ellipse is defined by clicking at its center, pressing at the end of one semi-axis, and releasing at the
+    // width of the other semi-axis. A release (almost) on the line of the first semi-axis defines no ellipse; then a
+    // third click defines it instead.
+    if (((m_mode == ELLIPSE) || (m_mode == FULL_ELLIPSE)) && (m_clicks.size() == 2)) {
       QPointF center = m_clicks[0], a = m_clicks[1], p = aEvent->scenePos();
       QPointF d = a - center, q = p - center;
       double len = std::hypot(d.x(), d.y());
-      if ((len == 0) ||
-          (std::abs(d.x()*q.y() - d.y()*q.x()) / len < 3 * pixel()))
-        return true;
+      if ((len == 0) || (std::abs(d.x()*q.y() - d.y()*q.x()) / len < 3 * pixel())) return true;
       m_clicks.clear();
       Rational c[6];
       if (ellipse(center, a, p, c)) {
@@ -665,6 +699,8 @@ private:
     return true;
   }
 
+  /*! records a click of the current tool, and constructs the conic once it has all its clicks.
+   */
   void tool_press(QPointF aP) {
     m_clicks.push_back(aP);
     Rational c[6];
@@ -674,9 +710,10 @@ private:
       if (line(m_clicks[0], m_clicks[1], c)) add_conic(c);
       m_clicks.clear();
       return;
+
      case CIRCLE:
-     case FULL_CIRCLE:
-      return;                   // completed on release
+     case FULL_CIRCLE: return;          // completed on release
+
      case ELLIPSE:
      case FULL_ELLIPSE:
       if (m_clicks.size() < 3) return;
@@ -689,49 +726,54 @@ private:
     }
   }
 
-  // Escape, Delete, and Backspace undo one step: they discard the conic
-  // under construction (the clicks so far, or the choice of a vertex or an
-  // arc) if there is one, and otherwise remove the last conic of the
-  // boundary.
+  /*! handles a key press. Escape, Delete, and Backspace undo one step: they discard the conic under construction (the
+   * clicks so far, or the choice of a vertex or an arc) if there is one, and otherwise remove the last conic of the
+   * boundary.
+   * \return true if the event is handled.
+   */
   bool key_press(QKeyEvent* aEvent) {
-    if ((aEvent->key() == ::Qt::Key_Escape) ||
-        (aEvent->key() == ::Qt::Key_Delete) ||
-        (aEvent->key() == ::Qt::Key_Backspace)) {
-      if (! m_clicks.empty()) m_clicks.clear();
-      else if (m_closing || (m_state != IDLE)) {
-        m_closing = false;
-        m_arc_queue.clear();
-        m_candidates.clear();
-        if (m_state == PICK_VERTEX) remove_last_conic();
-        m_state = IDLE;
-      }
-      else remove_last_conic();
-      update_preview();
-      return true;
+    if ((aEvent->key() != ::Qt::Key_Escape) && (aEvent->key() != ::Qt::Key_Delete) &&
+        (aEvent->key() != ::Qt::Key_Backspace))
+      return false;
+    if (! m_clicks.empty()) m_clicks.clear();
+    else if (m_closing || (m_state != IDLE)) {
+      m_closing = false;
+      m_arc_queue.clear();
+      m_candidates.clear();
+      if (m_state == PICK_VERTEX) remove_last_conic();
+      m_state = IDLE;
     }
-    return false;
+    else remove_last_conic();
+    update_preview();
+    return true;
   }
 
+  /*! obtains the visible part of the scene.
+   */
   QRectF view_rect() const {
     if (m_scene->views().isEmpty()) return m_scene->sceneRect();
     QGraphicsView* view = m_scene->views().first();
     return view->mapToScene(view->viewport()->rect()).boundingRect();
   }
 
-  // The size of a pixel in scene units.
+  /*! obtains the size of a pixel in scene units.
+   */
   double pixel() const {
     if (m_scene->views().isEmpty()) return 1;
     QGraphicsView* view = m_scene->views().first();
     return 1 / std::max(1e-9, std::abs(view->transform().m11()));
   }
 
+  /*! adds a polyline to a path.
+   */
   static void add(QPainterPath& rPath, const QPolygonF& aPolyline) {
     if (aPolyline.isEmpty()) return;
     rPath.moveTo(aPolyline.front());
     for (int i = 1; i < aPolyline.size(); ++i) rPath.lineTo(aPolyline[i]);
   }
 
-  // The curve under construction by the current tool.
+  /*! obtains the curve under construction by the current tool.
+   */
   QPainterPath tool_preview() const {
     QPainterPath path;
     if (m_clicks.empty()) return path;
@@ -740,15 +782,15 @@ private:
     bool ok = false;
     switch (m_mode) {
      case LINE: ok = line(m_clicks[0], p, c); break;
+
      case CIRCLE:
-     case FULL_CIRCLE: ok = (p != m_clicks[0]) && (circle(m_clicks[0], p, c), true);
-      break;
+     case FULL_CIRCLE: ok = (p != m_clicks[0]) && (circle(m_clicks[0], p, c), true); break;
+
      case ELLIPSE:
      case FULL_ELLIPSE:
-      // The first semi-axis, from the center, follows the cursor until it is
-      // picked. Then the ellipse is shown instead, but while the cursor is on
-      // the line of the semi-axis (e.g., right after the second click) there
-      // is no ellipse, and the semi-axis is shown again.
+      // The first semi-axis, from the center, follows the cursor until it is picked. Then the ellipse is shown
+      // instead, but while the cursor is on the line of the semi-axis (e.g., right after the second click) there is
+      // no ellipse, and the semi-axis is shown again.
       ok = (m_clicks.size() == 2) && ellipse(m_clicks[0], m_clicks[1], p, c);
       if (! ok) {
         path.moveTo(m_clicks[0]);
@@ -760,10 +802,15 @@ private:
     if (! ok) return path;
     std::string error;
     auto conic = make_conic(c, error);
-    if (conic) for (const auto& pl : conic->m_shape.curve(view_rect())) add(path, pl);
+    if (conic) {
+      for (const auto& pl : conic->m_shape.curve(view_rect())) add(path, pl);
+    }
     return path;
   }
 
+  /*! redraws everything under construction: the conics, their arcs, the vertices, the candidate vertices, and the
+   * curve under construction.
+   */
   void update_preview() {
     QRectF rect = view_rect();
     QPainterPath curves, arcs, markers;
@@ -808,18 +855,18 @@ private:
   Mode m_mode = LINE;
   State m_state = IDLE;
   QPointF m_cursor;
-  std::vector<QPointF> m_clicks;      // of the current tool
+  std::vector<QPointF> m_clicks;            // of the current tool
   std::vector<Conic> m_conics;
-  std::vector<int> m_ccw;             // the arc of an ellipse (-1: undecided)
-  std::vector<Conic_point> m_vertices;   // m_vertices[i] on conics i, i+1
-  std::vector<Conic_point> m_candidates; // for the next vertex
-  std::vector<std::size_t> m_arc_queue;  // ellipses waiting for a choice
+  std::vector<int> m_ccw;                   // the arc of an ellipse (-1: undecided)
+  std::vector<Conic_point> m_vertices;      // m_vertices[i] on conics i, i+1
+  std::vector<Conic_point> m_candidates;    // for the next vertex
+  std::vector<std::size_t> m_arc_queue;     // ellipses waiting for a choice
   bool m_closing = false;
-  Conic_point m_close_vertex;         // on the last and the first conics
+  Conic_point m_close_vertex;               // on the last and the first conics
   QString m_last_coefficients[6] = {"1", "1", "0", "0", "0", "-400"};
 };
 
 } // namespace Qt
 } // namespace CGAL
 
-#endif // CGAL_QT_GRAPHICS_VIEW_CONIC_INPUT_H
+#endif

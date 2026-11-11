@@ -16,8 +16,8 @@
 // $Id$
 // SPDX-License-Identifier: GPL-3.0+
 //
-// Author(s) : Apurva Bhatt <response2apurva@gmail.com>
-//             Efi Fogel <efifogel@gmain.com>
+// Author(s) : Efi Fogel <efifogel@gmail.com>
+//             Apurva Bhatt <response2apurva@gmail.com>
 
 #ifndef CGAL_TYPEDEFS_H
 #define CGAL_TYPEDEFS_H
@@ -49,190 +49,105 @@
 #include <CGAL/General_polygon_set_2.h>
 #include <CGAL/Gps_traits_2.h>
 #include <CGAL/Arr_segment_traits_2.h>
-//#include <CGAL/Gps_traits_2.h>
-//#include <CGAL/Arr_segment_traits_2.h>
-//#include <CGAL/Gps_segment_traits_2.h>
-//#include <CGAL/Qt/PolygonWithHolesGraphicsItem.h>
-//#include <CGAL/Gps_circle_segment_traits_2.h>
 
-#include "QT5/Polygon_set_2.h"
-#include "QT5/BezierCurves.h"
+#include "Qt6/BezierCurves.h"
 
+// Linear polygons
+using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
+using Point_2 = Kernel::Point_2;
+using Polygon_2 = CGAL::Polygon_2<Kernel>;
+using Polygon_with_holes_2 = CGAL::Polygon_with_holes_2<Kernel>;
+using Pgn_with_holes_2_container = std::list<Polygon_with_holes_2>;
 
-//Linear Polygons
+using Linear_traits = CGAL::Gps_traits_2<CGAL::Arr_segment_traits_2<Kernel>>;
+using Linear_polygon_with_holes = Linear_traits::General_polygon_with_holes_2;
+using Linear_polygon = Linear_traits::Polygon_2;
+using Linear_polygon_set = CGAL::General_polygon_set_2<Linear_traits>;
+using Linear_curve = Linear_traits::Curve_2;
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel        Kernel;
-typedef Kernel::Point_2                                          Point_2;
-typedef CGAL::Polygon_2<Kernel>                                  Polygon_2;
-typedef CGAL::Polygon_with_holes_2<Kernel>                       Polygon_with_holes_2;
-typedef std::list<Polygon_with_holes_2>                          Pgn_with_holes_2_container;
+using Linear_region_source_container = std::vector<Linear_polygon_with_holes>;
+using Linear_boundary_source = std::vector<Linear_curve>;
+using Linear_region_source = std::vector<Linear_boundary_source>;
 
-typedef CGAL::Gps_traits_2<CGAL::Arr_segment_traits_2<Kernel> >  Linear_traits;
-typedef Linear_traits::General_polygon_with_holes_2              Linear_polygon_with_holes;
-typedef Linear_traits::Polygon_2                                 Linear_polygon;
-typedef CGAL::General_polygon_set_2<Linear_traits>               Linear_polygon_set;
-typedef Linear_traits::Curve_2                                   Linear_curve;
+// Polylines (the kernel is the same as the linear one)
+using Segment_traits_2 = CGAL::Arr_segment_traits_2<Kernel>;
+using Polyline_traits = CGAL::Gps_traits_2<CGAL::Arr_polyline_traits_2<Segment_traits_2>>;
+using Polyline_polygon = Polyline_traits::Polygon_2;
+using Polyline_polygon_set = CGAL::General_polygon_set_2<Polyline_traits>;
+using Polyline_curve = Polyline_traits::Curve_2;
+using Polyline_polygon_with_holes = Polyline_traits::General_polygon_with_holes_2;
 
-typedef std::vector<Linear_polygon_with_holes>                   Linear_region_source_container;
-typedef std::vector<Linear_curve>                                Linear_boundary_source ;
-typedef std::vector<Linear_boundary_source>                      Linear_region_source ;
+using Polyline_region_source_container = std::vector<Polyline_polygon_with_holes>;
+using Polyline_boundary_source = std::vector<Polyline_curve>;
+using Polyline_region_source = std::vector<Polyline_boundary_source>;
 
-//Polyline traits. Kernel is same as linear
-typedef CGAL::Arr_segment_traits_2<Kernel>                                 Segment_traits_2;
-typedef CGAL::Gps_traits_2<CGAL::Arr_polyline_traits_2<Segment_traits_2> > Polyline_traits;
-typedef Polyline_traits::Polygon_2                                         Polyline_polygon;
-typedef CGAL::General_polygon_set_2<Polyline_traits>                       Polyline_polygon_set;
-typedef Polyline_traits::Curve_2                                           Polyline_curve;
-typedef Polyline_traits::General_polygon_with_holes_2                      Polyline_polygon_with_holes;
-
-typedef std::vector<Polyline_polygon_with_holes>                          Polyline_region_source_container;
-typedef std::vector<Polyline_curve>                                       Polyline_boundary_source ;
-typedef std::vector<Polyline_boundary_source>                             Polyline_region_source ;
-
-// Circlular polygons
+// Circular polygons
 #ifdef CGAL_USE_GMP
-  typedef CGAL::Gmpq                     Base_nt;
+using Base_nt = CGAL::Gmpq;
 #else
-  typedef CGAL::Quotient<CGAL::MP_Float> Base_nt;
+using Base_nt = CGAL::Quotient<CGAL::MP_Float>;
 #endif
 
-typedef CGAL::Lazy_exact_nt<Base_nt> Coord_type;
+using Coord_type = CGAL::Lazy_exact_nt<Base_nt>;
 struct Gps_circular_kernel : public CGAL::Cartesian<Coord_type> {};
 
-/*
-typedef CGAL::Simple_cartesian<double>            Linear_kernel ;
-typedef CGAL::Polygon_2<Linear_kernel>            Linear_polygon;
-typedef CGAL::Polygon_with_holes_2<Linear_kernel> Linear_polygon_with_holes;
+using Circular_Linear_point = Kernel::Point_2;
+using Circular_Linear_polygon = CGAL::Polygon_2<Kernel>;
+using Circular_Linear_polygon_with_holes = CGAL::Polygon_with_holes_2<Kernel>;
 
-typedef Linear_kernel::Point_2 Linear_point ;
-*/
+using Circular_traits = CGAL::Gps_circle_segment_traits_2<Kernel>;
+using Circular_curve = Circular_traits::Curve_2;
+using Circular_X_monotone_curve = Circular_traits::X_monotone_curve_2;
+using Circular_point = Circular_traits::Point_2;
+using Circular_polygon = Circular_traits::Polygon_2;
 
-typedef Kernel::Point_2                                 Circular_Linear_point;
-typedef CGAL::Polygon_2<Kernel>                         Circular_Linear_polygon;
-typedef CGAL::Polygon_with_holes_2<Kernel>              Circular_Linear_polygon_with_holes;
+using Circular_polygon_with_holes = Circular_traits::General_polygon_with_holes_2;
+using Circular_polygon_set = CGAL::General_polygon_set_2<Circular_traits>;
+using Circular_region_source_container = std::vector<Circular_polygon_with_holes>;
 
-typedef CGAL::Gps_circle_segment_traits_2<Kernel>       Circular_traits;
-typedef Circular_traits::Curve_2                        Circular_curve;
-typedef Circular_traits::X_monotone_curve_2             Circular_X_monotone_curve;
-typedef Circular_traits::Point_2                        Circular_point;
-typedef Circular_traits::Polygon_2                      Circular_polygon;
+// Bezier polygons
+using Bezier_nt_traits = CGAL::CORE_algebraic_number_traits;
+using Bezier_rational = Bezier_nt_traits::Rational;
+using Bezier_algebraic = Bezier_nt_traits::Algebraic;
 
-typedef Circular_traits::General_polygon_with_holes_2   Circular_polygon_with_holes;
-typedef CGAL::General_polygon_set_2<Circular_traits>    Circular_polygon_set;
-typedef std::vector<Circular_polygon_with_holes>        Circular_region_source_container ;
+struct Bezier_rat_kernel : public CGAL::Cartesian<Bezier_rational> {};
+struct Bezier_alg_kernel : public CGAL::Cartesian<Bezier_algebraic> {};
 
+struct Bezier_traits :
+  public CGAL::Arr_Bezier_curve_traits_2<Bezier_rat_kernel, Bezier_alg_kernel, Bezier_nt_traits> {};
 
-// Bezier Curves typedefs
+using Bezier_rat_point = Bezier_rat_kernel::Point_2;
+using Bezier_curve = Bezier_traits::Curve_2;
+using Bezier_X_monotone_curve = Bezier_traits::X_monotone_curve_2;
+using Bezier_point = Bezier_traits::Point_2;
+using Bezier_gps_traits = CGAL::Gps_traits_2<Bezier_traits>;
+using Bezier_polygon = Bezier_gps_traits::General_polygon_2;
+using Bezier_polygon_vector = std::vector<Bezier_polygon>;
+using Bezier_polygon_with_holes = Bezier_gps_traits::General_polygon_with_holes_2;
+using Bezier_polygon_set = CGAL::General_polygon_set_2<Bezier_gps_traits>;
 
-//#ifdef CGAL_USE_CORE
+using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
 
-typedef CGAL::CORE_algebraic_number_traits             Bezier_nt_traits;
-typedef Bezier_nt_traits::Rational                     Bezier_rational;
-typedef Bezier_nt_traits::Algebraic                    Bezier_algebraic;
-
-struct Bezier_rat_kernel  : public CGAL::Cartesian<Bezier_rational>  {};
-struct Bezier_alg_kernel  : public CGAL::Cartesian<Bezier_algebraic> {};
-
-struct Bezier_traits : public CGAL::Arr_Bezier_curve_traits_2<Bezier_rat_kernel, Bezier_alg_kernel, Bezier_nt_traits> {};
-  
-typedef Bezier_rat_kernel::Point_2                      Bezier_rat_point;
-typedef Bezier_traits::Curve_2                          Bezier_curve;
-typedef Bezier_traits::X_monotone_curve_2               Bezier_X_monotone_curve;
-typedef Bezier_traits::Point_2                          Bezier_point;
-typedef CGAL::Gps_traits_2<Bezier_traits>               Bezier_gps_traits;
-typedef Bezier_gps_traits::General_polygon_2            Bezier_polygon;
-typedef std::vector<Bezier_polygon>                     Bezier_polygon_vector ;
-typedef Bezier_gps_traits::General_polygon_with_holes_2 Bezier_polygon_with_holes;
-typedef CGAL::General_polygon_set_2<Bezier_gps_traits>  Bezier_polygon_set ;
-
-typedef CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set> Bezier_GI;
-
-typedef std::vector<Bezier_curve>                Bezier_boundary_source ;
-typedef std::vector<Bezier_boundary_source>      Bezier_region_source ;
-typedef std::vector<Bezier_region_source>        Bezier_region_source_container ;
-
-//#endif
+using Bezier_boundary_source = std::vector<Bezier_curve>;
+using Bezier_region_source = std::vector<Bezier_boundary_source>;
+using Bezier_region_source_container = std::vector<Bezier_region_source>;
 
 // Conic polygons
-typedef CGAL::CORE_algebraic_number_traits              Conic_nt_traits;
-typedef Conic_nt_traits::Rational                       Conic_rational;
-typedef Conic_nt_traits::Algebraic                      Conic_algebraic;
-typedef Conic_nt_traits::Integer                        Conic_integer;
+using Conic_nt_traits = CGAL::CORE_algebraic_number_traits;
+using Conic_rational = Conic_nt_traits::Rational;
+using Conic_algebraic = Conic_nt_traits::Algebraic;
+using Conic_integer = Conic_nt_traits::Integer;
 
 struct Conic_rat_kernel : public CGAL::Cartesian<Conic_rational> {};
 struct Conic_alg_kernel : public CGAL::Cartesian<Conic_algebraic> {};
 
-typedef CGAL::Arr_conic_traits_2<Conic_rat_kernel, Conic_alg_kernel,
-                                 Conic_nt_traits>       Conic_traits;
-typedef Conic_traits::Curve_2                           Conic_curve;
-typedef Conic_traits::X_monotone_curve_2                Conic_X_monotone_curve;
-typedef Conic_traits::Point_2                           Conic_point;
-typedef CGAL::Gps_traits_2<Conic_traits>                Conic_gps_traits;
-typedef Conic_gps_traits::General_polygon_2             Conic_polygon;
-typedef Conic_gps_traits::General_polygon_with_holes_2  Conic_polygon_with_holes;
-typedef CGAL::General_polygon_set_2<Conic_gps_traits>   Conic_polygon_set;
+using Conic_traits = CGAL::Arr_conic_traits_2<Conic_rat_kernel, Conic_alg_kernel, Conic_nt_traits>;
+using Conic_curve = Conic_traits::Curve_2;
+using Conic_X_monotone_curve = Conic_traits::X_monotone_curve_2;
+using Conic_point = Conic_traits::Point_2;
+using Conic_gps_traits = CGAL::Gps_traits_2<Conic_traits>;
+using Conic_polygon = Conic_gps_traits::General_polygon_2;
+using Conic_polygon_with_holes = Conic_gps_traits::General_polygon_with_holes_2;
+using Conic_polygon_set = CGAL::General_polygon_set_2<Conic_gps_traits>;
 
-// Conics Curves typedefs for future
-/*
-
-
-//#ifdef CGAL_USE_CORE
-
-//#include <CGAL/CORE_algebraic_number_traits.h>
-
-//typedef CGAL::CORE_algebraic_number_traits              Conic_nt_traits;
-//typedef Conic_nt_traits::Rational                       Conic_rational;
-//typedef Conic_nt_traits::Algebraic                      Conic_algebraic;
-//typedef Conic_rat_kernel : public CGAL::Cartesian<Conic_rational> {};
-//typedef Conic_alg_kernel : public CGAL::Cartesian<Conic_algebraic> {};
-
-//struct Conic_traits: public CGAL::Arr_conic_traits_2<Conic_rat_kernel,Conic_alg_kernel,Conic_nt_traits>{};
-
-//typedef  Conic_traits::Curve_2                          Conic_curve;
-//typedef  Conic_traits::X_monotone_curve_2               Conic_X_monotone_curve;
-//typedef  Conic_traits::Point_2                          Conic_point;
-//typedef  Conic_traits::Rat_point_2                      Conic_rat_point;
-//typedef  Conic_traits::Rat_segment_2                    Conic_rat_segment;
-//typedef  Conic_traits::Rat_circle_2                     Conic_rat_circle;
-//typedef  Conic_traits::Rat_line_2                       Conic_rat_line;
-//typedef  CGAL::Gps_traits_2<Conic_traits>               Conic_gps_traits;
-//typedef  Conic_gps_traits::General_polygon_2		      Conic_polygon;
-//typedef  std::vector<Conic_polygon> 			          Conic_polygon_vector;
-//typedef  Conic_gps_traits::General_polygon_with_holes_2 Conic_polygon_with_holes;
-//typedef  CGAL::General_polygon_set_2<Conic_gps_traits>  Conic_polygon_set;
-
-//typedef CGAL::Qt::Bezier_set_graphics_item<Conic_polygon_set> Conic_GI;
-
-//typedef std::vector<Conic_curve>                Conic_boundary_source ;
-//typedef std::vector<Conic_boundary_source>      Conic_region_source ;
-//typedef std::vector<Conic_region_source>        Conic_region_source_container ;
-
-//#endif
-
-
-#endif // CGAL_TYPEDEFS_H
-*/
-
-//typedef struct Iterator_and_polygons
-/*
-{
-public:
-    typedef Linear_traits::Curve_const_iterator        Curve_const_iterator;
-}
-*/
-
-//Linear polygons and traits
-/*typedef CGAL::Simple_cartesian<Coord_type>                       Linear_kernel;
-typedef std::vector<Linear_kernel::Point_2>                  Linear_Container;
-typedef CGAL::Arr_segment_traits_2<Linear_kernel>            ArrSegmentTraits;
-struct Gps_linear_kernel : public CGAL::Cartesian<Coord_type> {};
-
-struct Gps_linear_kernel : public ,
-                           public ,
-                           public {};
-typedef CGAL::Gps_segment_traits_2<CGAL::Exact_predicates_exact_constructions_kernel,
-                                   Linear_Container,
-                                   ArrSegmentTraits>         Linear_traits;
-*/
-
-#endif //CGAL_TYPEDEFS_H
+#endif

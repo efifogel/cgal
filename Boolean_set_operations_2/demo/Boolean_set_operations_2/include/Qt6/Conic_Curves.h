@@ -15,13 +15,13 @@
 // $URL$
 // $Id$
 // SPDX-License-Identifier: GPL-3.0+
-// 
 //
-// Author(s) : Fernando Cacciola <fernando.cacciola@geometryfactory.com>
-//			   Ronnie Gandhi <ronniegandhi19999@gmail.com>
+// Author(s) : Efi Fogel <efifogel@gmail.com>
+//             Fernando Cacciola <fernando.cacciola@geometryfactory.com>
+//             Ronnie Gandhi <ronniegandhi19999@gmail.com>
 
-#ifndef CGAL_QT_CONIC_CURVES_H
-#define CGAL_QT_CONIC_CURVES_H
+#ifndef CGAL_QT6_CONIC_CURVES_H
+#define CGAL_QT6_CONIC_CURVES_H
 
 #include <cmath>
 #include <vector>
@@ -31,31 +31,38 @@
 #include <QRectF>
 
 #include "Typedefs.h"
-#include "QT5/PiecewiseSetGraphicsItem.h"
+#include "Qt6/PiecewiseSetGraphicsItem.h"
 
 namespace CGAL {
 namespace Qt {
 
-// The traits used to approximate and bound conic arcs for drawing.
+/*! obtains the traits used to approximate and bound conic arcs for drawing.
+ */
 inline const Conic_traits& conic_drawing_traits() {
   static const Conic_traits s_traits;
   return s_traits;
 }
 
+/*! Bounds an x-monotone conic arc.
+ */
 struct Conic_X_monotone_bbox {
-  Bbox_2 operator()(Conic_X_monotone_curve const& aXcv) const
+  /*! obtains the bounding box of an x-monotone conic arc.
+   */
+  Bbox_2 operator()(const Conic_X_monotone_curve& aXcv) const
   { return conic_drawing_traits().construct_bbox_2_object()(aXcv); }
 };
 
-// Draw an x-monotone conic arc as a polyline from its source to its target.
+/*! Draws an x-monotone conic arc as a polyline from its source to its target.
+ */
 struct Draw_conic_X_monotone_curve {
+  /*! adds the polyline that approximates an x-monotone conic arc to the path. The first curve (of index 0) starts a
+   * new subpath.
+   */
   template <typename Path>
-  void operator()(Conic_X_monotone_curve const& aXcv, Path& aPath,
-                  int aIdx) const {
-    typedef Conic_traits::Approximate_2::Approximate_point_2 Approx_point;
+  void operator()(const Conic_X_monotone_curve& aXcv, Path& aPath, int aIdx) const {
+    using Approx_point = Conic_traits::Approximate_2::Approximate_point_2;
     std::vector<Approx_point> points;
-    conic_drawing_traits().approximate_2_object()
-      (aXcv, 0.05, std::back_inserter(points), aXcv.is_directed_right());
+    conic_drawing_traits().approximate_2_object()(aXcv, 0.05, std::back_inserter(points), aXcv.is_directed_right());
     for (std::size_t i = 0; i < points.size(); ++i) {
       QPointF p(points[i].x(), points[i].y());
       if ((aIdx == 0) && (i == 0)) aPath.moveTo(p);
@@ -64,27 +71,30 @@ struct Draw_conic_X_monotone_curve {
   }
 };
 
-typedef Piecewise_set_graphics_item_bezier<Conic_polygon_set,
-                                           Draw_conic_X_monotone_curve,
-                                           Conic_X_monotone_bbox> Conic_GI;
+using Conic_GI =
+  Piecewise_set_graphics_item_bezier<Conic_polygon_set, Draw_conic_X_monotone_curve, Conic_X_monotone_bbox>;
 
-// A non-degenerate conic, r*x^2 + s*y^2 + t*xy + u*x + v*y + w = 0, in
-// double precision, with a parametrization for previewing and picking:
-// - a line:      p0 + tau*d,
-// - an ellipse:  c + a*cos(tau)*e1 + b*sin(tau)*e2,
-// - a hyperbola: c + branch*a*cosh(tau)*e1 + b*sinh(tau)*e2 (branch = +-1),
-// - a parabola:  tau*e1 + Y(tau)*e2,
-// where e2 is e1 rotated by 90 degrees.
+/*! A non-degenerate conic, r*x^2 + s*y^2 + t*xy + u*x + v*y + w = 0, in double precision, with a parametrization for
+ * previewing and picking:
+ * - a line:      p0 + tau*d,
+ * - an ellipse:  c + a*cos(tau)*e1 + b*sin(tau)*e2,
+ * - a hyperbola: c + branch*a*cosh(tau)*e1 + b*sinh(tau)*e2 (branch = +-1),
+ * - a parabola:  tau*e1 + Y(tau)*e2,
+ * where e2 is e1 rotated by 90 degrees.
+ */
 class Conic_shape {
 public:
   enum Kind { LINE, ELLIPSE, HYPERBOLA, PARABOLA };
 
+  /*! constructs default.
+   */
   Conic_shape() {}
 
+  /*! constructs from the kind of the conic and its six coefficients.
+   */
   Conic_shape(Kind aKind, const double* aC) : m_kind(aKind) {
     for (int i = 0; i < 6; ++i) m_c[i] = aC[i];
-    double r = m_c[0], s = m_c[1], t = m_c[2], u = m_c[3], v = m_c[4],
-      w = m_c[5];
+    double r = m_c[0], s = m_c[1], t = m_c[2], u = m_c[3], v = m_c[4], w = m_c[5];
     if (m_kind == LINE) {
       double n2 = u*u + v*v;
       m_p0 = QPointF(-w*u/n2, -w*v/n2);
@@ -121,24 +131,28 @@ public:
     m_b = std::sqrt(std::abs(k0 / l2));
   }
 
+  /*! obtains the kind of the conic.
+   */
   Kind kind() const { return m_kind; }
+
+  /*! determines whether the conic is bounded (an ellipse).
+   */
   bool is_bounded() const { return m_kind == ELLIPSE; }
 
+  /*! obtains the point of a given parameter on a given branch.
+   */
   QPointF point(int aBranch, double aTau) const {
     switch (m_kind) {
      case LINE: return m_p0 + aTau * m_e1;
-     case ELLIPSE:
-      return m_c0 + m_a*std::cos(aTau)*m_e1 + m_b*std::sin(aTau)*m_e2;
-     case HYPERBOLA:
-      return m_c0 + aBranch*m_a*std::cosh(aTau)*m_e1 +
-        m_b*std::sinh(aTau)*m_e2;
-     case PARABOLA:
-      return aTau*m_e1 - (m_lambda*aTau*aTau + m_g*aTau + m_c[5])/m_h*m_e2;
+     case ELLIPSE: return m_c0 + m_a*std::cos(aTau)*m_e1 + m_b*std::sin(aTau)*m_e2;
+     case HYPERBOLA: return m_c0 + aBranch*m_a*std::cosh(aTau)*m_e1 + m_b*std::sinh(aTau)*m_e2;
+     case PARABOLA: return aTau*m_e1 - (m_lambda*aTau*aTau + m_g*aTau + m_c[5])/m_h*m_e2;
     }
     return QPointF();
   }
 
-  // The parameter (and the branch) of a point on the curve.
+  /*! obtains the parameter and the branch of a point on the curve.
+   */
   void param(QPointF aP, int& rBranch, double& rTau) const {
     rBranch = 1;
     switch (m_kind) {
@@ -158,16 +172,14 @@ public:
     }
   }
 
-  // Polylines that approximate the curve within the given rectangle.
+  /*! obtains polylines that approximate the curve within a given rectangle.
+   */
   std::vector<QPolygonF> curve(QRectF aRect) const {
     std::vector<QPolygonF> res;
     double far = 0;
-    QPointF origin = (m_kind == LINE) ? m_p0 :
-      (m_kind == PARABOLA) ? QPointF(0, 0) : m_c0;
-    for (QPointF corner : {aRect.topLeft(), aRect.topRight(),
-                           aRect.bottomLeft(), aRect.bottomRight()})
-      far = std::max(far, std::hypot(corner.x() - origin.x(),
-                                     corner.y() - origin.y()));
+    QPointF origin = (m_kind == LINE) ? m_p0 : (m_kind == PARABOLA) ? QPointF(0, 0) : m_c0;
+    for (QPointF corner : {aRect.topLeft(), aRect.topRight(), aRect.bottomLeft(), aRect.bottomRight()})
+      far = std::max(far, std::hypot(corner.x() - origin.x(), corner.y() - origin.y()));
     switch (m_kind) {
      case ELLIPSE: res.push_back(arc(1, 0, 2 * M_PI, 256)); break;
      case LINE: res.push_back(arc(1, -far, far, 2)); break;
@@ -182,30 +194,33 @@ public:
     return res;
   }
 
+  /*! obtains the polyline through aN+1 points equally spaced in the parameter range [aTau0, aTau1] of a branch.
+   */
   QPolygonF arc(int aBranch, double aTau0, double aTau1, int aN) const {
     QPolygonF res;
-    for (int i = 0; i <= aN; ++i)
-      res << point(aBranch, aTau0 + (aTau1 - aTau0) * i / aN);
+    for (int i = 0; i <= aN; ++i) res << point(aBranch, aTau0 + (aTau1 - aTau0) * i / aN);
     return res;
   }
 
-  // The arc from aSource to aTarget (both on the curve). On an ellipse,
-  // aCcw selects the counterclockwise arc (in the parameter space, which is
-  // counterclockwise in the plane). Return false if there is no such bounded
-  // arc (the points are on different branches of a hyperbola).
-  bool arc(QPointF aSource, QPointF aTarget, bool aCcw, QPolygonF& rArc,
-           QPointF& rMid) const {
+  /*! obtains the arc from aSource to aTarget (both on the curve) and its middle point. On an ellipse, aCcw selects the
+   * counterclockwise arc (in the parameter space, which is counterclockwise in the plane).
+   * \return false if there is no such bounded arc (the points are on different branches of a hyperbola).
+   */
+  bool arc(QPointF aSource, QPointF aTarget, bool aCcw, QPolygonF& rArc, QPointF& rMid) const {
     int b0, b1;
     double t0, t1;
     param(aSource, b0, t0);
     param(aTarget, b1, t1);
     if (b0 != b1) return false;
     if (m_kind == ELLIPSE) {
-      if (aCcw) { while (t1 <= t0) t1 += 2 * M_PI; }
-      else { while (t1 >= t0) t1 -= 2 * M_PI; }
+      if (aCcw) {
+        while (t1 <= t0) t1 += 2 * M_PI;
+      }
+      else {
+        while (t1 >= t0) t1 -= 2 * M_PI;
+      }
     }
-    int n = (m_kind == LINE) ? 2 :
-      std::max(16, int(std::abs(t1 - t0) / (2 * M_PI) * 256));
+    int n = (m_kind == LINE) ? 2 : std::max(16, int(std::abs(t1 - t0) / (2 * M_PI) * 256));
     if (m_kind == PARABOLA || m_kind == HYPERBOLA) n = 200;
     rArc = arc(b0, t0, t1, n);
     rArc.front() = aSource;
@@ -215,13 +230,16 @@ public:
   }
 
 private:
+  /*! obtains the dot product of two vectors.
+   */
   static double dot(QPointF a, QPointF b) { return a.x()*b.x() + a.y()*b.y(); }
 
-  double value(double x, double y) const {
-    return m_c[0]*x*x + m_c[1]*y*y + m_c[2]*x*y + m_c[3]*x + m_c[4]*y + m_c[5];
-  }
+  /*! evaluates the conic polynomial at a point.
+   */
+  double value(double x, double y) const { return m_c[0]*x*x + m_c[1]*y*y + m_c[2]*x*y + m_c[3]*x + m_c[4]*y + m_c[5]; }
 
-  // The center of a central conic: [[2r, t], [t, 2s]] c = -(u, v).
+  /*! obtains the center of a central conic: [[2r, t], [t, 2s]] c = -(u, v).
+   */
   void center(double& rX, double& rY) const {
     double r = m_c[0], s = m_c[1], t = m_c[2], u = m_c[3], v = m_c[4];
     double det = 4*r*s - t*t;
@@ -229,13 +247,14 @@ private:
     rY = (-v*2*r + u*t) / det;
   }
 
+  /*! obtains a unit eigenvector of [[r, t/2], [t/2, s]] of a given eigenvalue.
+   */
   QPointF eigenvector(double aL) const {
     double r = m_c[0], s = m_c[1], t = m_c[2];
     QPointF v1(t / 2, aL - r), v2(aL - s, t / 2);
     QPointF v = (dot(v1, v1) > dot(v2, v2)) ? v1 : v2;
     double n = std::sqrt(dot(v, v));
-    if (n == 0) return (std::abs(r - aL) < std::abs(s - aL)) ? QPointF(1, 0) :
-                  QPointF(0, 1);
+    if (n == 0) return (std::abs(r - aL) < std::abs(s - aL)) ? QPointF(1, 0) : QPointF(0, 1);
     return v / n;
   }
 
@@ -248,4 +267,4 @@ private:
 } // namespace Qt
 } // namespace CGAL
 
-#endif // CGAL_QT_CONIC_CURVES_H
+#endif
