@@ -30,6 +30,8 @@
 #include <iomanip>
 #include <list>
 #include <limits>
+#include <optional>
+#include <vector>
 
 #include <boost/shared_ptr.hpp>
 
@@ -1040,24 +1042,17 @@ public:
 using Curve_set_container = std::vector<Curve_set>;
 using Curve_set_const_iterator = Curve_set_container::const_iterator;
 
+// The operations recorded on the undo stack.
+enum class State_op { Complement, Intersection, Union, Difference, Symmetric_difference, Minkowski_sum, Reset, Copy,
+                      Move, Clear, Delete_all, Draw, Start, Console };
+
 // This container is for returning different color polygons while performing an operation
 class State_current {
-  /* COMPLEMENT_OP = 0
-  // INTERSECTION_OP = 1
-  // UNION_OP = 2
-  // DIFFERENCE_OP = 3
-  // SYMMETRIC_DIFFERENCE_OP = 4
-  // MINKOWSKI_SUM_OP = 5
-  // COPY_OP = 6
-  // MOVE_OP = 7
-  // CLEAR_OP = 9
-  // DELETE_ALL_OP = 10
-  // START_OP = 11*/
 
 public:
   /*! constructs the state after a given operation, with empty sets of a given curve family.
    */
-  State_current(size_t operation_name, size_t aType);
+  State_current(State_op aOperation, size_t aType);
 
 public:
   /*! obtains the set of a given bucket.
@@ -1067,10 +1062,6 @@ public:
   /*! obtains the set of the Draw/Insert bucket.
    */
   Curve_set& active_set(size_t m_color_active) { return set(m_color_active); }
-
-  /*! obtains the set of the bucket to move.
-   */
-  Curve_set& move_set(size_t m_color_move) { return set(m_color_move); }
 
   /*! obtains the set of the blue bucket.
    */
@@ -1354,11 +1345,11 @@ public:
   Polyline_region_source_container m_aqua_polyline_sources;
   Polyline_region_source_container m_result_polyline_sources;
 
-  size_t m_operation;
+  State_op m_operation;
   size_t m_type;
 };
 
-State_current::State_current(size_t operation_name, size_t aType) : m_operation(operation_name), m_type(aType) {
+State_current::State_current(State_op aOperation, size_t aType) : m_operation(aOperation), m_type(aType) {
   //for setting Curve_set of aGroup type an int representing a set of polygon of a specific type
 
   //default setups with Linear
@@ -1859,14 +1850,12 @@ private:
 
   //to determine which type is currently active
   size_t m_color_active;
-  size_t m_color_move;
   bool empty_warn;
   bool operand_error_warn;
   size_t m_color_visible;
-  size_t m_color_cm;
   size_t m_color_complement;
-  size_t m_color_copy;
-  size_t m_color_move_ext;
+  std::optional<std::size_t> m_color_copy;     // the bucket to copy from, if any
+  std::optional<std::size_t> m_color_move_ext; // the bucket to move from, if any
   bool m_blue_int;
   bool m_red_int;
   bool m_black_int;
@@ -2595,28 +2584,18 @@ signals:
   void changed();
 
 private:
-  /*! pushes a new state, a copy of the current one, onto the undo stack before an operation is applied. (Operation 12
+  /*! pushes a new state, a copy of the current one, onto the undo stack before an operation is applied. (Starting
    * pushes empty sets.)
    */
-  void get_new_state(size_t operation_name) {
-    //operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_DIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    if (operation_name == 12) {
-      State_current m_state = State_current(operation_name, active_type());
+  void get_new_state(State_op aOperation) {
+    if (aOperation == State_op::Start) {
+      State_current m_state = State_current(aOperation, active_type());
       states_stack.push_back(m_state);
       for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
         link_GI(si->gi());
     }
     else {
-      State_current m_state_x = State_current(operation_name, active_type());
+      State_current m_state_x = State_current(aOperation, active_type());
 
       for (int i = 0; i < 8; i++) {
         m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
@@ -2744,10 +2723,6 @@ MainWindow::MainWindow() :
   m_circular_active(false), //default
   m_polyline_active(false), //default
   m_color_active(0), //default
-  m_color_move(1111), //default
-  m_color_copy(1111),//default
-  m_color_move_ext(111),//default
-  m_color_cm(1111), //default
   m_color_visible(7), //default
   m_color_complement(0), //default
   m_blue_int(true), //default
@@ -2984,23 +2959,9 @@ MainWindow::MainWindow() :
   //adding files to select out of polygon
   this->addRecentFiles(this->menuFile, this->actionClose);
 
-  /*  operation_name
-  // COMPLEMENT_OP = 0
-  // INTERSECTION_OP = 1
-  // UNION_OP = 2
-  // DIFFERENCE_OP = 3
-  // SYMMETRIC_DIFFERENCE_OP = 4
-  // MINKOWSKI_SUM_OP = 5
-  // RESET_OP = 6
-  // COPY_OP = 7
-  // MOVE_OP = 8
-  // CLEAR_OP = 9
-  // DELETEALL_OP = 10
-  // START_OP = 11
-  */
 
   //initializing and pushing first state in States_stack
-  get_new_state(12);
+  get_new_state(State_op::Start);
   actionUndo->setEnabled(false);
 
   this->setWindowState(Qt::WindowMaximized);
@@ -4865,43 +4826,21 @@ void MainWindow::on_actionMinusColor_triggered() {
 
 void MainWindow::on_actionUndo_triggered() {
   if (m_state_num > 1) {
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_DIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // DRAWPOL_OP = 11
-    START_OP = 12
-    */
 
     //unlink GI for last state
     for (auto si = states_stack.back().m_curve_sets.begin();
          si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
 
     switch (states_stack.back().m_operation) {
-     case 0:if (actionComplementH->isChecked()) actionComplementH->setChecked(false);
-      break;
-     case 1:if (actionIntersectionH->isChecked()) actionIntersectionH->setChecked(false);
-      break;
-     case 2:if (actionUnionH->isChecked()) actionUnionH->setChecked(false);
-      break;
-     case 3:if (actionDifferenceH->isChecked()) actionDifferenceH->setChecked(false);
-      break;
-     case 4:if (actionSymmetric_DifferenceH->isChecked()) actionSymmetric_DifferenceH->setChecked(false);
-      break;
-     case 5:if (actionMinkowski_SumH->isChecked()) actionMinkowski_SumH->setChecked(false);
-      break;
-     case 10:if (actionComplementH->isChecked()) actionComplementH->setChecked(false);
-      break;
-     case 11:if (actionComplementH->isChecked()) actionComplementH->setChecked(false);
-      break;
+     case State_op::Complement:
+     case State_op::Delete_all:
+     case State_op::Draw: actionComplementH->setChecked(false); break;
+     case State_op::Intersection: actionIntersectionH->setChecked(false); break;
+     case State_op::Union: actionUnionH->setChecked(false); break;
+     case State_op::Difference: actionDifferenceH->setChecked(false); break;
+     case State_op::Symmetric_difference: actionSymmetric_DifferenceH->setChecked(false); break;
+     case State_op::Minkowski_sum: actionMinkowski_SumH->setChecked(false); break;
+     default: break;
     }
 
     modelChanged();
@@ -4929,7 +4868,7 @@ void MainWindow::on_actionUndo_triggered() {
 
 void MainWindow::on_actionNew_triggered() {
 
-  if (m_state_num > 1) get_new_state(6);
+  if (m_state_num > 1) get_new_state(State_op::Reset);
 
   // Reset starts a new program, which constructs the existing buckets.
   m_program.clear();
@@ -5013,8 +4952,6 @@ void MainWindow::on_actionNew_triggered() {
   m_pan = false;
 
   m_color_active = 0;
-  m_color_move = 1111;
-  m_color_cm = 1111;
   m_color_visible = 7;
 
   m_linear_input->mOngoingPieceGI->setPen(sPens[0]);
@@ -5047,8 +4984,8 @@ void MainWindow::on_actionNew_triggered() {
 
   actionDifferenceH->setEnabled(true);
 
-  m_color_copy = 111; //default
-  m_color_move_ext = 111; //default
+  m_color_copy.reset();
+  m_color_move_ext.reset();
   m_color_complement = 0; //default
   m_blue_int = true; //default
   m_red_int = true; //default
@@ -5278,7 +5215,7 @@ void MainWindow::on_actionDeleteAll_triggered() {
     actionComplementH->setChecked(false);
     actionComplementH->setChecked(false);
 
-    get_new_state(10);
+    get_new_state(State_op::Delete_all);
     {
       QStringList program;
       for (std::size_t i = 0; i < 7; ++i) {
@@ -5288,19 +5225,6 @@ void MainWindow::on_actionDeleteAll_triggered() {
       log_statements(program);
     }
 
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_DIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
 
     states_stack.back().blue_set().clear();
     states_stack.back().blue_circular_sources().clear();
@@ -5373,7 +5297,7 @@ void MainWindow::on_actionClearH_toggled(bool aChecked) {
     actionComplementH->setChecked(false);
     actionComplementH->setChecked(false);
 
-    get_new_state(9);
+    get_new_state(State_op::Clear);
     {
       QStringList program;
       std::size_t i = 0;
@@ -5385,19 +5309,6 @@ void MainWindow::on_actionClearH_toggled(bool aChecked) {
       log_statements(program);
     }
 
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_dIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
 
     if (clearBlue->isChecked()) {
       states_stack.back().blue_set().clear();
@@ -5758,7 +5669,7 @@ bool MainWindow::read_linear(QString aFileName, Linear_polygon_set& rSet, Linear
             Linear_polygon_with_holes lCPWH(lp);
 
             if (r == 0) {
-              get_new_state(11);
+              get_new_state(State_op::Draw);
               states_stack.back().active_set(m_color_active).linear().join(lCPWH);
               states_stack.back().active_linear_sources(m_color_active).push_back(lCPWH);
             }
@@ -5884,7 +5795,7 @@ bool MainWindow::read_circular(QString aFileName, Circular_polygon_set& rSet,
               Circular_polygon_with_holes lCPWH(cp);
 
               if (r == 0) {
-                get_new_state(11);
+                get_new_state(State_op::Draw);
                 states_stack.back().active_set(m_color_active).circular().join(lCPWH);
                 states_stack.back().active_circular_sources(m_color_active).push_back(lCPWH);
               }
@@ -6010,7 +5921,7 @@ bool MainWindow::read_polyline(QString aFileName, Polyline_polygon_set& rSet,
               pp.reverse_orientation();
             }
             if (r == 0) {
-              get_new_state(11);
+              get_new_state(State_op::Draw);
               states_stack.back().active_set(m_color_active).polyline().join(PPWH);
               states_stack.back().active_polyline_sources(m_color_active).push_back(PPWH);
             }
@@ -6102,7 +6013,7 @@ bool MainWindow::read_bezier(QString aFileName) {
           if (orient == CGAL::CLOCKWISE) pgn.reverse_orientation();
 
           if (b == 0) {
-            get_new_state(11);
+            get_new_state(State_op::Draw);
             states_stack.back().active_set(m_color_active).bezier().join(Bezier_polygon_with_holes(pgn));
             Bezier_region_source br;
             br.push_back(bb_source);
@@ -6847,23 +6758,10 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
     actionMinkowski_SumH->setChecked(false);
     actionMoveH->setChecked(false);
 
-    get_new_state(7);
-    if (m_color_copy < 7)
-      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(m_color_copy))});
+    get_new_state(State_op::Copy);
+    if (m_color_copy)
+      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*m_color_copy))});
 
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_dIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
 
     states_stack.back().result_set().clear();
     states_stack.back().result_linear_sources().clear();
@@ -6871,42 +6769,12 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
     states_stack.back().result_bezier_sources().clear();
     states_stack.back().result_polyline_sources().clear();
 
-    switch (m_color_copy) {
-     case 0:
-      if (! states_stack.back().blue_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-      break;
-     case 1:
-      if (! states_stack.back().red_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-      break;
-     case 2:
-      if (! states_stack.back().black_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-      break;
-     case 3:
-      if (! states_stack.back().brown_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-      break;
-     case 4:
-      if (! states_stack.back().yellow_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-      break;
-     case 5:
-      if (! states_stack.back().magenta_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-      break;
-     case 6:
-      if (! states_stack.back().aqua_set().is_empty())
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-      break;
-     default: show_warning("Please select a Bucket!!!");
-      break;
-    }
+    if (! m_color_copy) show_warning("Please select a Bucket!!!");
+    else if (! states_stack.back().set(*m_color_copy).is_empty())
+      states_stack.back().result_set().assign(states_stack.back().set(*m_color_copy));
 
     actionCopyH->setChecked(false);
     lDone = true;
-    m_color_cm = 0; //copy
     if (! states_stack.back().result_set().is_empty())
       states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
     states_stack.back().result_set().clear();
@@ -6933,24 +6801,11 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
     actionMinkowski_SumH->setChecked(false);
     actionCopyH->setChecked(false);
 
-    get_new_state(8);
-    if (m_color_move_ext < 7)
-      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(m_color_move_ext)),
-                      QString("%1.clear()").arg(bucket_name(m_color_move_ext))});
+    get_new_state(State_op::Move);
+    if (m_color_move_ext)
+      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*m_color_move_ext)),
+                      QString("%1.clear()").arg(bucket_name(*m_color_move_ext))});
 
-    /*operation_name
-    // COMPLEMENT_OP = 0
-    // INTERSECTION_OP = 1
-    // UNION_OP = 2
-    // DIFFERENCE_OP = 3
-    // SYMMETRIC_dIFFERENCE_OP = 4
-    // MINKOWSKI_SUM_OP = 5
-    // RESET_OP = 6
-    // COPY_OP = 7
-    // MOVE_OP = 8
-    // CLEAR_OP = 9
-    // DELETEALL_OP = 10
-    // START_OP = 11*/
 
     states_stack.back().result_set().clear();
     states_stack.back().result_linear_sources().clear();
@@ -6958,58 +6813,12 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
     states_stack.back().result_bezier_sources().clear();
     states_stack.back().result_polyline_sources().clear();
 
-    switch (m_color_move_ext) {
-     case 0:
-      if (! states_stack.back().blue_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().blue_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().blue_set().clear();
-      }
-      break;
-     case 1:
-      if (! states_stack.back().red_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().red_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().red_set().clear();
-      }
-      break;
-     case 2:
-      if (! states_stack.back().black_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().black_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().black_set().clear();
-      }
-      break;
-     case 3:
-      if (! states_stack.back().brown_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().brown_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().brown_set().clear();
-      }
-      break;
-     case 4:
-      if (! states_stack.back().yellow_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().yellow_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().yellow_set().clear();
-      }
-      break;
-     case 5:
-      if (! states_stack.back().magenta_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().magenta_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().magenta_set().clear();
-      }
-      break;
-     case 6:
-      if (! states_stack.back().aqua_set().is_empty()) {
-        states_stack.back().result_set().assign(states_stack.back().aqua_set());
-        states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-        states_stack.back().aqua_set().clear();
-      }
-      break;
-     default:show_warning("Please select a Bucket!!!");
-      break;
+    if (! m_color_move_ext) show_warning("Please select a Bucket!!!");
+    else if (! states_stack.back().set(*m_color_move_ext).is_empty()) {
+      auto& source = states_stack.back().set(*m_color_move_ext);
+      states_stack.back().result_set().assign(source);
+      states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
+      source.clear();
     }
 
     actionMoveH->setChecked(false);
@@ -7020,7 +6829,6 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
     states_stack.back().result_polyline_sources().clear();
 
     lDone = true;
-    m_color_cm = 1; //copy
     this->setCursor(old);
     if (lDone) modelChanged();
   }
@@ -7110,65 +6918,18 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
       actionDifferenceH->setChecked(false);
       actionSymmetric_DifferenceH->setChecked(false);
 
-      get_new_state(5);
+      get_new_state(State_op::Minkowski_sum);
       log_statements({"# Minkowski sum (not supported in the program yet)"});
 
-      /*operation_name
-      // COMPLEMENT_OP = 0
-      // INTERSECTION_OP = 1
-      // UNION_OP = 2
-      // DIFFERENCE_OP = 3
-      // SYMMETRIC_dIFFERENCE_OP = 4
-      // MINKOWSKI_SUM_OP = 5
-      // RESET_OP = 6
-      // COPY_OP = 7
-      // MOVE_OP = 8
-      // CLEAR_OP = 9
-      // DELETEALL_OP = 10
-      // START_OP = 11*/
 
-      size_t count = 0;
-      if (showBlueMink_Sum->isChecked()) count++;
-      if (showRedMink_Sum->isChecked()) count++;
-      if (showBlackMink_Sum->isChecked()) count++;
-      if (showBrownMink_Sum->isChecked()) count++;
-      if (showYellowMink_Sum->isChecked()) count++;
-      if (showMagentaMink_Sum->isChecked()) count++;
-      if (showAquaMink_Sum->isChecked()) count++;
+      // The two checked buckets, in order.
+      const QAbstractButton* mink_boxes[] = { showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum, showBrownMink_Sum,
+                                              showYellowMink_Sum, showMagentaMink_Sum, showAquaMink_Sum };
+      std::vector<std::size_t> operands;
+      for (std::size_t i = 0; i < 7; ++i)
+        if (mink_boxes[i]->isChecked()) operands.push_back(i);
 
-      if (count == 2) {
-        size_t color1 = 111;
-        size_t color2 = 1111;
-
-        if (showBlueMink_Sum->isChecked()) color1 = 0;
-        if (showRedMink_Sum->isChecked()) {
-          if (color1 < 1) color2 = 1;
-          else color1 = 1;
-        }
-
-        if (showBlackMink_Sum->isChecked()) {
-          if (color1 < 2) color2 = 2;
-          else color1 = 2;
-        }
-
-        if (showBrownMink_Sum->isChecked()) {
-          if (color1 < 3) color2 = 3;
-          else color1 = 3;
-        }
-
-        if (showYellowMink_Sum->isChecked()) {
-          if (color1 < 4) color2 = 4;
-          else color1 = 4;
-        }
-
-        if (showMagentaMink_Sum->isChecked()) {
-          if (color1 < 5) color2 = 5;
-          else color1 = 5;
-        }
-
-        if (showAquaMink_Sum->isChecked()) {
-          color2 = 6;
-        }
+      if (operands.size() == 2) {
 
         using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
         using Point_2 = Kernel::Point_2;
@@ -7178,86 +6939,9 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
         // Compute the Minkowski sum using the decomposition approach.
         CGAL::Small_side_angle_bisector_decomposition_2<Kernel> ssab_decomp;
 
-        if (color1 == 0 && ! states_stack.back().blue_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 1 && ! states_stack.back().red_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 2 && ! states_stack.back().black_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 3 && ! states_stack.back().brown_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 4 && ! states_stack.back().yellow_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-        }
-        else if (color1 == 1 && ! states_stack.back().red_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 2 && ! states_stack.back().black_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 3 && ! states_stack.back().brown_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 4 && ! states_stack.back().yellow_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-        }
-        else if (color1 == 2 && ! states_stack.back().black_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 3 && ! states_stack.back().brown_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 4 && ! states_stack.back().yellow_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-        }
-        else if (color1 == 3 && ! states_stack.back().brown_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 4 && ! states_stack.back().yellow_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-        }
-        else if (color1 == 4 && ! states_stack.back().yellow_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-          else if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
-        }
-        else if (color1 == 5 && ! states_stack.back().magenta_set().is_empty()) {
-          p0 = getMinkInputPolygon(color1);
-          if (color2 == 6 && ! states_stack.back().aqua_set().is_empty()) {
-            p1 = getMinkInputPolygon(color2);
-          }
+        if (! states_stack.back().set(operands[0]).is_empty()) {
+          p0 = getMinkInputPolygon(operands[0]);
+          if (! states_stack.back().set(operands[1]).is_empty()) p1 = getMinkInputPolygon(operands[1]);
         }
 
         if (! m_disjoint) {
@@ -7695,16 +7379,14 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
     return;
   }
 
-  // The operation codes of the undo stack.
-  std::size_t code = 0;
+  State_op code = State_op::Complement;
   QString name;
   switch (aOp) {
-   case Bucket_op::Complement: code = 0; name = "complement"; break;
-   case Bucket_op::Intersection: code = 1; name = "intersection"; break;
-   case Bucket_op::Join: code = 2; name = "join"; break;
-   case Bucket_op::Difference: code = 3; name = "difference"; break;
-   case Bucket_op::Symmetric_difference:
-    code = 4; name = "symmetric_difference"; break;
+   case Bucket_op::Complement: code = State_op::Complement; name = "complement"; break;
+   case Bucket_op::Intersection: code = State_op::Intersection; name = "intersection"; break;
+   case Bucket_op::Join: code = State_op::Union; name = "join"; break;
+   case Bucket_op::Difference: code = State_op::Difference; name = "difference"; break;
+   case Bucket_op::Symmetric_difference: code = State_op::Symmetric_difference; name = "symmetric_difference"; break;
   }
 
   QCursor old = this->cursor();
@@ -7904,7 +7586,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
       }
       log_statements({target + " = Polygon_set_2()"}, true);
     }
-    get_new_state(13);
+    get_new_state(State_op::Console);
     Curve_set* set = polygon_set(target);
     if (! set) {
       set = &m_variables.emplace(target, Curve_set(1, QPen(), QBrush()))
@@ -7952,7 +7634,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
 
   if (method == "clear") {
     arity(0, 0);
-    get_new_state(13);
+    get_new_state(State_op::Console);
     polygon_set(target)->clear();
     log();
     return QString();
@@ -7964,7 +7646,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
       if (&other == set)
         throw std::runtime_error("use complement() to complement in place");
     }
-    get_new_state(13);
+    get_new_state(State_op::Console);
     set = polygon_set(target);
     if (args.empty()) set->complement();
     else set->complement(set_of(args[0]));
@@ -7986,7 +7668,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     // The bivariate form overwrites the target, which must not be an operand.
     if ((&set_of(args[0]) == set) || (&set_of(args[1]) == set))
       throw std::runtime_error(("the target of " + method + "(a, b) must " "differ from a and b").toStdString());
-    get_new_state(13);
+    get_new_state(State_op::Console);
     set = polygon_set(target);
     Curve_set& a = set_of(args[0]);
     Curve_set& b = set_of(args[1]);
@@ -8003,7 +7685,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
   // One argument: a polygon set or a polygon.
   if (args[0].m_kind == Py_expr::Kind::Polygon) {
     Linear_polygon_with_holes pgn = polygon(args[0]);
-    get_new_state(13);
+    get_new_state(State_op::Console);
     auto& lset = polygon_set(target)->linear();
     switch (op) {
      case Op::Join: lset.join(pgn); break;
@@ -8015,7 +7697,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     return QString();
   }
   set_of(args[0]);      // check the name
-  get_new_state(13);
+  get_new_state(State_op::Console);
   set = polygon_set(target);
   Curve_set& other = set_of(args[0]);
   switch (op) {
@@ -8298,7 +7980,7 @@ void MainWindow::processInput(CGAL::Object o) {
       if (ensure_conic_mode()) {
         if (lConicPI.orientation() == CGAL::CLOCKWISE)
           lConicPI.reverse_orientation();
-        get_new_state(11);
+        get_new_state(State_op::Draw);
         states_stack.back().active_set(m_color_active).conic().
           join(Conic_polygon_with_holes(lConicPI));
       }
@@ -8310,7 +7992,7 @@ void MainWindow::processInput(CGAL::Object o) {
           lBI.first.reverse_orientation();
 
         if (! m_bezier_input->isboundingRect()) {
-          get_new_state(11);
+          get_new_state(State_op::Draw);
           states_stack.back().active_set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
           Bezier_region_source br;
           br.push_back(lBI.second);
@@ -8334,7 +8016,7 @@ void MainWindow::processInput(CGAL::Object o) {
 
         if (! m_linear_input->isboundingRect() && ! m_linear_input->ishole()) {
           if (! m_linear_input->is_mink()) {
-            get_new_state(11);
+            get_new_state(State_op::Draw);
           }
           states_stack.back().active_set(m_color_active).linear().join(lCPWH);
           states_stack.back().active_linear_sources(m_color_active).push_back(lCPWH);
@@ -8362,7 +8044,7 @@ void MainWindow::processInput(CGAL::Object o) {
         Circular_polygon_with_holes lCPWH(lCI);
 
         if (! m_circular_input->isboundingRect()) {
-          get_new_state(11);
+          get_new_state(State_op::Draw);
           states_stack.back().active_set(m_color_active).circular().join(lCPWH);
           states_stack.back().active_circular_sources(m_color_active).push_back(lCPWH);
         }
@@ -8381,7 +8063,7 @@ void MainWindow::processInput(CGAL::Object o) {
         Polyline_polygon_with_holes lPPWH(lPI);
 
         if (! m_polyline_input->isboundingRect()) {
-          get_new_state(11);
+          get_new_state(State_op::Draw);
           states_stack.back().active_set(m_color_active).polyline().join(lPPWH);
           states_stack.back().active_polyline_sources(m_color_active).push_back(lPPWH);
         }

@@ -292,12 +292,14 @@ public:
     mOngoingPieceGI->modelChanged();
   }
 
-  /*! adds the edge under construction to the polygon, and starts the next edge.
+  /*! adds the edge under construction to the polygon (unless it is degenerate), and starts the next edge.
    */
   void CommitOngoingPiece(const Point& aP) {
     if (! ongoing_piece()) return;
-    mLinearPolygonPieces.push_back(*ongoing_piece());
-    mLinearGI->modelChanged();
+    if (ongoing_piece()->source() != ongoing_piece()->target()) {
+      mLinearPolygonPieces.push_back(*ongoing_piece());
+      mLinearGI->modelChanged();
+    }
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mP0 = mP1;
@@ -335,7 +337,7 @@ public:
     HideHandle();
   }
 
-  /*! closes the polygon with an edge from its last vertex to its first, and emits it.
+  /*! closes the polygon with an edge from its last vertex to its first (unless they coincide), and emits it.
    */
   void GenerateLinearPolygon() {
     if (mLinearPolygonPieces.size() <= 1) return;
@@ -356,14 +358,11 @@ public:
       }
     }
 
-    if (xcvs.size() == 0) return;
-    const Linear_point& first_point = xcvs.front().source();
-    const Linear_point& last_point = xcvs.back().target();
-    FT fxs = first_point.x();
-    FT fys = first_point.y();
-    FT lxs = last_point.x();
-    FT lys = last_point.y();
-    xcvs.push_back(Linear_X_monotone_curve(Point(lxs, lys), Point(fxs, fys)));
+    if (xcvs.empty()) return;
+    const Linear_point first_point = xcvs.front().source();
+    const Linear_point last_point = xcvs.back().target();
+    if (last_point != first_point) xcvs.push_back(Linear_X_monotone_curve(last_point, first_point));
+    if (xcvs.size() < 3) return;
     Linear_polygon lp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<Linear_polygon>(lp)));
   }
