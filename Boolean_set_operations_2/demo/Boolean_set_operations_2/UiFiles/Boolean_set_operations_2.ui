@@ -2998,9 +2998,6 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="icon">
     <iconset resource="Boolean_operations_2.qrc">
      <normaloff>:/cgal/icons/resources/insert_conic.png</normaloff>:/cgal/icons/resources/insert_conic.png</iconset>
@@ -3009,7 +3006,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Conic Arcs</string>
    </property>
    <property name="toolTip">
-    <string>Conic Arcs (not available yet)</string>
+    <string>Conic Arcs</string>
    </property>
   </action>
   <action name="actionInsertAlgebraic">

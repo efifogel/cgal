@@ -71,6 +71,8 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/QT5/Gps_traits_2.h
     include/QT5/connect_holes.h
     include/QT5/Polygon_set_2.h
+    include/QT5/Conic_Curves.h
+    include/QT5/Graphics_view_conic_input.h
     ${UI_HEADERS}
     ${CGAL_Qt6_RESOURCE_FILES})
 
