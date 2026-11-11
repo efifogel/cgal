@@ -145,7 +145,6 @@
 #include "Qt6/Graphics_view_linear_polygon_input.h"
 #include "Qt6/Graphics_view_polyline_input.h"
 #include "Qt6/GraphicsViewBezierPolygonInput.h"
-#include "Qt6/Graphics_view_minkowski_input.h"
 #include "Qt6/Conic_Curves.h"
 #include "Qt6/Graphics_view_conic_input.h"
 
