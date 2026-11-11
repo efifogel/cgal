@@ -1,4 +1,59 @@
-Bugs related to polyline:-
-1. Switch Error bug	     :- On switching between polyline and any other type of polygon a crash occurs.
-                            This occurs because of a bad alloc or double free that is the pointer pointing to polyline polygon has been freed twice.
-                            Exactly what line is causing this error is unknown.
+1. Treat the seven colours as data instead of code (biggest win)
+- There are 70 slots that differ only in the colour: on_show<C>_toggled, on_draw<C>_toggled, on_copy<C>_toggled, on_move<C>_toggled, and the Comp, Int, Union, Diff, Sym_Diff and Mink_Sum variants. Each is 25–35 lines; for example, on_showBlue_toggled has a hard-coded "fall back to the next visible colour" chain.
+- State_current has blue_set()…aqua_set() (37 uses) and four switch functions, active_*_sources(color).
+- Fix: keep the widgets in per-colour arrays (std::array<QCheckBox*, 7> m_show, m_draw, …) and connect them in a loop with a lambda that captures the index. Then one on_show_toggled(std::size_t aGroup, bool) replaces seven. This removes something like 2,000 lines.
+
+2. One record per curve family
+- reset_type() builds the right Rep from the magic numbers 1–5.
+- There are five read_* functions, five m_*_input members (193 uses), five on_actionInsert*_toggled slots, and four *_region_source_container types (264 uses).
+- Fix:
+  - An enum class Curve_type { Linear, Circular, Bezier, Polyline, Conic } for the magic numbers.
+  - A small table or std::variant that holds each family's input tool, reader and sources.
+  - Move the sources into Rep<…> itself, so State_current stops switching on type.
+
+3. Enums instead of magic numbers for operations and sentinels
+- get_new_state(12), (11), (10) and so on. The two comment blocks that document these numbers disagree with each other: RESET_OP is 6 in one and COPY_OP is 6 in the other.
+- m_color_move(1111) and m_color_move_ext(111) use the numbers as "none" values.
+- Fix: Bucket_op already exists; extend it, and use std::optional<std::size_t> for "no bucket".
+
+4. Split the giant functions
+- on_actionNew_triggered is 336 lines, read_bezier_curve 314, on_actionMinusColor_triggered 223, on_actionMinkowski_SumH_toggled 203, execute 184, and processInput 132.
+- These are mostly per-colour or per-type repetition, so items 1 and 2 shrink them. What's left should be split into named helpers.
+
+5. Undo stack
+- get_new_state deep-copies all 8 polygon sets on every operation.
+- It also calls modelChanged() four times, and unlinks then relinks every graphics item.
+- Fix: move link/unlink into State_current (or RAII), call modelChanged() once, and only copy the buckets the operation changes.
+
+6. Split the file
+At about 8,400 lines it's hard to navigate. The natural units are:
+
+┌──────────────────┬──────────────────────────────────────────────────────┐
+│       Unit       │                   Current location                   │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ Representations  │ Rep_base, Rep, Rep_o, *_rep, Curve_set (lines        │
+│                  │ ~238–1040)                                           │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ State            │ State_current and the undo stack                     │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ Python layer     │ Py_expr, Py_statement, Py_parser (~1600–1825); also  │
+│                  │ the natural home for the "export program" button     │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ Readers and      │ the read_* functions                                 │
+│ writers          │                                                      │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ Small Qt helpers │ Grid_scene, Grid_snapper, Floating_dock_mover,       │
+│                  │ Visible_indicator_style                              │
+├──────────────────┼──────────────────────────────────────────────────────┤
+│ Main window      │ MainWindow                                           │
+└──────────────────┴──────────────────────────────────────────────────────┘
+
+Splitting the file also makes MainWindow compile faster on its own, since the template-heavy Rep instantiations live elsewhere.
+
+7. Smaller items
+- boost::shared_ptr → std::unique_ptr (or std::shared_ptr if sharing is needed).
+- Replace the CGAL::Object in processInput with std::variant or typed signals.
+- Rep and Rep_o duplicate most of their code; they could share a CRTP base.
+- Remove the leftover // default and debugging comments.
+
+Suggested order: 3 → 1 → 2 → 4 → 5 → 6. Item 3 is mechanical and makes 1 and 2 safer. Item 1 removes the most code. Item 6 is easiest once the rest has shrunk the file. Each step can be checked the same way as before (build plus headless run), and an interactive smoke test of the colour checkboxes is worth adding after step 1.
