@@ -630,6 +630,38 @@ private:
       else add_conic(c);
       update_preview();
     }
+    // A line is defined by pressing at one of its points and releasing at
+    // another. A release (almost) at the first point defines no line; then a
+    // second click defines it instead.
+    if ((m_mode == LINE) && (m_clicks.size() == 1)) {
+      QPointF p0 = m_clicks[0], p = aEvent->scenePos();
+      if (std::hypot(p.x() - p0.x(), p.y() - p0.y()) < 3 * pixel())
+        return true;
+      m_clicks.clear();
+      Rational c[6];
+      if (line(p0, p, c)) add_conic(c);
+      update_preview();
+    }
+    // An ellipse is defined by clicking at its center, pressing at the end of
+    // one semi-axis, and releasing at the width of the other semi-axis. A
+    // release (almost) on the line of the first semi-axis defines no ellipse;
+    // then a third click defines it instead.
+    if (((m_mode == ELLIPSE) || (m_mode == FULL_ELLIPSE)) &&
+        (m_clicks.size() == 2)) {
+      QPointF center = m_clicks[0], a = m_clicks[1], p = aEvent->scenePos();
+      QPointF d = a - center, q = p - center;
+      double len = std::hypot(d.x(), d.y());
+      if ((len == 0) ||
+          (std::abs(d.x()*q.y() - d.y()*q.x()) / len < 3 * pixel()))
+        return true;
+      m_clicks.clear();
+      Rational c[6];
+      if (ellipse(center, a, p, c)) {
+        if (m_mode == FULL_ELLIPSE) generate_full(c);
+        else add_conic(c);
+      }
+      update_preview();
+    }
     return true;
   }
 
@@ -657,12 +689,13 @@ private:
     }
   }
 
+  // Escape, Delete, and Backspace undo one step: they discard the conic
+  // under construction (the clicks so far, or the choice of a vertex or an
+  // arc) if there is one, and otherwise remove the last conic of the
+  // boundary.
   bool key_press(QKeyEvent* aEvent) {
-    if (aEvent->key() == ::Qt::Key_Escape) {
-      Reset();
-      return true;
-    }
-    if ((aEvent->key() == ::Qt::Key_Delete) ||
+    if ((aEvent->key() == ::Qt::Key_Escape) ||
+        (aEvent->key() == ::Qt::Key_Delete) ||
         (aEvent->key() == ::Qt::Key_Backspace)) {
       if (! m_clicks.empty()) m_clicks.clear();
       else if (m_closing || (m_state != IDLE)) {
