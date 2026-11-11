@@ -23,8 +23,7 @@
 #ifndef CGAL_QT6_PIECEWISE_GRAPHICS_ITEM_BASE_H
 #define CGAL_QT6_PIECEWISE_GRAPHICS_ITEM_BASE_H
 
-#include <boost/optional.hpp>
-#include <boost/utility.hpp>
+#include <optional>
 
 #include <CGAL/function_objects.h>
 #include <CGAL/Bbox_2.h>
@@ -114,7 +113,7 @@ protected:
       else bbox = aBbox;
     }
 
-    boost::optional<Bbox_2> bbox;
+    std::optional<Bbox_2> bbox;
     bool unbounded = false;
   };
 
