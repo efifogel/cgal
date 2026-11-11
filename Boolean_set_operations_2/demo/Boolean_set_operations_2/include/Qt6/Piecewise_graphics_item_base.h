@@ -51,12 +51,12 @@ protected:
 public:
   /*! recomputes the bounding rectangle.
    */
-  void updateBoundingBox();
+  void update_bounding_box();
 
   /*! updates the item after its model changed.
    */
   void modelChanged() {
-    updateBoundingBox();
+    update_bounding_box();
     update();
   }
 
@@ -91,7 +91,7 @@ public:
 
   /*! sets the brush.
    */
-  void setBrush(const QBrush& aBrush) { m_brush = aBrush; }
+  void set_brush(const QBrush& aBrush) { m_brush = aBrush; }
 
   /*! obtains the pen.
    */
@@ -99,7 +99,7 @@ public:
 
   /*! sets the pen.
    */
-  void setPen(const QPen& aPen) { m_pen = aPen; }
+  void set_pen(const QPen& aPen) { m_pen = aPen; }
 
 protected:
   using ToQtConverter = Converter<Kernel>;
@@ -120,7 +120,7 @@ protected:
 
   /*! determines whether there is nothing to draw.
    */
-  virtual bool isModelEmpty() const = 0;
+  virtual bool is_model_empty() const = 0;
 
   /*! adds the model to the path.
    */
@@ -139,7 +139,7 @@ protected:
 
 void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionGraphicsItem* /* aOption */,
                                          QWidget* /* aWidget */) {
-  if (isModelEmpty()) return;
+  if (is_model_empty()) return;
   QPainterPath l_path;
   draw_model(l_path);
   aPainter->setPen(m_pen);
@@ -148,8 +148,8 @@ void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionG
 }
 
 // The bounding box only grows, so that when vertices get removed the maximal bbox gets refreshed in the GraphicsView.
-void Piecewise_graphics_item_base::updateBoundingBox() {
-  if (isModelEmpty()) {
+void Piecewise_graphics_item_base::update_bounding_box() {
+  if (is_model_empty()) {
     if (m_unbounded) {
       prepareGeometryChange();
       m_unbounded = false;

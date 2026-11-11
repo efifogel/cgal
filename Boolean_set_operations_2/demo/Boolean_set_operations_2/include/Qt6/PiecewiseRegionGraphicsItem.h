@@ -53,7 +53,7 @@ public:
 
   /*! determines whether there is no polygon with holes to draw.
    */
-  virtual bool isModelEmpty() const { return ! mRegion || mRegion->outer_boundary().size(); }
+  virtual bool is_model_empty() const { return ! mRegion || mRegion->outer_boundary().size(); }
 
 protected:
   /*! constructs from a functor that draws a curve and a functor that bounds a curve.

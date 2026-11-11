@@ -166,7 +166,7 @@ struct Bezier_helper {
   /*! samples an x-monotone Bezier curve, including its endpoints.
    */
   template <class Bezier_X_monotone_curve, class Output_iterator, class NT>
-  static void sample_X_monotone_curve(const Bezier_X_monotone_curve& aXMCurve, bool aFwd, Output_iterator aOut,
+  static void sample_x_monotone_curve(const Bezier_X_monotone_curve& aXMCurve, bool aFwd, Output_iterator aOut,
                                       NT aFlatness) {
     // For a vertical subcurve, the points corresponding to the parameter extremes might not be at the correct
     // vertical positions, so the endpoints are added explicitly.
@@ -275,7 +275,7 @@ struct Draw_bezier_X_monotone_curve
     }
 
     Linear_point_vector lSample;
-    Bezier_helper::sample_X_monotone_curve(aBXMC, true, std::back_inserter(lSample), BoundNT(1e-4));
+    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(lSample), BoundNT(1e-4));
     for (auto it = lSample.begin(); it != lSample.end(); ++it) {
       QPointF lP = Bezier_helper::cvtp2<QPointF>(*it);
       if (aIdx == 0 && it == lSample.begin()) aPath.moveTo(lP);
@@ -300,7 +300,7 @@ struct Draw_bezier_X_monotone_curve
     using Linear_point_vector = std::vector<Linear_point>;
 
     Linear_point_vector lSample;
-    Bezier_helper::sample_X_monotone_curve(aBXMC, true, std::back_inserter(lSample));
+    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(lSample));
     for (auto it = lSample.begin(); it != lSample.end(); ++it) {
       QPointF lP = Bezier_helper::cvtp2<QPointF>(*it);
       if (aIdx == 0 && it == lSample.begin()) aPath.moveTo(lP);

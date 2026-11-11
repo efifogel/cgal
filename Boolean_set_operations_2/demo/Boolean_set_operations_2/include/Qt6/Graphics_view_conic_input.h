@@ -90,7 +90,7 @@ public:
 
   /*! discards everything under construction.
    */
-  void Reset() {
+  void reset() {
     m_conics.clear();
     m_vertices.clear();
     m_ccw.clear();
@@ -603,7 +603,7 @@ private:
       if (! append_x_monotone(traits, cv, xcvs)) return;
     }
     Conic_polygon pgn(xcvs.begin(), xcvs.end());
-    Reset();
+    reset();
     emit(generate(CGAL::make_object(pgn)));
   }
 

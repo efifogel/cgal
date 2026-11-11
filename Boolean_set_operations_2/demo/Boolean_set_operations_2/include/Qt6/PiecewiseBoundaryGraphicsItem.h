@@ -52,7 +52,7 @@ public:
 
   /*! determines whether there is no boundary to draw.
    */
-  virtual bool isModelEmpty() const { return ! mBoundary || mBoundary->is_empty(); }
+  virtual bool is_model_empty() const { return ! mBoundary || mBoundary->is_empty(); }
 
 protected:
   /*! constructs from a functor that draws a curve and a functor that bounds a curve.

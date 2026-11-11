@@ -84,14 +84,14 @@ public:
     m_last_polyline(false),
     m_last(false),
     mState(Start) {
-    mOngoingPieceGI->setPen(mOngoingCurvePen);
+    mOngoingPieceGI->set_pen(mOngoingCurvePen);
     mHandleGI->setPen(mHandlePen);
 
     mHandleGI->setLine(0, 0, 1, 1);
     mHandleGI->hide();
 
     mPolylineGI = new GI(&mPolylinePolygonPieces);
-    mPolylineGI->setPen(mPolylinePolygonPen);
+    mPolylineGI->set_pen(mPolylinePolygonPen);
 
     mScene->addItem(mOngoingPieceGI);
     mScene->addItem(mHandleGI);
@@ -108,13 +108,13 @@ public:
   bool eventFilter(QObject* obj, QEvent* aEvent) {
     bool rHandled = false;
     if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      rHandled = mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      rHandled = mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      rHandled = mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::KeyPress)
-      rHandled = keyPressEvent(static_cast<QKeyEvent*>(aEvent));
+      rHandled = key_press(static_cast<QKeyEvent*>(aEvent));
     if (! rHandled) rHandled = QObject::eventFilter(obj, aEvent);
     return rHandled;
   }
@@ -129,7 +129,7 @@ public:
   /*! handles a mouse press. A left press ends the edge under construction; a right press starts closing the polygon.
    * \return true if the event is handled.
    */
-  bool mousePressEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     m_bound_rect = false;
     Point lP = cvt(aEvent->scenePos());
@@ -167,13 +167,13 @@ public:
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouseMoveEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     switch (mState) {
      case PieceOngoing:
       mP1 = lP;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -183,8 +183,8 @@ public:
         mP1 = ps;
         m_last_polyline = true;
       }
-      UpdateHandle(lP);
-      UpdateOngoingPiece();
+      update_handle(lP);
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -202,7 +202,7 @@ public:
    * polygon.
    * \return true if the event is handled.
    */
-  bool mouseReleaseEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     if (aEvent->button() == ::Qt::LeftButton) {
@@ -213,8 +213,8 @@ public:
         break;
 
        case HandleOngoing:
-        HideHandle();
-        CommitOngoingPiece(lP);
+        hide_handle();
+        commit_ongoing_piece(lP);
         mState = PieceEnded;
         rHandled = true;
         break;
@@ -226,12 +226,12 @@ public:
       switch (mState) {
        case HandleOngoing:
         if (m_last_polyline) {
-          HideHandle();
-          CommitOngoingPiece(lP);
+          hide_handle();
+          commit_ongoing_piece(lP);
         }
         m_bound_rect = false;
-        CommitCurrPolylinePolygon();
-        ReStart();
+        commit_curr_polyline_polygon();
+        restart();
         rHandled = true;
         break;
 
@@ -244,15 +244,15 @@ public:
   /*! handles a key press. Delete and Backspace remove the last edge; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool keyPressEvent(QKeyEvent* aEvent) {
+  bool key_press(QKeyEvent* aEvent) {
     bool rHandled = false;
     if ((aEvent->key() == ::Qt::Key_Delete) || (aEvent->key() == ::Qt::Key_Backspace)) {
-      RemoveLastPiece();
+      remove_last_piece();
       mState = (mPolylinePolygonPieces.size() > 0) ? PieceEnded : Start;
       rHandled = true;
     }
     else if (aEvent->key() == ::Qt::Key_Escape) {
-      Reset();
+      reset();
       mState = Start;
       rHandled = true;
     }
@@ -266,28 +266,28 @@ public:
 
   /*! starts a new polygon.
    */
-  void ReStart() {
+  void restart() {
     mH = std::optional<Point>();
     mState = Start;
   }
 
   /*! discards the polygon under construction.
    */
-  void Reset() {
+  void reset() {
     mPolylinePolygonPieces.clear();
     mOngoingPieceCtr.clear();
     mPolylineGI->modelChanged();
     mOngoingPieceGI->modelChanged();
-    ReStart();
+    restart();
   }
 
   /*! hides the handle.
    */
-  void HideHandle() { mHandleGI->hide(); }
+  void hide_handle() { mHandleGI->hide(); }
 
   /*! creates the edge (a one-segment polyline) from the last vertex to the current point.
    */
-  Polyline_curve CreatePiece() {
+  Polyline_curve create_piece() {
     Gps_traits poly_tr;
     auto construct_poly = poly_tr.construct_curve_2_object();
     return Polyline_curve(construct_poly(mP0, mP1));
@@ -295,7 +295,7 @@ public:
 
   /*! removes the last edge.
    */
-  void RemoveLastPiece() {
+  void remove_last_piece() {
     mPolylinePolygonPieces.pop_back();
     mOngoingPieceCtr.clear();
     mPolylineGI->modelChanged();
@@ -304,16 +304,16 @@ public:
       auto xx = mPolylinePolygonPieces.back().number_of_subcurves();
       Point pt(mPolylinePolygonPieces.back()[xx - 1].target().x(), mPolylinePolygonPieces.back()[xx - 1].target().y());
       mP0 = pt;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
     }
     mH = std::optional<Point>();
   }
 
   /*! updates the edge under construction.
    */
-  void UpdateOngoingPiece() {
+  void update_ongoing_piece() {
     if (mOngoingPieceCtr.size() > 0) mOngoingPieceCtr.clear();
-    mOngoingPieceCtr.push_back(CreatePiece());
+    mOngoingPieceCtr.push_back(create_piece());
     mOngoingPieceGI->modelChanged();
   }
 
@@ -326,7 +326,7 @@ public:
 
   /*! adds the edge under construction to the polygon (unless it is degenerate), and starts the next edge.
    */
-  void CommitOngoingPiece(const Point& aP) {
+  void commit_ongoing_piece(const Point& aP) {
     if (! ongoing_piece()) return;
     if (! is_degenerate(*ongoing_piece())) {
       mPolylinePolygonPieces.push_back(*ongoing_piece());
@@ -341,14 +341,14 @@ public:
 
   /*! updates the handle; it is shown only when it is at least 2 units long.
    */
-  void UpdateHandle(const Point& aP) {
+  void update_handle(const Point& aP) {
     if (squared_distance(mP1, aP) >= 4) {
       mH = aP;
       mHandleGI->setLine(to_double(mP1.x()), to_double(mP1.y()), to_double(mH->x()), to_double(mH->y()));
       mHandleGI->show();
     }
     else {
-      HideHandle();
+      hide_handle();
       mH = std::optional<Point>();
     }
   }
@@ -363,19 +363,19 @@ public:
 
   /*! completes the polygon under construction.
    */
-  void CommitCurrPolylinePolygon() {
-    GeneratePolylinePolygon();
+  void commit_curr_polyline_polygon() {
+    generate_polyline_polygon();
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mPolylinePolygonPieces.clear();
     mPolylineGI->modelChanged();
     mH = std::optional<Point>();
-    HideHandle();
+    hide_handle();
   }
 
   /*! closes the polygon with an edge from its last vertex to its first (unless they coincide), and emits it.
    */
-  void GeneratePolylinePolygon() {
+  void generate_polyline_polygon() {
     bool closed = m_last_polyline;
     m_last = false;
     m_last_polyline = false;
@@ -417,19 +417,19 @@ public:
 
   /*! completes the polygon under construction, used for the complement.
    */
-  void CommitComplementCurrPolylinePolygon() {
-    GenerateComplementPolylinePolygon();
+  void commit_complement_curr_polyline_polygon() {
+    generate_complement_polyline_polygon();
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mPolylinePolygonPieces.clear();
     mPolylineGI->modelChanged();
     mH = std::optional<Point>();
-    HideHandle();
+    hide_handle();
   }
 
   /*! closes the polygon, used for the complement, and emits it. The x-coordinates of the closing edge are negated.
    */
-  void GenerateComplementPolylinePolygon() {
+  void generate_complement_polyline_polygon() {
     bool closed = m_last_polyline;
     m_last = false;
     m_last_polyline = false;
@@ -473,7 +473,7 @@ public:
 
   /*! constructs a huge (bounding) polygon.
    */
-  void get_BoundingRect() {
+  void get_bounding_rect() {
     m_bound_rect = true;
 
     mP0 = Point(-15500000, -10000000);
@@ -481,44 +481,44 @@ public:
 
     mState = PieceOngoing;
     mP1 = Point(-15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(-15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(-15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(-15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, -10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, -10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, -10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, -10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(-9000000, -9000000);
-    UpdateOngoingPiece();
-    CommitComplementCurrPolylinePolygon();
-    ReStart();
+    update_ongoing_piece();
+    commit_complement_curr_polyline_polygon();
+    restart();
   }
 
   /*! determines whether the last polygon is the bounding polygon.
    */
-  bool isboundingRect() { return m_bound_rect; }
+  bool is_bounding_rect() { return m_bound_rect; }
 
 public:
   QGraphicsScene* mScene;

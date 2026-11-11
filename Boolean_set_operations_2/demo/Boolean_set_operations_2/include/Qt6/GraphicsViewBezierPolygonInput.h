@@ -77,7 +77,7 @@ public:
     mHandle0GI = new QGraphicsLineItem();
     mHandle1GI = new QGraphicsLineItem();
 
-    mOngoingPieceGI->setPen(mOngoingCurvePen);
+    mOngoingPieceGI->set_pen(mOngoingCurvePen);
     mHandle0GI->setPen(mHandlePen);
     mHandle1GI->setPen(mHandlePen);
 
@@ -87,7 +87,7 @@ public:
     mHandle1GI->hide();
 
     mBezierGI = new GI(&mBezierPolygonPieces);
-    mBezierGI->setPen(mBezierPolygonPen);
+    mBezierGI->set_pen(mBezierPolygonPen);
 
     mScene->addItem(mOngoingPieceGI);
     mScene->addItem(mHandle0GI);
@@ -105,13 +105,13 @@ public:
   bool eventFilter(QObject* obj, QEvent* aEvent) {
     bool rHandled = false;
     if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      rHandled = mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      rHandled = mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      rHandled = mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::KeyPress)
-      rHandled = keyPressEvent(static_cast<QKeyEvent*>(aEvent));
+      rHandled = key_press(static_cast<QKeyEvent*>(aEvent));
     if (! rHandled) rHandled = QObject::eventFilter(obj, aEvent);
     return rHandled;
   }
@@ -129,7 +129,7 @@ public:
    * closing curve too.
    * \return true if the event is handled.
    */
-  bool mousePressEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     m_bound_rect = false;
     Point lP = cvt(aEvent->scenePos());
@@ -167,7 +167,7 @@ public:
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouseMoveEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     switch (mState) {
@@ -178,12 +178,12 @@ public:
 
      case PieceOngoing:
       mP1 = lP;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
       rHandled = true;
       break;
 
      case FirstHandleOngoing:
-      UpdateVeryFirstHandle(lP);
+      update_very_first_handle(lP);
       rHandled = true;
       break;
 
@@ -192,8 +192,8 @@ public:
         mP1 = mBezierPolygonPieces.front().control_point(0);
         m_last_bezier = true;
       }
-      UpdateHandles(lP);
-      UpdateOngoingPiece();
+      update_handles(lP);
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -208,7 +208,7 @@ public:
   /*! handles a mouse release. A right release closes the polygon.
    * \return true if the event is handled.
    */
-  bool mouseReleaseEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     if (aEvent->button() == ::Qt::LeftButton) {
@@ -219,7 +219,7 @@ public:
         break;
 
        case FirstHandleOngoing:
-        UpdateVeryFirstHandle(lP);
+        update_very_first_handle(lP);
         mPrevH0 = mH1;
         mH1 = std::optional<Point>();
         mState = PieceOngoing;
@@ -227,8 +227,8 @@ public:
         break;
 
        case HandleOngoing:
-        UpdateHandles(lP);
-        CommitOngoingPiece(lP);
+        update_handles(lP);
+        commit_ongoing_piece(lP);
         mState = PieceEnded;
         rHandled = true;
         break;
@@ -241,12 +241,12 @@ public:
        case HandleOngoing:
         m_bound_rect = false;
         if (m_last_bezier) {
-          HideHandles();
-          CommitOngoingPiece(lP);
+          hide_handles();
+          commit_ongoing_piece(lP);
         }
-        CloseCurrBundary();
-        CommitCurrBezierPolygon();
-        ReStart();
+        close_curr_boundary();
+        commit_curr_bezier_polygon();
+        restart();
         rHandled = true;
         break;
 
@@ -259,15 +259,15 @@ public:
   /*! handles a key press. Delete and Backspace remove the last curve; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool keyPressEvent(QKeyEvent* aEvent) {
+  bool key_press(QKeyEvent* aEvent) {
     bool rHandled = false;
     if (aEvent->key() == ::Qt::Key_Delete || aEvent->key() == ::Qt::Key_Backspace) {
-      RemoveLastPiece();
+      remove_last_piece();
       mState = mBezierPolygonPieces.size() > 0 ? PieceEnded : Start;
       rHandled = true;
     }
     else if (aEvent->key() == ::Qt::Key_Escape) {
-      Reset();
+      reset();
       mState = Start;
       rHandled = true;
     }
@@ -281,45 +281,45 @@ public:
 
   /*! starts a new polygon.
    */
-  void ReStart() {
+  void restart() {
     mPrevH0 = mH0 = mH1 = std::optional<Point>();
     mState = Start;
   }
 
   /*! discards the polygon under construction.
    */
-  void Reset() {
+  void reset() {
     mBezierPolygonPieces.clear();
     mOngoingPieceCtr.clear();
     mBezierGI->modelChanged();
     mOngoingPieceGI->modelChanged();
-    ReStart();
+    restart();
   }
 
   /*! removes the last curve.
    */
-  void RemoveLastPiece() {
+  void remove_last_piece() {
     mBezierPolygonPieces.pop_back();
     mOngoingPieceCtr.clear();
     mBezierGI->modelChanged();
     mOngoingPieceGI->modelChanged();
     if (mBezierPolygonPieces.size() > 0) {
       mP0 = mBezierPolygonPieces.back().control_point(mBezierPolygonPieces.back().number_of_control_points() - 1);
-      UpdateOngoingPiece();
+      update_ongoing_piece();
     }
     mPrevH0 = mH0 = mH1 = std::optional<Point>();
   }
 
   /*! hides the handles.
    */
-  void HideHandles() {
+  void hide_handles() {
     mHandle0GI->hide();
     mHandle1GI->hide();
   }
 
   /*! creates the curve from the last vertex to the current point, using the handles that are set.
    */
-  Bezier_curve CreatePiece() {
+  Bezier_curve create_piece() {
     if (mPrevH0 && mH1 && *mPrevH0 != *mH1 && *mPrevH0 != mP0 && *mH1 != mP1) {
       Point lControlPoints[4] = {mP0, *mPrevH0, *mH1, mP1};
       return Bezier_curve(lControlPoints, lControlPoints + 4);
@@ -338,9 +338,9 @@ public:
 
   /*! updates the curve under construction.
    */
-  void UpdateOngoingPiece() {
+  void update_ongoing_piece() {
     if (mOngoingPieceCtr.size() > 0) mOngoingPieceCtr.clear();
-    mOngoingPieceCtr.push_back(CreatePiece());
+    mOngoingPieceCtr.push_back(create_piece());
     mOngoingPieceGI->modelChanged();
   }
 
@@ -352,7 +352,7 @@ public:
 
   /*! adds the curve under construction to the polygon (unless it is degenerate), and starts the next curve.
    */
-  void CommitOngoingPiece(const Point& aP) {
+  void commit_ongoing_piece(const Point& aP) {
     if (! ongoing_piece()) return;
     if (! is_degenerate(*ongoing_piece())) {
       mBezierPolygonPieces.push_back(*ongoing_piece());
@@ -368,7 +368,7 @@ public:
 
   /*! updates the handle of the first vertex; it is shown only when it is at least 3 units long.
    */
-  void UpdateVeryFirstHandle(const Point& aP) {
+  void update_very_first_handle(const Point& aP) {
     if (squared_distance(mP0, aP) >= 9) {
       mH1 = aP;
       mHandle1GI->setLine(to_double(mP0.x()), to_double(mP0.y()), to_double(mH1->x()), to_double(mH1->y()));
@@ -377,7 +377,7 @@ public:
       mHandle0GI->hide();
     }
     else {
-      HideHandles();
+      hide_handles();
       mH0 = mH1 = std::optional<Point>();
     }
   }
@@ -385,7 +385,7 @@ public:
   /*! updates the two (symmetric) handles of the current vertex; they are shown only when they are at least 3 units
    * long.
    */
-  void UpdateHandles(const Point& aP) {
+  void update_handles(const Point& aP) {
     if (squared_distance(mP1, aP) >= 9) {
       mH0 = aP;
       mH1 = mP1 - (aP - mP1);
@@ -395,14 +395,14 @@ public:
       mHandle1GI->show();
     }
     else {
-      HideHandles();
+      hide_handles();
       mH0 = mH1 = std::optional<Point>();
     }
   }
 
   /*! closes the boundary with a curve that ends at the first vertex (unless the last vertex is the first).
    */
-  void CloseCurrBundary() {
+  void close_curr_boundary() {
     if ((mBezierPolygonPieces.size() == 0) || (ongoing_piece() == NULL) || m_last_bezier) return;
     std::vector<Point> lControlPoints(ongoing_piece()->control_points_begin(), ongoing_piece()->control_points_end());
     lControlPoints.back() = mBezierPolygonPieces.front().control_point(0);
@@ -413,8 +413,8 @@ public:
 
   /*! completes the polygon under construction.
    */
-  void CommitCurrBezierPolygon() {
-    GenerateBezierPolygon();
+  void commit_curr_bezier_polygon() {
+    generate_bezier_polygon();
 
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
@@ -424,13 +424,13 @@ public:
 
     mPrevH0 = mH0 = mH1 = std::optional<Point>();
 
-    HideHandles();
+    hide_handles();
   }
 
   /*! emits the polygon, together with its curves. A polygon bounded by fewer than three segments, or by a single curve,
    * is dropped.
    */
-  void GenerateBezierPolygon() {
+  void generate_bezier_polygon() {
     m_last = false;
     m_last_bezier = false;
     auto n = mBezierPolygonPieces.size();
@@ -460,7 +460,7 @@ public:
 
   /*! constructs a huge (bounding) polygon.
    */
-  void get_BoundingRect() {
+  void get_bounding_rect() {
     m_bound_rect = true;
 
     mP0 = Point(-15500000, -10000000);
@@ -468,46 +468,46 @@ public:
 
     mState = PieceOngoing;
     mP1 = Point(-15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(-15500000, 10000000);
     mState = HandleOngoing;
-    UpdateHandles(Point(-15500000, 10000000));
-    CommitOngoingPiece(Point(-15500000, 10000000));
+    update_handles(Point(-15500000, 10000000));
+    commit_ongoing_piece(Point(-15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, 10000000);
     mState = HandleOngoing;
-    UpdateHandles(Point(15500000, 10000000));
-    CommitOngoingPiece(Point(15500000, 10000000));
+    update_handles(Point(15500000, 10000000));
+    commit_ongoing_piece(Point(15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, -10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, -10000000);
     mState = HandleOngoing;
-    UpdateHandles(Point(15500000, -10000000));
-    CommitOngoingPiece(Point(15500000, -10000000));
+    update_handles(Point(15500000, -10000000));
+    commit_ongoing_piece(Point(15500000, -10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(-9000000, -9000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
-    CloseCurrBundary();
-    CommitCurrBezierPolygon();
-    ReStart();
+    close_curr_boundary();
+    commit_curr_bezier_polygon();
+    restart();
   }
 
   /*! determines whether the last polygon is the bounding polygon.
    */
-  bool isboundingRect() { return m_bound_rect; }
+  bool is_bounding_rect() { return m_bound_rect; }
 
 public:
   QGraphicsScene* mScene;
