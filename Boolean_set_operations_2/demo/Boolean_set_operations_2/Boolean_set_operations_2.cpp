@@ -149,6 +149,8 @@
 #include "QT5/Graphics_view_polyline_input.h"
 #include "QT5/GraphicsViewBezierPolygonInput.h"
 #include "QT5/Graphics_view_minkowski_input.h"
+#include "QT5/Conic_Curves.h"
+#include "QT5/Graphics_view_conic_input.h"
 #include "QT5/General_polygon_2.h"
 #include "QT5/General_polygon_set_2.h"
 #include "QT5/General_polygon_set_on_surface_2.h"
@@ -646,6 +648,15 @@ public:
   virtual int type() const { return 3; }
 };
 
+//A class for connecting conic polygon GUI and this file
+class Conic_rep : public Rep_o<CGAL::Qt::Conic_GI, Conic_polygon_set> {
+  typedef Rep_o<CGAL::Qt::Conic_GI, Conic_polygon_set> Base;
+public:
+  Conic_rep() : Base() {}
+
+  virtual int type() const { return 5; }
+};
+
 // a container which deletes an object when last shared_ptr gets deleted or re-initiated
 class Curve_set {
   typedef boost::shared_ptr <Rep_base> Rep_ptr;
@@ -660,6 +671,7 @@ public:
     else if (aType == 2) m_rep = Rep_ptr(new Circular_rep());
     else if (aType == 3) m_rep = Rep_ptr(new Bezier_rep());
     else if (aType == 4) m_rep = Rep_ptr(new Polyline_rep());
+    else if (aType == 5) m_rep = Rep_ptr(new Conic_rep());
 
     //setting pen and brush
     m_rep->set_pen(m_pen);
@@ -690,6 +702,8 @@ public:
       get_bezier_rep()->assign(*aOther.get_bezier_rep());
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->assign(*aOther.get_polyline_rep());
+    else if (is_conic() && aOther.is_conic())
+      get_conic_rep()->assign(*aOther.get_conic_rep());
   }
 
   void intersect(Curve_set const &aOther) {
@@ -701,6 +715,8 @@ public:
       get_bezier_rep()->intersect(*aOther.get_bezier_rep());
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->intersect(*aOther.get_polyline_rep());
+    else if (is_conic() && aOther.is_conic())
+      get_conic_rep()->intersect(*aOther.get_conic_rep());
   }
 
   void join(Curve_set const &aOther) {
@@ -712,6 +728,8 @@ public:
       get_bezier_rep()->join(*aOther.get_bezier_rep());
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->join(*aOther.get_polyline_rep());
+    else if (is_conic() && aOther.is_conic())
+      get_conic_rep()->join(*aOther.get_conic_rep());
   }
 
   void difference(Curve_set const &aOther) {
@@ -723,6 +741,8 @@ public:
       get_bezier_rep()->difference(*aOther.get_bezier_rep());
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->difference(*aOther.get_polyline_rep());
+    else if (is_conic() && aOther.is_conic())
+      get_conic_rep()->difference(*aOther.get_conic_rep());
   }
 
   void symmetric_difference(Curve_set const &aOther) {
@@ -734,6 +754,8 @@ public:
       get_bezier_rep()->symmetric_difference(*aOther.get_bezier_rep());
     else if (is_polyline() && aOther.is_polyline())
       get_polyline_rep()->symmetric_difference(*aOther.get_polyline_rep());
+    else if (is_conic() && aOther.is_conic())
+      get_conic_rep()->symmetric_difference(*aOther.get_conic_rep());
   }
 
   // Bivariate operations: *this = aFirst op aSecond (all of the same type).
@@ -786,6 +808,18 @@ public:
   bool is_bezier() const { return m_rep->type() == 3; }
 
   bool is_polyline() const { return m_rep->type() == 4; }
+
+  bool is_conic() const { return m_rep->type() == 5; }
+
+  const Conic_rep *get_conic_rep() const
+  { return dynamic_cast<Conic_rep const *>(boost::get_pointer(m_rep)); }
+
+  Conic_rep *get_conic_rep()
+  { return dynamic_cast<Conic_rep *>(boost::get_pointer(m_rep)); }
+
+  const Conic_polygon_set &conic() const { return get_conic_rep()->set(); }
+
+  Conic_polygon_set &conic() { return get_conic_rep()->set(); }
 
   //to get rep for linear polygons
   const Linear_rep *get_linear_rep() const { return dynamic_cast<Linear_rep const *>(boost::get_pointer(m_rep)); }
@@ -1208,10 +1242,15 @@ private:
   double m_grid_spacing = 10;
 };
 
-// Snaps mouse positions in a Grid_scene to the nearest grid point. It is
-// installed on the application, so that it sees the scene's mouse events
-// before the scene's own event filters (the polygon input tools, which read
-// scenePos()).
+// Adjusts mouse positions in a Grid_scene. With snapping enabled, a position
+// is moved to the nearest grid point. Otherwise, it is rounded to a multiple
+// of the largest power of 2 that does not exceed half a pixel in scene
+// coordinates. A double carries 53 bits, while such a multiple has a small
+// exact (dyadic) value, so the exact curves constructed from clicked points
+// have much smaller coefficients, which makes the exact computations (e.g.,
+// the Boolean operations on conics) much faster. The filter is installed on
+// the application, so that it sees the scene's mouse events before the
+// scene's own event filters (the polygon input tools, which read scenePos()).
 class Grid_snapper : public QObject {
 public:
   Grid_snapper(Grid_scene* aScene, QObject* aParent) :
@@ -1222,14 +1261,15 @@ public:
 
 protected:
   bool eventFilter(QObject* obj, QEvent* event) override {
-    if (! m_enabled || (obj != m_scene)) return false;
+    if (obj != m_scene) return false;
     switch (event->type()) {
      case QEvent::GraphicsSceneMousePress:
      case QEvent::GraphicsSceneMouseMove:
      case QEvent::GraphicsSceneMouseRelease:
      case QEvent::GraphicsSceneMouseDoubleClick: {
        auto* me = static_cast<QGraphicsSceneMouseEvent*>(event);
-       me->setScenePos(m_scene->snap(me->scenePos()));
+       me->setScenePos(m_enabled ? m_scene->snap(me->scenePos()) :
+                       round_to_pixel(me->scenePos(), me->widget()));
        break;
      }
      default: break;
@@ -1238,6 +1278,20 @@ protected:
   }
 
 private:
+  // Round aP to a multiple of the largest power of 2 that does not exceed
+  // half a pixel of the view whose viewport is aViewport. Dividing and
+  // multiplying by a power of 2 is exact.
+  static QPointF round_to_pixel(const QPointF& aP, QWidget* aViewport) {
+    auto* view = aViewport ?
+      qobject_cast<QGraphicsView*>(aViewport->parentWidget()) : nullptr;
+    if (! view) return aP;
+    double scale = std::abs(view->transform().m11());
+    if (! (scale > 0) || ! std::isfinite(scale)) return aP;
+    double step = std::ldexp(1.0, int(std::floor(std::log2(0.5 / scale))));
+    return QPointF(std::round(aP.x() / step) * step,
+                   std::round(aP.y() / step) * step);
+  }
+
   Grid_scene* m_scene;
   bool m_enabled = false;
 };
@@ -1517,6 +1571,7 @@ private:
   bool m_circular_active;
   bool m_bezier_active;
   bool m_polyline_active;
+  bool m_conic_active = false;
 
   //to determine which type is currently active
   size_t m_color_active;
@@ -1593,6 +1648,7 @@ private:
   CGAL::Qt::Graphics_view_circular_polygon_input <Kernel> *m_circular_input;
   CGAL::Qt::GraphicsViewBezierPolygonInput <Bezier_traits> *m_bezier_input;
   CGAL::Qt::Graphics_view_polyline_input <Kernel> *m_polyline_input;
+  CGAL::Qt::Graphics_view_conic_input *m_conic_input;
 
 public:
   MainWindow();
@@ -1636,6 +1692,7 @@ slots:
   void on_actionInsertLinear_toggled(bool aChecked);
 
   void on_actionInsertCircular_toggled(bool aChecked);
+  void on_actionInsertConic_toggled(bool aChecked);
 
   void on_actionInsertBezier_toggled(bool aChecked);
 
@@ -1689,7 +1746,14 @@ slots:
   void log_statements(const QStringList& aStatements, bool aSticky = false);
   bool eventFilter(QObject* aObject, QEvent* aEvent) override;
   void update_unbounded_rect();
-  QIcon curve_tool_icon(bool aCircle);
+  int active_type() const;
+  QObject* current_input() const;
+  void remove_inputs();
+  void install_input(QObject* aInput);
+  bool ensure_conic_mode();
+  QAction* family_action(int aType) const;
+  void set_conic_pen(const QPen& aPen);
+  QIcon curve_tool_icon(const QString& aKind);
   bool bucket_exists(std::size_t aIndex) const;
   std::size_t bucket_index(const QString& aName) const;
   Curve_set* polygon_set(const QString& aName);
@@ -1911,125 +1975,32 @@ private:
     // COPY_OP = 7
     // MOVE_OP = 8
     if (operation_name == 12) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        State_current m_state = State_current(operation_name, 1);
-        states_stack.push_back(m_state);
-        states_stack.back();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si)
-        { link_GI(si->gi()); }
-      } else if (!m_bezier_active && !m_polyline_active) {
-        State_current m_state = State_current(operation_name, 2);
-        states_stack.push_back(m_state);
-        states_stack.back();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si)
-        { link_GI(si->gi()); }
-      } else if (!m_polyline_active) {
-        State_current m_state = State_current(operation_name, 3);
-        states_stack.push_back(m_state);
-        states_stack.back();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si)
-        { link_GI(si->gi()); }
-      }
-      else {
-        State_current m_state = State_current(operation_name, 4);
-        states_stack.push_back(m_state);
-        states_stack.back();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si)
-        { link_GI(si->gi()); }
-      }
+      State_current m_state = State_current(operation_name, active_type());
+      states_stack.push_back(m_state);
+      for (auto si = states_stack.back().m_curve_sets.begin();
+           si != states_stack.back().m_curve_sets.end(); ++si)
+      { link_GI(si->gi()); }
     }
     else {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        State_current m_state_x = State_current(operation_name, 1);
+      State_current m_state_x = State_current(operation_name, active_type());
 
-        for (int i = 0; i < 8; i++) {
-          m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
-        }
-
-        modelChanged();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
-
-        modelChanged();
-
-        states_stack.push_back(m_state_x);
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
-
-        modelChanged();
-
-      } else if (!m_bezier_active && !m_polyline_active) {
-        State_current m_state_x = State_current(operation_name, 2);
-
-        for (int i = 0; i < 8; i++) {
-          m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
-        }
-
-        modelChanged();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
-
-        modelChanged();
-
-        states_stack.push_back(m_state_x);
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
-
-        modelChanged();
-      } else if (!m_polyline_active) {
-        State_current m_state_x = State_current(operation_name, 3);
-
-        for (int i = 0; i < 8; i++) {
-          m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
-        }
-
-        modelChanged();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
-
-        modelChanged();
-
-        states_stack.push_back(m_state_x);
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
-
-        modelChanged();
-
-      } else {
-        State_current m_state_x = State_current(operation_name, 4);
-
-        for (int i = 0; i < 8; i++) {
-          m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
-        }
-
-        modelChanged();
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
-
-        modelChanged();
-
-        states_stack.push_back(m_state_x);
-
-        for (auto si = states_stack.back().m_curve_sets.begin();
-             si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
-
-        modelChanged();
+      for (int i = 0; i < 8; i++) {
+        m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
       }
+
+      modelChanged();
+
+      for (auto si = states_stack.back().m_curve_sets.begin();
+           si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
+
+      modelChanged();
+
+      states_stack.push_back(m_state_x);
+
+      for (auto si = states_stack.back().m_curve_sets.begin();
+           si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
+
+      modelChanged();
     }
 
     m_state_num = states_stack.size();
@@ -2410,6 +2381,7 @@ MainWindow::MainWindow() :
   m_linear_input = new CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>(this, &m_scene);
   m_circular_input = new CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>(this, &m_scene);
   m_polyline_input = new CGAL::Qt::Graphics_view_polyline_input<Kernel>(this, &m_scene);
+  m_conic_input = new CGAL::Qt::Graphics_view_conic_input(this, &m_scene);
 
   // The curve tool bar, underneath the curve families: the ways to construct
   // curves of the selected family.
@@ -2419,13 +2391,13 @@ MainWindow::MainWindow() :
     auto* bar = new QToolBar;
     bar->setIconSize(QSize(24, 24));
     auto* group = new QActionGroup(this);
-    auto* arcs = bar->addAction(curve_tool_icon(false),
+    auto* arcs = bar->addAction(curve_tool_icon("arcs"),
                                 "Line Segments and Circular Arcs");
     arcs->setToolTip("Line Segments and Circular Arcs: click at each vertex; "
                      "press and drag to bend a piece into an arc through the "
                      "cursor; right-click to close (drag to bend the last "
                      "piece)");
-    auto* circle = bar->addAction(curve_tool_icon(true), "Circle");
+    auto* circle = bar->addAction(curve_tool_icon("full circle"), "Circle");
     circle->setToolTip("Circle: press at the center and drag to the radius");
     for (auto* action : {arcs, circle}) {
       action->setCheckable(true);
@@ -2436,14 +2408,68 @@ MainWindow::MainWindow() :
       m_circular_input->set_mode(aChecked ? Circular_input::Circle_mode :
                                  Circular_input::Arcs);
     });
+
+    // The conic tools: conics that bound a polygon, full curves, and a conic
+    // given by its coefficients.
+    using Conic_input = CGAL::Qt::Graphics_view_conic_input;
+    auto* conic_group = new QActionGroup(this);
+    const std::vector<std::tuple<QString, QString, Conic_input::Mode, QString>>
+      conic_tools = {
+      {"line", "Line", Conic_input::LINE,
+       "Line: click at two of its points"},
+      {"circle", "Circle", Conic_input::CIRCLE,
+       "Circle: press at the center and drag to the radius"},
+      {"ellipse", "Ellipse", Conic_input::ELLIPSE,
+       "Ellipse: click at the center, at the end of an axis, and at the "
+       "width of the other axis"},
+      {"full circle", "Full Circle", Conic_input::FULL_CIRCLE,
+       "Full Circle: press at the center and drag to the radius"},
+      {"full ellipse", "Full Ellipse", Conic_input::FULL_ELLIPSE,
+       "Full Ellipse: click at the center, at the end of an axis, and at the "
+       "width of the other axis"}};
+    const QString boundary_help =
+      ". Every conic you add meets the previous one at the next vertex (click "
+      "at it when there are several); on a circle or an ellipse, click near "
+      "the arc to keep; right-click to close the boundary. Backspace removes "
+      "the last conic; Escape discards the boundary.";
+    std::vector<QAction*> conic_actions;
+    for (const auto& [icon, text, mode, tip] : conic_tools) {
+      if (mode == Conic_input::FULL_CIRCLE)
+        conic_actions.push_back(bar->addSeparator());
+      auto* action = bar->addAction(curve_tool_icon(icon), text);
+      action->setToolTip((mode < Conic_input::FULL_CIRCLE) ?
+                         tip + boundary_help : tip);
+      action->setCheckable(true);
+      conic_group->addAction(action);
+      Conic_input::Mode m = mode;
+      QObject::connect(action, &QAction::triggered, this,
+                       [this, m]() { m_conic_input->set_mode(m); });
+      conic_actions.push_back(action);
+    }
+    conic_actions[0]->setChecked(true);
+    conic_actions.push_back(bar->addSeparator());
+    auto* coefficients =
+      bar->addAction(curve_tool_icon("coefficients"), "Coefficients...");
+    coefficients->setToolTip("Coefficients: enter a conic "
+                             "r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0, "
+                             "and add it to the boundary or construct the full "
+                             "ellipse");
+    QObject::connect(coefficients, &QAction::triggered, this,
+                     [this]() { m_conic_input->enter_coefficients(this); });
+    conic_actions.push_back(coefficients);
+
     // Keep the height of the bar when it shows no buttons.
     bar->setMinimumHeight(bar->sizeHint().height());
-    auto show_tools = [arcs, circle](bool aCircular) {
-      arcs->setVisible(aCircular);
-      circle->setVisible(aCircular);
+    auto show_tools = [this, arcs, circle, conic_actions]() {
+      bool circular = actionInsertCircular->isChecked();
+      arcs->setVisible(circular);
+      circle->setVisible(circular);
+      for (auto* action : conic_actions)
+        action->setVisible(actionInsertConic->isChecked());
     };
-    show_tools(actionInsertCircular->isChecked());
+    show_tools();
     QObject::connect(actionInsertCircular, &QAction::toggled, this, show_tools);
+    QObject::connect(actionInsertConic, &QAction::toggled, this, show_tools);
     verticalLayout->insertWidget(1, bar);
   }
 
@@ -2456,6 +2482,8 @@ MainWindow::MainWindow() :
   QObject::connect(m_circular_input, SIGNAL(generate(CGAL::Object)), this,
                    SLOT(processInput(CGAL::Object)));
   QObject::connect(m_bezier_input, SIGNAL(generate(CGAL::Object)), this,
+                   SLOT(processInput(CGAL::Object)));
+  QObject::connect(m_conic_input, SIGNAL(generate(CGAL::Object)), this,
                    SLOT(processInput(CGAL::Object)));
   QObject::connect(m_polyline_input, SIGNAL(generate(CGAL::Object)), this,
                    SLOT(processInput(CGAL::Object)));
@@ -2713,15 +2741,7 @@ void MainWindow::on_showBlue_toggled(bool a_check) {
   states_stack.back().ToggleView(BLUE_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (!m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawBlue->setEnabled(true);
@@ -2734,14 +2754,7 @@ void MainWindow::on_showBlue_toggled(bool a_check) {
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawBlue->setEnabled(false);
   }
@@ -2753,15 +2766,7 @@ void MainWindow::on_showRed_toggled(bool a_check) {
   states_stack.back().ToggleView(RED_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (!m_bezier_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawRed->setEnabled(true);
@@ -2774,14 +2779,7 @@ void MainWindow::on_showRed_toggled(bool a_check) {
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawRed->setEnabled(false);
   }
@@ -2793,15 +2791,7 @@ void MainWindow::on_showBlack_toggled(bool a_check) {
   states_stack.back().ToggleView(BLACK_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (!m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawBlack->setEnabled(true);
@@ -2814,15 +2804,7 @@ void MainWindow::on_showBlack_toggled(bool a_check) {
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawBlack->setEnabled(false);
   }
@@ -2834,15 +2816,7 @@ void MainWindow::on_showBrown_toggled(bool a_check) {
   states_stack.back().ToggleView(BROWN_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawBrown->setEnabled(true);
@@ -2855,14 +2829,7 @@ void MainWindow::on_showBrown_toggled(bool a_check) {
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawBrown->setEnabled(false);
   }
@@ -2874,18 +2841,7 @@ void MainWindow::on_showYellow_toggled(bool a_check) {
   states_stack.back().ToggleView(YELLOW_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      }
-      else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      }
-      else if (!m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      }
-      else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawYellow->setEnabled(true);
@@ -2898,14 +2854,7 @@ void MainWindow::on_showYellow_toggled(bool a_check) {
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawYellow->setEnabled(false);
   }
@@ -2917,15 +2866,7 @@ void MainWindow::on_showMagenta_toggled(bool a_check) {
   states_stack.back().ToggleView(MAGENTA_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawMagenta->setEnabled(true);
@@ -2938,14 +2879,7 @@ void MainWindow::on_showMagenta_toggled(bool a_check) {
     else if (showYellow->isChecked()) drawYellow->setChecked(true);
     else if (showAqua->isChecked()) drawAqua->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawMagenta->setEnabled(false);
   }
@@ -2957,15 +2891,7 @@ void MainWindow::on_showAqua_toggled(bool a_check) {
   states_stack.back().ToggleView(AQUA_GROUP, a_check);
   if (a_check) {
     if (m_color_visible == 0) {
-      if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_linear_input);
-      } else if (!m_bezier_active && !m_polyline_active) {
-        m_scene.installEventFilter(m_circular_input);
-      } else if (!m_polyline_active) {
-        m_scene.installEventFilter(m_bezier_input);
-      } else {
-        m_scene.installEventFilter(m_polyline_input);
-      }
+      m_scene.installEventFilter(current_input());
     }
     m_color_visible++;
     drawAqua->setEnabled(true);
@@ -2978,14 +2904,7 @@ void MainWindow::on_showAqua_toggled(bool a_check) {
     else if (showYellow->isChecked()) drawYellow->setChecked(true);
     else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
     else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
+      remove_inputs();
     }
     drawAqua->setEnabled(false);
   }
@@ -4567,27 +4486,8 @@ void MainWindow::on_actionNew_triggered() {
   actionMinkowski_SumH->setChecked(false);
 
   m_reset = true;
-  if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-    actionInsertLinear->setChecked(true);
-    actionInsertCircular->setChecked(false);
-    actionInsertBezier->setChecked(false);
-    actionInsertPolyline->setChecked(false);
-  } else if (!m_bezier_active && !m_polyline_active) {
-    actionInsertLinear->setChecked(false);
-    actionInsertCircular->setChecked(true);
-    actionInsertBezier->setChecked(false);
-    actionInsertPolyline->setChecked(false);
-  } else if (!m_polyline_active) {
-    actionInsertLinear->setChecked(false);
-    actionInsertCircular->setChecked(false);
-    actionInsertBezier->setChecked(true);
-    actionInsertPolyline->setChecked(false);
-  } else {
-    actionInsertLinear->setChecked(false);
-    actionInsertCircular->setChecked(false);
-    actionInsertBezier->setChecked(false);
-    actionInsertPolyline->setChecked(true);
-  }
+  for (int type = 1; type <= 5; ++type)
+    family_action(type)->setChecked(type == active_type());
 
   m_reset = false;
 
@@ -5037,6 +4937,7 @@ void MainWindow::on_drawBlue_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[0]);
     m_polyline_input->mHandleGI->setPen(sPens[0]);
   }
+  set_conic_pen(sPens[0]);
 
 }
 
@@ -5061,6 +4962,7 @@ void MainWindow::on_drawRed_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[1]);
     m_polyline_input->mHandleGI->setPen(sPens[1]);
   }
+  set_conic_pen(sPens[1]);
 
 }
 
@@ -5085,6 +4987,7 @@ void MainWindow::on_drawBlack_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[2]);
     m_polyline_input->mHandleGI->setPen(sPens[2]);
   }
+  set_conic_pen(sPens[2]);
 
 }
 
@@ -5109,6 +5012,7 @@ void MainWindow::on_drawBrown_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[3]);
     m_polyline_input->mHandleGI->setPen(sPens[3]);
   }
+  set_conic_pen(sPens[3]);
 
 }
 
@@ -5133,6 +5037,7 @@ void MainWindow::on_drawYellow_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[4]);
     m_polyline_input->mHandleGI->setPen(sPens[4]);
   }
+  set_conic_pen(sPens[4]);
 
 }
 
@@ -5157,6 +5062,7 @@ void MainWindow::on_drawMagenta_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[5]);
     m_polyline_input->mHandleGI->setPen(sPens[5]);
   }
+  set_conic_pen(sPens[5]);
 
 }
 
@@ -5181,6 +5087,7 @@ void MainWindow::on_drawAqua_toggled(bool /* a_check */) {
     m_polyline_input->mPolylineGI->setPen(sPens[6]);
     m_polyline_input->mHandleGI->setPen(sPens[6]);
   }
+  set_conic_pen(sPens[6]);
 
 }
 
@@ -6035,6 +5942,9 @@ void MainWindow::on_actionSaveCurrentBucket_triggered() {
       show_error("Cannot save bezier polygon set.");
     }
   }
+  else if (m_conic_active) {
+    show_error("Saving conic polygon sets is not supported yet.");
+  }
   else if (m_polyline_active) {
     if (!save_polyline(QFileDialog::getSaveFileName(this,
                                                     tr("Save Result Polyline Polygon Set"), "/data/index.mps",
@@ -6098,6 +6008,8 @@ bool MainWindow::ensure_circular_mode() {
       m_bezier_input->Reset();
       m_polyline_input->Reset();
       m_circular_active = true;
+      m_conic_active = false;
+      m_conic_input->Reset();
       m_bezier_active = false;
       m_polyline_active = false;
     }
@@ -6125,6 +6037,8 @@ bool MainWindow::ensure_bezier_mode() {
       m_linear_input->Reset();
       m_polyline_input->Reset();
       m_bezier_active = true;
+      m_conic_active = false;
+      m_conic_input->Reset();
       m_circular_active = false;
       m_polyline_active = false;
     }
@@ -6133,7 +6047,7 @@ bool MainWindow::ensure_bezier_mode() {
 }
 
 bool MainWindow::ensure_linear_mode() {
-  if (m_circular_active || m_bezier_active || m_polyline_active) {
+  if (active_type() != 1) {
     bool lProceed = states_stack.back().blue_set().is_empty() && states_stack.back().red_set().is_empty() &&
       states_stack.back().black_set().is_empty() && states_stack.back().brown_set().is_empty() &&
       states_stack.back().yellow_set().is_empty() && states_stack.back().magenta_set().is_empty() &&
@@ -6157,11 +6071,13 @@ bool MainWindow::ensure_linear_mode() {
       m_bezier_active = false;
       //cout<<"fault 3"<<endl;
       m_polyline_active = false;
+      m_conic_active = false;
+      m_conic_input->Reset();
       //cout<<"End of ensure_linear_polygon()"<<endl;
     }
     //cout<<"end of this function"<<endl;
   }
-  return ! m_circular_active;
+  return active_type() == 1;
 }
 
 bool MainWindow::ensure_polyline_mode() {
@@ -6186,6 +6102,8 @@ bool MainWindow::ensure_polyline_mode() {
       m_circular_active = false;
       m_bezier_active = false;
       m_polyline_active = true;
+      m_conic_active = false;
+      m_conic_input->Reset();
     }
   }
   return m_polyline_active;
@@ -6241,7 +6159,8 @@ void MainWindow::on_actionInsertCircular_toggled(bool aChecked) {
       actionInsertLinear->setChecked(false);
       actionInsertBezier->setChecked(false);
       actionInsertPolyline->setChecked(false);
-      m_scene.installEventFilter(m_circular_input);
+      actionInsertConic->setChecked(false);
+      install_input(m_circular_input);
       on_actionDeleteResult();
       actionMinkowski_SumH->setEnabled(false);
 
@@ -6273,7 +6192,8 @@ void MainWindow::on_actionInsertBezier_toggled(bool aChecked) {
       actionInsertLinear->setChecked(false);
       actionInsertCircular->setChecked(false);
       actionInsertPolyline->setChecked(false);
-      m_scene.installEventFilter(m_bezier_input);
+      actionInsertConic->setChecked(false);
+      install_input(m_bezier_input);
       on_actionDeleteResult();
 
       actionMinkowski_SumH->setEnabled(false);
@@ -6308,7 +6228,8 @@ void MainWindow::on_actionInsertPolyline_toggled(bool aChecked) {
       actionInsertBezier->setChecked(false);
 
       actionInsertCircular->setChecked(false);
-      m_scene.installEventFilter(m_polyline_input);
+      actionInsertConic->setChecked(false);
+      install_input(m_polyline_input);
       on_actionDeleteResult();
       actionMinkowski_SumH->setEnabled(false);
 
@@ -6339,7 +6260,8 @@ void MainWindow::on_actionInsertLinear_toggled(bool aChecked) {
       actionInsertCircular->setChecked(false);
       actionInsertBezier->setChecked(false);
       actionInsertPolyline->setChecked(false);
-      m_scene.installEventFilter(m_linear_input);
+      actionInsertConic->setChecked(false);
+      install_input(m_linear_input);
       on_actionDeleteResult();
 
       actionMinkowski_SumH->setEnabled(true);
@@ -6702,7 +6624,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
 
-    if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
+    if (active_type() == 1) {
       actionComplementH->setChecked(false);
       actionUnionH->setChecked(false);
       actionIntersectionH->setChecked(false);
@@ -6909,54 +6831,9 @@ void MainWindow::on_actionAxis_triggered() {
 void MainWindow::on_actionPAN_triggered() {
   if (! m_pan) {
     //get_new_state(7);
-    if (!m_circular_active && !m_bezier_active && !m_polyline_active) {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      actionInsertLinear->setChecked(false);
-      this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    }
-    else if (!m_bezier_active && !m_polyline_active) {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      actionInsertCircular->setChecked(false);
-      this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    }
-    else if (!m_polyline_active) {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      actionInsertBezier->setChecked(false);
-      this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    }
-    else {
-      m_scene.removeEventFilter(m_linear_input);
-      m_scene.removeEventFilter(m_bezier_input);
-      m_scene.removeEventFilter(m_circular_input);
-      m_scene.removeEventFilter(m_polyline_input);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      actionInsertPolyline->setChecked(false);
-      this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    }
+    remove_inputs();
+    family_action(active_type())->setChecked(false);
+    this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
 
     this->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     m_scene.update();
@@ -6964,18 +6841,7 @@ void MainWindow::on_actionPAN_triggered() {
     modelChanged();
   }
   else {
-    if (! (m_circular_active || m_bezier_active) || m_polyline_active) {
-      actionInsertLinear->setChecked(true);
-    }
-    else if (m_circular_active) {
-      actionInsertCircular->setChecked(true);
-    }
-    else if (m_bezier_active) {
-      actionInsertBezier->setChecked(true);
-    }
-    else if (m_polyline_active) {
-      actionInsertPolyline->setChecked(true);
-    }
+    family_action(active_type())->setChecked(true);
     m_pan = false;
     modelChanged();
   }
@@ -7018,23 +6884,20 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
 
 // The icons of the curve tool bar: a boundary of a segment and an arc, or a
 // circle with its center and radius.
-QIcon MainWindow::curve_tool_icon(bool aCircle) {
+QIcon MainWindow::curve_tool_icon(const QString& aKind) {
   const qreal ratio = 2;
   QPixmap pixmap(QSize(24, 24) * ratio);
   pixmap.setDevicePixelRatio(ratio);
   pixmap.fill(Qt::transparent);
   QPainter painter(&pixmap);
   painter.setRenderHint(QPainter::Antialiasing);
-  painter.setPen(QPen(QColor(6, 131, 2), 2));
+  const QColor green(6, 131, 2);
+  painter.setPen(QPen(green, 2));
   painter.setBrush(Qt::NoBrush);
+  // Full curves are filled; the curves that bound a polygon show two vertices.
+  if (aKind.startsWith("full")) painter.setBrush(QColor(0, 255, 1, 140));
   QList<QPointF> vertices;
-  if (aCircle) {
-    painter.drawEllipse(QPointF(12, 12), 9, 9);
-    painter.setPen(QPen(QColor(64, 64, 64), 1.5, Qt::DashLine));
-    painter.drawLine(QPointF(12, 12), QPointF(18.4, 5.6));
-    vertices << QPointF(12, 12);
-  }
-  else {
+  if (aKind == "arcs") {
     QPainterPath path(QPointF(3, 20));
     path.lineTo(7, 9);
     path.arcTo(QRectF(7, 2, 14, 14), 180, -180);
@@ -7043,10 +6906,149 @@ QIcon MainWindow::curve_tool_icon(bool aCircle) {
     vertices << QPointF(3, 20) << QPointF(7, 9) << QPointF(21, 9)
              << QPointF(17, 20);
   }
+  else if (aKind == "line") {
+    painter.drawLine(QPointF(2, 20), QPointF(22, 4));
+    vertices << QPointF(7, 16) << QPointF(17, 8);
+  }
+  else if ((aKind == "circle") || (aKind == "full circle")) {
+    painter.drawEllipse(QPointF(12, 12), 9, 9);
+    if (aKind == "circle") vertices << QPointF(3, 12) << QPointF(18.4, 5.6);
+    else {
+      painter.setPen(QPen(QColor(64, 64, 64), 1.5, Qt::DashLine));
+      painter.drawLine(QPointF(12, 12), QPointF(18.4, 5.6));
+      vertices << QPointF(12, 12);
+    }
+  }
+  else if ((aKind == "ellipse") || (aKind == "full ellipse")) {
+    painter.translate(12, 12);
+    painter.rotate(-30);
+    painter.drawEllipse(QPointF(0, 0), 10.5, 6);
+    painter.resetTransform();
+    if (aKind == "ellipse") vertices << QPointF(3, 17) << QPointF(21, 7);
+  }
+  else if (aKind == "coefficients") {
+    QFont font = painter.font();
+    font.setPixelSize(11);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(QColor(64, 64, 64));
+    painter.drawText(QRectF(0, 0, 24, 24), Qt::AlignCenter, "ax²");
+  }
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor(255, 7, 0));
   for (const auto& p : vertices) painter.drawEllipse(p, 2, 2);
   return QIcon(pixmap);
+}
+
+// The curve family being constructed: 1 linear, 2 circular, 3 Bezier,
+// 4 polyline, 5 conic.
+int MainWindow::active_type() const {
+  if (m_conic_active) return 5;
+  if (m_polyline_active) return 4;
+  if (m_bezier_active) return 3;
+  if (m_circular_active) return 2;
+  return 1;
+}
+
+QAction* MainWindow::family_action(int aType) const {
+  switch (aType) {
+   case 2: return actionInsertCircular;
+   case 3: return actionInsertBezier;
+   case 4: return actionInsertPolyline;
+   case 5: return actionInsertConic;
+   default: return actionInsertLinear;
+  }
+}
+
+// The input that constructs curves of the active family.
+QObject* MainWindow::current_input() const {
+  switch (active_type()) {
+   case 2: return m_circular_input;
+   case 3: return m_bezier_input;
+   case 4: return m_polyline_input;
+   case 5: return m_conic_input;
+   default: return m_linear_input;
+  }
+}
+
+// Stop constructing curves, and discard those under construction.
+void MainWindow::remove_inputs() {
+  for (QObject* input : {static_cast<QObject*>(m_linear_input),
+                         static_cast<QObject*>(m_circular_input),
+                         static_cast<QObject*>(m_bezier_input),
+                         static_cast<QObject*>(m_polyline_input),
+                         static_cast<QObject*>(m_conic_input)})
+    m_scene.removeEventFilter(input);
+  m_linear_input->Reset();
+  m_circular_input->Reset();
+  m_bezier_input->Reset();
+  m_polyline_input->Reset();
+  m_conic_input->Reset();
+}
+
+// Construct curves with the given input only.
+void MainWindow::install_input(QObject* aInput) {
+  for (QObject* input : {static_cast<QObject*>(m_linear_input),
+                         static_cast<QObject*>(m_circular_input),
+                         static_cast<QObject*>(m_bezier_input),
+                         static_cast<QObject*>(m_polyline_input),
+                         static_cast<QObject*>(m_conic_input)})
+    m_scene.removeEventFilter(input);
+  m_scene.installEventFilter(aInput);
+}
+
+void MainWindow::set_conic_pen(const QPen& aPen) { m_conic_input->set_pen(aPen); }
+
+bool MainWindow::ensure_conic_mode() {
+  if (! m_conic_active) {
+    bool lProceed = true;
+    for (auto& curve_set : states_stack.back().m_curve_sets)
+      lProceed = lProceed && curve_set.is_empty();
+    if (! lProceed)
+      lProceed = ask_user_yesno("Conic mode switch",
+                                "You are about to construct a conic polygon, but there are polygons of another type already loaded.\n" \
+                                "Both types are not interoperable. In order to proceed, the polygons must be removed first.\n" \
+                                "Once deleted you cannot undo the action.\n" \
+                                "Yes to remove and proceed?\n");
+    if (lProceed) {
+      switch_sets_type(5);
+      m_linear_input->Reset();
+      m_circular_input->Reset();
+      m_bezier_input->Reset();
+      m_polyline_input->Reset();
+      m_circular_active = false;
+      m_bezier_active = false;
+      m_polyline_active = false;
+      m_conic_active = true;
+    }
+  }
+  return m_conic_active;
+}
+
+void MainWindow::on_actionInsertConic_toggled(bool aChecked) {
+  if (! aChecked) return;
+  this->graphicsView->setDragMode(QGraphicsView::NoDrag);
+  if (! ensure_conic_mode()) {
+    actionInsertConic->setChecked(false);
+    return;
+  }
+  if (!m_pan && !m_reset) {
+    while (m_state_num > 1) on_actionUndo_triggered();
+  }
+  actionPAN->setChecked(false);
+  m_pan = false;
+  actionOpenLinear->setEnabled(false);
+  actionOpenDXF->setEnabled(false);
+  actionOpenBezier->setEnabled(false);
+  actionOpenPolyline->setEnabled(false);
+  actionInsertLinear->setChecked(false);
+  actionInsertCircular->setChecked(false);
+  actionInsertBezier->setChecked(false);
+  actionInsertPolyline->setChecked(false);
+  install_input(m_conic_input);
+  on_actionDeleteResult();
+  actionMinkowski_SumH->setEnabled(false);
+  set_conic_pen(sPens[m_color_active]);
 }
 
 //zoom to fit button
@@ -7700,7 +7702,7 @@ void MainWindow::run_console_line(const QString& aLine) {
     m_console_history << aLine;
   }
   m_console_history_pos = m_console_history.size();
-  if (m_circular_active || m_bezier_active || m_polyline_active) {
+  if (active_type() != 1) {
     console_print("Error: the console supports linear polygons only");
     return;
   }
@@ -7940,9 +7942,19 @@ void MainWindow::processInput(CGAL::Object o) {
   Linear_polygon lLI;
   Circular_polygon lCI;
   Polyline_polygon lPI;
+  Conic_polygon lConicPI;
   //cout<<"in process input"<<endl;
   try {
-    if (CGAL::assign(lBI, o)) {
+    if (CGAL::assign(lConicPI, o)) {
+      if (ensure_conic_mode()) {
+        if (lConicPI.orientation() == CGAL::CLOCKWISE)
+          lConicPI.reverse_orientation();
+        get_new_state(11);
+        states_stack.back().active_set(m_color_active).conic().
+          join(Conic_polygon_with_holes(lConicPI));
+      }
+    }
+    else if (CGAL::assign(lBI, o)) {
       if (ensure_bezier_mode()) {
         CGAL::Orientation o = lBI.first.orientation();
         if (o == CGAL::CLOCKWISE)

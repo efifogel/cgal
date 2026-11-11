@@ -153,6 +153,25 @@ typedef std::vector<Bezier_region_source>        Bezier_region_source_container 
 
 //#endif
 
+// Conic polygons
+typedef CGAL::CORE_algebraic_number_traits              Conic_nt_traits;
+typedef Conic_nt_traits::Rational                       Conic_rational;
+typedef Conic_nt_traits::Algebraic                      Conic_algebraic;
+typedef Conic_nt_traits::Integer                        Conic_integer;
+
+struct Conic_rat_kernel : public CGAL::Cartesian<Conic_rational> {};
+struct Conic_alg_kernel : public CGAL::Cartesian<Conic_algebraic> {};
+
+typedef CGAL::Arr_conic_traits_2<Conic_rat_kernel, Conic_alg_kernel,
+                                 Conic_nt_traits>       Conic_traits;
+typedef Conic_traits::Curve_2                           Conic_curve;
+typedef Conic_traits::X_monotone_curve_2                Conic_X_monotone_curve;
+typedef Conic_traits::Point_2                           Conic_point;
+typedef CGAL::Gps_traits_2<Conic_traits>                Conic_gps_traits;
+typedef Conic_gps_traits::General_polygon_2             Conic_polygon;
+typedef Conic_gps_traits::General_polygon_with_holes_2  Conic_polygon_with_holes;
+typedef CGAL::General_polygon_set_2<Conic_gps_traits>   Conic_polygon_set;
+
 // Conics Curves typedefs for future
 /*
 
