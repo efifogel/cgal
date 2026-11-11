@@ -30,6 +30,7 @@
 #include <array>
 #include <memory>
 #include <map>
+#include <limits>
 
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/ellint_2.hpp>
@@ -43,6 +44,7 @@
 #include <CGAL/Arr_geometry_traits/Conic_point_2.h>
 #include <CGAL/Arr_geometry_traits/Conic_intersections_2.h>
 #include <CGAL/Bbox_2.h>
+#include <CGAL/Interval_nt.h>
 
 namespace CGAL {
 
@@ -2910,72 +2912,125 @@ public:
     Bbox_2 operator()(const Curve_2& cv) const { return bbox(cv); }
 
   private:
+    // A box that is extended to contain intervals; it is rounded outwards.
+    struct Box {
+      double x_min = std::numeric_limits<double>::infinity();
+      double y_min = std::numeric_limits<double>::infinity();
+      double x_max = -std::numeric_limits<double>::infinity();
+      double y_max = -std::numeric_limits<double>::infinity();
+
+      void add_x(const Algebraic& x) {
+        auto i = CGAL::to_interval(x);
+        if (i.first < x_min) x_min = i.first;
+        if (i.second > x_max) x_max = i.second;
+      }
+
+      void add_y(const Algebraic& y) {
+        auto i = CGAL::to_interval(y);
+        if (i.first < y_min) y_min = i.first;
+        if (i.second > y_max) y_max = i.second;
+      }
+
+      void add(const Alg_point_2& p) { add_x(p.x()); add_y(p.y()); }
+
+      Bbox_2 bbox() const { return Bbox_2(x_min, y_min, x_max, y_max); }
+    };
+
+    /*! obtains a bounding box for a full conic (an ellipse or a circle) using
+     * its vertical and horizontal tangency points.
+     */
+    Bbox_2 full_conic_bbox(const Curve_2& cv) const {
+      Box box;
+      Alg_point_2 tan_ps[2];
+      auto n_tan_ps = m_traits.conic_vertical_tangency_points(cv, tan_ps);
+      CGAL_assertion(n_tan_ps == 2);
+      for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) box.add_x(tan_ps[i].x());
+      n_tan_ps = m_traits.conic_horizontal_tangency_points(cv, tan_ps);
+      CGAL_assertion(n_tan_ps == 2);
+      for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) box.add_y(tan_ps[i].y());
+      return box.bbox();
+    }
+
+    /*! determines whether a horizontal tangency point of the conic that
+     * supports an x-monotone arc lies on the same branch as the arc, that is,
+     * whether its y-coordinate is the root of the quadratic equation
+     * s*y^2 + (t*x + v)*y + (r*x^2 + u*x + w) = 0 in y used by the arc.
+     * On the root (sqrt(disc) - (t*x + v)) / 2s, the expression
+     * 2s*y + t*x + v equals sqrt(disc), and on the other root it equals
+     * -sqrt(disc). The discriminant does not vanish at a horizontal
+     * tangency point of a non-degenerate conic.
+     */
+    bool is_on_branch(const X_monotone_curve_2& xcv, const Alg_point_2& p)
+      const {
+      // If s = 0, the equation has a single root.
+      if (CGAL::sign(xcv.s()) == ZERO) return true;
+
+      using Interval = Interval_nt<false>;
+      Interval x(CGAL::to_interval(p.x()));
+      Interval y(CGAL::to_interval(p.y()));
+      Interval val = 2 * Interval(CGAL::to_interval(xcv.s())) * y +
+        Interval(CGAL::to_interval(xcv.t())) * x +
+        Interval(CGAL::to_interval(xcv.v()));
+      Sign sign_val;
+      if (val.inf() > 0) sign_val = POSITIVE;
+      else if (val.sup() < 0) sign_val = NEGATIVE;
+      else {
+        // The interval approximation is inconclusive; compute exactly.
+        const auto& nt_traits = m_traits.m_nt_traits;
+        sign_val = CGAL::sign(nt_traits->convert(Integer(2 * xcv.s())) * p.y() +
+                              nt_traits->convert(xcv.t()) * p.x() +
+                              nt_traits->convert(xcv.v()));
+      }
+      return (sign_val == POSITIVE) ==
+        xcv.test_flag(X_monotone_curve_2::PLUS_SQRT_DISC_ROOT);
+    }
+
+    /*! obtains a bounding box for an x-monotone arc.
+     * The x-range of the arc is the x-range of its endpoints. Its y-range
+     * is the y-range of its endpoints extended by the horizontal tangency
+     * points that lie on the arc. Interval arithmetic is used, and a
+     * tangency point is excluded only if it certainly does not lie on the
+     * arc, so the box may only be larger than the tight one.
+     */
     Bbox_2 bbox(const X_monotone_curve_2& xcv) const {
       CGAL_precondition(xcv.is_valid());
-      double x_min(0), y_min(0), x_max(0), y_max(0);
+      if (xcv.is_full_conic()) return full_conic_bbox(xcv);
 
-      if (xcv.is_full_conic()) {
-        // In case of a full conic (an ellipse or a circle), compute the
-        // horizontal and vertical tangency points and use them to bound the arc.
-        Alg_point_2 tan_ps[2];
-        CGAL_assertion_code(size_t n_tan_ps);
+      Box box;
+      box.add(xcv.source());
+      box.add(xcv.target());
+      if (xcv.orientation() == COLLINEAR) return box.bbox();
 
-        CGAL_assertion_code
-          (n_tan_ps = m_traits.vertical_tangency_points(xcv, tan_ps));
-        CGAL_assertion(n_tan_ps == 2);
-
-        if (CGAL::to_double(tan_ps[0].x()) < CGAL::to_double(tan_ps[1].x())) {
-          x_min = CGAL::to_double(tan_ps[0].x());
-          x_max = CGAL::to_double(tan_ps[1].x());
-        }
-        else {
-          x_min = CGAL::to_double(tan_ps[1].x());
-          x_max = CGAL::to_double(tan_ps[0].x());
-        }
-
-        CGAL_assertion_code(n_tan_ps = m_traits.horizontal_tangency_points(xcv, tan_ps));
-        CGAL_assertion(n_tan_ps == 2);
-
-        if (CGAL::to_double(tan_ps[0].y()) < CGAL::to_double(tan_ps[1].y())) {
-          y_min = CGAL::to_double(tan_ps[0].y());
-          y_max = CGAL::to_double(tan_ps[1].y());
-        }
-        else {
-          y_min = CGAL::to_double(tan_ps[1].y());
-          y_max = CGAL::to_double(tan_ps[0].y());
-        }
+      auto xl = CGAL::to_interval(xcv.left().x());
+      auto xr = CGAL::to_interval(xcv.right().x());
+      Alg_point_2 tan_ps[2];
+      auto n_tan_ps = m_traits.conic_horizontal_tangency_points(xcv, tan_ps);
+      for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) {
+        auto x = CGAL::to_interval(tan_ps[i].x());
+        // Skip points that are certainly outside the x-range of the arc.
+        if ((x.second < xl.first) || (x.first > xr.second)) continue;
+        if (! is_on_branch(xcv, tan_ps[i])) continue;
+        box.add_y(tan_ps[i].y());
       }
-      else {
-        // Use the source and target to initialize the extreme points.
-        bool source_left =
-          CGAL::to_double(xcv.source().x()) < CGAL::to_double(xcv.target().x());
-        x_min = (source_left) ? CGAL::to_double(xcv.source().x()) : CGAL::to_double(xcv.target().x());
-        x_max = source_left ? CGAL::to_double(xcv.target().x()) : CGAL::to_double(xcv.source().x());
+      return box.bbox();
+    }
 
-        bool source_down = CGAL::to_double(xcv.source().y()) < CGAL::to_double(xcv.target().y());
-        y_min = source_down ? CGAL::to_double(xcv.source().y()) : CGAL::to_double(xcv.target().y());
-        y_max = source_down ? CGAL::to_double(xcv.target().y()) : CGAL::to_double(xcv.source().y());
+    /*! obtains a bounding box for a (not necessarily x-monotone) arc using
+     * its endpoints and its vertical and horizontal tangency points.
+     */
+    Bbox_2 bbox(const Curve_2& cv) const {
+      CGAL_precondition(cv.is_valid());
+      if (cv.is_full_conic()) return full_conic_bbox(cv);
 
-        // Go over the vertical tangency points and try to update the
-        // \f$x\f$-points.
-        Alg_point_2 tan_ps[2];
-        auto n_tan_ps = m_traits.vertical_tangency_points(xcv, tan_ps);
-        for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) {
-          if (CGAL::to_double(tan_ps[i].x()) < x_min) x_min = CGAL::to_double(tan_ps[i].x());
-          if (CGAL::to_double(tan_ps[i].x()) > x_max) x_max = CGAL::to_double(tan_ps[i].x());
-        }
-
-        // Go over the horizontal tangency points and try to update the
-        // \f$y\f$-points.
-        n_tan_ps = m_traits.horizontal_tangency_points(xcv, tan_ps);
-        for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) {
-          if (CGAL::to_double(tan_ps[i].y()) < y_min) y_min = CGAL::to_double(tan_ps[i].y());
-          if (CGAL::to_double(tan_ps[i].y()) > y_max) y_max = CGAL::to_double(tan_ps[i].y());
-        }
-      }
-
-      // Return the resulting bounding box.
-      return Bbox_2(x_min, y_min, x_max, y_max);
+      Box box;
+      box.add(cv.source());
+      box.add(cv.target());
+      Alg_point_2 tan_ps[2];
+      auto n_tan_ps = m_traits.vertical_tangency_points(cv, tan_ps);
+      for (decltype(n_tan_ps) i = 0; i < n_tan_ps; ++i) box.add_x(tan_ps[i].x());
+      auto n_htan_ps = m_traits.horizontal_tangency_points(cv, tan_ps);
+      for (decltype(n_htan_ps) i = 0; i < n_htan_ps; ++i) box.add_y(tan_ps[i].y());
+      return box.bbox();
     }
   };
 
