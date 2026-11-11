@@ -64,6 +64,7 @@ using Linear_polygon_with_holes = Linear_traits::General_polygon_with_holes_2;
 using Linear_polygon = Linear_traits::Polygon_2;
 using Linear_polygon_set = CGAL::General_polygon_set_2<Linear_traits>;
 using Linear_curve = Linear_traits::Curve_2;
+using Linear_X_monotone_curve = Linear_traits::X_monotone_curve_2;
 
 // Polylines (the kernel is the same as the linear one)
 using Segment_traits_2 = CGAL::Arr_segment_traits_2<Kernel>;
@@ -71,6 +72,7 @@ using Polyline_traits = CGAL::Gps_traits_2<CGAL::Arr_polyline_traits_2<Segment_t
 using Polyline_polygon = Polyline_traits::Polygon_2;
 using Polyline_polygon_set = CGAL::General_polygon_set_2<Polyline_traits>;
 using Polyline_curve = Polyline_traits::Curve_2;
+using Polyline_X_monotone_curve = Polyline_traits::X_monotone_curve_2;
 using Polyline_polygon_with_holes = Polyline_traits::General_polygon_with_holes_2;
 
 // Circular polygons
