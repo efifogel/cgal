@@ -21,8 +21,6 @@
 //             Ronnie Gandhi <ronniegandhi19999@gmail.com>
 //             Apurva Bhatt <response2apurva@gmail.com>
 
-//TODO:- add error handling
-
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -35,11 +33,9 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/shared_ptr.hpp>
 
 #include <QApplication>
 #include <qmessagebox.h>
-// #include <QDesktopWidget>
 
 #include <QMainWindow>
 #include <QGraphicsScene>
@@ -138,7 +134,7 @@
 #include <CGAL/IO/Dxf_bsop_reader.h>
 #include <CGAL/Qt/GraphicsViewNavigation.h>
 
-#include "Qt6/MinkowskiSum.h"   //for future supports
+#include "Qt6/MinkowskiSum.h"
 #include "Qt6/Circular_polygons.h"
 #include "Qt6/Linear_polygons.h"
 #include "Qt6/BezierCurves.h"
@@ -218,7 +214,7 @@ constexpr std::size_t min_number_of_buckets = 3;
 
 // The curve families are identified by numbers: linear 1, circular 2, Bezier 3, polyline 4, and conic 5.
 
-//drawing tools for different colors
+// The pens and the brushes of the buckets and of the scratch result set.
 QPen sPens[] = {
   QPen(QColor(255, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //red
   QPen(QColor(0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),     //black
@@ -245,7 +241,7 @@ QBrush sBrushes[] = {
 enum class Curve_type { Linear, Circular, Bezier, Polyline, Conic };
 constexpr std::size_t number_of_curve_types = 5;
 
-//A base call for rep class
+// The representation of a set of polygons of some curve family.
 struct Rep_base {
   /*! destructs.
    */
@@ -258,6 +254,10 @@ struct Rep_base {
   /*! constructs a copy of the set (with its own graphics item).
    */
   virtual Rep_base* clone() const = 0;
+
+  /*! assigns another set (of the same family) to the set.
+   */
+  virtual void assign(const Rep_base& aOther) = 0;
 
   /*! obtains the graphics item that draws the set.
    */
@@ -345,8 +345,7 @@ public:
    */
   Rep() { make_gi(); }
 
-  /*! constructs a copy of a set and its graphics item. (The set is copy constructed: the copy assignment of some
-   * traits, e.g., Arr_polycurve_basic_traits_2, is broken.)
+  /*! constructs a copy of a set and its graphics item.
    */
   explicit Rep(const Set& aSet) : m_set(aSet) { make_gi(); }
 
@@ -401,6 +400,10 @@ public:
   /*! complements the set.
    */
   void complement() override { guarded("complement", [&] { m_set.complement(); }); }
+
+  /*! assigns another set (of the same family) to the set.
+   */
+  void assign(const Rep_base& aOther) override { guarded("assign", [&] { m_set = cast(aOther).m_set; }); }
 
   /*! intersects the set with another set.
    */
@@ -487,9 +490,9 @@ using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::Bezier>;
 using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::Polyline, Polyline_traits>;
 using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::Conic>;
 
-// a container which deletes an object when last shared_ptr gets deleted or re-initiated
+// A set of polygons of some curve family, drawn with a given pen and brush.
 class Curve_set {
-  using Rep_ptr = boost::shared_ptr<Rep_base>;
+  using Rep_ptr = std::shared_ptr<Rep_base>;
 
 public:
   /*! constructs an empty set of a given curve family, drawn with a given pen and brush.
@@ -572,7 +575,9 @@ public:
   /*! assigns another set (of the same family) to the set.
    */
   void assign(const Curve_set& aOther) {
-    if (same_type(aOther) && (&aOther != this)) replace_rep(aOther.m_rep->clone());
+    if (! same_type(aOther) || (&aOther == this)) return;
+    detach(false);
+    m_rep->assign(*aOther.m_rep);
   }
 
   /*! intersects the set with another set (of the same family).
@@ -697,13 +702,13 @@ public:
 
   /*! obtains the conic representation, or null if the set is not conic.
    */
-  const Conic_rep* get_conic_rep() const { return dynamic_cast<const Conic_rep*>(boost::get_pointer(m_rep)); }
+  const Conic_rep* get_conic_rep() const { return dynamic_cast<const Conic_rep*>(m_rep.get()); }
 
   /*! obtains the conic representation, or null if the set is not conic.
    */
   Conic_rep* get_conic_rep() {
     detach();
-    return dynamic_cast<Conic_rep*>(boost::get_pointer(m_rep));
+    return dynamic_cast<Conic_rep*>(m_rep.get());
   }
 
   /*! obtains the conic set.
@@ -716,13 +721,13 @@ public:
 
   /*! obtains the linear representation, or null if the set is not linear.
    */
-  const Linear_rep* get_linear_rep() const { return dynamic_cast<const Linear_rep*>(boost::get_pointer(m_rep)); }
+  const Linear_rep* get_linear_rep() const { return dynamic_cast<const Linear_rep*>(m_rep.get()); }
 
   /*! obtains the linear representation, or null if the set is not linear.
    */
   Linear_rep* get_linear_rep() {
     detach();
-    return dynamic_cast<Linear_rep*>(boost::get_pointer(m_rep));
+    return dynamic_cast<Linear_rep*>(m_rep.get());
   }
 
   /*! obtains the linear set.
@@ -735,13 +740,13 @@ public:
 
   /*! obtains the circular representation, or null if the set is not circular.
    */
-  const Circular_rep* get_circular_rep() const { return dynamic_cast<const Circular_rep*>(boost::get_pointer(m_rep)); }
+  const Circular_rep* get_circular_rep() const { return dynamic_cast<const Circular_rep*>(m_rep.get()); }
 
   /*! obtains the circular representation, or null if the set is not circular.
    */
   Circular_rep* get_circular_rep() {
     detach();
-    return dynamic_cast<Circular_rep*>(boost::get_pointer(m_rep));
+    return dynamic_cast<Circular_rep*>(m_rep.get());
   }
 
   /*! obtains the circular set.
@@ -754,13 +759,13 @@ public:
 
   /*! obtains the Bezier representation, or null if the set is not Bezier.
    */
-  const Bezier_rep* get_bezier_rep() const { return dynamic_cast<const Bezier_rep*>(boost::get_pointer(m_rep)); }
+  const Bezier_rep* get_bezier_rep() const { return dynamic_cast<const Bezier_rep*>(m_rep.get()); }
 
   /*! obtains the Bezier representation, or null if the set is not Bezier.
    */
   Bezier_rep* get_bezier_rep() {
     detach();
-    return dynamic_cast<Bezier_rep*>(boost::get_pointer(m_rep));
+    return dynamic_cast<Bezier_rep*>(m_rep.get());
   }
 
   /*! obtains the Bezier set.
@@ -773,13 +778,13 @@ public:
 
   /*! obtains the polyline representation, or null if the set is not a polyline set.
    */
-  const Polyline_rep* get_polyline_rep() const { return dynamic_cast<const Polyline_rep*>(boost::get_pointer(m_rep)); }
+  const Polyline_rep* get_polyline_rep() const { return dynamic_cast<const Polyline_rep*>(m_rep.get()); }
 
   /*! obtains the polyline representation, or null if the set is not a polyline set.
    */
   Polyline_rep* get_polyline_rep() {
     detach();
-    return dynamic_cast<Polyline_rep*>(boost::get_pointer(m_rep));
+    return dynamic_cast<Polyline_rep*>(m_rep.get());
   }
 
   /*! obtains the polyline set.
@@ -796,11 +801,9 @@ public:
   Set& get();
 
 public:
-  //drawing tools
   QPen m_pen;
   QBrush m_brush;
-  // a container which deletes an object when last shared_ptr gets deleted or re-initiated
-  boost::shared_ptr<Rep_base> m_rep;
+  Rep_ptr m_rep;
 };
 
 template <> Linear_polygon_set& Curve_set::get<Linear_polygon_set>() { return linear(); }
@@ -1357,9 +1360,9 @@ private:
   }
 };
 
-//The main page for displaying the window and all the icons
+// The main window.
 class MainWindow : public CGAL::Qt::DemosMainWindow, public Ui::Boolean_set_operations_2 {
-  Q_OBJECT// removing it gives error ui not declared
+  Q_OBJECT
 
 private:
   Grid_scene m_scene;
@@ -1397,7 +1400,6 @@ private:
   QStringList m_console_history;
   int m_console_history_pos = 0;
   std::map<QString, Curve_set> m_variables;
-  //keep it intact for now check it out
   Curve_type m_curve_type = Curve_type::Linear;     // the curve family of the sets
 
   // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
@@ -1406,7 +1408,7 @@ private:
     Curve_type m_type;
     const char* m_name;
     QAction* m_insert_action;
-    QObject* m_input;
+    CGAL::Qt::GraphicsViewInput* m_input;
     std::function<void()> m_reset_input;
     QAction* m_open_action;
     const char* m_extension;
@@ -1414,8 +1416,7 @@ private:
   };
   std::array<Curve_family, number_of_curve_types> m_families;
 
-  //to determine which type is currently active
-  size_t m_color_active;
+  size_t m_color_active;           // the Draw/Insert bucket
   bool empty_warn;
   bool operand_error_warn;
   bool m_grid;
@@ -1428,8 +1429,6 @@ private:
 
   QGraphicsLineItem* xAxis = new QGraphicsLineItem();
   QGraphicsLineItem* yAxis = new QGraphicsLineItem();
-
-  //typedefs of classes used to draw circular and linear polygon
 
   state_container states_stack;
   std::array<CGAL::Qt::GraphicsItem*, number_of_buckets + 1> m_linked_items{};   // the graphics items in the scene
@@ -1455,10 +1454,7 @@ protected slots:
    */
   void open(QString filename);
 
-  //defining QT slots for GUI integration
 public slots:
-  //for all the operations such as union, complement, difference
-
   /*! adds a polygon constructed by one of the inputs to the Draw/Insert bucket.
    */
   void process_input(CGAL::Object o);
@@ -1916,8 +1912,6 @@ private:
   void ask_user_ok(std::string aTitle, std::string aQuestion)
   { QMessageBox::warning(this, QString(aTitle.c_str()), QString(aQuestion.c_str())); }
 
-  //changes the set of polygons of a specific type
-
   /*! adds a graphics item to the scene and connects it to the changed() signal.
    */
   void link_gi(CGAL::Qt::GraphicsItem* aGI) {
@@ -1957,11 +1951,11 @@ private:
 
 MainWindow::MainWindow() :
   DemosMainWindow(),
-  m_color_active(0), //default
-  minkowski_sum_operated(false), //default
-  empty_warn(true), // default
-  operand_error_warn(true), // default
-  m_disjoint(false), //default
+  m_color_active(0),
+  minkowski_sum_operated(false),
+  empty_warn(true),
+  operand_error_warn(true),
+  m_disjoint(false),
   m_pan(false),
   m_grid(false),
   m_reset(false),
@@ -2148,9 +2142,7 @@ MainWindow::MainWindow() :
     if (! pixmap.isNull()) label->setPixmap(pixmap.scaled(27, 25, Qt::KeepAspectRatio, Qt::SmoothTransformation));
   }
 
-  //
-  // Setup the m_scene and the view
-  //
+  // The scene and the view.
   m_scene.setItemIndexMethod(QGraphicsScene::NoIndex);
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphicsView->setScene(&m_scene);
@@ -2165,33 +2157,26 @@ MainWindow::MainWindow() :
   // Turn the vertical axis upside down
   this->graphicsView->scale(2.5, -2.5);
 
-  //adding basic setups
-
-  //todo:need to be given finishing touch
-  //The navigation adds zooming and translation functionality to the
-  //QGraphicsView.
+  // The navigation adds zooming and translation functionality to the view.
   this->addNavigation(this->graphicsView);
   // Every change of the view (zoom, pan, resize) ends in a repaint, where the area that unbounded sets are drawn over
   // is updated.
   this->graphicsView->viewport()->installEventFilter(this);
 
-  //setting the menus
+  // The menus.
   this->setupStatusBar();
   this->setupOptionsMenu();
 
-  //adding files to select out of polygon
+  // The recently opened files.
   this->addRecentFiles(this->menuFile, this->actionClose);
 
-
-  //initializing and pushing first state in States_stack
+  // The first state of the undo stack.
   get_new_state(State_op::Start);
   actionUndo->setEnabled(false);
 
   this->setWindowState(Qt::WindowMaximized);
 
-  //! \todo what is it?
-
-  //initializing classes to draw respective polygons using mouse
+  // The inputs, which construct polygons with the mouse.
   m_bezier_input = new CGAL::Qt::GraphicsViewBezierPolygonInput<Bezier_traits>(this, &m_scene);
   m_linear_input = new CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>(this, &m_scene);
   m_circular_input = new CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>(this, &m_scene);
@@ -2295,12 +2280,10 @@ MainWindow::MainWindow() :
     verticalLayout->insertWidget(1, bar);
   }
 
-  //connecting GUI and the code base
-  QObject::connect(m_linear_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
-  QObject::connect(m_circular_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
-  QObject::connect(m_bezier_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
-  QObject::connect(m_conic_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
-  QObject::connect(m_polyline_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
+  // The polygons constructed by the inputs are added to the Draw/Insert bucket.
+  for (const auto& family : m_families) {
+    QObject::connect(family.m_input, &CGAL::Qt::GraphicsViewInput::generate, this, &MainWindow::process_input);
+  }
 
   m_scene.installEventFilter(m_linear_input);
 
@@ -2352,22 +2335,20 @@ MainWindow::MainWindow() :
   QObject::connect(consoleDockWidget, &QDockWidget::visibilityChanged, this,
                    &MainWindow::console_panel_visibility_changed);
 
-  //for file handling
+  // Opening a recently opened file.
   QObject::connect(this, SIGNAL(openRecentFile(QString)), this, SLOT(open(QString)));
 
   QObject::connect(actionErrorOperand, &QAction::toggled, this, [this](bool a_check) { operand_error_warn = a_check; });
   QObject::connect(actionWarnNotEmpty, &QAction::toggled, this, [this](bool a_check) { empty_warn = a_check; });
 
-  //clear
   this->graphicsView->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
 
-  // axis
-  QPen* dashedLine{new QPen(QBrush(Qt::black), 1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin)};
-  dashedLine->setWidth(0);
+  // The axes.
+  QPen axis_pen(QBrush(Qt::black), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
   xAxis->setLine(-155000000000000, 0, 155000000000000, 0);
-  xAxis->setPen(*dashedLine);
+  xAxis->setPen(axis_pen);
   yAxis->setLine(0, -100000000000000, 0, 100000000000000);
-  yAxis->setPen(*dashedLine);
+  yAxis->setPen(axis_pen);
 
   m_linear_input->mOngoingPieceGI->set_pen(sPens[0]);
   m_linear_input->mLinearGI->set_pen(sPens[0]);
