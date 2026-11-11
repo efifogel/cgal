@@ -52,7 +52,7 @@ public:
 
   /*! determines whether the set is empty.
    */
-  virtual bool isModelEmpty() const { return ! m_set || m_set->is_empty(); }
+  virtual bool is_model_empty() const { return ! m_set || m_set->is_empty(); }
 
 protected:
   /*! extends the bounding box with the box of the set.

@@ -80,7 +80,7 @@ public:
     m_last_circular(false),
     m_last(false),
     mState(Start) {
-    mOngoingPieceGI->setPen(mOngoingCurvePen);
+    mOngoingPieceGI->set_pen(mOngoingCurvePen);
     mHandleGI->setPen(mHandlePen);
 
     mHandleGI->setLine(0, 0, 1, 1);
@@ -88,7 +88,7 @@ public:
     mCircleGI->hide();
 
     mCircularGI = new GI(&mCircularPolygonPieces);
-    mCircularGI->setPen(mCircularPolygonPen);
+    mCircularGI->set_pen(mCircularPolygonPen);
 
     mScene->addItem(mOngoingPieceGI);
     mScene->addItem(mHandleGI);
@@ -106,13 +106,13 @@ public:
   bool eventFilter(QObject* obj, QEvent* aEvent) {
     bool rHandled = false;
     if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      rHandled = mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      rHandled = mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      rHandled = mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::KeyPress)
-      rHandled = keyPressEvent(static_cast<QKeyEvent*>(aEvent));
+      rHandled = key_press(static_cast<QKeyEvent*>(aEvent));
     if (! rHandled) rHandled = QObject::eventFilter(obj, aEvent);
     return rHandled;
   }
@@ -127,7 +127,7 @@ public:
   /*! sets what the user constructs, and discards the polygon under construction.
    */
   void set_mode(Mode aMode) {
-    Reset();
+    reset();
     mMode = aMode;
   }
 
@@ -139,7 +139,7 @@ public:
    * under construction (a drag then bends it into an arc), and a right press starts closing the polygon.
    * \return true if the event is handled.
    */
-  bool mousePressEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     m_bound_rect = false;
     Point lP = cvt(aEvent->scenePos());
@@ -148,7 +148,7 @@ public:
       if ((aEvent->button() == ::Qt::LeftButton) && (mState == Start)) {
         mCenter = lP;
         mState = CircleOngoing;
-        UpdateCircle(lP);
+        update_circle(lP);
         rHandled = true;
       }
       return rHandled;
@@ -193,18 +193,18 @@ public:
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouseMoveEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     switch (mState) {
      case CircleOngoing:
-      UpdateCircle(lP);
+      update_circle(lP);
       rHandled = true;
       break;
 
      case PieceOngoing:
       mP1 = lP;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -213,15 +213,15 @@ public:
         mP1 = cvt(mCircularPolygonPieces.front().source());
         m_last_circular = true;
       }
-      UpdateHandle(lP);
-      UpdateOngoingPiece();
+      update_handle(lP);
+      update_ongoing_piece();
       rHandled = true;
       break;
 
      case PieceEnded:
       mState = PieceOngoing;
       mP1 = lP;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -234,14 +234,14 @@ public:
    * piece under construction, and a right release closes the polygon.
    * \return true if the event is handled.
    */
-  bool mouseReleaseEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     if (aEvent->button() == ::Qt::LeftButton) {
       switch (mState) {
        case CircleOngoing:
         mCircleGI->hide();
-        if (squared_distance(mCenter, lP) >= 4) GenerateCircle(Circle(mCenter, squared_distance(mCenter, lP)));
+        if (squared_distance(mCenter, lP) >= 4) generate_circle(Circle(mCenter, squared_distance(mCenter, lP)));
         mState = Start;
         rHandled = true;
         break;
@@ -252,8 +252,8 @@ public:
         break;
 
        case HandleOngoing:
-        HideHandle();
-        CommitOngoingPiece(lP);
+        hide_handle();
+        commit_ongoing_piece(lP);
         mState = PieceEnded;
         rHandled = true;
         break;
@@ -265,12 +265,12 @@ public:
       switch (mState) {
        case HandleOngoing:
         if (m_last_circular) {
-          HideHandle();
-          CommitOngoingPiece(lP);
+          hide_handle();
+          commit_ongoing_piece(lP);
         }
         m_bound_rect = false;
-        CommitCurrCircularPolygon();
-        ReStart();
+        commit_curr_circular_polygon();
+        restart();
         rHandled = true;
         break;
 
@@ -283,15 +283,15 @@ public:
   /*! handles a key press. Delete and Backspace remove the last piece; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool keyPressEvent(QKeyEvent* aEvent) {
+  bool key_press(QKeyEvent* aEvent) {
     bool rHandled = false;
     if ((aEvent->key() == ::Qt::Key_Delete) || (aEvent->key() == ::Qt::Key_Backspace)) {
-      RemoveLastPiece();
+      remove_last_piece();
       mState = (mCircularPolygonPieces.size() > 0) ? PieceEnded : Start;
       rHandled = true;
     }
     else if (aEvent->key() == ::Qt::Key_Escape) {
-      Reset();
+      reset();
       mState = Start;
       rHandled = true;
     }
@@ -305,60 +305,60 @@ public:
 
   /*! starts a new polygon.
    */
-  void ReStart() {
+  void restart() {
     mH = std::optional<Point>();
     mState = Start;
   }
 
   /*! discards the polygon under construction.
    */
-  void Reset() {
+  void reset() {
     mCircularPolygonPieces.clear();
     mOngoingPieceCtr.clear();
     mCircularGI->modelChanged();
     mOngoingPieceGI->modelChanged();
     mCircleGI->hide();
-    HideHandle();
-    ReStart();
+    hide_handle();
+    restart();
   }
 
   /*! hides the handle.
    */
-  void HideHandle() { mHandleGI->hide(); }
+  void hide_handle() { mHandleGI->hide(); }
 
   /*! creates the piece from the last vertex to the current point: an arc through the cursor if it is set, and a
    * segment otherwise.
    */
-  Circular_curve CreatePiece() {
+  Circular_curve create_piece() {
     if (mH && ! collinear(mP0, *mH, mP1)) return Circular_curve(mP0, *mH, mP1);
     return Circular_curve(mP0, mP1);
   }
 
   /*! removes the last piece.
    */
-  void RemoveLastPiece() {
+  void remove_last_piece() {
     mCircularPolygonPieces.pop_back();
     mOngoingPieceCtr.clear();
     mCircularGI->modelChanged();
     mOngoingPieceGI->modelChanged();
     if (mCircularPolygonPieces.size() > 0) {
       mP0 = cvt(mCircularPolygonPieces.back().target());
-      UpdateOngoingPiece();
+      update_ongoing_piece();
     }
     mH = std::optional<Point>();
   }
 
   /*! updates the piece under construction.
    */
-  void UpdateOngoingPiece() {
+  void update_ongoing_piece() {
     if (mOngoingPieceCtr.size() > 0) mOngoingPieceCtr.clear();
-    mOngoingPieceCtr.push_back(CreatePiece());
+    mOngoingPieceCtr.push_back(create_piece());
     mOngoingPieceGI->modelChanged();
   }
 
   /*! adds the piece under construction to the polygon (unless its endpoints coincide), and starts the next piece.
    */
-  void CommitOngoingPiece(const Point& aP) {
+  void commit_ongoing_piece(const Point& aP) {
     if (! ongoing_piece()) return;
     if (! ongoing_piece()->source().equals(ongoing_piece()->target())) {
       mCircularPolygonPieces.push_back(*ongoing_piece());
@@ -374,14 +374,14 @@ public:
   /*! updates the point the arc passes through. Once the cursor is dragged away from where the button was pressed, the
    * piece becomes an arc through the cursor; otherwise it stays a segment.
    */
-  void UpdateHandle(const Point& aP) {
+  void update_handle(const Point& aP) {
     if (squared_distance(mPress, aP) >= 4) mH = aP;
     else mH = std::optional<Point>();
   }
 
   /*! updates the circle under construction, whose boundary passes through a given point.
    */
-  void UpdateCircle(const Point& aP) {
+  void update_circle(const Point& aP) {
     double cx = to_double(mCenter.x());
     double cy = to_double(mCenter.y());
     double r = std::sqrt(to_double(squared_distance(mCenter, aP)));
@@ -393,7 +393,7 @@ public:
 
   /*! emits the polygon bounded by a given circle (counterclockwise).
    */
-  void GenerateCircle(const Circle& aCircle) {
+  void generate_circle(const Circle& aCircle) {
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
     std::vector<std::variant<Circular_X_monotone_curve, Arc_point>> x_objs;
@@ -412,20 +412,20 @@ public:
 
   /*! completes the polygon under construction.
    */
-  void CommitCurrCircularPolygon() {
-    GenerateCircularPolygon();
+  void commit_curr_circular_polygon() {
+    generate_circular_polygon();
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mCircularPolygonPieces.clear();
     mCircularGI->modelChanged();
     mH = std::optional<Point>();
-    HideHandle();
+    hide_handle();
   }
 
   /*! closes the polygon with a segment from its last vertex to its first (unless the closing piece is an arc or the
    * vertices coincide), and emits it. A polygon bounded by fewer than three segments, or by a single curve, is dropped.
    */
-  void GenerateCircularPolygon() {
+  void generate_circular_polygon() {
     bool closed = m_last_circular;
     m_last = false;
     m_last_circular = false;
@@ -466,7 +466,7 @@ public:
 
   /*! constructs a huge (bounding) polygon.
    */
-  void get_BoundingRect() {
+  void get_bounding_rect() {
     m_bound_rect = true;
 
     mP0 = Point(-15500000, -10000000);
@@ -474,45 +474,45 @@ public:
 
     mState = PieceOngoing;
     mP1 = Point(-15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(-15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(-15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(-15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(15500000, -10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, -10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, -10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, -10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
     mP1 = Point(-9000000, -9000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
-    CommitCurrCircularPolygon();
-    ReStart();
+    commit_curr_circular_polygon();
+    restart();
   }
 
   /*! determines whether the last polygon is the bounding polygon.
    */
-  bool isboundingRect() { return m_bound_rect; }
+  bool is_bounding_rect() { return m_bound_rect; }
 
 public:
   QGraphicsScene* mScene;

@@ -87,13 +87,13 @@ public:
     m_bound_rect(true),
     m_is_mink(false),
     m_hole(false) {
-    mOngoingPieceGI->setPen(mOngoingCurvePen);
+    mOngoingPieceGI->set_pen(mOngoingCurvePen);
     mHandleGI->setPen(mHandlePen);
 
     mHandleGI->setLine(0, 0, 1, 1);
     mHandleGI->hide();
 
-    mLinearGI->setPen(mLinearPolygonPen);
+    mLinearGI->set_pen(mLinearPolygonPen);
 
     mScene->addItem(mOngoingPieceGI);
     mScene->addItem(mHandleGI);
@@ -110,13 +110,13 @@ public:
   bool eventFilter(QObject* obj, QEvent* aEvent) {
     bool rHandled = false;
     if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      rHandled = mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      rHandled = mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      rHandled = mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
+      rHandled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
     else if (aEvent->type() == QEvent::KeyPress)
-      rHandled = keyPressEvent(static_cast<QKeyEvent*>(aEvent));
+      rHandled = key_press(static_cast<QKeyEvent*>(aEvent));
     if (! rHandled) rHandled = QObject::eventFilter(obj, aEvent);
     return rHandled;
   }
@@ -131,7 +131,7 @@ public:
   /*! handles a mouse press.
    * \return true if the event is handled.
    */
-  bool mousePressEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
     m_bound_rect = false;
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
@@ -158,19 +158,19 @@ public:
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouseMoveEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     switch (mState) {
      case PieceOngoing:
       mP1 = lP;
-      UpdateOngoingPiece();
+      update_ongoing_piece();
       rHandled = true;
       break;
 
      case HandleOngoing:
-      UpdateHandle(lP);
-      UpdateOngoingPiece();
+      update_handle(lP);
+      update_ongoing_piece();
       rHandled = true;
       break;
 
@@ -188,7 +188,7 @@ public:
    * polygon.
    * \return true if the event is handled.
    */
-  bool mouseReleaseEvent(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
     bool rHandled = false;
     Point lP = cvt(aEvent->scenePos());
     if (aEvent->button() == ::Qt::LeftButton) {
@@ -199,8 +199,8 @@ public:
         break;
 
        case HandleOngoing:
-        HideHandle();
-        CommitOngoingPiece(lP);
+        hide_handle();
+        commit_ongoing_piece(lP);
         mState = PieceEnded;
         rHandled = true;
         break;
@@ -212,8 +212,8 @@ public:
       switch (mState) {
        case PieceOngoing:
         m_bound_rect = false;
-        CommitCurrLinearPolygon();
-        ReStart();
+        commit_curr_linear_polygon();
+        restart();
         rHandled = true;
         break;
 
@@ -226,15 +226,15 @@ public:
   /*! handles a key press. Delete and Backspace remove the last edge; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool keyPressEvent(QKeyEvent* aEvent) {
+  bool key_press(QKeyEvent* aEvent) {
     bool rHandled = false;
     if ((aEvent->key() == ::Qt::Key_Delete) || (aEvent->key() == ::Qt::Key_Backspace)) {
-      RemoveLastPiece();
+      remove_last_piece();
       mState = (mLinearPolygonPieces.size() > 0) ? PieceEnded : Start;
       rHandled = true;
     }
     else if (aEvent->key() == ::Qt::Key_Escape) {
-      Reset();
+      reset();
       mState = Start;
       rHandled = true;
     }
@@ -247,54 +247,54 @@ public:
 
   /*! starts a new polygon.
    */
-  void ReStart() {
+  void restart() {
     mH = std::optional<Point>();
     mState = Start;
   }
 
   /*! discards the polygon under construction.
    */
-  void Reset() {
+  void reset() {
     mLinearPolygonPieces.clear();
     mOngoingPieceCtr.clear();
     mLinearGI->modelChanged();
     mOngoingPieceGI->modelChanged();
-    ReStart();
+    restart();
   }
 
   /*! hides the handle.
    */
-  void HideHandle() { mHandleGI->hide(); }
+  void hide_handle() { mHandleGI->hide(); }
 
   /*! creates the edge from the last vertex to the current point.
    */
-  Linear_curve CreatePiece() { return Linear_curve(mP0, mP1); }
+  Linear_curve create_piece() { return Linear_curve(mP0, mP1); }
 
   /*! removes the last edge.
    */
-  void RemoveLastPiece() {
+  void remove_last_piece() {
     mLinearPolygonPieces.pop_back();
     mOngoingPieceCtr.clear();
     mLinearGI->modelChanged();
     mOngoingPieceGI->modelChanged();
     if (mLinearPolygonPieces.size() > 0) {
       mP0 = cvt(mLinearPolygonPieces.back().target());
-      UpdateOngoingPiece();
+      update_ongoing_piece();
     }
     mH = std::optional<Point>();
   }
 
   /*! updates the edge under construction.
    */
-  void UpdateOngoingPiece() {
+  void update_ongoing_piece() {
     if (mOngoingPieceCtr.size() > 0) mOngoingPieceCtr.clear();
-    mOngoingPieceCtr.push_back(CreatePiece());
+    mOngoingPieceCtr.push_back(create_piece());
     mOngoingPieceGI->modelChanged();
   }
 
   /*! adds the edge under construction to the polygon (unless it is degenerate), and starts the next edge.
    */
-  void CommitOngoingPiece(const Point& aP) {
+  void commit_ongoing_piece(const Point& aP) {
     if (! ongoing_piece()) return;
     if (ongoing_piece()->source() != ongoing_piece()->target()) {
       mLinearPolygonPieces.push_back(*ongoing_piece());
@@ -309,14 +309,14 @@ public:
 
   /*! updates the handle; it is shown only when it is at least 2 units long.
    */
-  void UpdateHandle(const Point& aP) {
+  void update_handle(const Point& aP) {
     if (squared_distance(mP1, aP) >= 4) {
       mH = aP;
       mHandleGI->setLine(to_double(mP1.x()), to_double(mP1.y()), to_double(mH->x()), to_double(mH->y()));
       mHandleGI->show();
     }
     else {
-      HideHandle();
+      hide_handle();
       mH = std::optional<Point>();
     }
   }
@@ -327,19 +327,19 @@ public:
 
   /*! completes the polygon under construction.
    */
-  void CommitCurrLinearPolygon() {
-    GenerateLinearPolygon();
+  void commit_curr_linear_polygon() {
+    generate_linear_polygon();
     mOngoingPieceCtr.clear();
     mOngoingPieceGI->modelChanged();
     mLinearPolygonPieces.clear();
     mLinearGI->modelChanged();
     mH = std::optional<Point>();
-    HideHandle();
+    hide_handle();
   }
 
   /*! closes the polygon with an edge from its last vertex to its first (unless they coincide), and emits it.
    */
-  void GenerateLinearPolygon() {
+  void generate_linear_polygon() {
     if (mLinearPolygonPieces.size() <= 1) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
@@ -369,7 +369,7 @@ public:
 
   /*! constructs a huge (bounding) polygon.
    */
-  void get_BoundingRect() {
+  void get_bounding_rect() {
     m_bound_rect = true;
 
     mP0 = Point(-15500000, -10000000);
@@ -377,48 +377,48 @@ public:
     mState = PieceOngoing;
 
     mP1 = Point(-15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(-15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(-15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(-15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
 
     mP1 = Point(15500000, 10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, 10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, 10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, 10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
 
     mP1 = Point(15500000, -10000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
     mP1 = Point(15500000, -10000000);
     mState = HandleOngoing;
-    HideHandle();
-    CommitOngoingPiece(Point(15500000, -10000000));
+    hide_handle();
+    commit_ongoing_piece(Point(15500000, -10000000));
     mState = PieceEnded;
 
     mState = PieceOngoing;
 
     mP1 = Point(-9000000, -9000000);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
-    CommitCurrLinearPolygon();
-    ReStart();
+    commit_curr_linear_polygon();
+    restart();
   }
 
   /*! constructs polygons from the holes of a given polygon with holes (e.g., the result of a Minkowski sum).
    */
-  void get_Minkowski_holes(Polygon_with_holes_2 polygon, Polygon_with_holes_2 p0) {
+  void get_minkowski_holes(Polygon_with_holes_2 polygon, Polygon_with_holes_2 p0) {
     m_bound_rect = false;
     Point_2 pt;
     Polygon_2 hole;
@@ -436,11 +436,11 @@ public:
         else {
           mState = PieceOngoing;
           mP1 = p;
-          UpdateOngoingPiece();
+          update_ongoing_piece();
           mP1 = p;
           mState = HandleOngoing;
-          HideHandle();
-          CommitOngoingPiece(p);
+          hide_handle();
+          commit_ongoing_piece(p);
           mState = PieceEnded;
         }
         i++;
@@ -448,17 +448,17 @@ public:
 
       mState = PieceOngoing;
       mP1 = Point(-90, -90);
-      UpdateOngoingPiece();
+      update_ongoing_piece();
 
-      CommitCurrLinearPolygon();
-      ReStart();
+      commit_curr_linear_polygon();
+      restart();
     }
   }
 
   /*! constructs a polygon from the outer boundary of a given polygon with holes (e.g., the result of a Minkowski
    * sum).
    */
-  void get_Minkowski_result(Polygon_with_holes_2 polygon, Polygon_with_holes_2 p0) {
+  void get_minkowski_result(Polygon_with_holes_2 polygon, Polygon_with_holes_2 p0) {
     m_bound_rect = false;
     Point_2 pt;
 
@@ -473,11 +473,11 @@ public:
       else {
         mState = PieceOngoing;
         mP1 = p;
-        UpdateOngoingPiece();
+        update_ongoing_piece();
         mP1 = p;
         mState = HandleOngoing;
-        HideHandle();
-        CommitOngoingPiece(p);
+        hide_handle();
+        commit_ongoing_piece(p);
         mState = PieceEnded;
       }
       i++;
@@ -485,15 +485,15 @@ public:
 
     mState = PieceOngoing;
     mP1 = Point(-90, -90);
-    UpdateOngoingPiece();
+    update_ongoing_piece();
 
-    CommitCurrLinearPolygon();
-    ReStart();
+    commit_curr_linear_polygon();
+    restart();
   }
 
   /*! determines whether the last polygon is the bounding polygon.
    */
-  bool isboundingRect() { return m_bound_rect; }
+  bool is_bounding_rect() { return m_bound_rect; }
 
   /*! determines whether the last polygon is a hole.
    */

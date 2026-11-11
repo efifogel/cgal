@@ -55,7 +55,7 @@ public:
 
   /*! determines whether there are no pieces.
    */
-  virtual bool isModelEmpty() const { return ! m_boundary || (m_boundary->size() == 0); }
+  virtual bool is_model_empty() const { return ! m_boundary || (m_boundary->size() == 0); }
 
 protected:
   /*! extends the bounding box with the boxes of the pieces.

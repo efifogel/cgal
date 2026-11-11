@@ -43,7 +43,7 @@ class Piecewise_boundary_graphics_item : public Piecewise_graphics_item_base {
 public:
   /*! determines whether there is no boundary to draw.
    */
-  virtual bool isModelEmpty() const { return ! m_boundary || m_boundary->is_empty(); }
+  virtual bool is_model_empty() const { return ! m_boundary || m_boundary->is_empty(); }
 
 protected:
   /*! constructs from a functor that draws a curve and a functor that bounds a curve.

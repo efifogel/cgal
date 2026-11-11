@@ -378,11 +378,11 @@ public:
 
   /*! sets the pen of the graphics item.
    */
-  void set_pen(const QPen& aPen) override { m_GI->setPen(aPen); }
+  void set_pen(const QPen& aPen) override { m_GI->set_pen(aPen); }
 
   /*! sets the brush of the graphics item.
    */
-  void set_brush(const QBrush& aBrush) override { m_GI->setBrush(aBrush); }
+  void set_brush(const QBrush& aBrush) override { m_GI->set_brush(aBrush); }
 
   /*! determines whether the set is empty.
    */
@@ -733,7 +733,7 @@ public:
 
   /*! shows or hides a bucket.
    */
-  void ToggleView(std::size_t aIndex, bool a_check) {
+  void toggle_view(std::size_t aIndex, bool a_check) {
     if (a_check) set(aIndex).gi()->show();
     else set(aIndex).gi()->hide();
   }
@@ -1299,7 +1299,7 @@ public:
 private:
   /*! fits the view to the curves of all buckets.
    */
-  void zoomToFit();
+  void zoom_to_fit();
 
 protected slots:
   /*! loads polygons from a file into the Draw/Insert bucket; the file type is determined by its extension.
@@ -1312,47 +1312,43 @@ public slots:
 
   /*! adds a polygon constructed by one of the inputs to the Draw/Insert bucket.
    */
-  void processInput(CGAL::Object o);
+  void process_input(CGAL::Object o);
 
   /*! undoes the last action.
    */
-  void on_actionUndo_triggered();
+  void undo();
 
   /*! clears all buckets and starts a new program.
    */
-  void on_actionNew_triggered();
+  void new_program();
 
   /*! shows or hides the axes.
    */
-  void on_actionAxis_triggered();
-
-  /*! fits the view to the curves of all buckets.
-   */
-  void on_actionRecenter_triggered();
+  void toggle_axes();
 
   /*! adds the complement of the marked bucket to the Draw/Insert bucket.
    */
-  void on_actionComplementH_toggled(bool aChecked);
+  void apply_complement(bool aChecked);
 
   /*! adds the union of the marked buckets to the Draw/Insert bucket.
    */
-  void on_actionUnionH_toggled(bool aChecked);
+  void apply_union(bool aChecked);
 
   /*! adds the intersection of the marked buckets to the Draw/Insert bucket.
    */
-  void on_actionIntersectionH_toggled(bool aChecked);
+  void apply_intersection(bool aChecked);
 
   /*! adds the difference of the two marked buckets to the Draw/Insert bucket.
    */
-  void on_actionDifferenceH_toggled(bool aChecked);
+  void apply_difference(bool aChecked);
 
   /*! adds the symmetric difference of the two marked buckets to the Draw/Insert bucket.
    */
-  void on_actionSymmetric_DifferenceH_toggled(bool aChecked);
+  void apply_symmetric_difference(bool aChecked);
 
   /*! adds the Minkowski sum of the two marked (linear) buckets to the Draw/Insert bucket.
    */
-  void on_actionMinkowski_SumH_toggled(bool aChecked);
+  void apply_minkowski_sum(bool aChecked);
 
 
 
@@ -1361,43 +1357,43 @@ public slots:
 
   /*! shows or hides the Operations panel.
    */
-  void on_showColorBucket_toggled(bool aChecked);
+  void show_operations_panel(bool aChecked);
 
   /*! keeps the Operations menu item in sync with the visibility of its panel.
    */
-  void on_sceneDockWidget_visibilityChanged(bool visible);
+  void operations_panel_visibility_changed(bool visible);
 
   /*! keeps the Log menu item in sync with the visibility of its panel.
    */
-  void on_infoDockWidget_visibilityChanged(bool visible);
+  void log_panel_visibility_changed(bool visible);
 
   /*! keeps the Console menu item in sync with the visibility of its panel.
    */
-  void on_consoleDockWidget_visibilityChanged(bool visible);
+  void console_panel_visibility_changed(bool visible);
 
   /*! shows or hides the Console panel.
    */
-  void on_showConsole_toggled(bool aChecked);
+  void show_console_panel(bool aChecked);
 
   /*! shows or hides the Log panel.
    */
-  void on_showInfo_toggled(bool aChecked);
+  void show_log_panel(bool aChecked);
 
   /*! loads linear polygons from a file.
    */
-  void on_actionOpenLinear_triggered();
+  void open_linear();
 
   /*! loads polygons bounded by segments and circular arcs from a file.
    */
-  void on_actionOpenDXF_triggered();
+  void open_circular();
 
   /*! loads Bezier polygons from a file.
    */
-  void on_actionOpenBezier_triggered();
+  void open_bezier();
 
   /*! loads polygons bounded by polylines from a file.
    */
-  void on_actionOpenPolyline_triggered();
+  void open_polyline();
 
   /*! zooms the view in or out.
    */
@@ -1405,23 +1401,23 @@ public slots:
 
   /*! saves the Draw/Insert bucket to a file.
    */
-  void on_actionSaveCurrentBucket_triggered();
+  void save_draw_bucket();
 
   /*! adds a bucket (up to seven).
    */
-  void on_actionAddColor_triggered();
+  void add_bucket();
 
   /*! removes the last bucket (down to three).
    */
-  void on_actionMinusColor_triggered();
+  void remove_bucket();
 
   /*! copies the marked bucket into the Draw/Insert bucket.
    */
-  void on_actionCopyH_toggled(bool aChecked);
+  void apply_copy(bool aChecked);
 
   /*! moves the marked bucket into the Draw/Insert bucket.
    */
-  void on_actionMoveH_toggled(bool aChecked);
+  void apply_move(bool aChecked);
 
   /*! shows a message with a "Don't show this message again" check box. aToggle is the Edit-menu action that controls
    * whether the message is shown; checking the box unchecks it. Unlike a QMessageBox, OK is always on the left and
@@ -1580,15 +1576,15 @@ public slots:
 
   /*! shows or hides the scratch result set.
    */
-  void on_showResult_toggled(bool a_check);
+  void show_result(bool a_check);
 
   /*! shows or hides all buckets.
    */
-  void on_VisibleHeader_toggled(bool a_check);
+  void show_all_buckets(bool a_check);
 
   /*! marks or unmarks all buckets for clearing.
    */
-  void on_showClear_toggled(bool a_check);
+  void mark_all_for_clearing(bool a_check);
 
   /*! shows or hides a bucket. When the Draw/Insert bucket is hidden, the first visible bucket becomes the Draw/Insert
    * bucket; when no bucket is visible, curves are not constructed.
@@ -1613,19 +1609,19 @@ public slots:
 
   /*! shows information about 2D regularized Boolean set-operations.
    */
-  void on_aboutBolop_triggered();
+  void about_boolean_set_operations();
 
   /*! shows information about CGAL.
    */
-  void on_aboutCGAL_triggered();
+  void about_cgal();
 
   /*! shows information about 2D Minkowski sums.
    */
-  void on_aboutMinkop_triggered();
+  void about_minkowski_sums();
 
   /*! shows information about the demo.
    */
-  void on_aboutDemo_triggered();
+  void about_demo();
 
   /*! fits the view to the scene after the window is resized.
    */
@@ -1634,23 +1630,23 @@ public slots:
 
   /*! clears the scratch result set.
    */
-  void on_actionDeleteResult();
+  void delete_result();
 
   /*! clears all buckets.
    */
-  void on_actionDeleteAll_triggered();
+  void delete_all();
 
   /*! clears the marked buckets.
    */
-  void on_actionClearH_toggled(bool aChecked);
+  void apply_clear(bool aChecked);
 
   /*! starts or stops panning the view by dragging.
    */
-  void on_actionPAN_triggered();
+  void toggle_pan();
 
   /*! obtains the (linear) polygon with holes of a given bucket, an operand of a Minkowski sum.
    */
-  Polygon_with_holes_2 getMinkInputPolygon(size_t color);
+  Polygon_with_holes_2 get_mink_input_polygon(size_t color);
 
   /*! reads linear polygons from a file. \return false if the file cannot be read.
    */
@@ -1686,7 +1682,7 @@ private:
       State_current m_state = State_current(aOperation, m_curve_type);
       states_stack.push_back(m_state);
       for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        link_GI(si->gi());
+        link_gi(si->gi());
     }
     else {
       State_current m_state_x = State_current(aOperation, m_curve_type);
@@ -1695,31 +1691,31 @@ private:
         m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
       }
 
-      modelChanged();
+      model_changed();
 
       for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        unlink_GI(si->gi());
+        unlink_gi(si->gi());
 
-      modelChanged();
+      model_changed();
 
       states_stack.push_back(m_state_x);
 
       for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        link_GI(si->gi());
+        link_gi(si->gi());
 
-      modelChanged();
+      model_changed();
     }
 
     m_state_num = states_stack.size();
     actionUndo->setEnabled(true);
 
     // for confirming the num of each state during debugging
-    modelChanged();
+    model_changed();
   }
 
   /*! emits the changed() signal.
    */
-  void modelChanged() { emit(changed()); }
+  void model_changed() { emit(changed()); }
 
   /*! asks the user a yes/no question. \return true if the answer is yes.
    */
@@ -1737,14 +1733,14 @@ private:
 
   /*! adds a graphics item to the scene and connects it to the changed() signal.
    */
-  void link_GI(CGAL::Qt::GraphicsItem* aGI) {
+  void link_gi(CGAL::Qt::GraphicsItem* aGI) {
     QObject::connect(this, SIGNAL(changed()), aGI, SLOT(modelChanged()));
     m_scene.addItem(aGI);
   }
 
   /*! removes a graphics item from the scene and disconnects it from the changed() signal.
    */
-  void unlink_GI(CGAL::Qt::GraphicsItem* aGI) {
+  void unlink_gi(CGAL::Qt::GraphicsItem* aGI) {
     m_scene.removeItem(aGI);
     QObject::disconnect(this, SIGNAL(changed()), aGI, SLOT(modelChanged()));
   }
@@ -2017,15 +2013,15 @@ MainWindow::MainWindow() :
 
   // The curve families. Selecting one in the tool bar starts constructing its curves.
   m_families = {{
-    {Curve_type::Linear, "linear", actionInsertLinear, m_linear_input, [this] { m_linear_input->Reset(); },
+    {Curve_type::Linear, "linear", actionInsertLinear, m_linear_input, [this] { m_linear_input->reset(); },
      actionOpenLinear, ".lps", &MainWindow::read_linear},
-    {Curve_type::Circular, "circular", actionInsertCircular, m_circular_input, [this] { m_circular_input->Reset(); },
+    {Curve_type::Circular, "circular", actionInsertCircular, m_circular_input, [this] { m_circular_input->reset(); },
      actionOpenDXF, ".cps", &MainWindow::read_circular},
-    {Curve_type::Bezier, "Bezier", actionInsertBezier, m_bezier_input, [this] { m_bezier_input->Reset(); },
+    {Curve_type::Bezier, "Bezier", actionInsertBezier, m_bezier_input, [this] { m_bezier_input->reset(); },
      actionOpenBezier, ".bps", &MainWindow::read_bezier},
-    {Curve_type::Polyline, "polyline", actionInsertPolyline, m_polyline_input, [this] { m_polyline_input->Reset(); },
+    {Curve_type::Polyline, "polyline", actionInsertPolyline, m_polyline_input, [this] { m_polyline_input->reset(); },
      actionOpenPolyline, ".mps", &MainWindow::read_polyline},
-    {Curve_type::Conic, "conic", actionInsertConic, m_conic_input, [this] { m_conic_input->Reset(); }, nullptr,
+    {Curve_type::Conic, "conic", actionInsertConic, m_conic_input, [this] { m_conic_input->reset(); }, nullptr,
      nullptr, nullptr}}};
   for (const auto& family : m_families) {
     Curve_type type = family.m_type;
@@ -2113,11 +2109,11 @@ MainWindow::MainWindow() :
   }
 
   //connecting GUI and the code base
-  QObject::connect(m_linear_input, SIGNAL(generate(CGAL::Object)), this, SLOT(processInput(CGAL::Object)));
-  QObject::connect(m_circular_input, SIGNAL(generate(CGAL::Object)), this, SLOT(processInput(CGAL::Object)));
-  QObject::connect(m_bezier_input, SIGNAL(generate(CGAL::Object)), this, SLOT(processInput(CGAL::Object)));
-  QObject::connect(m_conic_input, SIGNAL(generate(CGAL::Object)), this, SLOT(processInput(CGAL::Object)));
-  QObject::connect(m_polyline_input, SIGNAL(generate(CGAL::Object)), this, SLOT(processInput(CGAL::Object)));
+  QObject::connect(m_linear_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
+  QObject::connect(m_circular_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
+  QObject::connect(m_bezier_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
+  QObject::connect(m_conic_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
+  QObject::connect(m_polyline_input, SIGNAL(generate(CGAL::Object)), this, SLOT(process_input(CGAL::Object)));
 
   m_scene.installEventFilter(m_linear_input);
 
@@ -2128,6 +2124,46 @@ MainWindow::MainWindow() :
   }
 
   QObject::connect(this->actionQuit, SIGNAL(triggered()), this, SLOT(close()));
+
+  // The actions and the widgets of the panels.
+  QObject::connect(actionNew, &QAction::triggered, this, &MainWindow::new_program);
+  QObject::connect(actionUndo, &QAction::triggered, this, &MainWindow::undo);
+  QObject::connect(actionAxis, &QAction::triggered, this, &MainWindow::toggle_axes);
+  QObject::connect(actionPAN, &QAction::triggered, this, &MainWindow::toggle_pan);
+  QObject::connect(actionRecenter, &QAction::triggered, this, &MainWindow::zoom_to_fit);
+  QObject::connect(actionOpenLinear, &QAction::triggered, this, &MainWindow::open_linear);
+  QObject::connect(actionOpenDXF, &QAction::triggered, this, &MainWindow::open_circular);
+  QObject::connect(actionOpenBezier, &QAction::triggered, this, &MainWindow::open_bezier);
+  QObject::connect(actionOpenPolyline, &QAction::triggered, this, &MainWindow::open_polyline);
+  QObject::connect(actionSaveCurrentBucket, &QAction::triggered, this, &MainWindow::save_draw_bucket);
+  QObject::connect(actionAddColor, &QAction::triggered, this, &MainWindow::add_bucket);
+  QObject::connect(actionMinusColor, &QAction::triggered, this, &MainWindow::remove_bucket);
+  QObject::connect(actionDeleteAll, &QAction::triggered, this, &MainWindow::delete_all);
+  QObject::connect(showColorBucket, &QAction::toggled, this, &MainWindow::show_operations_panel);
+  QObject::connect(showConsole, &QAction::toggled, this, &MainWindow::show_console_panel);
+  QObject::connect(showInfo, &QAction::toggled, this, &MainWindow::show_log_panel);
+  QObject::connect(aboutBolop, &QAction::triggered, this, &MainWindow::about_boolean_set_operations);
+  QObject::connect(aboutCGAL, &QAction::triggered, this, &MainWindow::about_cgal);
+  QObject::connect(aboutMinkop, &QAction::triggered, this, &MainWindow::about_minkowski_sums);
+  QObject::connect(aboutDemo, &QAction::triggered, this, &MainWindow::about_demo);
+  QObject::connect(actionComplementH, &QAbstractButton::toggled, this, &MainWindow::apply_complement);
+  QObject::connect(actionIntersectionH, &QAbstractButton::toggled, this, &MainWindow::apply_intersection);
+  QObject::connect(actionUnionH, &QAbstractButton::toggled, this, &MainWindow::apply_union);
+  QObject::connect(actionDifferenceH, &QAbstractButton::toggled, this, &MainWindow::apply_difference);
+  QObject::connect(actionSymmetric_DifferenceH, &QAbstractButton::toggled, this,
+                   &MainWindow::apply_symmetric_difference);
+  QObject::connect(actionMinkowski_SumH, &QAbstractButton::toggled, this, &MainWindow::apply_minkowski_sum);
+  QObject::connect(actionCopyH, &QAbstractButton::toggled, this, &MainWindow::apply_copy);
+  QObject::connect(actionMoveH, &QAbstractButton::toggled, this, &MainWindow::apply_move);
+  QObject::connect(actionClearH, &QAbstractButton::toggled, this, &MainWindow::apply_clear);
+  QObject::connect(showResult, &QAbstractButton::toggled, this, &MainWindow::show_result);
+  QObject::connect(VisibleHeader, &QAbstractButton::toggled, this, &MainWindow::show_all_buckets);
+  QObject::connect(showClear, &QAbstractButton::toggled, this, &MainWindow::mark_all_for_clearing);
+  QObject::connect(sceneDockWidget, &QDockWidget::visibilityChanged, this,
+                   &MainWindow::operations_panel_visibility_changed);
+  QObject::connect(infoDockWidget, &QDockWidget::visibilityChanged, this, &MainWindow::log_panel_visibility_changed);
+  QObject::connect(consoleDockWidget, &QDockWidget::visibilityChanged, this,
+                   &MainWindow::console_panel_visibility_changed);
 
   //for file handling
   QObject::connect(this, SIGNAL(openRecentFile(QString)), this, SLOT(open(QString)));
@@ -2146,8 +2182,8 @@ MainWindow::MainWindow() :
   yAxis->setLine(0, -100000000000000, 0, 100000000000000);
   yAxis->setPen(*dashedLine);
 
-  m_linear_input->mOngoingPieceGI->setPen(sPens[0]);
-  m_linear_input->mLinearGI->setPen(sPens[0]);
+  m_linear_input->mOngoingPieceGI->set_pen(sPens[0]);
+  m_linear_input->mLinearGI->set_pen(sPens[0]);
   m_linear_input->mHandleGI->setPen(sPens[0]);
   actionOpenLinear->setEnabled(true);
   actionOpenDXF->setEnabled(false);
@@ -2155,10 +2191,10 @@ MainWindow::MainWindow() :
   actionOpenPolyline->setEnabled(false);
 }
 
-void MainWindow::on_showResult_toggled(bool a_check) { states_stack.back().ToggleView(result_index, a_check); }
+void MainWindow::show_result(bool a_check) { states_stack.back().toggle_view(result_index, a_check); }
 
 void MainWindow::show_bucket(std::size_t aIndex, bool aChecked) {
-  states_stack.back().ToggleView(aIndex, aChecked);
+  states_stack.back().toggle_view(aIndex, aChecked);
   m_draw_column[aIndex]->setEnabled(aChecked);
   if (aIndex >= m_number_of_buckets) return;
   auto visible = number_of_visible_buckets();
@@ -2223,53 +2259,53 @@ std::optional<std::size_t> MainWindow::checked_bucket(const Column& aColumn) con
   return buckets.front();
 }
 
-void MainWindow::on_VisibleHeader_toggled(bool a_check) {
+void MainWindow::show_all_buckets(bool a_check) {
   for (auto* box : m_show_column) box->setChecked(a_check);
   if (a_check) m_draw_column[0]->setChecked(true);
 }
 
-void MainWindow::on_showClear_toggled(bool a_check) {
+void MainWindow::mark_all_for_clearing(bool a_check) {
   for (auto* box : m_clear_column) box->setChecked(a_check);
 }
 
-void MainWindow::on_sceneDockWidget_visibilityChanged(bool a_check) {
+void MainWindow::operations_panel_visibility_changed(bool a_check) {
   if (a_check) showColorBucket->setChecked(true);
   else if (! this->windowState().testFlag(Qt::WindowMinimized)) showColorBucket->setChecked(false);
 }
 
-void MainWindow::on_infoDockWidget_visibilityChanged(bool a_check) {
+void MainWindow::log_panel_visibility_changed(bool a_check) {
   if (a_check) showInfo->setChecked(true);
   else if (! this->windowState().testFlag(Qt::WindowMinimized)) showInfo->setChecked(false);
 }
 
-void MainWindow::on_consoleDockWidget_visibilityChanged(bool a_check) {
+void MainWindow::console_panel_visibility_changed(bool a_check) {
   if (a_check) showConsole->setChecked(true);
   else if (! this->windowState().testFlag(Qt::WindowMinimized)) showConsole->setChecked(false);
 }
 
-void MainWindow::on_showColorBucket_toggled(bool a_check) {
+void MainWindow::show_operations_panel(bool a_check) {
   if (a_check) sceneDockWidget->setVisible(true);
   else sceneDockWidget->setVisible(false);
 }
 
-void MainWindow::on_showConsole_toggled(bool a_check) {
+void MainWindow::show_console_panel(bool a_check) {
   if (a_check) consoleDockWidget->setVisible(true);
   else consoleDockWidget->setVisible(false);
 }
 
-void MainWindow::on_showInfo_toggled(bool a_check) {
+void MainWindow::show_log_panel(bool a_check) {
   if (a_check) infoDockWidget->setVisible(true);
   else infoDockWidget->setVisible(false);
 }
 
-void MainWindow::on_actionAddColor_triggered() {
+void MainWindow::add_bucket() {
   if (m_number_of_buckets == number_of_buckets) return;
   log_statements({QString("%1 = Polygon_set_2()").arg(bucket_name(m_number_of_buckets))}, true);
   set_number_of_buckets(m_number_of_buckets + 1);
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_actionMinusColor_triggered() {
+void MainWindow::remove_bucket() {
   if (m_number_of_buckets == min_number_of_buckets) return;
   std::size_t i = m_number_of_buckets - 1;
   log_statements({QString("del %1").arg(bucket_name(i))}, true);
@@ -2288,15 +2324,15 @@ void MainWindow::on_actionMinusColor_triggered() {
   // Keep at least one remaining bucket unmarked in the Intersection and Union columns, for the result.
   keep_one_unchecked(m_intersection_column);
   keep_one_unchecked(m_union_column);
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_actionUndo_triggered() {
+void MainWindow::undo() {
   if (m_state_num > 1) {
 
     //unlink GI for last state
     for (auto si = states_stack.back().m_curve_sets.begin();
-         si != states_stack.back().m_curve_sets.end(); ++si) { unlink_GI(si->gi()); }
+         si != states_stack.back().m_curve_sets.end(); ++si) { unlink_gi(si->gi()); }
 
     switch (states_stack.back().m_operation) {
      case State_op::Complement:
@@ -2310,13 +2346,13 @@ void MainWindow::on_actionUndo_triggered() {
      default: break;
     }
 
-    modelChanged();
+    model_changed();
 
     // pop last state
     states_stack.pop_back();
 
     for (auto si = states_stack.back().m_curve_sets.begin();
-         si != states_stack.back().m_curve_sets.end(); ++si) { link_GI(si->gi()); }
+         si != states_stack.back().m_curve_sets.end(); ++si) { link_gi(si->gi()); }
 
     if (states_stack.size() == 1) {
       actionUndo->setEnabled(false);
@@ -2326,14 +2362,14 @@ void MainWindow::on_actionUndo_triggered() {
     trim_program_to_states();
 
     // for confirming the num of each state during debugging
-    modelChanged();
+    model_changed();
   }
   else {
     show_error("Nothing to Undo!!!");
   }
 }
 
-void MainWindow::on_actionNew_triggered() {
+void MainWindow::new_program() {
   if (m_state_num > 1) get_new_state(State_op::Reset);
 
   // Reset starts a new program, which constructs the initial buckets.
@@ -2353,17 +2389,17 @@ void MainWindow::on_actionNew_triggered() {
 
   m_disjoint = false;
 
-  m_linear_input->Reset();
-  m_circular_input->Reset();
-  m_bezier_input->Reset();
-  m_polyline_input->Reset();
+  m_linear_input->reset();
+  m_circular_input->reset();
+  m_bezier_input->reset();
+  m_polyline_input->reset();
 
   m_pan = false;
 
   m_color_active = 0;
 
-  m_linear_input->mOngoingPieceGI->setPen(sPens[0]);
-  m_linear_input->mLinearGI->setPen(sPens[0]);
+  m_linear_input->mOngoingPieceGI->set_pen(sPens[0]);
+  m_linear_input->mLinearGI->set_pen(sPens[0]);
   m_linear_input->mHandleGI->setPen(sPens[0]);
 
   sceneDockWidget->setVisible(true);
@@ -2416,11 +2452,11 @@ void MainWindow::on_actionNew_triggered() {
   showClear->setChecked(false);
   line11->setVisible(true);
 
-  zoomToFit();
-  modelChanged();
+  zoom_to_fit();
+  model_changed();
 }
 
-void MainWindow::on_actionDeleteAll_triggered() {
+void MainWindow::delete_all() {
   actionComplementH->setChecked(false);
   actionIntersectionH->setChecked(false);
   actionUnionH->setChecked(false);
@@ -2436,16 +2472,16 @@ void MainWindow::on_actionDeleteAll_triggered() {
   log_statements(program);
 
   for (std::size_t i = 0; i < number_of_buckets; ++i) states_stack.back().clear(i);
-  on_actionDeleteResult();
-  modelChanged();
+  delete_result();
+  model_changed();
 }
 
-void MainWindow::on_actionDeleteResult() {
+void MainWindow::delete_result() {
   states_stack.back().clear(result_index);
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_actionClearH_toggled(bool aChecked) {
+void MainWindow::apply_clear(bool aChecked) {
   if (! aChecked) return;
   actionComplementH->setChecked(false);
   actionIntersectionH->setChecked(false);
@@ -2464,23 +2500,21 @@ void MainWindow::on_actionClearH_toggled(bool aChecked) {
   if (buckets.empty()) show_error("Please select color bucket to be cleaned!!!");
 
   actionClearH->setChecked(false);
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_actionRecenter_triggered() { zoomToFit(); }
-
-void MainWindow::on_actionOpenLinear_triggered()
+void MainWindow::open_linear()
 { open(QFileDialog::getOpenFileName(this, tr("Open Linear Polygon"), "./data", tr("Linear Curve files (*.lps)"))); }
 
-void MainWindow::on_actionOpenDXF_triggered() {
+void MainWindow::open_circular() {
   open(QFileDialog::getOpenFileName(this, tr("Open Line segments and circular arcs"), "./data",
                                     tr("Circular curve files (*.cps)")));
 }
 
-void MainWindow::on_actionOpenBezier_triggered()
+void MainWindow::open_bezier()
 { open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), "./data", tr("Bezier Curve files (*.bps)"))); }
 
-void MainWindow::on_actionOpenPolyline_triggered()
+void MainWindow::open_polyline()
 { open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data", tr("Polyline Curve files (*.mps)"))); }
 
 bool MainWindow::read_linear(QString aFileName) {
@@ -2908,7 +2942,7 @@ bool MainWindow::read_bezier(QString aFileName) {
       }
     }
     catch (const std::exception& e) {
-      on_actionUndo_triggered();
+      undo();
     }
   }
   return rOK;
@@ -3229,7 +3263,7 @@ bool save_bezier_result(QString aFileName, const Bezier_polygon_set& aSet) {
   return rOK;
 }
 
-void MainWindow::on_actionSaveCurrentBucket_triggered() {
+void MainWindow::save_draw_bucket() {
   auto& bucket = states_stack.back().set(m_color_active);
   switch (m_curve_type) {
    case Curve_type::Linear:
@@ -3261,10 +3295,10 @@ void MainWindow::on_actionSaveCurrentBucket_triggered() {
 }
 
 void MainWindow::switch_set_type(Curve_set& aSet, Curve_type aType) {
-  unlink_GI(aSet.gi());
+  unlink_gi(aSet.gi());
   aSet.reset_type(aType);
-  link_GI(aSet.gi());
-  modelChanged();
+  link_gi(aSet.gi());
+  model_changed();
 }
 
 void MainWindow::switch_sets_type(Curve_type aType) {
@@ -3276,14 +3310,14 @@ void MainWindow::open(QString fileName) {
   for (const auto& family : m_families) {
     if (! family.m_extension || ! fileName.endsWith(family.m_extension)) continue;
     if (ensure_curve_type(family.m_type) && (this->*family.m_read)(fileName)) {
-      modelChanged();
+      model_changed();
       this->addToRecentFiles(fileName);
     }
     return;
   }
 }
 
-void MainWindow::on_actionComplementH_toggled(bool /* aChecked */) {
+void MainWindow::apply_complement(bool /* aChecked */) {
   if (! actionComplementH->isChecked()) return;
   auto operands = checked_buckets(m_complement_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
@@ -3292,7 +3326,7 @@ void MainWindow::on_actionComplementH_toggled(bool /* aChecked */) {
   run_operation(Bucket_op::Complement, operands, actionComplementH);
 }
 
-void MainWindow::on_actionIntersectionH_toggled(bool /* aChecked */) {
+void MainWindow::apply_intersection(bool /* aChecked */) {
   if (! actionIntersectionH->isChecked()) return;
   auto operands = checked_buckets(m_intersection_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
@@ -3301,7 +3335,7 @@ void MainWindow::on_actionIntersectionH_toggled(bool /* aChecked */) {
   run_operation(Bucket_op::Intersection, operands, actionIntersectionH);
 }
 
-void MainWindow::on_actionDifferenceH_toggled(bool /* aChecked */) {
+void MainWindow::apply_difference(bool /* aChecked */) {
   if (! actionDifferenceH->isChecked()) return;
   auto operands = checked_buckets(m_difference_column);
   if (operands.size() != 2) {
@@ -3315,7 +3349,7 @@ void MainWindow::on_actionDifferenceH_toggled(bool /* aChecked */) {
   run_operation(Bucket_op::Difference, operands, actionDifferenceH);
 }
 
-void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool /* aChecked */) {
+void MainWindow::apply_symmetric_difference(bool /* aChecked */) {
   if (! actionSymmetric_DifferenceH->isChecked()) return;
   auto operands = checked_buckets(m_symmetric_difference_column);
   if (operands.size() != 2) {
@@ -3329,7 +3363,7 @@ void MainWindow::on_actionSymmetric_DifferenceH_toggled(bool /* aChecked */) {
   run_operation(Bucket_op::Symmetric_difference, operands, actionSymmetric_DifferenceH);
 }
 
-void MainWindow::on_actionUnionH_toggled(bool /* aChecked */) {
+void MainWindow::apply_union(bool /* aChecked */) {
   if (! actionUnionH->isChecked()) return;
   auto operands = checked_buckets(m_union_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
@@ -3338,7 +3372,7 @@ void MainWindow::on_actionUnionH_toggled(bool /* aChecked */) {
   run_operation(Bucket_op::Join, operands, actionUnionH);
 }
 
-void MainWindow::on_actionCopyH_toggled(bool aChecked) {
+void MainWindow::apply_copy(bool aChecked) {
   if (actionCopyH->isChecked()) {
     auto source = checked_bucket(m_copy_column);
     if (abort_for_draw_bucket(actionCopyH, source == m_color_active)) return;
@@ -3370,11 +3404,11 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
       states_stack.back().set(m_color_active).join(states_stack.back().result_set());
     states_stack.back().clear(result_index);
     this->setCursor(old);
-    if (lDone) modelChanged();
+    if (lDone) model_changed();
   }
 }
 
-void MainWindow::on_actionMoveH_toggled(bool aChecked) {
+void MainWindow::apply_move(bool aChecked) {
   if (actionMoveH->isChecked()) {
     auto source = checked_bucket(m_move_column);
     if (abort_for_draw_bucket(actionMoveH, source == m_color_active)) return;
@@ -3410,11 +3444,11 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
 
     lDone = true;
     this->setCursor(old);
-    if (lDone) modelChanged();
+    if (lDone) model_changed();
   }
 }
 
-Polygon_with_holes_2 MainWindow::getMinkInputPolygon(size_t color) {
+Polygon_with_holes_2 MainWindow::get_mink_input_polygon(size_t color) {
   Linear_polygon_set lps;
   using Pgn_with_holes_container = std::vector<Linear_polygon_with_holes>;
   using Point = typename Kernel::Point_2;
@@ -3465,7 +3499,7 @@ Polygon_with_holes_2 MainWindow::getMinkInputPolygon(size_t color) {
   return pwh;
 }
 
-void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
+void MainWindow::apply_minkowski_sum(bool aChecked) {
   if (actionMinkowski_SumH->isChecked()) {
     if (abort_for_draw_bucket(actionMinkowski_SumH,
                               draw_row_checked(m_minkowski_sum_column)))
@@ -3499,17 +3533,17 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
         CGAL::Small_side_angle_bisector_decomposition_2<Kernel> ssab_decomp;
 
         if (! states_stack.back().set(operands[0]).is_empty()) {
-          p0 = getMinkInputPolygon(operands[0]);
-          if (! states_stack.back().set(operands[1]).is_empty()) p1 = getMinkInputPolygon(operands[1]);
+          p0 = get_mink_input_polygon(operands[0]);
+          if (! states_stack.back().set(operands[1]).is_empty()) p1 = get_mink_input_polygon(operands[1]);
         }
 
         if (! m_disjoint) {
           Polygon_with_holes_2 mink_sum_res = CGAL::minkowski_sum_2(p0, p1);
           if (! mink_sum_res.is_unbounded()) {
             m_linear_input->m_is_mink = true;
-            m_linear_input->get_Minkowski_result(mink_sum_res, p0);
+            m_linear_input->get_minkowski_result(mink_sum_res, p0);
             m_linear_input->m_hole = true;
-            m_linear_input->get_Minkowski_holes(mink_sum_res, p0);
+            m_linear_input->get_minkowski_holes(mink_sum_res, p0);
             states_stack.back().result_set().clear();
             m_linear_input->m_hole = false;
             m_linear_input->m_is_mink = false;
@@ -3519,7 +3553,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
           minkowski_sum_operated = true;
         }
         else {
-          on_actionUndo_triggered();
+          undo();
           show_error("DISJOINT POLYGON SET ERROR\n\nCannot perform Minkowski Sum operation since Input Bucket contains "
                      "more than disjoint polygons!!!");
           m_disjoint = false;
@@ -3533,12 +3567,12 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
     actionMinkowski_SumH->setChecked(false);
     this->setCursor(old);
     if (lDone) {
-      modelChanged();
+      model_changed();
     }
   }
 }
 
-void MainWindow::on_actionAxis_triggered() {
+void MainWindow::toggle_axes() {
   if (! m_grid) {
     m_scene.addItem(xAxis);
     m_scene.addItem(yAxis);
@@ -3552,10 +3586,10 @@ void MainWindow::on_actionAxis_triggered() {
   // Keep the button checked (highlighted) while the axes are shown.
   actionAxis->setChecked(m_grid);
   m_scene.update();
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_actionPAN_triggered() {
+void MainWindow::toggle_pan() {
   if (! m_pan) {
     remove_inputs();
     family(m_curve_type).m_insert_action->setChecked(false);
@@ -3564,12 +3598,12 @@ void MainWindow::on_actionPAN_triggered() {
     this->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     m_scene.update();
     m_pan = true;
-    modelChanged();
+    model_changed();
   }
   else {
     family(m_curve_type).m_insert_action->setChecked(true);
     m_pan = false;
-    modelChanged();
+    model_changed();
   }
 }
 
@@ -3601,7 +3635,7 @@ void MainWindow::wheelEvent(QWheelEvent* event) {
       this->graphicsView->scale(2.5, 2.5);
     }
   }
-  modelChanged();
+  model_changed();
 }
 
 QIcon MainWindow::curve_tool_icon(const QString& aKind) {
@@ -3675,18 +3709,18 @@ void MainWindow::install_input(QObject* aInput) {
 }
 
 void MainWindow::set_input_pen(const QPen& aPen) {
-  m_linear_input->mOngoingPieceGI->setPen(aPen);
-  m_linear_input->mLinearGI->setPen(aPen);
+  m_linear_input->mOngoingPieceGI->set_pen(aPen);
+  m_linear_input->mLinearGI->set_pen(aPen);
   m_linear_input->mHandleGI->setPen(aPen);
-  m_circular_input->mOngoingPieceGI->setPen(aPen);
-  m_circular_input->mCircularGI->setPen(aPen);
+  m_circular_input->mOngoingPieceGI->set_pen(aPen);
+  m_circular_input->mCircularGI->set_pen(aPen);
   m_circular_input->mHandleGI->setPen(aPen);
-  m_bezier_input->mOngoingPieceGI->setPen(aPen);
-  m_bezier_input->mBezierGI->setPen(aPen);
+  m_bezier_input->mOngoingPieceGI->set_pen(aPen);
+  m_bezier_input->mBezierGI->set_pen(aPen);
   m_bezier_input->mHandle0GI->setPen(aPen);
   m_bezier_input->mHandle1GI->setPen(aPen);
-  m_polyline_input->mOngoingPieceGI->setPen(aPen);
-  m_polyline_input->mPolylineGI->setPen(aPen);
+  m_polyline_input->mOngoingPieceGI->set_pen(aPen);
+  m_polyline_input->mPolylineGI->set_pen(aPen);
   m_polyline_input->mHandleGI->setPen(aPen);
   m_conic_input->set_pen(aPen);
 }
@@ -3719,7 +3753,7 @@ void MainWindow::start_inserting(Curve_type aType) {
     return;
   }
   if (! m_pan && ! m_reset) {
-    while (m_state_num > 1) on_actionUndo_triggered();
+    while (m_state_num > 1) undo();
   }
   actionPAN->setChecked(false);
   m_pan = false;
@@ -3728,12 +3762,12 @@ void MainWindow::start_inserting(Curve_type aType) {
     if (other.m_type != aType) other.m_insert_action->setChecked(false);
   }
   install_input(selected.m_input);
-  on_actionDeleteResult();
+  delete_result();
   actionMinkowski_SumH->setEnabled(aType == Curve_type::Linear);
   set_input_pen(sPens[m_color_active]);
 }
 
-void MainWindow::zoomToFit() {
+void MainWindow::zoom_to_fit() {
   std::optional<QRectF> lTotalRect;
   for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si) {
     if (! si->is_empty()) {
@@ -3746,7 +3780,7 @@ void MainWindow::zoomToFit() {
     this->graphicsView->setSceneRect(*lTotalRect);
     this->graphicsView->fitInView(*lTotalRect, Qt::KeepAspectRatio);
   }
-  modelChanged();
+  model_changed();
 }
 
 QMessageBox::StandardButton
@@ -3981,7 +4015,7 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
   aOperation->setChecked(false);
   this->setCursor(old);
   log_statements(program);
-  modelChanged();
+  model_changed();
 }
 
 void MainWindow::log_statements(const QStringList& aStatements, bool aSticky) {
@@ -4070,7 +4104,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     if ((index < min_number_of_buckets) || (index != last))
       throw std::runtime_error(index < min_number_of_buckets ? "the red, black, and blue buckets cannot be deleted" :
         ("only the last bucket (" + QString(bucket_name(last)) + ") can be deleted").toStdString());
-    on_actionMinusColor_triggered();      // logs "del <name>"
+    remove_bucket();      // logs "del <name>"
     return QString();
   }
 
@@ -4088,7 +4122,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
         throw std::runtime_error(("buckets are added in order; the next one " "is " + QString(bucket_name(next)))
                                  .toStdString());
       m_logging = false;
-      on_actionAddColor_triggered();
+      add_bucket();
       m_logging = true;
       if (! arg) {       // a new, empty bucket
         log_statements({to_python(aStatement)}, true);
@@ -4282,7 +4316,7 @@ void MainWindow::run_console_line(const QString& aLine) {
   catch (std::exception& e) {
     console_print(QString("Error: ") + e.what());
   }
-  modelChanged();
+  model_changed();
 }
 
 void MainWindow::save_program() {
@@ -4326,10 +4360,10 @@ bool MainWindow::abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOper
 void MainWindow::resizeEvent(QResizeEvent* e) {
   this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
   this->graphicsView->scale(2.5, 2.5);
-  modelChanged();
+  model_changed();
 }
 
-void MainWindow::on_aboutCGAL_triggered() {
+void MainWindow::about_cgal() {
   QString title = "About CGAL";
   QString html_resource_name = "help/about_CGAL.html";
 
@@ -4361,7 +4395,7 @@ void MainWindow::on_aboutCGAL_triggered() {
   mb.exec();
 }
 
-void MainWindow::on_aboutMinkop_triggered() {
+void MainWindow::about_minkowski_sums() {
   QString title = "About 2D Minkowski sums";
   QString html_resource_name = "help/About2DMinkowskisums.html";
   QFile about_CGAL(html_resource_name);
@@ -4392,7 +4426,7 @@ void MainWindow::on_aboutMinkop_triggered() {
   mb.exec();
 }
 
-void MainWindow::on_aboutBolop_triggered() {
+void MainWindow::about_boolean_set_operations() {
 
   QString title = "About 2D Minkowski sums";
   QString html_resource_name = "help/About2DRegularizedBooleanOperations.html";
@@ -4424,7 +4458,7 @@ void MainWindow::on_aboutBolop_triggered() {
   mb.exec();
 }
 
-void MainWindow::on_aboutDemo_triggered() {
+void MainWindow::about_demo() {
   QString title = "About Demo";
   QString html_resource_name = "help/aboutThisDemo.html";
   QFile about_CGAL(html_resource_name);
@@ -4455,7 +4489,7 @@ void MainWindow::on_aboutDemo_triggered() {
   mb.exec();
 }
 
-void MainWindow::processInput(CGAL::Object o) {
+void MainWindow::process_input(CGAL::Object o) {
   std::pair<Bezier_polygon, Bezier_boundary_source> lBI;
   Linear_polygon lLI;
   Circular_polygon lCI;
@@ -4477,7 +4511,7 @@ void MainWindow::processInput(CGAL::Object o) {
         if (o == CGAL::CLOCKWISE)
           lBI.first.reverse_orientation();
 
-        if (! m_bezier_input->isboundingRect()) {
+        if (! m_bezier_input->is_bounding_rect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
         }
@@ -4494,7 +4528,7 @@ void MainWindow::processInput(CGAL::Object o) {
         }
         Linear_polygon_with_holes lCPWH(lLI);
 
-        if (! m_linear_input->isboundingRect() && ! m_linear_input->ishole()) {
+        if (! m_linear_input->is_bounding_rect() && ! m_linear_input->ishole()) {
           if (! m_linear_input->is_mink()) {
             get_new_state(State_op::Draw);
           }
@@ -4520,7 +4554,7 @@ void MainWindow::processInput(CGAL::Object o) {
 
         Circular_polygon_with_holes lCPWH(lCI);
 
-        if (! m_circular_input->isboundingRect()) {
+        if (! m_circular_input->is_bounding_rect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).circular().join(lCPWH);
         }
@@ -4537,7 +4571,7 @@ void MainWindow::processInput(CGAL::Object o) {
 
         Polyline_polygon_with_holes lPPWH(lPI);
 
-        if (! m_polyline_input->isboundingRect()) {
+        if (! m_polyline_input->is_bounding_rect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).polyline().join(lPPWH);
         }
@@ -4548,9 +4582,9 @@ void MainWindow::processInput(CGAL::Object o) {
     }
   }
   catch (const std::exception& e) {
-    on_actionUndo_triggered();
+    undo();
   }
-  modelChanged();
+  model_changed();
 }
 
 #include "Boolean_set_operations_2.moc"
