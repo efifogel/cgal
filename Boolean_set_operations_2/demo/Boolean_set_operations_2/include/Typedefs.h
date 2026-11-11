@@ -65,10 +65,6 @@ using Linear_polygon = Linear_traits::Polygon_2;
 using Linear_polygon_set = CGAL::General_polygon_set_2<Linear_traits>;
 using Linear_curve = Linear_traits::Curve_2;
 
-using Linear_region_source_container = std::vector<Linear_polygon_with_holes>;
-using Linear_boundary_source = std::vector<Linear_curve>;
-using Linear_region_source = std::vector<Linear_boundary_source>;
-
 // Polylines (the kernel is the same as the linear one)
 using Segment_traits_2 = CGAL::Arr_segment_traits_2<Kernel>;
 using Polyline_traits = CGAL::Gps_traits_2<CGAL::Arr_polyline_traits_2<Segment_traits_2>>;
@@ -76,10 +72,6 @@ using Polyline_polygon = Polyline_traits::Polygon_2;
 using Polyline_polygon_set = CGAL::General_polygon_set_2<Polyline_traits>;
 using Polyline_curve = Polyline_traits::Curve_2;
 using Polyline_polygon_with_holes = Polyline_traits::General_polygon_with_holes_2;
-
-using Polyline_region_source_container = std::vector<Polyline_polygon_with_holes>;
-using Polyline_boundary_source = std::vector<Polyline_curve>;
-using Polyline_region_source = std::vector<Polyline_boundary_source>;
 
 // Circular polygons
 #ifdef CGAL_USE_GMP
@@ -103,7 +95,6 @@ using Circular_polygon = Circular_traits::Polygon_2;
 
 using Circular_polygon_with_holes = Circular_traits::General_polygon_with_holes_2;
 using Circular_polygon_set = CGAL::General_polygon_set_2<Circular_traits>;
-using Circular_region_source_container = std::vector<Circular_polygon_with_holes>;
 
 // Bezier polygons
 using Bezier_nt_traits = CGAL::CORE_algebraic_number_traits;
@@ -129,8 +120,6 @@ using Bezier_polygon_set = CGAL::General_polygon_set_2<Bezier_gps_traits>;
 using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
 
 using Bezier_boundary_source = std::vector<Bezier_curve>;
-using Bezier_region_source = std::vector<Bezier_boundary_source>;
-using Bezier_region_source_container = std::vector<Bezier_region_source>;
 
 // Conic polygons
 using Conic_nt_traits = CGAL::CORE_algebraic_number_traits;

@@ -31,6 +31,8 @@
 #include <list>
 #include <limits>
 #include <optional>
+#include <functional>
+#include <type_traits>
 #include <vector>
 
 #include <boost/shared_ptr.hpp>
@@ -239,15 +241,19 @@ QBrush sBrushes[] = {
   QBrush(QColor(0, 0, 0, 0)),              //Result
 };
 
+// The curve families.
+enum class Curve_type { Linear, Circular, Bezier, Polyline, Conic };
+constexpr std::size_t number_of_curve_types = 5;
+
 //A base call for rep class
 struct Rep_base {
   /*! destructs.
    */
   virtual ~Rep_base() {}
 
-  /*! obtains the curve family: 1 linear, 2 circular, 3 Bezier, 4 polyline, 5 conic.
+  /*! obtains the curve family.
    */
-  virtual int type() const = 0;
+  virtual Curve_type type() const = 0;
 
   /*! obtains the graphics item that draws the set.
    */
@@ -326,19 +332,25 @@ struct Rep_base {
   virtual void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) = 0;
 };
 
-//Class for initializing Rep class.
-//Used for linear and circular
-template<typename GI_, typename Set_, typename Gps_traits>
+// The representation of a set of a given curve family. The graphics item that draws the set is constructed with traits
+// if they are given.
+template <typename GI_, typename Set_, Curve_type type_, typename Gps_traits = void>
 class Rep : public Rep_base {
 public:
   using GI = GI_;
   using Set = Set_;
-
-  using Self = Rep<GI, Set, Gps_traits>;
+  using Self = Rep<GI, Set, type_, Gps_traits>;
 
   /*! constructs an empty set and its graphics item.
    */
-  Rep() { m_GI = new GI(&m_set, m_traits); }
+  Rep() {
+    if constexpr (std::is_void_v<Gps_traits>) m_GI = new GI(&m_set);
+    else m_GI = new GI(&m_set, m_traits);
+  }
+
+  /*! obtains the curve family.
+   */
+  Curve_type type() const override { return type_; }
 
   /*! obtains the set.
    */
@@ -350,163 +362,87 @@ public:
 
   /*! obtains the graphics item that draws the set.
    */
-  virtual CGAL::Qt::GraphicsItem* gi() const { return m_GI; }
+  CGAL::Qt::GraphicsItem* gi() const override { return m_GI; }
 
   /*! obtains the graphics item that draws the set.
    */
-  virtual CGAL::Qt::GraphicsItem* gi() { return m_GI; }
+  CGAL::Qt::GraphicsItem* gi() override { return m_GI; }
 
   /*! obtains the bounding rectangle of the curves of the set.
    */
-  virtual QRectF bounding_rect() const { return m_GI->curves_rect(); }
+  QRectF bounding_rect() const override { return m_GI->curves_rect(); }
 
   /*! updates the graphics item after the area that unbounded sets are drawn over changed.
    */
-  virtual void unbounded_rect_changed() { if (m_GI->is_unbounded()) m_GI->modelChanged(); }
+  void unbounded_rect_changed() override { if (m_GI->is_unbounded()) m_GI->modelChanged(); }
 
   /*! sets the pen of the graphics item.
    */
-  virtual void set_pen(const QPen& aPen) { m_GI->setPen(aPen); }
+  void set_pen(const QPen& aPen) override { m_GI->setPen(aPen); }
 
   /*! sets the brush of the graphics item.
    */
-  virtual void set_brush(const QBrush& aBrush) { m_GI->setBrush(aBrush); }
+  void set_brush(const QBrush& aBrush) override { m_GI->setBrush(aBrush); }
 
   /*! determines whether the set is empty.
    */
-  virtual bool is_empty() const { return m_set.is_empty(); }
+  bool is_empty() const override { return m_set.is_empty(); }
 
   /*! clears the set.
    */
-  virtual void clear() {
-    try {
-      m_set.clear();
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation clear");
-    }
-  }
+  void clear() override { guarded("clear", [&] { m_set.clear(); }); }
 
   /*! complements the set.
    */
-  virtual void complement() {
-    try {
-      m_set.complement();
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation complement");
-    }
-  }
+  void complement() override { guarded("complement", [&] { m_set.complement(); }); }
 
   /*! assigns another set (of the same family) to the set.
    */
-  virtual void assign(const Rep_base& aOther) {
-    try {
-      m_set = cast(aOther).m_set;
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation assign");
-    }
-  }
+  void assign(const Rep_base& aOther) override { guarded("assign", [&] { m_set = cast(aOther).m_set; }); }
 
   /*! intersects the set with another set.
    */
-  virtual void intersect(const Rep_base& aOther) {
-    try {
-      m_set.intersection(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation intersect");
-    }
-  }
+  void intersect(const Rep_base& aOther) override
+  { guarded("intersect", [&] { m_set.intersection(cast(aOther).m_set); }); }
 
   /*! joins the set with another set.
    */
-  virtual void join(const Rep_base& aOther) {
-    try {
-      m_set.join(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation union");
-    }
-  }
+  void join(const Rep_base& aOther) override { guarded("union", [&] { m_set.join(cast(aOther).m_set); }); }
 
   /*! subtracts another set from the set.
    */
-  virtual void difference(const Rep_base& aOther) {
-    try {
-      m_set.difference(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation difference");
-    }
-  }
+  void difference(const Rep_base& aOther) override
+  { guarded("difference", [&] { m_set.difference(cast(aOther).m_set); }); }
 
   /*! replaces the set with its symmetric difference with another set.
    */
-  virtual void symmetric_difference(const Rep_base& aOther) {
-    try {
-      m_set.symmetric_difference(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation symmetric difference");
-    }
-  }
+  void symmetric_difference(const Rep_base& aOther) override
+  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(aOther).m_set); }); }
 
   /*! replaces the set with the complement of another set.
    */
-  virtual void complement(const Rep_base& aOther) {
-    try {
-      m_set.complement(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation complement");
-    }
-  }
+  void complement(const Rep_base& aOther) override
+  { guarded("complement", [&] { m_set.complement(cast(aOther).m_set); }); }
 
   /*! replaces the set with the intersection of two sets.
    */
-  virtual void intersect(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation intersect");
-    }
-  }
+  void intersect(const Rep_base& aFirst, const Rep_base& aSecond) override
+  { guarded("intersect", [&] { m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set); }); }
 
   /*! replaces the set with the union of two sets.
    */
-  virtual void join(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.join(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation union");
-    }
-  }
+  void join(const Rep_base& aFirst, const Rep_base& aSecond) override
+  { guarded("union", [&] { m_set.join(cast(aFirst).m_set, cast(aSecond).m_set); }); }
 
   /*! replaces the set with the difference of two sets.
    */
-  virtual void difference(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation difference");
-    }
-  }
+  void difference(const Rep_base& aFirst, const Rep_base& aSecond) override
+  { guarded("difference", [&] { m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set); }); }
 
   /*! replaces the set with the symmetric difference of two sets.
    */
-  virtual void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation symmetric difference");
-    }
-  }
+  void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) override
+  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set); }); }
 
   /*! casts a set representation to this type.
    */
@@ -517,273 +453,30 @@ public:
   static Self& cast(Rep_base& aOther) { return dynamic_cast<Self&>(aOther); }
 
 private:
-  //For maintaining all drawing operations
-  GI* m_GI;
-  //Storage for all polygons of one type. It is used as a base to perform all boolean operations
-  Set m_set;
-protected:
-  //pass it
-  Gps_traits m_traits;
-};
-
-//Implementing Bezier's rep class
-template<class GI_, class Set_>
-class Rep_o : public Rep_base {
-public:
-  using GI = GI_;
-  using Set = Set_;
-
-  using Self = Rep_o<GI, Set>;
-
-  /*! constructs an empty set and its graphics item.
+  /*! applies an operation to the set; shows an error if it throws.
    */
-  Rep_o() { m_GI = new GI(&m_set); }
-
-  /*! obtains the set.
-   */
-  const Set& set() const { return m_set; }
-
-  /*! obtains the set.
-   */
-  Set& set() { return m_set; }
-
-  /*! obtains the graphics item that draws the set.
-   */
-  virtual CGAL::Qt::GraphicsItem* gi() const { return m_GI; }
-
-  /*! obtains the graphics item that draws the set.
-   */
-  virtual CGAL::Qt::GraphicsItem* gi() { return m_GI; }
-
-  /*! obtains the bounding rectangle of the curves of the set.
-   */
-  virtual QRectF bounding_rect() const { return m_GI->curves_rect(); }
-
-  /*! updates the graphics item after the area that unbounded sets are drawn over changed.
-   */
-  virtual void unbounded_rect_changed() { if (m_GI->is_unbounded()) m_GI->modelChanged(); }
-
-  /*! sets the pen of the graphics item.
-   */
-  virtual void set_pen(const QPen& aPen) { m_GI->setPen(aPen); }
-
-  /*! sets the brush of the graphics item.
-   */
-  virtual void set_brush(const QBrush& aBrush) { m_GI->setBrush(aBrush); }
-
-  /*! determines whether the set is empty.
-   */
-  virtual bool is_empty() const { return m_set.is_empty(); }
-
-  /*! clears the set.
-   */
-  virtual void clear() {
+  template <typename Operation>
+  static void guarded(const char* aName, Operation aOperation) {
     try {
-      m_set.clear();
+      aOperation();
     }
     catch (...) {
-      show_error("Exception thrown during boolean operation clear");
+      show_error(std::string("Exception thrown during boolean operation ") + aName);
     }
   }
 
-  /*! complements the set.
-   */
-  virtual void complement() {
-    try {
-      m_set.complement();
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation complement");
-    }
-  }
+  struct No_traits {};
 
-  /*! assigns another set (of the same family) to the set.
-   */
-  virtual void assign(const Rep_base& aOther) {
-    try {
-      m_set = cast(aOther).m_set;
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation assign");
-    }
-  }
-
-  /*! intersects the set with another set.
-   */
-  virtual void intersect(const Rep_base& aOther) {
-    try {
-      m_set.intersection(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation intersect");
-    }
-  }
-
-  /*! joins the set with another set.
-   */
-  virtual void join(const Rep_base& aOther) {
-    try {
-      m_set.join(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation union");
-    }
-  }
-
-  /*! subtracts another set from the set.
-   */
-  virtual void difference(const Rep_base& aOther) {
-    try {
-      m_set.difference(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation difference");
-    }
-  }
-
-  /*! replaces the set with its symmetric difference with another set.
-   */
-  virtual void symmetric_difference(const Rep_base& aOther) {
-    try {
-      m_set.symmetric_difference(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation symmetric difference");
-    }
-  }
-
-  /*! replaces the set with the complement of another set.
-   */
-  virtual void complement(const Rep_base& aOther) {
-    try {
-      m_set.complement(cast(aOther).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation complement");
-    }
-  }
-
-  /*! replaces the set with the intersection of two sets.
-   */
-  virtual void intersect(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation intersect");
-    }
-  }
-
-  /*! replaces the set with the union of two sets.
-   */
-  virtual void join(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.join(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation union");
-    }
-  }
-
-  /*! replaces the set with the difference of two sets.
-   */
-  virtual void difference(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation difference");
-    }
-  }
-
-  /*! replaces the set with the symmetric difference of two sets.
-   */
-  virtual void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) {
-    try {
-      m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set);
-    }
-    catch (...) {
-      show_error("Exception thrown during boolean operation symmetric difference");
-    }
-  }
-
-  /*! casts a set representation to this type.
-   */
-  static const Self& cast(const Rep_base& aOther) { return dynamic_cast<const Self&>(aOther); }
-
-  /*! casts a set representation to this type.
-   */
-  static Self& cast(Rep_base& aOther) { return dynamic_cast<Self&>(aOther); }
-
-private:
   GI* m_GI;
   Set m_set;
+  std::conditional_t<std::is_void_v<Gps_traits>, No_traits, Gps_traits> m_traits;
 };
 
-//A class for connecting linear polygon GUI and this file
-class Linear_rep : public Rep<Linear_GI, Linear_polygon_set, Linear_traits> {
-  using Base = Rep<Linear_GI, Linear_polygon_set, Linear_traits>;
-public:
-  /*! constructs an empty set.
-   */
-  Linear_rep() : Base() {}
-
-  /*! obtains the curve family (linear).
-   */
-  virtual int type() const { return 1; }
-};
-
-//A class for connecting circular polygon GUI and this file
-class Circular_rep : public Rep<Circular_GI, Circular_polygon_set, Circular_traits> {
-  using Base = Rep<Circular_GI, Circular_polygon_set, Circular_traits>;
-public:
-  /*! constructs an empty set.
-   */
-  Circular_rep() : Base() {}
-
-  /*! obtains the curve family (circular).
-   */
-  virtual int type() const { return 2; }
-};
-
-//A class for connecting polyline polygon GUI and this file
-class Polyline_rep : public Rep<Polyline_GI, Polyline_polygon_set, Polyline_traits> {
-  using Base = Rep<Polyline_GI, Polyline_polygon_set, Polyline_traits>;
-public:
-  /*! constructs an empty set.
-   */
-  Polyline_rep() : Base() {}
-
-  /*! obtains the curve family (polyline).
-   */
-  virtual int type() const { return 4; }
-};
-
-//A class for connecting bezier polygon GUI and this file
-class Bezier_rep : public Rep_o<Bezier_GI, Bezier_polygon_set> {
-  using Base = Rep_o<Bezier_GI, Bezier_polygon_set>;
-public:
-  /*! constructs an empty set.
-   */
-  Bezier_rep() : Base() {}
-
-  /*! obtains the curve family (Bezier).
-   */
-  virtual int type() const { return 3; }
-};
-
-//A class for connecting conic polygon GUI and this file
-class Conic_rep : public Rep_o<CGAL::Qt::Conic_GI, Conic_polygon_set> {
-  using Base = Rep_o<CGAL::Qt::Conic_GI, Conic_polygon_set>;
-public:
-  /*! constructs an empty set.
-   */
-  Conic_rep() : Base() {}
-
-  /*! obtains the curve family (conic).
-   */
-  virtual int type() const { return 5; }
-};
+using Linear_rep = Rep<Linear_GI, Linear_polygon_set, Curve_type::Linear, Linear_traits>;
+using Circular_rep = Rep<Circular_GI, Circular_polygon_set, Curve_type::Circular, Circular_traits>;
+using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::Bezier>;
+using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::Polyline, Polyline_traits>;
+using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::Conic>;
 
 // a container which deletes an object when last shared_ptr gets deleted or re-initiated
 class Curve_set {
@@ -792,17 +485,18 @@ class Curve_set {
 public:
   /*! constructs an empty set of a given curve family, drawn with a given pen and brush.
    */
-  Curve_set(int aType, QPen aPen, QBrush aBrush) : m_pen(aPen), m_brush(aBrush) { reset_type(aType); }
+  Curve_set(Curve_type aType, QPen aPen, QBrush aBrush) : m_pen(aPen), m_brush(aBrush) { reset_type(aType); }
 
   /*! replaces the set with an empty set of a given curve family.
    */
-  void reset_type(int aType) {
-    //setting shared_ptr for respective polygon
-    if (aType == 1) m_rep = Rep_ptr(new Linear_rep());
-    else if (aType == 2) m_rep = Rep_ptr(new Circular_rep());
-    else if (aType == 3) m_rep = Rep_ptr(new Bezier_rep());
-    else if (aType == 4) m_rep = Rep_ptr(new Polyline_rep());
-    else if (aType == 5) m_rep = Rep_ptr(new Conic_rep());
+  void reset_type(Curve_type aType) {
+    switch (aType) {
+     case Curve_type::Linear: m_rep = Rep_ptr(new Linear_rep()); break;
+     case Curve_type::Circular: m_rep = Rep_ptr(new Circular_rep()); break;
+     case Curve_type::Bezier: m_rep = Rep_ptr(new Bezier_rep()); break;
+     case Curve_type::Polyline: m_rep = Rep_ptr(new Polyline_rep()); break;
+     case Curve_type::Conic: m_rep = Rep_ptr(new Conic_rep()); break;
+    }
 
     //setting pen and brush
     m_rep->set_pen(m_pen);
@@ -839,55 +533,24 @@ public:
 
   /*! assigns another set (of the same family) to the set.
    */
-  void assign(const Curve_set& aOther) {
-    if (is_linear() && aOther.is_linear()) get_linear_rep()->assign(*aOther.get_linear_rep());
-    else if (is_circular() && aOther.is_circular()) get_circular_rep()->assign(*aOther.get_circular_rep());
-    else if (is_bezier() && aOther.is_bezier()) get_bezier_rep()->assign(*aOther.get_bezier_rep());
-    else if (is_polyline() && aOther.is_polyline()) get_polyline_rep()->assign(*aOther.get_polyline_rep());
-    else if (is_conic() && aOther.is_conic()) get_conic_rep()->assign(*aOther.get_conic_rep());
-  }
+  void assign(const Curve_set& aOther) { if (same_type(aOther)) m_rep->assign(*aOther.m_rep); }
 
   /*! intersects the set with another set (of the same family).
    */
-  void intersect(const Curve_set& aOther) {
-    if (is_linear() && aOther.is_linear()) get_linear_rep()->intersect(*aOther.get_linear_rep());
-    else if (is_circular() && aOther.is_circular()) get_circular_rep()->intersect(*aOther.get_circular_rep());
-    else if (is_bezier() && aOther.is_bezier()) get_bezier_rep()->intersect(*aOther.get_bezier_rep());
-    else if (is_polyline() && aOther.is_polyline()) get_polyline_rep()->intersect(*aOther.get_polyline_rep());
-    else if (is_conic() && aOther.is_conic()) get_conic_rep()->intersect(*aOther.get_conic_rep());
-  }
+  void intersect(const Curve_set& aOther) { if (same_type(aOther)) m_rep->intersect(*aOther.m_rep); }
 
   /*! joins the set with another set (of the same family).
    */
-  void join(const Curve_set& aOther) {
-    if (is_linear() && aOther.is_linear()) get_linear_rep()->join(*aOther.get_linear_rep());
-    else if (is_circular() && aOther.is_circular()) get_circular_rep()->join(*aOther.get_circular_rep());
-    else if (is_bezier() && aOther.is_bezier()) get_bezier_rep()->join(*aOther.get_bezier_rep());
-    else if (is_polyline() && aOther.is_polyline()) get_polyline_rep()->join(*aOther.get_polyline_rep());
-    else if (is_conic() && aOther.is_conic()) get_conic_rep()->join(*aOther.get_conic_rep());
-  }
+  void join(const Curve_set& aOther) { if (same_type(aOther)) m_rep->join(*aOther.m_rep); }
 
   /*! subtracts another set (of the same family) from the set.
    */
-  void difference(const Curve_set& aOther) {
-    if (is_linear() && aOther.is_linear()) get_linear_rep()->difference(*aOther.get_linear_rep());
-    else if (is_circular() && aOther.is_circular()) get_circular_rep()->difference(*aOther.get_circular_rep());
-    else if (is_bezier() && aOther.is_bezier()) get_bezier_rep()->difference(*aOther.get_bezier_rep());
-    else if (is_polyline() && aOther.is_polyline()) get_polyline_rep()->difference(*aOther.get_polyline_rep());
-    else if (is_conic() && aOther.is_conic()) get_conic_rep()->difference(*aOther.get_conic_rep());
-  }
+  void difference(const Curve_set& aOther) { if (same_type(aOther)) m_rep->difference(*aOther.m_rep); }
 
   /*! replaces the set with its symmetric difference with another set (of the same family).
    */
-  void symmetric_difference(const Curve_set& aOther) {
-    if (is_linear() && aOther.is_linear()) get_linear_rep()->symmetric_difference(*aOther.get_linear_rep());
-    else if (is_circular() && aOther.is_circular())
-      get_circular_rep()->symmetric_difference(*aOther.get_circular_rep());
-    else if (is_bezier() && aOther.is_bezier()) get_bezier_rep()->symmetric_difference(*aOther.get_bezier_rep());
-    else if (is_polyline() && aOther.is_polyline())
-      get_polyline_rep()->symmetric_difference(*aOther.get_polyline_rep());
-    else if (is_conic() && aOther.is_conic()) get_conic_rep()->symmetric_difference(*aOther.get_conic_rep());
-  }
+  void symmetric_difference(const Curve_set& aOther)
+  { if (same_type(aOther)) m_rep->symmetric_difference(*aOther.m_rep); }
 
   /*! replaces the set with the complement of another set.
    */
@@ -934,25 +597,29 @@ public:
    */
   Rep_base& rep() { return *m_rep; }
 
+  /*! obtains the curve family of the set.
+   */
+  Curve_type type() const { return m_rep->type(); }
+
   /*! determines whether the set is linear.
    */
-  bool is_linear() const { return m_rep->type() == 1; }
+  bool is_linear() const { return type() == Curve_type::Linear; }
 
   /*! determines whether the set is circular.
    */
-  bool is_circular() const { return m_rep->type() == 2; }
+  bool is_circular() const { return type() == Curve_type::Circular; }
 
   /*! determines whether the set is Bezier.
    */
-  bool is_bezier() const { return m_rep->type() == 3; }
+  bool is_bezier() const { return type() == Curve_type::Bezier; }
 
   /*! determines whether the set is a polyline set.
    */
-  bool is_polyline() const { return m_rep->type() == 4; }
+  bool is_polyline() const { return type() == Curve_type::Polyline; }
 
   /*! determines whether the set is conic.
    */
-  bool is_conic() const { return m_rep->type() == 5; }
+  bool is_conic() const { return type() == Curve_type::Conic; }
 
   /*! obtains the conic representation, or null if the set is not conic.
    */
@@ -1054,7 +721,7 @@ class State_current {
 public:
   /*! constructs the state after a given operation, with empty sets of a given curve family.
    */
-  State_current(State_op aOperation, size_t aType);
+  State_current(State_op aOperation, Curve_type aType);
 
   /*! obtains the set of a given bucket (or the scratch result set, at result_index).
    */
@@ -1071,52 +738,18 @@ public:
     else set(aIndex).gi()->hide();
   }
 
-  /*! obtains the linear polygons of a given bucket (or of the result), as constructed.
+  /*! clears a given bucket (or the result).
    */
-  Linear_region_source_container& linear_sources(std::size_t aIndex) { return m_linear_sources[aIndex]; }
-
-  /*! obtains the circular polygons of a given bucket (or of the result), as constructed.
-   */
-  Circular_region_source_container& circular_sources(std::size_t aIndex) { return m_circular_sources[aIndex]; }
-
-  /*! obtains the Bezier polygons of a given bucket (or of the result), as constructed.
-   */
-  Bezier_region_source_container& bezier_sources(std::size_t aIndex) { return m_bezier_sources[aIndex]; }
-
-  /*! obtains the polyline polygons of a given bucket (or of the result), as constructed.
-   */
-  Polyline_region_source_container& polyline_sources(std::size_t aIndex) { return m_polyline_sources[aIndex]; }
-
-  /*! clears the polygons of a given bucket (or of the result), as constructed.
-   */
-  void clear_sources(std::size_t aIndex) {
-    m_linear_sources[aIndex].clear();
-    m_circular_sources[aIndex].clear();
-    m_bezier_sources[aIndex].clear();
-    m_polyline_sources[aIndex].clear();
-  }
-
-  /*! clears a given bucket (or the result), and its polygons as constructed.
-   */
-  void clear(std::size_t aIndex) {
-    set(aIndex).clear();
-    clear_sources(aIndex);
-  }
+  void clear(std::size_t aIndex) { set(aIndex).clear(); }
 
 public:
   Curve_set_container m_curve_sets;
 
-  // The polygons of the buckets and of the result (indexed like the sets), as constructed.
-  std::array<Linear_region_source_container, number_of_buckets + 1> m_linear_sources;
-  std::array<Circular_region_source_container, number_of_buckets + 1> m_circular_sources;
-  std::array<Bezier_region_source_container, number_of_buckets + 1> m_bezier_sources;
-  std::array<Polyline_region_source_container, number_of_buckets + 1> m_polyline_sources;
-
   State_op m_operation;
-  size_t m_type;
+  Curve_type m_type;
 };
 
-State_current::State_current(State_op aOperation, size_t aType) : m_operation(aOperation), m_type(aType) {
+State_current::State_current(State_op aOperation, Curve_type aType) : m_operation(aOperation), m_type(aType) {
   for (std::size_t i = 0; i <= number_of_buckets; ++i) m_curve_sets.push_back(Curve_set(m_type, sPens[i], sBrushes[i]));
 }
 
@@ -1314,6 +947,13 @@ enum class Bucket_op { Complement, Intersection, Join, Difference,
 inline const char* bucket_name(std::size_t aIndex) {
   static const char* names[] = { "red", "black", "blue", "brown", "yellow", "magenta", "aqua" };
   return (aIndex < number_of_buckets) ? names[aIndex] : "result";
+}
+
+/*! obtains a string with its first letter capitalized.
+ */
+inline QString capitalized(QString aString) {
+  if (! aString.isEmpty()) aString[0] = aString[0].toUpper();
+  return aString;
 }
 
 /*! obtains the shortest decimal representation that reads back as the same double, so that the program reproduces the
@@ -1610,10 +1250,21 @@ private:
   int m_console_history_pos = 0;
   std::map<QString, Curve_set> m_variables;
   //keep it intact for now check it out
-  bool m_circular_active;
-  bool m_bezier_active;
-  bool m_polyline_active;
-  bool m_conic_active = false;
+  Curve_type m_curve_type = Curve_type::Linear;     // the curve family of the sets
+
+  // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
+  // be loaded, the action that does it, the extension of their files, and the reader.
+  struct Curve_family {
+    Curve_type m_type;
+    const char* m_name;
+    QAction* m_insert_action;
+    QObject* m_input;
+    std::function<void()> m_reset_input;
+    QAction* m_open_action;
+    const char* m_extension;
+    bool (MainWindow::*m_read)(QString);
+  };
+  std::array<Curve_family, number_of_curve_types> m_families;
 
   //to determine which type is currently active
   size_t m_color_active;
@@ -1703,25 +1354,10 @@ public slots:
    */
   void on_actionMinkowski_SumH_toggled(bool aChecked);
 
-  /*! starts or stops constructing linear polygons.
-   */
-  void on_actionInsertLinear_toggled(bool aChecked);
 
-  /*! starts or stops constructing polygons bounded by segments and circular arcs.
-   */
-  void on_actionInsertCircular_toggled(bool aChecked);
 
-  /*! starts or stops constructing polygons bounded by conic arcs.
-   */
-  void on_actionInsertConic_toggled(bool aChecked);
 
-  /*! starts or stops constructing Bezier polygons.
-   */
-  void on_actionInsertBezier_toggled(bool aChecked);
 
-  /*! starts or stops constructing polygons bounded by polylines.
-   */
-  void on_actionInsertPolyline_toggled(bool aChecked);
 
   /*! shows or hides the Operations panel.
    */
@@ -1844,9 +1480,6 @@ public slots:
    */
   void update_unbounded_rect();
 
-  /*! obtains the curve family being constructed: 1 linear, 2 circular, 3 Bezier, 4 polyline, 5 conic.
-   */
-  int active_type() const;
 
   /*! obtains the input that constructs curves of the active family.
    */
@@ -1860,18 +1493,24 @@ public slots:
    */
   void install_input(QObject* aInput);
 
-  /*! switches to conic polygons; if there are polygons of another family, asks the user first. \return true if the
-   * conic family is active.
-   */
-  bool ensure_conic_mode();
 
-  /*! obtains the tool-bar action of a given curve family.
-   */
-  QAction* family_action(int aType) const;
 
-  /*! sets the pen of the conic curves under construction.
+  /*! sets the pen of the curves under construction.
    */
-  void set_conic_pen(const QPen& aPen);
+  void set_input_pen(const QPen& aPen);
+
+  /*! obtains a curve family.
+   */
+  const Curve_family& family(Curve_type aType) const { return m_families[std::size_t(aType)]; }
+
+  /*! switches to a curve family; if there are polygons of another family, asks the user first. \return true if the
+   * family is active.
+   */
+  bool ensure_curve_type(Curve_type aType);
+
+  /*! starts constructing curves of a given family.
+   */
+  void start_inserting(Curve_type aType);
 
   /*! obtains an icon of the curve tool bar: a boundary of a segment and an arc, or a circle with its center and radius.
    */
@@ -1992,9 +1631,6 @@ public slots:
    */
   void resizeEvent(QResizeEvent* event);
 
-  /*! discards the polygon under construction after an exception.
-   */
-  void exception_handler();
 
   /*! clears the scratch result set.
    */
@@ -2018,15 +1654,15 @@ public slots:
 
   /*! reads linear polygons from a file. \return false if the file cannot be read.
    */
-  bool read_linear(QString aFileName, Linear_polygon_set& rSet, Linear_region_source_container& rSources);
+  bool read_linear(QString aFileName);
 
   /*! reads polygons bounded by segments and circular arcs from a file. \return false if the file cannot be read.
    */
-  bool read_circular(QString aFileName, Circular_polygon_set& rSet, Circular_region_source_container& rSources);
+  bool read_circular(QString aFileName);
 
   /*! reads polygons bounded by polylines from a file. \return false if the file cannot be read.
    */
-  bool read_polyline(QString aFilename, Polyline_polygon_set& rSet, Polyline_region_source_container& rSources);
+  bool read_polyline(QString aFileName);
 
   /*! reads Bezier polygons from a file into the Draw/Insert bucket. \return false if the file cannot be read.
    */
@@ -2047,13 +1683,13 @@ private:
    */
   void get_new_state(State_op aOperation) {
     if (aOperation == State_op::Start) {
-      State_current m_state = State_current(aOperation, active_type());
+      State_current m_state = State_current(aOperation, m_curve_type);
       states_stack.push_back(m_state);
       for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
         link_GI(si->gi());
     }
     else {
-      State_current m_state_x = State_current(aOperation, active_type());
+      State_current m_state_x = State_current(aOperation, m_curve_type);
 
       for (std::size_t i = 0; i <= number_of_buckets; ++i) {
         m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
@@ -2087,9 +1723,9 @@ private:
 
   /*! asks the user a yes/no question. \return true if the answer is yes.
    */
-  bool ask_user_yesno(const char* aTitle, const char* aQuestion) {
-    return QMessageBox::warning(this, aTitle, QString(aQuestion), QMessageBox::Yes | QMessageBox::No,
-                                QMessageBox::No) == QMessageBox::Yes;
+  bool ask_user_yesno(const QString& aTitle, const QString& aQuestion) {
+    return QMessageBox::warning(this, aTitle, aQuestion, QMessageBox::Yes | QMessageBox::No, QMessageBox::No) ==
+      QMessageBox::Yes;
   }
 
   /*! shows a warning.
@@ -2115,11 +1751,11 @@ private:
 
   /*! replaces a set with an empty set of a given curve family.
    */
-  void switch_set_type(Curve_set& aSet, int aType);
+  void switch_set_type(Curve_set& aSet, Curve_type aType);
 
   /*! replaces all sets with empty sets of a given curve family.
    */
-  void switch_sets_type(int aType);
+  void switch_sets_type(Curve_type aType);
 
   /*! determines whether all sets (the buckets and the result) are empty.
    */
@@ -2130,33 +1766,14 @@ private:
     return true;
   }
 
-  /*! switches to circular polygons; if there are polygons of another family, asks the user first. \return true if the
-   * circular family is active.
-   */
-  bool ensure_circular_mode();
 
-  /*! switches to Bezier polygons; if there are polygons of another family, asks the user first. \return true if the
-   * Bezier family is active.
-   */
-  bool ensure_bezier_mode();
 
-  /*! switches to linear polygons; if there are polygons of another family, asks the user first. \return true if the
-   * linear family is active.
-   */
-  bool ensure_linear_mode();
 
-  /*! switches to polyline polygons; if there are polygons of another family, asks the user first. \return true if the
-   * polyline family is active.
-   */
-  bool ensure_polyline_mode();
 
 };
 
 MainWindow::MainWindow() :
   DemosMainWindow(),
-  m_bezier_active(false), //default
-  m_circular_active(false), //default
-  m_polyline_active(false), //default
   m_color_active(0), //default
   minkowski_sum_operated(false), //default
   empty_warn(true), // default
@@ -2398,6 +2015,25 @@ MainWindow::MainWindow() :
   m_polyline_input = new CGAL::Qt::Graphics_view_polyline_input<Kernel>(this, &m_scene);
   m_conic_input = new CGAL::Qt::Graphics_view_conic_input(this, &m_scene);
 
+  // The curve families. Selecting one in the tool bar starts constructing its curves.
+  m_families = {{
+    {Curve_type::Linear, "linear", actionInsertLinear, m_linear_input, [this] { m_linear_input->Reset(); },
+     actionOpenLinear, ".lps", &MainWindow::read_linear},
+    {Curve_type::Circular, "circular", actionInsertCircular, m_circular_input, [this] { m_circular_input->Reset(); },
+     actionOpenDXF, ".cps", &MainWindow::read_circular},
+    {Curve_type::Bezier, "Bezier", actionInsertBezier, m_bezier_input, [this] { m_bezier_input->Reset(); },
+     actionOpenBezier, ".bps", &MainWindow::read_bezier},
+    {Curve_type::Polyline, "polyline", actionInsertPolyline, m_polyline_input, [this] { m_polyline_input->Reset(); },
+     actionOpenPolyline, ".mps", &MainWindow::read_polyline},
+    {Curve_type::Conic, "conic", actionInsertConic, m_conic_input, [this] { m_conic_input->Reset(); }, nullptr,
+     nullptr, nullptr}}};
+  for (const auto& family : m_families) {
+    Curve_type type = family.m_type;
+    QObject::connect(family.m_insert_action, &QAction::toggled, this, [this, type](bool checked) {
+      if (checked) start_inserting(type);
+    });
+  }
+
   // The curve tool bar, underneath the curve families: the ways to construct curves of the selected family.
   {
     using Circular_input = CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>;
@@ -2545,30 +2181,7 @@ void MainWindow::show_bucket(std::size_t aIndex, bool aChecked) {
 
 void MainWindow::set_draw_bucket(std::size_t aIndex) {
   m_color_active = aIndex;
-  const QPen& pen = sPens[aIndex];
-  auto& bucket = states_stack.back().set(aIndex);
-  if (bucket.is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(pen);
-    m_linear_input->mLinearGI->setPen(pen);
-    m_linear_input->mHandleGI->setPen(pen);
-  }
-  else if (bucket.is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(pen);
-    m_circular_input->mCircularGI->setPen(pen);
-    m_circular_input->mHandleGI->setPen(pen);
-  }
-  else if (bucket.is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(pen);
-    m_bezier_input->mBezierGI->setPen(pen);
-    m_bezier_input->mHandle0GI->setPen(pen);
-    m_bezier_input->mHandle1GI->setPen(pen);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(pen);
-    m_polyline_input->mPolylineGI->setPen(pen);
-    m_polyline_input->mHandleGI->setPen(pen);
-  }
-  set_conic_pen(pen);
+  set_input_pen(sPens[aIndex]);
 }
 
 std::size_t MainWindow::number_of_visible_buckets() const {
@@ -2599,9 +2212,7 @@ void MainWindow::set_number_of_buckets(std::size_t aNumber) {
   bool can_remove = (aNumber > min_number_of_buckets);
   actionMinusColor->setEnabled(can_remove);
   if (can_remove) {
-    QString name = bucket_name(aNumber - 1);
-    name[0] = name[0].toUpper();
-    actionMinusColor->setText("Remove " + name);
+    actionMinusColor->setText("Remove " + capitalized(bucket_name(aNumber - 1)));
   }
   else actionMinusColor->setText("Minimum Number of Buckets Reached");
 }
@@ -2774,8 +2385,7 @@ void MainWindow::on_actionNew_triggered() {
   actionMinkowski_SumH->setChecked(false);
 
   m_reset = true;
-  for (int type = 1; type <= 5; ++type)
-    family_action(type)->setChecked(type == active_type());
+  for (const auto& family : m_families) family.m_insert_action->setChecked(family.m_type == m_curve_type);
 
   m_reset = false;
 
@@ -2873,7 +2483,7 @@ void MainWindow::on_actionOpenBezier_triggered()
 void MainWindow::on_actionOpenPolyline_triggered()
 { open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data", tr("Polyline Curve files (*.mps)"))); }
 
-bool MainWindow::read_linear(QString aFileName, Linear_polygon_set& rSet, Linear_region_source_container& rSources) {
+bool MainWindow::read_linear(QString aFileName) {
   bool rOK = false;
 
   std::ifstream in_file(qPrintable(aFileName));
@@ -2960,16 +2570,12 @@ bool MainWindow::read_linear(QString aFileName, Linear_polygon_set& rSet, Linear
             if (r == 0) {
               get_new_state(State_op::Draw);
               states_stack.back().set(m_color_active).linear().join(lCPWH);
-              states_stack.back().linear_sources(m_color_active).push_back(lCPWH);
             }
             else {
               states_stack.back().result_set().clear();
-              states_stack.back().linear_sources(result_index).clear();
               states_stack.back().result_set().linear().join(lCPWH);
-              states_stack.back().linear_sources(result_index).push_back(lCPWH);
               states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
               states_stack.back().result_set().clear();
-              states_stack.back().linear_sources(result_index).clear();
             }
             mLinearPolygonPieces.clear();
           }
@@ -2984,8 +2590,7 @@ bool MainWindow::read_linear(QString aFileName, Linear_polygon_set& rSet, Linear
   return rOK;
 }
 
-bool MainWindow::read_circular(QString aFileName, Circular_polygon_set& rSet,
-                               Circular_region_source_container& rSources) {
+bool MainWindow::read_circular(QString aFileName) {
   bool rOK = false;
 
   std::ifstream in_file(qPrintable(aFileName));
@@ -3086,16 +2691,12 @@ bool MainWindow::read_circular(QString aFileName, Circular_polygon_set& rSet,
               if (r == 0) {
                 get_new_state(State_op::Draw);
                 states_stack.back().set(m_color_active).circular().join(lCPWH);
-                states_stack.back().circular_sources(m_color_active).push_back(lCPWH);
               }
               else {
                 states_stack.back().result_set().clear();
-                states_stack.back().circular_sources(result_index).clear();
                 states_stack.back().result_set().circular().join(lCPWH);
-                states_stack.back().circular_sources(result_index).push_back(lCPWH);
                 states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
                 states_stack.back().result_set().clear();
-                states_stack.back().circular_sources(result_index).clear();
               }
             }
             mCircularPolygonPieces.clear();
@@ -3111,8 +2712,7 @@ bool MainWindow::read_circular(QString aFileName, Circular_polygon_set& rSet,
   return rOK;
 }
 
-bool MainWindow::read_polyline(QString aFileName, Polyline_polygon_set& rSet,
-                               Polyline_region_source_container& rSources) {
+bool MainWindow::read_polyline(QString aFileName) {
   bool rOK = false;
 
   std::ifstream in_file(qPrintable(aFileName));
@@ -3212,16 +2812,12 @@ bool MainWindow::read_polyline(QString aFileName, Polyline_polygon_set& rSet,
             if (r == 0) {
               get_new_state(State_op::Draw);
               states_stack.back().set(m_color_active).polyline().join(PPWH);
-              states_stack.back().polyline_sources(m_color_active).push_back(PPWH);
             }
             else {
               states_stack.back().result_set().clear();
-              states_stack.back().polyline_sources(result_index).clear();
               states_stack.back().result_set().polyline().join(PPWH);
-              states_stack.back().polyline_sources(result_index).push_back(PPWH);
               states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
               states_stack.back().result_set().clear();
-              states_stack.back().polyline_sources(result_index).clear();
             }
             mPolylinePolygonPieces.clear();
           }
@@ -3255,14 +2851,11 @@ bool MainWindow::read_bezier(QString aFileName) {
 
       for (unsigned int r = 0; r < n_regions; ++r) {
         Bezier_polygon_vector bezier_polygons;
-        Bezier_region_source br_source;
         // Read the number of bezier curves.
         unsigned int n_boundaries;
         in_file >> n_boundaries;
 
         for (unsigned int b = 0; b < n_boundaries; ++b) {
-          Bezier_boundary_source bb_source;
-
           // Read the number of bezier curves.
           unsigned int n_curves;
           in_file >> n_curves;
@@ -3285,7 +2878,6 @@ bool MainWindow::read_bezier(QString aFileName) {
 
             Bezier_curve b = read_bezier_curve(in_file, lDoubleFormat);
             if (b.number_of_control_points() >= 2) {
-              bb_source.push_back(b);
               make_x_monotone(b, std::back_inserter(x_objs));
 
               for (auto i = 0; i < x_objs.size(); ++i) {
@@ -3304,20 +2896,12 @@ bool MainWindow::read_bezier(QString aFileName) {
           if (b == 0) {
             get_new_state(State_op::Draw);
             states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(pgn));
-            Bezier_region_source br;
-            br.push_back(bb_source);
-            states_stack.back().bezier_sources(m_color_active).push_back(br);
           }
           else {
             states_stack.back().result_set().clear();
-            states_stack.back().bezier_sources(result_index).clear();
             states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(pgn));
-            Bezier_region_source br;
-            br.push_back(bb_source);
-            states_stack.back().bezier_sources(result_index).push_back(br);
             states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
             states_stack.back().result_set().clear();
-            states_stack.back().bezier_sources(result_index).clear();
           }
         }
         rOK = true;
@@ -3646,316 +3230,56 @@ bool save_bezier_result(QString aFileName, const Bezier_polygon_set& aSet) {
 }
 
 void MainWindow::on_actionSaveCurrentBucket_triggered() {
-  if (m_circular_active) {
-    if (! save_circular(QFileDialog::getSaveFileName(this, tr("Save Result Circular Polygon Set"), "/data/index.cps",
-                                                    tr("Circular Curve files (*.cps)")),
-                       states_stack.back().set(m_color_active).circular())) {
-      show_error("Cannot save circular polygon set.");
-    }
-  }
-  else if (m_bezier_active) {
-    if (! save_bezier_result(QFileDialog::getSaveFileName(this, tr("Save Result Bezier Polygon Set"), "/data/index.bps",
-                                                         tr("Bezier Curve files (*.bps)")),
-                            states_stack.back().set(m_color_active).bezier())) {
-      show_error("Cannot save bezier polygon set.");
-    }
-  }
-  else if (m_conic_active) {
-    show_error("Saving conic polygon sets is not supported yet.");
-  }
-  else if (m_polyline_active) {
-    if (! save_polyline(QFileDialog::getSaveFileName(this, tr("Save Result Polyline Polygon Set"), "/data/index.mps",
-                                                    tr("Polyline Curve files (*.mps)")),
-                       states_stack.back().set(m_color_active).polyline())) {
-      show_error("Cannot save polyline polygon set.");
-    }
-  }
-  else {
+  auto& bucket = states_stack.back().set(m_color_active);
+  switch (m_curve_type) {
+   case Curve_type::Linear:
     if (! save_linear(QFileDialog::getSaveFileName(this, tr("Save Result Linear Polygon Set"), "/data/index.lps",
-                                                  tr("Linear Curve files (*.lps)")),
-                     states_stack.back().set(m_color_active).linear())) {
+                                                  tr("Linear Curve files (*.lps)")), bucket.linear()))
       show_error("Cannot save linear polygon set.");
-    }
+    break;
+
+   case Curve_type::Circular:
+    if (! save_circular(QFileDialog::getSaveFileName(this, tr("Save Result Circular Polygon Set"), "/data/index.cps",
+                                                    tr("Circular Curve files (*.cps)")), bucket.circular()))
+      show_error("Cannot save circular polygon set.");
+    break;
+
+   case Curve_type::Bezier:
+    if (! save_bezier_result(QFileDialog::getSaveFileName(this, tr("Save Result Bezier Polygon Set"), "/data/index.bps",
+                                                         tr("Bezier Curve files (*.bps)")), bucket.bezier()))
+      show_error("Cannot save bezier polygon set.");
+    break;
+
+   case Curve_type::Polyline:
+    if (! save_polyline(QFileDialog::getSaveFileName(this, tr("Save Result Polyline Polygon Set"), "/data/index.mps",
+                                                    tr("Polyline Curve files (*.mps)")), bucket.polyline()))
+      show_error("Cannot save polyline polygon set.");
+    break;
+
+   case Curve_type::Conic: show_error("Saving conic polygon sets is not supported yet."); break;
   }
 }
 
-void MainWindow::switch_set_type(Curve_set& aSet, int aType) {
+void MainWindow::switch_set_type(Curve_set& aSet, Curve_type aType) {
   unlink_GI(aSet.gi());
   aSet.reset_type(aType);
   link_GI(aSet.gi());
   modelChanged();
 }
 
-void MainWindow::switch_sets_type(int aType) {
+void MainWindow::switch_sets_type(Curve_type aType) {
   for (std::size_t i = 0; i <= number_of_buckets; ++i) switch_set_type(states_stack.back().set(i), aType);
 }
 
-bool MainWindow::ensure_circular_mode() {
-  if (! m_circular_active) {
-    bool lProceed = are_all_sets_empty();
-
-    if (! lProceed)
-      lProceed = ask_user_yesno("Circular mode switch",
-                                "You are about to load a circular poygon, but there are linear/bezier/polyline curves "
-                                "already loaded.\n"
-                                "Both types are not interoperable. In order to proceed, the polygons must be removed "
-                                "first.\n"
-                                "Once deleted you cannot undo the action.\n"
-                                "Yes to remove and proceed?\n");
-
-    if (lProceed) {
-      switch_sets_type(2);
-      m_linear_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      m_circular_active = true;
-      m_conic_active = false;
-      m_conic_input->Reset();
-      m_bezier_active = false;
-      m_polyline_active = false;
-    }
-  }
-  return m_circular_active;
-}
-
-bool MainWindow::ensure_bezier_mode() {
-  if (! m_bezier_active) {
-    bool lProceed = are_all_sets_empty();
-
-    if (! lProceed)
-      lProceed = ask_user_yesno("Bezier mode switch",
-                                "You are about to load a Bezier curve, but there are linear/bezier/polyline polygons "
-                                "already loaded.\n"
-                                "Both types are not interoperable. In order to proceed, the polygons must be removed "
-                                "first.\n"
-                                "Once deleted you cannot undo the action.\n"
-                                "Yes to remove and proceed?\n");
-
-    if (lProceed) {
-      switch_sets_type(3);
-      m_circular_input->Reset();
-      m_linear_input->Reset();
-      m_polyline_input->Reset();
-      m_bezier_active = true;
-      m_conic_active = false;
-      m_conic_input->Reset();
-      m_circular_active = false;
-      m_polyline_active = false;
-    }
-  }
-  return m_bezier_active;
-}
-
-bool MainWindow::ensure_linear_mode() {
-  if (active_type() != 1) {
-    bool lProceed = are_all_sets_empty();
-
-    if (! lProceed)
-      lProceed = ask_user_yesno("Linear mode switch",
-                                "You are about to load a linear poygon, but there are circular/bezier/polyline "
-                                "polygons already loaded.\n"
-                                "Both types are not interoperable. In order to proceed, the polygons must be removed "
-                                "first.\n"
-                                "Once deleted you cannot undo the action.\n" "Yes to remove and proceed?\n");
-
-    if (lProceed) {
-      switch_sets_type(1);
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      m_circular_active = false;
-      m_bezier_active = false;
-      m_polyline_active = false;
-      m_conic_active = false;
-      m_conic_input->Reset();
-    }
-  }
-  return active_type() == 1;
-}
-
-bool MainWindow::ensure_polyline_mode() {
-  if (! m_polyline_active) {
-    bool lProceed = are_all_sets_empty();
-
-    if (! lProceed)
-      lProceed = ask_user_yesno("Polyline mode switch",
-                                "You are about to load a polyline polygon, but there are circular/bezier/linear "
-                                "polygons already loaded.\n"
-                                "Both types are not interoperable. In order to proceed, the polygons must be removed "
-                                "first.\n"
-                                "Once deleted you cannot undo the action.\n"
-                                "Yes to remove and proceed?\n");
-
-    if (lProceed) {
-      switch_sets_type(4);
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_linear_input->Reset();
-      m_circular_active = false;
-      m_bezier_active = false;
-      m_polyline_active = true;
-      m_conic_active = false;
-      m_conic_input->Reset();
-    }
-  }
-  return m_polyline_active;
-}
-
 void MainWindow::open(QString fileName) {
-  if (! fileName.isEmpty()) {
-    bool lRead = false;
-    if (fileName.endsWith(".lps")) {
-      if (ensure_linear_mode())
-        lRead = read_linear(fileName, states_stack.back().set(m_color_active).linear(),
-                            states_stack.back().linear_sources(m_color_active));
-    }
-    else if (fileName.endsWith(".cps")) {
-      if (ensure_circular_mode())
-        lRead = read_circular(fileName, states_stack.back().set(m_color_active).circular(),
-                              states_stack.back().circular_sources(m_color_active));
-    }
-    else if (fileName.endsWith(".bps")) {
-      if (ensure_bezier_mode())
-        lRead = read_bezier(fileName);
-    }
-    else if (fileName.endsWith(".mps")) {
-      if (ensure_polyline_mode())
-        lRead = read_polyline(fileName, states_stack.back().set(m_color_active).polyline(),
-                              states_stack.back().polyline_sources(m_color_active));
-    }
-    if (lRead) {
+  if (fileName.isEmpty()) return;
+  for (const auto& family : m_families) {
+    if (! family.m_extension || ! fileName.endsWith(family.m_extension)) continue;
+    if (ensure_curve_type(family.m_type) && (this->*family.m_read)(fileName)) {
       modelChanged();
       this->addToRecentFiles(fileName);
     }
-  }
-}
-
-void MainWindow::on_actionInsertCircular_toggled(bool aChecked) {
-  if (aChecked) {
-    this->graphicsView->setDragMode(QGraphicsView::NoDrag);
-    if (ensure_circular_mode()) {
-      if (! m_pan && ! m_reset) {
-        while (m_state_num > 1) {
-          on_actionUndo_triggered();
-        }
-      }
-
-      actionPAN->setChecked(false);
-      m_pan = false;
-      actionOpenLinear->setEnabled(false);
-      actionOpenDXF->setEnabled(true);
-      actionOpenBezier->setEnabled(false);
-      actionOpenPolyline->setEnabled(false);
-      actionInsertLinear->setChecked(false);
-      actionInsertBezier->setChecked(false);
-      actionInsertPolyline->setChecked(false);
-      actionInsertConic->setChecked(false);
-      install_input(m_circular_input);
-      on_actionDeleteResult();
-      actionMinkowski_SumH->setEnabled(false);
-
-      m_circular_input->mOngoingPieceGI->setPen(sPens[m_color_active]);
-      m_circular_input->mCircularGI->setPen(sPens[m_color_active]);
-      m_circular_input->mHandleGI->setPen(sPens[m_color_active]);
-    }
-    else {
-      actionInsertCircular->setChecked(false);
-    }
-  }
-}
-
-void MainWindow::on_actionInsertBezier_toggled(bool aChecked) {
-  if (aChecked) {
-    this->graphicsView->setDragMode(QGraphicsView::NoDrag);
-    if (ensure_bezier_mode()) {
-      if (! m_pan && ! m_reset) {
-        while (m_state_num > 1) on_actionUndo_triggered();
-      }
-
-      actionPAN->setChecked(false);
-      m_pan = false;
-      actionOpenLinear->setEnabled(false);
-      actionOpenDXF->setEnabled(false);
-      actionOpenBezier->setEnabled(true);
-      actionOpenPolyline->setEnabled(false);
-      actionInsertLinear->setChecked(false);
-      actionInsertCircular->setChecked(false);
-      actionInsertPolyline->setChecked(false);
-      actionInsertConic->setChecked(false);
-      install_input(m_bezier_input);
-      on_actionDeleteResult();
-
-      actionMinkowski_SumH->setEnabled(false);
-
-      m_bezier_input->mOngoingPieceGI->setPen(sPens[m_color_active]);
-      m_bezier_input->mBezierGI->setPen(sPens[m_color_active]);
-      m_bezier_input->mHandle0GI->setPen(sPens[m_color_active]);
-      m_bezier_input->mHandle1GI->setPen(sPens[m_color_active]);
-    }
-    else {
-      actionInsertBezier->setChecked(false);
-    }
-  }
-}
-
-void MainWindow::on_actionInsertPolyline_toggled(bool aChecked) {
-  if (aChecked) {
-    this->graphicsView->setDragMode(QGraphicsView::NoDrag);
-    if (ensure_polyline_mode()) {
-      if (! m_pan && ! m_reset) {
-        while (m_state_num > 1) on_actionUndo_triggered();
-      }
-
-      actionPAN->setChecked(false);
-      m_pan = false;
-      actionOpenLinear->setEnabled(false);
-      actionOpenDXF->setEnabled(false);
-      actionOpenBezier->setEnabled(false);
-      actionOpenPolyline->setEnabled(true);
-      actionInsertLinear->setChecked(false);
-      actionInsertBezier->setChecked(false);
-
-      actionInsertCircular->setChecked(false);
-      actionInsertConic->setChecked(false);
-      install_input(m_polyline_input);
-      on_actionDeleteResult();
-      actionMinkowski_SumH->setEnabled(false);
-
-      m_polyline_input->mOngoingPieceGI->setPen(sPens[m_color_active]);
-      m_polyline_input->mPolylineGI->setPen(sPens[m_color_active]);
-      m_polyline_input->mHandleGI->setPen(sPens[m_color_active]);
-    }
-    else {
-      actionInsertPolyline->setChecked(false);
-    }
-  }
-}
-
-void MainWindow::on_actionInsertLinear_toggled(bool aChecked) {
-  if (aChecked) {
-    this->graphicsView->setDragMode(QGraphicsView::NoDrag);
-    if (ensure_linear_mode()) {
-      if (! m_pan && ! m_reset) {
-        while (m_state_num > 1) on_actionUndo_triggered();
-      }
-      actionPAN->setChecked(false);
-      m_pan = false;
-      actionOpenLinear->setEnabled(true);
-      actionOpenDXF->setEnabled(false);
-      actionOpenBezier->setEnabled(false);
-      actionOpenPolyline->setEnabled(false);
-      actionInsertCircular->setChecked(false);
-      actionInsertBezier->setChecked(false);
-      actionInsertPolyline->setChecked(false);
-      actionInsertConic->setChecked(false);
-      install_input(m_linear_input);
-      on_actionDeleteResult();
-
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionInsertLinear->setChecked(false);
-    }
+    return;
   }
 }
 
@@ -4150,7 +3474,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
 
-    if (active_type() == 1) {
+    if (m_curve_type == Curve_type::Linear) {
       actionComplementH->setChecked(false);
       actionUnionH->setChecked(false);
       actionIntersectionH->setChecked(false);
@@ -4187,7 +3511,6 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
             m_linear_input->m_hole = true;
             m_linear_input->get_Minkowski_holes(mink_sum_res, p0);
             states_stack.back().result_set().clear();
-            states_stack.back().linear_sources(result_index).clear();
             m_linear_input->m_hole = false;
             m_linear_input->m_is_mink = false;
           }
@@ -4235,7 +3558,7 @@ void MainWindow::on_actionAxis_triggered() {
 void MainWindow::on_actionPAN_triggered() {
   if (! m_pan) {
     remove_inputs();
-    family_action(active_type())->setChecked(false);
+    family(m_curve_type).m_insert_action->setChecked(false);
     this->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
 
     this->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
@@ -4244,7 +3567,7 @@ void MainWindow::on_actionPAN_triggered() {
     modelChanged();
   }
   else {
-    family_action(active_type())->setChecked(true);
+    family(m_curve_type).m_insert_action->setChecked(true);
     m_pan = false;
     modelChanged();
   }
@@ -4337,89 +3660,62 @@ QIcon MainWindow::curve_tool_icon(const QString& aKind) {
   return QIcon(pixmap);
 }
 
-int MainWindow::active_type() const {
-  if (m_conic_active) return 5;
-  if (m_polyline_active) return 4;
-  if (m_bezier_active) return 3;
-  if (m_circular_active) return 2;
-  return 1;
-}
-
-QAction* MainWindow::family_action(int aType) const {
-  switch (aType) {
-   case 2: return actionInsertCircular;
-   case 3: return actionInsertBezier;
-   case 4: return actionInsertPolyline;
-   case 5: return actionInsertConic;
-   default: return actionInsertLinear;
-  }
-}
-
-QObject* MainWindow::current_input() const {
-  switch (active_type()) {
-   case 2: return m_circular_input;
-   case 3: return m_bezier_input;
-   case 4: return m_polyline_input;
-   case 5: return m_conic_input;
-   default: return m_linear_input;
-  }
-}
+QObject* MainWindow::current_input() const { return family(m_curve_type).m_input; }
 
 void MainWindow::remove_inputs() {
-  for (QObject* input : {static_cast<QObject*>(m_linear_input), static_cast<QObject*>(m_circular_input),
-                         static_cast<QObject*>(m_bezier_input), static_cast<QObject*>(m_polyline_input),
-                         static_cast<QObject*>(m_conic_input)})
-    m_scene.removeEventFilter(input);
-  m_linear_input->Reset();
-  m_circular_input->Reset();
-  m_bezier_input->Reset();
-  m_polyline_input->Reset();
-  m_conic_input->Reset();
+  for (const auto& family : m_families) {
+    m_scene.removeEventFilter(family.m_input);
+    family.m_reset_input();
+  }
 }
 
 void MainWindow::install_input(QObject* aInput) {
-  for (QObject* input : {static_cast<QObject*>(m_linear_input), static_cast<QObject*>(m_circular_input),
-                         static_cast<QObject*>(m_bezier_input), static_cast<QObject*>(m_polyline_input),
-                         static_cast<QObject*>(m_conic_input)})
-    m_scene.removeEventFilter(input);
+  for (const auto& family : m_families) m_scene.removeEventFilter(family.m_input);
   m_scene.installEventFilter(aInput);
 }
 
-void MainWindow::set_conic_pen(const QPen& aPen) { m_conic_input->set_pen(aPen); }
-
-bool MainWindow::ensure_conic_mode() {
-  if (! m_conic_active) {
-    bool lProceed = true;
-    for (auto& curve_set : states_stack.back().m_curve_sets)
-      lProceed = lProceed && curve_set.is_empty();
-    if (! lProceed)
-      lProceed = ask_user_yesno("Conic mode switch",
-                                "You are about to construct a conic polygon, but there are polygons of another type "
-                                "already loaded.\n"
-                                "Both types are not interoperable. In order to proceed, the polygons must be removed "
-                                "first.\n"
-                                "Once deleted you cannot undo the action.\n"
-                                "Yes to remove and proceed?\n");
-    if (lProceed) {
-      switch_sets_type(5);
-      m_linear_input->Reset();
-      m_circular_input->Reset();
-      m_bezier_input->Reset();
-      m_polyline_input->Reset();
-      m_circular_active = false;
-      m_bezier_active = false;
-      m_polyline_active = false;
-      m_conic_active = true;
-    }
-  }
-  return m_conic_active;
+void MainWindow::set_input_pen(const QPen& aPen) {
+  m_linear_input->mOngoingPieceGI->setPen(aPen);
+  m_linear_input->mLinearGI->setPen(aPen);
+  m_linear_input->mHandleGI->setPen(aPen);
+  m_circular_input->mOngoingPieceGI->setPen(aPen);
+  m_circular_input->mCircularGI->setPen(aPen);
+  m_circular_input->mHandleGI->setPen(aPen);
+  m_bezier_input->mOngoingPieceGI->setPen(aPen);
+  m_bezier_input->mBezierGI->setPen(aPen);
+  m_bezier_input->mHandle0GI->setPen(aPen);
+  m_bezier_input->mHandle1GI->setPen(aPen);
+  m_polyline_input->mOngoingPieceGI->setPen(aPen);
+  m_polyline_input->mPolylineGI->setPen(aPen);
+  m_polyline_input->mHandleGI->setPen(aPen);
+  m_conic_input->set_pen(aPen);
 }
 
-void MainWindow::on_actionInsertConic_toggled(bool aChecked) {
-  if (! aChecked) return;
+bool MainWindow::ensure_curve_type(Curve_type aType) {
+  if (m_curve_type == aType) return true;
+  QString name = family(aType).m_name;
+  if (! are_all_sets_empty() &&
+      ! ask_user_yesno(capitalized(name) + " mode switch",
+                       QString("You are about to construct or load %1 polygons, but there are polygons of another "
+                               "family already loaded.\n"
+                               "Both families are not interoperable. In order to proceed, the polygons must be removed "
+                               "first.\n"
+                               "Once deleted you cannot undo the action.\n"
+                               "Yes to remove and proceed?\n").arg(name)))
+    return false;
+  switch_sets_type(aType);
+  for (const auto& other : m_families) {
+    if (other.m_type != aType) other.m_reset_input();
+  }
+  m_curve_type = aType;
+  return true;
+}
+
+void MainWindow::start_inserting(Curve_type aType) {
+  const auto& selected = family(aType);
   this->graphicsView->setDragMode(QGraphicsView::NoDrag);
-  if (! ensure_conic_mode()) {
-    actionInsertConic->setChecked(false);
+  if (! ensure_curve_type(aType)) {
+    selected.m_insert_action->setChecked(false);
     return;
   }
   if (! m_pan && ! m_reset) {
@@ -4427,18 +3723,14 @@ void MainWindow::on_actionInsertConic_toggled(bool aChecked) {
   }
   actionPAN->setChecked(false);
   m_pan = false;
-  actionOpenLinear->setEnabled(false);
-  actionOpenDXF->setEnabled(false);
-  actionOpenBezier->setEnabled(false);
-  actionOpenPolyline->setEnabled(false);
-  actionInsertLinear->setChecked(false);
-  actionInsertCircular->setChecked(false);
-  actionInsertBezier->setChecked(false);
-  actionInsertPolyline->setChecked(false);
-  install_input(m_conic_input);
+  for (const auto& other : m_families) {
+    if (other.m_open_action) other.m_open_action->setEnabled(other.m_type == aType);
+    if (other.m_type != aType) other.m_insert_action->setChecked(false);
+  }
+  install_input(selected.m_input);
   on_actionDeleteResult();
-  actionMinkowski_SumH->setEnabled(false);
-  set_conic_pen(sPens[m_color_active]);
+  actionMinkowski_SumH->setEnabled(aType == Curve_type::Linear);
+  set_input_pen(sPens[m_color_active]);
 }
 
 void MainWindow::zoomToFit() {
@@ -4807,7 +4099,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     get_new_state(State_op::Console);
     Curve_set* set = polygon_set(target);
     if (! set) {
-      set = &m_variables.emplace(target, Curve_set(1, QPen(), QBrush()))
+      set = &m_variables.emplace(target, Curve_set(Curve_type::Linear, QPen(), QBrush()))
         .first->second;
     }
     if (! arg) set->clear();
@@ -4976,7 +4268,7 @@ void MainWindow::run_console_line(const QString& aLine) {
     m_console_history << aLine;
   }
   m_console_history_pos = m_console_history.size();
-  if (active_type() != 1) {
+  if (m_curve_type != Curve_type::Linear) {
     console_print("Error: the console supports linear polygons only");
     return;
   }
@@ -5163,30 +4455,6 @@ void MainWindow::on_aboutDemo_triggered() {
   mb.exec();
 }
 
-void MainWindow::exception_handler() {
-  try {
-    if (ensure_linear_mode()) {
-      m_linear_input->Reset();
-      m_linear_input->mState = m_linear_input->Start;
-    }
-    else if (ensure_circular_mode()) {
-      m_circular_input->Reset();
-      m_circular_input->mState = m_circular_input->Start;
-    }
-    else if (ensure_bezier_mode()) {
-      m_bezier_input->Reset();
-      m_bezier_input->mState = m_bezier_input->Start;
-    }
-    else if (ensure_polyline_mode()) {
-      m_polyline_input->Reset();
-      m_polyline_input->mState = m_polyline_input->Start;
-    }
-  }
-  catch (const std::exception& e) {
-    //todo::add catch statement
-  }
-}
-
 void MainWindow::processInput(CGAL::Object o) {
   std::pair<Bezier_polygon, Bezier_boundary_source> lBI;
   Linear_polygon lLI;
@@ -5195,7 +4463,7 @@ void MainWindow::processInput(CGAL::Object o) {
   Conic_polygon lConicPI;
   try {
     if (CGAL::assign(lConicPI, o)) {
-      if (ensure_conic_mode()) {
+      if (ensure_curve_type(Curve_type::Conic)) {
         if (lConicPI.orientation() == CGAL::CLOCKWISE)
           lConicPI.reverse_orientation();
         get_new_state(State_op::Draw);
@@ -5204,7 +4472,7 @@ void MainWindow::processInput(CGAL::Object o) {
       }
     }
     else if (CGAL::assign(lBI, o)) {
-      if (ensure_bezier_mode()) {
+      if (ensure_curve_type(Curve_type::Bezier)) {
         CGAL::Orientation o = lBI.first.orientation();
         if (o == CGAL::CLOCKWISE)
           lBI.first.reverse_orientation();
@@ -5212,20 +4480,14 @@ void MainWindow::processInput(CGAL::Object o) {
         if (! m_bezier_input->isboundingRect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
-          Bezier_region_source br;
-          br.push_back(lBI.second);
-          states_stack.back().bezier_sources(m_color_active).push_back(br);
         }
         else {
           states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(lBI.first));
-          Bezier_region_source br;
-          br.push_back(lBI.second);
-          states_stack.back().bezier_sources(result_index).push_back(br);
         }
       }
     }
     else if (CGAL::assign(lLI, o)) {
-      if (ensure_linear_mode()) {
+      if (ensure_curve_type(Curve_type::Linear)) {
         CGAL::Orientation orient = lLI.orientation();
         if (orient == CGAL::CLOCKWISE) {
           lLI.reverse_orientation();
@@ -5237,24 +4499,21 @@ void MainWindow::processInput(CGAL::Object o) {
             get_new_state(State_op::Draw);
           }
           states_stack.back().set(m_color_active).linear().join(lCPWH);
-          states_stack.back().linear_sources(m_color_active).push_back(lCPWH);
           if (! m_linear_input->is_mink())
             log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
         }
         else {
           states_stack.back().result_set().linear().join(lCPWH);
-          states_stack.back().linear_sources(result_index).push_back(lCPWH);
           if (m_linear_input->ishole()) {
             log_statements({QString("%1.difference(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
             states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
             states_stack.back().result_set().clear();
-            states_stack.back().linear_sources(result_index).clear();
           }
         }
       }
     }
     else if (CGAL::assign(lCI, o)) {
-      if (ensure_circular_mode()) {
+      if (ensure_curve_type(Curve_type::Circular)) {
         CGAL::Orientation o = lCI.orientation();
         if (o == CGAL::CLOCKWISE)
           lCI.reverse_orientation();
@@ -5264,16 +4523,14 @@ void MainWindow::processInput(CGAL::Object o) {
         if (! m_circular_input->isboundingRect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).circular().join(lCPWH);
-          states_stack.back().circular_sources(m_color_active).push_back(lCPWH);
         }
         else {
           states_stack.back().result_set().circular().join(lCPWH);
-          states_stack.back().circular_sources(result_index).push_back(lCPWH);
         }
       }
     }
     else if (CGAL::assign(lPI, o)) {
-      if (ensure_polyline_mode()) {
+      if (ensure_curve_type(Curve_type::Polyline)) {
         CGAL::Orientation o = lPI.orientation();
         if (o == CGAL::CLOCKWISE)
           lPI.reverse_orientation();
@@ -5283,11 +4540,9 @@ void MainWindow::processInput(CGAL::Object o) {
         if (! m_polyline_input->isboundingRect()) {
           get_new_state(State_op::Draw);
           states_stack.back().set(m_color_active).polyline().join(lPPWH);
-          states_stack.back().polyline_sources(m_color_active).push_back(lPPWH);
         }
         else {
           states_stack.back().result_set().polyline().join(lPPWH);
-          states_stack.back().polyline_sources(result_index).push_back(lPPWH);
         }
       }
     }
