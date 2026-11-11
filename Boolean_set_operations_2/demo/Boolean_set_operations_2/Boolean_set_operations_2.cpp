@@ -255,6 +255,10 @@ struct Rep_base {
    */
   virtual Curve_type type() const = 0;
 
+  /*! constructs a copy of the set (with its own graphics item).
+   */
+  virtual Rep_base* clone() const = 0;
+
   /*! obtains the graphics item that draws the set.
    */
   virtual CGAL::Qt::GraphicsItem* gi() const = 0;
@@ -290,10 +294,6 @@ struct Rep_base {
   /*! complements the set.
    */
   virtual void complement() = 0;
-
-  /*! assigns another set (of the same family) to the set.
-   */
-  virtual void assign(const Rep_base& aOther) = 0;
 
   /*! intersects the set with another set.
    */
@@ -343,14 +343,20 @@ public:
 
   /*! constructs an empty set and its graphics item.
    */
-  Rep() {
-    if constexpr (std::is_void_v<Gps_traits>) m_GI = new GI(&m_set);
-    else m_GI = new GI(&m_set, m_traits);
-  }
+  Rep() { make_gi(); }
+
+  /*! constructs a copy of a set and its graphics item. (The set is copy constructed: the copy assignment of some
+   * traits, e.g., Arr_polycurve_basic_traits_2, is broken.)
+   */
+  explicit Rep(const Set& aSet) : m_set(aSet) { make_gi(); }
 
   /*! obtains the curve family.
    */
   Curve_type type() const override { return type_; }
+
+  /*! constructs a copy of the set (with its own graphics item).
+   */
+  Rep_base* clone() const override { return new Self(m_set); }
 
   /*! obtains the set.
    */
@@ -395,10 +401,6 @@ public:
   /*! complements the set.
    */
   void complement() override { guarded("complement", [&] { m_set.complement(); }); }
-
-  /*! assigns another set (of the same family) to the set.
-   */
-  void assign(const Rep_base& aOther) override { guarded("assign", [&] { m_set = cast(aOther).m_set; }); }
 
   /*! intersects the set with another set.
    */
@@ -453,6 +455,13 @@ public:
   static Self& cast(Rep_base& aOther) { return dynamic_cast<Self&>(aOther); }
 
 private:
+  /*! constructs the graphics item that draws the set.
+   */
+  void make_gi() {
+    if constexpr (std::is_void_v<Gps_traits>) m_GI = new GI(&m_set);
+    else m_GI = new GI(&m_set, m_traits);
+  }
+
   /*! applies an operation to the set; shows an error if it throws.
    */
   template <typename Operation>
@@ -490,17 +499,32 @@ public:
   /*! replaces the set with an empty set of a given curve family.
    */
   void reset_type(Curve_type aType) {
-    switch (aType) {
-     case Curve_type::Linear: m_rep = Rep_ptr(new Linear_rep()); break;
-     case Curve_type::Circular: m_rep = Rep_ptr(new Circular_rep()); break;
-     case Curve_type::Bezier: m_rep = Rep_ptr(new Bezier_rep()); break;
-     case Curve_type::Polyline: m_rep = Rep_ptr(new Polyline_rep()); break;
-     case Curve_type::Conic: m_rep = Rep_ptr(new Conic_rep()); break;
-    }
-
-    //setting pen and brush
+    m_rep = Rep_ptr(new_rep(aType));
     m_rep->set_pen(m_pen);
     m_rep->set_brush(m_brush);
+  }
+
+  /*! constructs an empty set of a given curve family.
+   */
+  static Rep_base* new_rep(Curve_type aType) {
+    switch (aType) {
+     case Curve_type::Linear: return new Linear_rep();
+     case Curve_type::Circular: return new Circular_rep();
+     case Curve_type::Bezier: return new Bezier_rep();
+     case Curve_type::Polyline: return new Polyline_rep();
+     case Curve_type::Conic: return new Conic_rep();
+    }
+    return nullptr;
+  }
+
+  /*! replaces the representation of the set with a given one, keeping the pen, the brush, and the visibility.
+   */
+  void replace_rep(Rep_base* aRep) {
+    bool visible = m_rep->gi()->isVisible();
+    m_rep = Rep_ptr(aRep);
+    m_rep->set_pen(m_pen);
+    m_rep->set_brush(m_brush);
+    m_rep->gi()->setVisible(visible);
   }
 
   /*! obtains the graphics item that draws the set.
@@ -523,58 +547,105 @@ public:
    */
   bool is_empty() const { return ! m_rep || m_rep->is_empty(); }
 
+  /*! makes the representation of the set its own before the set changes: the states of the undo stack share the
+   * representations of the sets that do not change. If the representation is shared, it is replaced with a copy, or
+   * with an empty set if the contents are about to be replaced anyway.
+   */
+  void detach(bool aCopy = true) {
+    if (m_rep.use_count() > 1) replace_rep(aCopy ? m_rep->clone() : new_rep(type()));
+  }
+
   /*! clears the set.
    */
-  void clear() { m_rep->clear(); }
+  void clear() {
+    detach(false);
+    m_rep->clear();
+  }
 
   /*! complements the set.
    */
-  void complement() { m_rep->complement(); }
+  void complement() {
+    detach();
+    m_rep->complement();
+  }
 
   /*! assigns another set (of the same family) to the set.
    */
-  void assign(const Curve_set& aOther) { if (same_type(aOther)) m_rep->assign(*aOther.m_rep); }
+  void assign(const Curve_set& aOther) {
+    if (same_type(aOther) && (&aOther != this)) replace_rep(aOther.m_rep->clone());
+  }
 
   /*! intersects the set with another set (of the same family).
    */
-  void intersect(const Curve_set& aOther) { if (same_type(aOther)) m_rep->intersect(*aOther.m_rep); }
+  void intersect(const Curve_set& aOther) {
+    if (! same_type(aOther)) return;
+    detach();
+    m_rep->intersect(*aOther.m_rep);
+  }
 
   /*! joins the set with another set (of the same family).
    */
-  void join(const Curve_set& aOther) { if (same_type(aOther)) m_rep->join(*aOther.m_rep); }
+  void join(const Curve_set& aOther) {
+    if (! same_type(aOther)) return;
+    detach();
+    m_rep->join(*aOther.m_rep);
+  }
 
   /*! subtracts another set (of the same family) from the set.
    */
-  void difference(const Curve_set& aOther) { if (same_type(aOther)) m_rep->difference(*aOther.m_rep); }
+  void difference(const Curve_set& aOther) {
+    if (! same_type(aOther)) return;
+    detach();
+    m_rep->difference(*aOther.m_rep);
+  }
 
   /*! replaces the set with its symmetric difference with another set (of the same family).
    */
-  void symmetric_difference(const Curve_set& aOther)
-  { if (same_type(aOther)) m_rep->symmetric_difference(*aOther.m_rep); }
+  void symmetric_difference(const Curve_set& aOther) {
+    if (! same_type(aOther)) return;
+    detach();
+    m_rep->symmetric_difference(*aOther.m_rep);
+  }
 
   /*! replaces the set with the complement of another set.
    */
-  void complement(const Curve_set& aOther) { if (same_type(aOther)) m_rep->complement(*aOther.m_rep); }
+  void complement(const Curve_set& aOther) {
+    if (! same_type(aOther)) return;
+    detach(&aOther == this);
+    m_rep->complement(*aOther.m_rep);
+  }
 
   /*! replaces the set with the intersection of two sets (of the same family).
    */
-  void intersect(const Curve_set& aFirst, const Curve_set& aSecond)
-  { if (same_type(aFirst) && same_type(aSecond)) m_rep->intersect(*aFirst.m_rep, *aSecond.m_rep); }
+  void intersect(const Curve_set& aFirst, const Curve_set& aSecond) {
+    if (! same_type(aFirst) || ! same_type(aSecond)) return;
+    detach((&aFirst == this) || (&aSecond == this));
+    m_rep->intersect(*aFirst.m_rep, *aSecond.m_rep);
+  }
 
   /*! replaces the set with the union of two sets (of the same family).
    */
-  void join(const Curve_set& aFirst, const Curve_set& aSecond)
-  { if (same_type(aFirst) && same_type(aSecond)) m_rep->join(*aFirst.m_rep, *aSecond.m_rep); }
+  void join(const Curve_set& aFirst, const Curve_set& aSecond) {
+    if (! same_type(aFirst) || ! same_type(aSecond)) return;
+    detach((&aFirst == this) || (&aSecond == this));
+    m_rep->join(*aFirst.m_rep, *aSecond.m_rep);
+  }
 
   /*! replaces the set with the difference of two sets (of the same family).
    */
-  void difference(const Curve_set& aFirst, const Curve_set& aSecond)
-  { if (same_type(aFirst) && same_type(aSecond)) m_rep->difference(*aFirst.m_rep, *aSecond.m_rep); }
+  void difference(const Curve_set& aFirst, const Curve_set& aSecond) {
+    if (! same_type(aFirst) || ! same_type(aSecond)) return;
+    detach((&aFirst == this) || (&aSecond == this));
+    m_rep->difference(*aFirst.m_rep, *aSecond.m_rep);
+  }
 
   /*! replaces the set with the symmetric difference of two sets (of the same family).
    */
-  void symmetric_difference(const Curve_set& aFirst, const Curve_set& aSecond)
-  { if (same_type(aFirst) && same_type(aSecond)) m_rep->symmetric_difference(*aFirst.m_rep, *aSecond.m_rep); }
+  void symmetric_difference(const Curve_set& aFirst, const Curve_set& aSecond) {
+    if (! same_type(aFirst) || ! same_type(aSecond)) return;
+    detach((&aFirst == this) || (&aSecond == this));
+    m_rep->symmetric_difference(*aFirst.m_rep, *aSecond.m_rep);
+  }
 
   /*! determines whether another set is of the same curve family.
    */
@@ -593,9 +664,12 @@ public:
    */
   const Rep_base& rep() const { return *m_rep; }
 
-  /*! obtains the representation of the set.
+  /*! obtains the representation of the set (to change it).
    */
-  Rep_base& rep() { return *m_rep; }
+  Rep_base& rep() {
+    detach();
+    return *m_rep;
+  }
 
   /*! obtains the curve family of the set.
    */
@@ -627,7 +701,10 @@ public:
 
   /*! obtains the conic representation, or null if the set is not conic.
    */
-  Conic_rep* get_conic_rep() { return dynamic_cast<Conic_rep*>(boost::get_pointer(m_rep)); }
+  Conic_rep* get_conic_rep() {
+    detach();
+    return dynamic_cast<Conic_rep*>(boost::get_pointer(m_rep));
+  }
 
   /*! obtains the conic set.
    */
@@ -643,7 +720,10 @@ public:
 
   /*! obtains the linear representation, or null if the set is not linear.
    */
-  Linear_rep* get_linear_rep() { return dynamic_cast<Linear_rep*>(boost::get_pointer(m_rep)); }
+  Linear_rep* get_linear_rep() {
+    detach();
+    return dynamic_cast<Linear_rep*>(boost::get_pointer(m_rep));
+  }
 
   /*! obtains the linear set.
    */
@@ -659,7 +739,10 @@ public:
 
   /*! obtains the circular representation, or null if the set is not circular.
    */
-  Circular_rep* get_circular_rep() { return dynamic_cast<Circular_rep*>(boost::get_pointer(m_rep)); }
+  Circular_rep* get_circular_rep() {
+    detach();
+    return dynamic_cast<Circular_rep*>(boost::get_pointer(m_rep));
+  }
 
   /*! obtains the circular set.
    */
@@ -675,7 +758,10 @@ public:
 
   /*! obtains the Bezier representation, or null if the set is not Bezier.
    */
-  Bezier_rep* get_bezier_rep() { return dynamic_cast<Bezier_rep*>(boost::get_pointer(m_rep)); }
+  Bezier_rep* get_bezier_rep() {
+    detach();
+    return dynamic_cast<Bezier_rep*>(boost::get_pointer(m_rep));
+  }
 
   /*! obtains the Bezier set.
    */
@@ -691,7 +777,10 @@ public:
 
   /*! obtains the polyline representation, or null if the set is not a polyline set.
    */
-  Polyline_rep* get_polyline_rep() { return dynamic_cast<Polyline_rep*>(boost::get_pointer(m_rep)); }
+  Polyline_rep* get_polyline_rep() {
+    detach();
+    return dynamic_cast<Polyline_rep*>(boost::get_pointer(m_rep));
+  }
 
   /*! obtains the polyline set.
    */
@@ -1343,6 +1432,7 @@ private:
   //typedefs of classes used to draw circular and linear polygon
 
   state_container states_stack;
+  std::array<CGAL::Qt::GraphicsItem*, number_of_buckets + 1> m_linked_items{};   // the graphics items in the scene
 
   CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>* m_linear_input;
   CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>* m_circular_input;
@@ -1771,48 +1861,48 @@ private:
   template <typename Set, typename Read_boundary>
   bool read_polygons(const QString& aFileName, const char* aKind, Read_boundary aReadBoundary);
 
-  /*! pushes a new state, a copy of the current one, onto the undo stack before an operation is applied. (Starting
-   * pushes empty sets.)
+  /*! pushes a new state onto the undo stack before an operation is applied. The new state shares the sets of the
+   * current one; a set is copied when it first changes (see Curve_set::detach()). (Starting pushes empty sets.)
    */
   void get_new_state(State_op aOperation) {
-    if (aOperation == State_op::Start) {
-      State_current m_state = State_current(aOperation, m_curve_type);
-      states_stack.push_back(m_state);
-      for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        link_gi(si->gi());
-    }
+    if (aOperation == State_op::Start) states_stack.push_back(State_current(aOperation, m_curve_type));
     else {
-      State_current m_state_x = State_current(aOperation, m_curve_type);
-
-      for (std::size_t i = 0; i <= number_of_buckets; ++i) {
-        m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
+      State_current state = states_stack.back();
+      state.m_operation = aOperation;
+      state.m_type = m_curve_type;
+      // The sets of another curve family (of a state before the family was switched) are replaced with empty sets.
+      for (auto& set : state.m_curve_sets) {
+        if (set.type() != m_curve_type) set.reset_type(m_curve_type);
       }
-
-      model_changed();
-
-      for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        unlink_gi(si->gi());
-
-      model_changed();
-
-      states_stack.push_back(m_state_x);
-
-      for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-        link_gi(si->gi());
-
-      model_changed();
+      states_stack.push_back(state);
     }
-
     m_state_num = states_stack.size();
     actionUndo->setEnabled(true);
-
-    // for confirming the num of each state during debugging
     model_changed();
   }
 
-  /*! emits the changed() signal.
+  /*! shows the graphics items of the sets of the current state in the scene, instead of those of the sets they replaced
+   * (of other states, or of other curve families).
    */
-  void model_changed() { emit(changed()); }
+  void sync_graphics_items() {
+    if (states_stack.empty()) return;
+    auto& sets = states_stack.back().m_curve_sets;
+    for (std::size_t i = 0; i < sets.size(); ++i) {
+      CGAL::Qt::GraphicsItem* gi = sets[i].gi();
+      if (gi == m_linked_items[i]) continue;
+      if (m_linked_items[i]) unlink_gi(m_linked_items[i]);
+      gi->setZValue(double(i));       // the sets are drawn in the order of their indices
+      link_gi(gi);
+      m_linked_items[i] = gi;
+    }
+  }
+
+  /*! shows the graphics items of the current state, and emits the changed() signal.
+   */
+  void model_changed() {
+    sync_graphics_items();
+    emit(changed());
+  }
 
   /*! asks the user a yes/no question. \return true if the answer is yes.
    */
@@ -2426,11 +2516,6 @@ void MainWindow::remove_bucket() {
 
 void MainWindow::undo() {
   if (m_state_num > 1) {
-
-    //unlink GI for last state
-    for (auto si = states_stack.back().m_curve_sets.begin();
-         si != states_stack.back().m_curve_sets.end(); ++si) { unlink_gi(si->gi()); }
-
     switch (states_stack.back().m_operation) {
      case State_op::Complement:
      case State_op::Delete_all:
@@ -2443,22 +2528,11 @@ void MainWindow::undo() {
      default: break;
     }
 
-    model_changed();
-
-    // pop last state
+    // The sets of the previous state are shown again by model_changed().
     states_stack.pop_back();
-
-    for (auto si = states_stack.back().m_curve_sets.begin();
-         si != states_stack.back().m_curve_sets.end(); ++si) { link_gi(si->gi()); }
-
-    if (states_stack.size() == 1) {
-      actionUndo->setEnabled(false);
-    }
-
+    if (states_stack.size() == 1) actionUndo->setEnabled(false);
     m_state_num = states_stack.size();
     trim_program_to_states();
-
-    // for confirming the num of each state during debugging
     model_changed();
   }
   else {
@@ -2942,9 +3016,7 @@ void MainWindow::save_draw_bucket() {
 }
 
 void MainWindow::switch_set_type(Curve_set& aSet, Curve_type aType) {
-  unlink_gi(aSet.gi());
   aSet.reset_type(aType);
-  link_gi(aSet.gi());
   model_changed();
 }
 
@@ -3361,7 +3433,9 @@ void MainWindow::start_inserting(Curve_type aType) {
     return;
   }
   if (! m_pan && ! m_reset) {
+    // Switching the family discards the history; the first state gets empty sets of the family.
     while (m_state_num > 1) undo();
+    if (states_stack.back().set(0).type() != aType) switch_sets_type(aType);
   }
   actionPAN->setChecked(false);
   m_pan = false;
