@@ -208,15 +208,19 @@ void error_handler(const char* what, const char* expr, const char* file, int lin
   }
 }
 
-enum { BLUE_GROUP, RED_GROUP, BLACK_GROUP, BROWN_GROUP, YELLOW_GROUP, MAGENTA_GROUP, AQUA_GROUP, RESULT_GROUP };
+// The buckets are identified by their indices: red, black, blue, brown, yellow, magenta, and aqua. The scratch result
+// set follows them. Initially (and at least) the first three buckets exist.
+constexpr std::size_t number_of_buckets = 7;
+constexpr std::size_t result_index = number_of_buckets;
+constexpr std::size_t min_number_of_buckets = 3;
 
 // The curve families are identified by numbers: linear 1, circular 2, Bezier 3, polyline 4, and conic 5.
 
 //drawing tools for different colors
 QPen sPens[] = {
-  QPen(QColor(255, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //blue
-  QPen(QColor(0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),     //red
-  QPen(QColor(0, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //black
+  QPen(QColor(255, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //red
+  QPen(QColor(0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),     //black
+  QPen(QColor(0, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //blue
   QPen(QColor(210, 105, 30), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),//brown
   QPen(QColor(255, 255, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), //yellow
   QPen(QColor(255, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), //magenta
@@ -225,9 +229,9 @@ QPen sPens[] = {
 };
 
 QBrush sBrushes[] = {
-  QBrush(QColor(255, 0, 0, 75)),           //blue
-  QBrush(QColor(0, 0, 0, 75)),             //red
-  QBrush(QColor(0, 0, 255, 75)),           //black
+  QBrush(QColor(255, 0, 0, 75)),           //red
+  QBrush(QColor(0, 0, 0, 75)),             //black
+  QBrush(QColor(0, 0, 255, 75)),           //blue
   QBrush(QColor(210, 105, 30, 75)),        //brown
   QBrush(QColor(255, 255, 0, 75)),         //yellow
   QBrush(QColor(255, 0, 255, 75)),         //magenta
@@ -1047,319 +1051,73 @@ enum class State_op { Complement, Intersection, Union, Difference, Symmetric_dif
 
 // This container is for returning different color polygons while performing an operation
 class State_current {
-
 public:
   /*! constructs the state after a given operation, with empty sets of a given curve family.
    */
   State_current(State_op aOperation, size_t aType);
 
-public:
-  /*! obtains the set of a given bucket.
+  /*! obtains the set of a given bucket (or the scratch result set, at result_index).
    */
-  Curve_set& set(size_t aGroup) { return m_curve_sets[aGroup]; }
-
-  /*! obtains the set of the Draw/Insert bucket.
-   */
-  Curve_set& active_set(size_t m_color_active) { return set(m_color_active); }
-
-  /*! obtains the set of the blue bucket.
-   */
-  Curve_set& blue_set() { return set(BLUE_GROUP); }
-
-  /*! obtains the set of the red bucket.
-   */
-  Curve_set& red_set() { return set(RED_GROUP); }
-
-  /*! obtains the set of the black bucket.
-   */
-  Curve_set& black_set() { return set(BLACK_GROUP); }
-
-  /*! obtains the set of the brown bucket.
-   */
-  Curve_set& brown_set() { return set(BROWN_GROUP); }
-
-  /*! obtains the set of the yellow bucket.
-   */
-  Curve_set& yellow_set() { return set(YELLOW_GROUP); }
-
-  /*! obtains the set of the magenta bucket.
-   */
-  Curve_set& magenta_set() { return set(MAGENTA_GROUP); }
-
-  /*! obtains the set of the aqua bucket.
-   */
-  Curve_set& aqua_set() { return set(AQUA_GROUP); }
+  Curve_set& set(std::size_t aIndex) { return m_curve_sets[aIndex]; }
 
   /*! obtains the scratch result set.
    */
-  Curve_set& result_set() { return set(RESULT_GROUP); }
+  Curve_set& result_set() { return set(result_index); }
 
   /*! shows or hides a bucket.
    */
-  void ToggleView(size_t aGROUP, bool a_check) {
-    if (a_check) set(aGROUP).gi()->show();
-    else set(aGROUP).gi()->hide();
+  void ToggleView(std::size_t aIndex, bool a_check) {
+    if (a_check) set(aIndex).gi()->show();
+    else set(aIndex).gi()->hide();
   }
 
-  /*! obtains the linear polygons of the blue bucket, as constructed.
+  /*! obtains the linear polygons of a given bucket (or of the result), as constructed.
    */
-  Linear_region_source_container& blue_linear_sources() { return m_blue_linear_sources; }
+  Linear_region_source_container& linear_sources(std::size_t aIndex) { return m_linear_sources[aIndex]; }
 
-  /*! obtains the linear polygons of the red bucket, as constructed.
+  /*! obtains the circular polygons of a given bucket (or of the result), as constructed.
    */
-  Linear_region_source_container& red_linear_sources() { return m_red_linear_sources; }
+  Circular_region_source_container& circular_sources(std::size_t aIndex) { return m_circular_sources[aIndex]; }
 
-  /*! obtains the linear polygons of the black bucket, as constructed.
+  /*! obtains the Bezier polygons of a given bucket (or of the result), as constructed.
    */
-  Linear_region_source_container& black_linear_sources() { return m_black_linear_sources; }
+  Bezier_region_source_container& bezier_sources(std::size_t aIndex) { return m_bezier_sources[aIndex]; }
 
-  /*! obtains the linear polygons of the brown bucket, as constructed.
+  /*! obtains the polyline polygons of a given bucket (or of the result), as constructed.
    */
-  Linear_region_source_container& brown_linear_sources() { return m_brown_linear_sources; }
+  Polyline_region_source_container& polyline_sources(std::size_t aIndex) { return m_polyline_sources[aIndex]; }
 
-  /*! obtains the linear polygons of the yellow bucket, as constructed.
+  /*! clears the polygons of a given bucket (or of the result), as constructed.
    */
-  Linear_region_source_container& yellow_linear_sources() { return m_yellow_linear_sources; }
-
-  /*! obtains the linear polygons of the magenta bucket, as constructed.
-   */
-  Linear_region_source_container& magenta_linear_sources() { return m_magenta_linear_sources; }
-
-  /*! obtains the linear polygons of the aqua bucket, as constructed.
-   */
-  Linear_region_source_container& aqua_linear_sources() { return m_aqua_linear_sources; }
-
-  /*! obtains the linear polygons of the result, as constructed.
-   */
-  Linear_region_source_container& result_linear_sources() { return m_result_linear_sources; }
-
-  /*! obtains the circular polygons of the blue bucket, as constructed.
-   */
-  Circular_region_source_container& blue_circular_sources() { return m_blue_circular_sources; }
-
-  /*! obtains the circular polygons of the red bucket, as constructed.
-   */
-  Circular_region_source_container& red_circular_sources() { return m_red_circular_sources; }
-
-  /*! obtains the circular polygons of the black bucket, as constructed.
-   */
-  Circular_region_source_container& black_circular_sources() { return m_black_circular_sources; }
-
-  /*! obtains the circular polygons of the brown bucket, as constructed.
-   */
-  Circular_region_source_container& brown_circular_sources() { return m_brown_circular_sources; }
-
-  /*! obtains the circular polygons of the yellow bucket, as constructed.
-   */
-  Circular_region_source_container& yellow_circular_sources() { return m_yellow_circular_sources; }
-
-  /*! obtains the circular polygons of the magenta bucket, as constructed.
-   */
-  Circular_region_source_container& magenta_circular_sources() { return m_magenta_circular_sources; }
-
-  /*! obtains the circular polygons of the aqua bucket, as constructed.
-   */
-  Circular_region_source_container& aqua_circular_sources() { return m_aqua_circular_sources; }
-
-  /*! obtains the circular polygons of the result, as constructed.
-   */
-  Circular_region_source_container& result_circular_sources() { return m_result_circular_sources; }
-
-  /*! obtains the Bezier polygons of the blue bucket, as constructed.
-   */
-  Bezier_region_source_container& blue_bezier_sources() { return m_blue_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the red bucket, as constructed.
-   */
-  Bezier_region_source_container& red_bezier_sources() { return m_red_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the black bucket, as constructed.
-   */
-  Bezier_region_source_container& black_bezier_sources() { return m_black_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the brown bucket, as constructed.
-   */
-  Bezier_region_source_container& brown_bezier_sources() { return m_brown_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the yellow bucket, as constructed.
-   */
-  Bezier_region_source_container& yellow_bezier_sources() { return m_yellow_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the magenta bucket, as constructed.
-   */
-  Bezier_region_source_container& magenta_bezier_sources() { return m_magenta_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the aqua bucket, as constructed.
-   */
-  Bezier_region_source_container& aqua_bezier_sources() { return m_aqua_bezier_sources; }
-
-  /*! obtains the Bezier polygons of the result, as constructed.
-   */
-  Bezier_region_source_container& result_bezier_sources() { return m_result_bezier_sources; }
-
-  /*! obtains the polyline polygons of the blue bucket, as constructed.
-   */
-  Polyline_region_source_container& blue_polyline_sources() { return m_blue_polyline_sources; }
-
-  /*! obtains the polyline polygons of the red bucket, as constructed.
-   */
-  Polyline_region_source_container& red_polyline_sources() { return m_red_polyline_sources; }
-
-  /*! obtains the polyline polygons of the black bucket, as constructed.
-   */
-  Polyline_region_source_container& black_polyline_sources() { return m_black_polyline_sources; }
-
-  /*! obtains the polyline polygons of the brown bucket, as constructed.
-   */
-  Polyline_region_source_container& brown_polyline_sources() { return m_brown_polyline_sources; }
-
-  /*! obtains the polyline polygons of the yellow bucket, as constructed.
-   */
-  Polyline_region_source_container& yellow_polyline_sources() { return m_yellow_polyline_sources; }
-
-  /*! obtains the polyline polygons of the magenta bucket, as constructed.
-   */
-  Polyline_region_source_container& magenta_polyline_sources() { return m_magenta_polyline_sources; }
-
-  /*! obtains the polyline polygons of the aqua bucket, as constructed.
-   */
-  Polyline_region_source_container& aqua_polyline_sources() { return m_aqua_polyline_sources; }
-
-  /*! obtains the polyline polygons of the result, as constructed.
-   */
-  Polyline_region_source_container& result_polyline_sources() { return m_result_polyline_sources; }
-
-  /*! obtains the linear polygons of a given bucket, as constructed.
-   */
-  Linear_region_source_container& active_linear_sources(size_t m_color_active) {
-    switch (m_color_active) {
-     case 0:return m_blue_linear_sources;
-     case 1:return m_red_linear_sources;
-     case 2:return m_black_linear_sources;
-     case 3:return m_brown_linear_sources;
-     case 4:return m_yellow_linear_sources;
-     case 5:return m_magenta_linear_sources;
-     case 6:return m_aqua_linear_sources;
-     case 7:return m_result_linear_sources;
-
-     default:break;
-    }
-    CGAL_warning_msg(true, "Should not reach here!");
-    return m_blue_linear_sources;
+  void clear_sources(std::size_t aIndex) {
+    m_linear_sources[aIndex].clear();
+    m_circular_sources[aIndex].clear();
+    m_bezier_sources[aIndex].clear();
+    m_polyline_sources[aIndex].clear();
   }
 
-  /*! obtains the circular polygons of a given bucket, as constructed.
+  /*! clears a given bucket (or the result), and its polygons as constructed.
    */
-  Circular_region_source_container& active_circular_sources(size_t m_color_active) {
-    switch (m_color_active) {
-     case 0:return m_blue_circular_sources;
-     case 1:return m_red_circular_sources;
-     case 2:return m_black_circular_sources;
-     case 3:return m_brown_circular_sources;
-     case 4:return m_yellow_circular_sources;
-     case 5:return m_magenta_circular_sources;
-     case 6:return m_aqua_circular_sources;
-     case 7:return m_result_circular_sources;
-
-     default:break;
-    }
-    CGAL_warning_msg(true, "Should not reach here!");
-    return m_blue_circular_sources;
-  }
-
-  /*! obtains the Bezier polygons of a given bucket, as constructed.
-   */
-  Bezier_region_source_container& active_bezier_sources(size_t m_color_active) {
-    switch (m_color_active) {
-     case 0:return m_blue_bezier_sources;
-     case 1:return m_red_bezier_sources;
-     case 2:return m_black_bezier_sources;
-     case 3:return m_brown_bezier_sources;
-     case 4:return m_yellow_bezier_sources;
-     case 5:return m_magenta_bezier_sources;
-     case 6:return m_aqua_bezier_sources;
-     case 7:return m_result_bezier_sources;
-
-     default:break;
-    }
-    CGAL_warning_msg(true, "Should not reach here!");
-    return m_blue_bezier_sources;
-  }
-
-  /*! obtains the polyline polygons of a given bucket, as constructed.
-   */
-  Polyline_region_source_container& active_polyline_sources(size_t m_color_active) {
-    switch (m_color_active) {
-     case 0:return m_blue_polyline_sources;
-     case 1:return m_red_polyline_sources;
-     case 2:return m_black_polyline_sources;
-     case 3:return m_brown_polyline_sources;
-     case 4:return m_yellow_polyline_sources;
-     case 5:return m_magenta_polyline_sources;
-     case 6:return m_aqua_polyline_sources;
-     case 7:return m_result_polyline_sources;
-
-     default:break;
-    }
-    CGAL_warning_msg(true, "Should not reach here!");
-    return m_blue_polyline_sources;
+  void clear(std::size_t aIndex) {
+    set(aIndex).clear();
+    clear_sources(aIndex);
   }
 
 public:
   Curve_set_container m_curve_sets;
-  //container for curves
-  Linear_region_source_container m_blue_linear_sources;
-  Linear_region_source_container m_red_linear_sources;
-  Linear_region_source_container m_black_linear_sources;
-  Linear_region_source_container m_brown_linear_sources;
-  Linear_region_source_container m_yellow_linear_sources;
-  Linear_region_source_container m_magenta_linear_sources;
-  Linear_region_source_container m_aqua_linear_sources;
-  Linear_region_source_container m_result_linear_sources;
 
-  Circular_region_source_container m_blue_circular_sources;
-  Circular_region_source_container m_red_circular_sources;
-  Circular_region_source_container m_black_circular_sources;
-  Circular_region_source_container m_brown_circular_sources;
-  Circular_region_source_container m_yellow_circular_sources;
-  Circular_region_source_container m_magenta_circular_sources;
-  Circular_region_source_container m_aqua_circular_sources;
-  Circular_region_source_container m_result_circular_sources;
-
-  Bezier_region_source_container m_blue_bezier_sources;
-  Bezier_region_source_container m_red_bezier_sources;
-  Bezier_region_source_container m_black_bezier_sources;
-  Bezier_region_source_container m_brown_bezier_sources;
-  Bezier_region_source_container m_yellow_bezier_sources;
-  Bezier_region_source_container m_magenta_bezier_sources;
-  Bezier_region_source_container m_aqua_bezier_sources;
-  Bezier_region_source_container m_result_bezier_sources;
-
-  Polyline_region_source_container m_blue_polyline_sources;
-  Polyline_region_source_container m_red_polyline_sources;
-  Polyline_region_source_container m_black_polyline_sources;
-  Polyline_region_source_container m_brown_polyline_sources;
-  Polyline_region_source_container m_yellow_polyline_sources;
-  Polyline_region_source_container m_magenta_polyline_sources;
-  Polyline_region_source_container m_aqua_polyline_sources;
-  Polyline_region_source_container m_result_polyline_sources;
+  // The polygons of the buckets and of the result (indexed like the sets), as constructed.
+  std::array<Linear_region_source_container, number_of_buckets + 1> m_linear_sources;
+  std::array<Circular_region_source_container, number_of_buckets + 1> m_circular_sources;
+  std::array<Bezier_region_source_container, number_of_buckets + 1> m_bezier_sources;
+  std::array<Polyline_region_source_container, number_of_buckets + 1> m_polyline_sources;
 
   State_op m_operation;
   size_t m_type;
 };
 
 State_current::State_current(State_op aOperation, size_t aType) : m_operation(aOperation), m_type(aType) {
-  //for setting Curve_set of aGroup type an int representing a set of polygon of a specific type
-
-  //default setups with Linear
-  m_curve_sets.push_back(Curve_set(m_type, sPens[BLUE_GROUP], sBrushes[BLUE_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[RED_GROUP], sBrushes[RED_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[BLACK_GROUP], sBrushes[BLACK_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[BROWN_GROUP], sBrushes[BROWN_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[YELLOW_GROUP], sBrushes[YELLOW_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[MAGENTA_GROUP], sBrushes[MAGENTA_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[AQUA_GROUP], sBrushes[AQUA_GROUP]));
-  m_curve_sets.push_back(Curve_set(m_type, sPens[RESULT_GROUP], sBrushes[RESULT_GROUP]));
+  for (std::size_t i = 0; i <= number_of_buckets; ++i) m_curve_sets.push_back(Curve_set(m_type, sPens[i], sBrushes[i]));
 }
 
 using state_container = std::vector<State_current>;
@@ -1555,7 +1313,7 @@ enum class Bucket_op { Complement, Intersection, Join, Difference,
  */
 inline const char* bucket_name(std::size_t aIndex) {
   static const char* names[] = { "red", "black", "blue", "brown", "yellow", "magenta", "aqua" };
-  return (aIndex < 7) ? names[aIndex] : "result";
+  return (aIndex < number_of_buckets) ? names[aIndex] : "result";
 }
 
 /*! obtains the shortest decimal representation that reads back as the same double, so that the program reproduces the
@@ -1817,12 +1575,22 @@ class MainWindow : public CGAL::Qt::DemosMainWindow, public Ui::Boolean_set_oper
 
 private:
   Grid_scene m_scene;
-  // The Intersection and Union columns (one cell per bucket).
-  std::array<QAbstractButton*, 7> m_intersection_column;
-  std::array<QAbstractButton*, 7> m_union_column;
-  std::array<QAbstractButton*, 7> m_complement_column;
-  std::array<QAbstractButton*, 7> m_difference_column;
-  std::array<QAbstractButton*, 7> m_symmetric_difference_column;
+  // The cells of the bucket rows of the Operations panel, by column, and the other widgets of the rows.
+  using Column = std::array<QAbstractButton*, number_of_buckets>;
+  Column m_show_column;                         // Visible
+  Column m_draw_column;                         // Draw/Insert
+  Column m_complement_column;
+  Column m_intersection_column;
+  Column m_union_column;
+  Column m_difference_column;
+  Column m_symmetric_difference_column;
+  Column m_minkowski_sum_column;
+  Column m_copy_column;
+  Column m_move_column;
+  Column m_clear_column;
+  std::array<QLabel*, number_of_buckets> m_bucket_labels;
+  std::array<QFrame*, number_of_buckets> m_bucket_separators;   // the lines below the rows (null for the initial rows)
+  std::size_t m_number_of_buckets = min_number_of_buckets;     // the existing buckets are the first ones
 
   // The program: the statements executed so far, each tagged with the size of the undo stack after its action, so that
   // undo can drop them.
@@ -1851,59 +1619,9 @@ private:
   size_t m_color_active;
   bool empty_warn;
   bool operand_error_warn;
-  size_t m_color_visible;
-  size_t m_color_complement;
-  std::optional<std::size_t> m_color_copy;     // the bucket to copy from, if any
-  std::optional<std::size_t> m_color_move_ext; // the bucket to move from, if any
-  bool m_blue_int;
-  bool m_red_int;
-  bool m_black_int;
-  bool m_brown_int;
-  bool m_yellow_int;
-  bool m_magenta_int;
-  bool m_aqua_int;
   bool m_grid;
   bool m_pan;
   bool m_reset;
-
-  bool m_blue_union;
-  bool m_red_union;
-  bool m_black_union;
-  bool m_brown_union;
-  bool m_yellow_union;
-  bool m_magenta_union;
-  bool m_aqua_union;
-
-  bool m_blue_sym_diff;
-  bool m_red_sym_diff;
-  bool m_black_sym_diff;
-  bool m_brown_sym_diff;
-  bool m_yellow_sym_diff;
-  bool m_magenta_sym_diff;
-  bool m_aqua_sym_diff;
-
-  bool m_blue_mink;
-  bool m_red_mink;
-  bool m_black_mink;
-  bool m_brown_mink;
-  bool m_yellow_mink;
-  bool m_magenta_mink;
-  bool m_aqua_mink;
-
-  bool m_visible_black;
-  bool m_visible_brown;
-  bool m_visible_yellow;
-  bool m_visible_magenta;
-  bool m_visible_aqua;
-
-  bool m_clear_blue;
-  bool m_clear_red;
-  bool m_clear_black;
-  bool m_clear_brown;
-  bool m_clear_yellow;
-  bool m_clear_magenta;
-  bool m_clear_aqua;
-
   bool minkowski_sum_operated;
   bool m_disjoint;
 
@@ -2089,12 +1807,12 @@ public slots:
 
   /*! determines whether the Draw/Insert bucket is marked in a given operation column.
    */
-  bool draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const;
+  bool draw_row_checked(const Column& aColumn) const;
 
   /*! obtains the buckets (indices) marked in a given operation column.
    */
   std::vector<std::size_t>
-  checked_buckets(const std::array<QAbstractButton*, 7>& aColumn) const;
+  checked_buckets(const Column& aColumn) const;
 
   /*! unchecks all operation buttons but a given one.
    */
@@ -2163,7 +1881,7 @@ public slots:
    */
   bool bucket_exists(std::size_t aIndex) const;
 
-  /*! obtains the index of the bucket with a given name, or 7 if there is none.
+  /*! obtains the index of the bucket with a given name, or number_of_buckets if there is none.
    */
   std::size_t bucket_index(const QString& aName) const;
 
@@ -2201,18 +1919,18 @@ public slots:
   /*! keeps at least one bucket unmarked in the intersection or union column (for the result) when a cell is toggled:
    * checking the last unchecked cell is undone. The operation button is enabled only when at least one cell is checked.
    */
-  void limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn, QAbstractButton* aBox, bool aChecked,
+  void limit_to_all_but_one(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
                             QAbstractButton* aOperation);
 
   /*! restores the invariant of limit_to_all_but_one() after a bucket is removed: if all (remaining) buckets are
    * checked, unchecks the last one.
    */
-  void keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn);
+  void keep_one_unchecked(const Column& aColumn);
 
   /*! keeps at most two buckets marked in the difference, symmetric difference, or Minkowski-sum column when a cell is
    * toggled: checking a third cell is undone. The operation button is enabled only when exactly two cells are checked.
    */
-  void limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn, QAbstractButton* aBox, bool aChecked,
+  void limit_to_two_operands(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
                              QAbstractButton* aOperation);
 
   /*! checks the Draw/Insert bucket, where every operation stores its result. If it is not empty and an operand, shows
@@ -2220,34 +1938,6 @@ public slots:
    * button. \return true if the operation is aborted.
    */
   bool abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOperand);
-
-  /*! shows or hides the blue bucket.
-   */
-  void on_showBlue_toggled(bool a_check);
-
-  /*! shows or hides the red bucket.
-   */
-  void on_showRed_toggled(bool a_check);
-
-  /*! shows or hides the black bucket.
-   */
-  void on_showBlack_toggled(bool a_check);
-
-  /*! shows or hides the brown bucket.
-   */
-  void on_showBrown_toggled(bool a_check);
-
-  /*! shows or hides the yellow bucket.
-   */
-  void on_showYellow_toggled(bool a_check);
-
-  /*! shows or hides the magenta bucket.
-   */
-  void on_showMagenta_toggled(bool a_check);
-
-  /*! shows or hides the aqua bucket.
-   */
-  void on_showAqua_toggled(bool a_check);
 
   /*! shows or hides the scratch result set.
    */
@@ -2261,257 +1951,26 @@ public slots:
    */
   void on_showClear_toggled(bool a_check);
 
-  /*! marks or unmarks the blue bucket for copying.
+  /*! shows or hides a bucket. When the Draw/Insert bucket is hidden, the first visible bucket becomes the Draw/Insert
+   * bucket; when no bucket is visible, curves are not constructed.
    */
-  void on_copyBlue_toggled(bool aCheck);
+  void show_bucket(std::size_t aIndex, bool aChecked);
 
-  /*! marks or unmarks the red bucket for copying.
+  /*! makes a bucket the Draw/Insert bucket.
    */
-  void on_copyRed_toggled(bool aCheck);
+  void set_draw_bucket(std::size_t aIndex);
 
-  /*! marks or unmarks the black bucket for copying.
+  /*! obtains the number of existing buckets that are visible.
    */
-  void on_copyBlack_toggled(bool aCheck);
+  std::size_t number_of_visible_buckets() const;
 
-  /*! marks or unmarks the brown bucket for copying.
+  /*! sets the number of existing buckets (the first ones), and shows their rows of the Operations panel.
    */
-  void on_copyBrown_toggled(bool aCheck);
+  void set_number_of_buckets(std::size_t aNumber);
 
-  /*! marks or unmarks the yellow bucket for copying.
+  /*! obtains the first bucket marked in a given column, if any.
    */
-  void on_copyYellow_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket for copying.
-   */
-  void on_copyMagenta_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket for copying.
-   */
-  void on_copyAqua_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket for moving.
-   */
-  void on_moveBlue_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket for moving.
-   */
-  void on_moveRed_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket for moving.
-   */
-  void on_moveBlack_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket for moving.
-   */
-  void on_moveBrown_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket for moving.
-   */
-  void on_moveYellow_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket for moving.
-   */
-  void on_moveMagenta_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket for moving.
-   */
-  void on_moveAqua_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as the complement operand.
-   */
-  void on_showBlueComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as the complement operand.
-   */
-  void on_showRedComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as the complement operand.
-   */
-  void on_showBlackComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as the complement operand.
-   */
-  void on_showBrownComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as the complement operand.
-   */
-  void on_showYellowComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as the complement operand.
-   */
-  void on_showMagentaComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as the complement operand.
-   */
-  void on_showAquaComp_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as an intersection operand.
-   */
-  void on_showBlueInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as an intersection operand.
-   */
-  void on_showRedInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as an intersection operand.
-   */
-  void on_showBlackInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as an intersection operand.
-   */
-  void on_showBrownInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as an intersection operand.
-   */
-  void on_showYellowInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as an intersection operand.
-   */
-  void on_showMagentaInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as an intersection operand.
-   */
-  void on_showAquaInt_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as a union operand.
-   */
-  void on_showBlueUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as a union operand.
-   */
-  void on_showRedUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as a union operand.
-   */
-  void on_showBlackUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as a union operand.
-   */
-  void on_showBrownUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as a union operand.
-   */
-  void on_showYellowUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as a union operand.
-   */
-  void on_showMagentaUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as a union operand.
-   */
-  void on_showAquaUnion_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as a difference operand.
-   */
-  void on_showBlueDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as a difference operand.
-   */
-  void on_showRedDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as a difference operand.
-   */
-  void on_showBlackDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as a difference operand.
-   */
-  void on_showBrownDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as a difference operand.
-   */
-  void on_showYellowDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as a difference operand.
-   */
-  void on_showMagentaDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as a difference operand.
-   */
-  void on_showAquaDiff_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as a symmetric-difference operand.
-   */
-  void on_showBlueSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as a symmetric-difference operand.
-   */
-  void on_showRedSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as a symmetric-difference operand.
-   */
-  void on_showBlackSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as a symmetric-difference operand.
-   */
-  void on_showBrownSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as a symmetric-difference operand.
-   */
-  void on_showYellowSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as a symmetric-difference operand.
-   */
-  void on_showMagentaSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as a symmetric-difference operand.
-   */
-  void on_showAquaSym_Diff_toggled(bool aCheck);
-
-  /*! marks or unmarks the blue bucket as a Minkowski-sum operand.
-   */
-  void on_showBlueMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the red bucket as a Minkowski-sum operand.
-   */
-  void on_showRedMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the black bucket as a Minkowski-sum operand.
-   */
-  void on_showBlackMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the brown bucket as a Minkowski-sum operand.
-   */
-  void on_showBrownMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the yellow bucket as a Minkowski-sum operand.
-   */
-  void on_showYellowMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the magenta bucket as a Minkowski-sum operand.
-   */
-  void on_showMagentaMink_Sum_toggled(bool aCheck);
-
-  /*! marks or unmarks the aqua bucket as a Minkowski-sum operand.
-   */
-  void on_showAquaMink_Sum_toggled(bool aCheck);
-
-  /*! makes the blue bucket the Draw/Insert bucket.
-   */
-  void on_drawBlue_toggled(bool a_check);
-
-  /*! makes the red bucket the Draw/Insert bucket.
-   */
-  void on_drawRed_toggled(bool a_check);
-
-  /*! makes the black bucket the Draw/Insert bucket.
-   */
-  void on_drawBlack_toggled(bool a_check);
-
-  /*! makes the brown bucket the Draw/Insert bucket.
-   */
-  void on_drawBrown_toggled(bool a_check);
-
-  /*! makes the yellow bucket the Draw/Insert bucket.
-   */
-  void on_drawYellow_toggled(bool a_check);
-
-  /*! makes the magenta bucket the Draw/Insert bucket.
-   */
-  void on_drawMagenta_toggled(bool a_check);
-
-  /*! makes the aqua bucket the Draw/Insert bucket.
-   */
-  void on_drawAqua_toggled(bool a_check);
+  std::optional<std::size_t> checked_bucket(const Column& aColumn) const;
 
   /*! shows information about 2D regularized Boolean set-operations.
    */
@@ -2596,7 +2055,7 @@ private:
     else {
       State_current m_state_x = State_current(aOperation, active_type());
 
-      for (int i = 0; i < 8; i++) {
+      for (std::size_t i = 0; i <= number_of_buckets; ++i) {
         m_state_x.m_curve_sets[i].assign(states_stack.back().m_curve_sets[i]);
       }
 
@@ -2638,38 +2097,6 @@ private:
   void ask_user_ok(std::string aTitle, std::string aQuestion)
   { QMessageBox::warning(this, QString(aTitle.c_str()), QString(aQuestion.c_str())); }
 
-  /*! shows or hides the blue bucket.
-   */
-  void SetViewBlue(bool a_check) { showBlue->setChecked(a_check); }
-
-  /*! shows or hides the red bucket.
-   */
-  void SetViewRed(bool a_check) { showRed->setChecked(a_check); }
-
-  /*! shows or hides the black bucket.
-   */
-  void SetViewBlack(bool a_check) { showBlack->setChecked(a_check); }
-
-  /*! shows or hides the brown bucket.
-   */
-  void SetViewBrown(bool a_check) { showBrown->setChecked(a_check); }
-
-  /*! shows or hides the yellow bucket.
-   */
-  void SetViewYellow(bool a_check) { showYellow->setChecked(a_check); }
-
-  /*! shows or hides the magenta bucket.
-   */
-  void SetViewMagenta(bool a_check) { showMagenta->setChecked(a_check); }
-
-  /*! shows or hides the aqua bucket.
-   */
-  void SetViewAqua(bool a_check) { showAqua->setChecked(a_check); }
-
-  /*! shows or hides the scratch result set.
-   */
-  void SetViewResult(bool a_check) { showResult->setChecked(a_check); }
-
   //changes the set of polygons of a specific type
 
   /*! adds a graphics item to the scene and connects it to the changed() signal.
@@ -2693,6 +2120,15 @@ private:
   /*! replaces all sets with empty sets of a given curve family.
    */
   void switch_sets_type(int aType);
+
+  /*! determines whether all sets (the buckets and the result) are empty.
+   */
+  bool are_all_sets_empty() {
+    for (std::size_t i = 0; i <= number_of_buckets; ++i) {
+      if (! states_stack.back().set(i).is_empty()) return false;
+    }
+    return true;
+  }
 
   /*! switches to circular polygons; if there are polygons of another family, asks the user first. \return true if the
    * circular family is active.
@@ -2722,42 +2158,7 @@ MainWindow::MainWindow() :
   m_circular_active(false), //default
   m_polyline_active(false), //default
   m_color_active(0), //default
-  m_color_visible(7), //default
-  m_color_complement(0), //default
-  m_blue_int(true), //default
   minkowski_sum_operated(false), //default
-  m_red_int(true), //default
-  m_black_int(false), //default
-  m_brown_int(false), //default
-  m_yellow_int(false), //default
-  m_magenta_int(false), //default
-  m_aqua_int(false), //default
-  m_blue_union(true), //default
-  m_red_union(true), //default
-  m_black_union(false), //default
-  m_brown_union(false), //default
-  m_yellow_union(false), //default
-  m_magenta_union(false), //default
-  m_aqua_union(false), //default
-  m_blue_sym_diff(true), //default
-  m_red_sym_diff(true), //default
-  m_black_sym_diff(false), //default
-  m_brown_sym_diff(false), //default
-  m_yellow_sym_diff(false), //default
-  m_magenta_sym_diff(false), //default
-  m_aqua_sym_diff(false), //default
-  m_blue_mink(true), //default
-  m_red_mink(true), //default
-  m_black_mink(false), //default
-  m_brown_mink(false), //default
-  m_yellow_mink(false), //default
-  m_magenta_mink(false), //default
-  m_aqua_mink(false), //default
-  m_visible_black(true), //default
-  m_visible_brown(false), //default
-  m_visible_yellow(false), //default
-  m_visible_magenta(false), //default
-  m_visible_aqua(false), //default
   empty_warn(true), // default
   operand_error_warn(true), // default
   m_disjoint(false), //default
@@ -2864,27 +2265,58 @@ MainWindow::MainWindow() :
   QObject::connect(actionGridSparser, &QAction::triggered, this, [change_density]() { change_density(+1); });
   update_density_actions();
 
+  // The cells of the bucket rows, by column, and the other widgets of the rows.
+  m_show_column = {showRed, showBlack, showBlue, showBrown, showYellow, showMagenta, showAqua};
+  m_draw_column = {drawRed, drawBlack, drawBlue, drawBrown, drawYellow, drawMagenta, drawAqua};
+  m_complement_column = {showRedComp, showBlackComp, showBlueComp, showBrownComp, showYellowComp, showMagentaComp,
+                         showAquaComp};
+  m_intersection_column = {showRedInt, showBlackInt, showBlueInt, showBrownInt, showYellowInt, showMagentaInt,
+                           showAquaInt};
+  m_union_column = {showRedUnion, showBlackUnion, showBlueUnion, showBrownUnion, showYellowUnion, showMagentaUnion,
+                    showAquaUnion};
+  m_difference_column = {showRedDiff, showBlackDiff, showBlueDiff, showBrownDiff, showYellowDiff, showMagentaDiff,
+                         showAquaDiff};
+  m_symmetric_difference_column = {showRedSym_Diff, showBlackSym_Diff, showBlueSym_Diff, showBrownSym_Diff,
+                                   showYellowSym_Diff, showMagentaSym_Diff, showAquaSym_Diff};
+  m_minkowski_sum_column = {showRedMink_Sum, showBlackMink_Sum, showBlueMink_Sum, showBrownMink_Sum, showYellowMink_Sum,
+                            showMagentaMink_Sum, showAquaMink_Sum};
+  m_copy_column = {copyRed, copyBlack, copyBlue, copyBrown, copyYellow, copyMagenta, copyAqua};
+  m_move_column = {moveRed, moveBlack, moveBlue, moveBrown, moveYellow, moveMagenta, moveAqua};
+  m_clear_column = {clearRed, clearBlack, clearBlue, clearBrown, clearYellow, clearMagenta, clearAqua};
+  m_bucket_labels = {showRedLabel, showBlackLabel, showBlueLabel, showBrownLabel, showYellowLabel, showMagentaLabel,
+                     showAquaLabel};
+  m_bucket_separators = {nullptr, nullptr, nullptr, line10, line9, line8, line7};
+
+  // Visible shows or hides a bucket; Draw/Insert selects one bucket (the radio buttons are exclusive).
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+    QObject::connect(m_show_column[i], &QAbstractButton::toggled, this,
+                     [this, i](bool checked) { show_bucket(i, checked); });
+    QObject::connect(m_draw_column[i], &QAbstractButton::toggled, this, [this, i](bool checked) {
+      if (checked) set_draw_bucket(i);
+    });
+  }
+
   // Exactly one bucket is the operand of the complement operation: make the Complement column exclusive, so clicking
   // the marked cell is a no-op.
   auto* complement_group = new QButtonGroup(this);
   complement_group->setExclusive(true);
-  for (auto* box :
-         { showBlueComp, showRedComp, showBlackComp, showBrownComp, showYellowComp, showMagentaComp, showAquaComp})
-    complement_group->addButton(box);
+  for (auto* box : m_complement_column) complement_group->addButton(box);
+
+  // At most one bucket is copied or moved: checking a cell of the Copy or Move column unchecks the others.
+  for (const Column* column : {&m_copy_column, &m_move_column}) {
+    for (auto* box : *column) {
+      QObject::connect(box, &QAbstractButton::toggled, this, [column, box](bool checked) {
+        if (! checked) return;
+        for (auto* other : *column) {
+          if (other != box) other->setChecked(false);
+        }
+      });
+    }
+  }
 
   // In the Intersection and Union columns at least one bucket stays unchecked, to hold the result, and the operations
   // are enabled only with at least one operand.
-  m_complement_column = {showBlueComp, showRedComp, showBlackComp, showBrownComp, showYellowComp, showMagentaComp,
-                         showAquaComp};
-  m_difference_column = {showBlueDiff, showRedDiff, showBlackDiff, showBrownDiff, showYellowDiff, showMagentaDiff,
-                         showAquaDiff};
-  m_symmetric_difference_column = {showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff, showBrownSym_Diff,
-                                   showYellowSym_Diff, showMagentaSym_Diff, showAquaSym_Diff};
-  m_intersection_column = {showBlueInt, showRedInt, showBlackInt, showBrownInt, showYellowInt, showMagentaInt,
-                           showAquaInt};
-  m_union_column = {showBlueUnion, showRedUnion, showBlackUnion, showBrownUnion, showYellowUnion, showMagentaUnion,
-                    showAquaUnion};
-  const std::pair<const std::array<QAbstractButton*, 7>*, QAbstractButton*>
+  const std::pair<const Column*, QAbstractButton*>
     multi_operand_columns[] = {{&m_intersection_column, actionIntersectionH}, {&m_union_column, actionUnionH}};
   for (const auto& [column, operation] : multi_operand_columns) {
     for (auto* box : *column)
@@ -2897,24 +2329,16 @@ MainWindow::MainWindow() :
 
   // The Difference, Symmetric Difference, and Minkowski Sum columns have at most two marked cells, and their operations
   // are enabled only with exactly two.
-  using Column = std::array<QAbstractButton*, 7>;
-  const std::pair<Column, QAbstractButton*> two_operand_columns[] = {
-    {{showBlueDiff, showRedDiff, showBlackDiff, showBrownDiff, showYellowDiff, showMagentaDiff, showAquaDiff},
-     actionDifferenceH},
-    {{showBlueSym_Diff, showRedSym_Diff, showBlackSym_Diff, showBrownSym_Diff, showYellowSym_Diff, showMagentaSym_Diff,
-      showAquaSym_Diff},
-     actionSymmetric_DifferenceH},
-    {{showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum, showBrownMink_Sum, showYellowMink_Sum, showMagentaMink_Sum,
-      showAquaMink_Sum},
-     actionMinkowski_SumH}
-  };
+  const std::pair<const Column*, QAbstractButton*> two_operand_columns[] = {
+    {&m_difference_column, actionDifferenceH}, {&m_symmetric_difference_column, actionSymmetric_DifferenceH},
+    {&m_minkowski_sum_column, actionMinkowski_SumH}};
   for (const auto& [column, operation] : two_operand_columns) {
-    for (auto* box : column)
+    for (auto* box : *column)
       QObject::connect(box, &QAbstractButton::toggled, this,
                        [this, box, column, operation](bool checked)
-                       { limit_to_two_operands(column, box, checked, operation); });
+                       { limit_to_two_operands(*column, box, checked, operation); });
     // Set the initial state of the operation.
-    limit_to_two_operands(column, column[0], false, operation);
+    limit_to_two_operands(*column, (*column)[0], false, operation);
   }
 
   // Fit the Visible and Draw/Insert header images into the same icon area as the operation buttons next to them
@@ -3072,106 +2496,8 @@ MainWindow::MainWindow() :
   //for file handling
   QObject::connect(this, SIGNAL(openRecentFile(QString)), this, SLOT(open(QString)));
 
-  //drawing polygons of various colors
-  QObject::connect(drawBlue, SIGNAL(toggled(bool)), this, SLOT(on_drawBlue_toggled(bool)));
-  QObject::connect(drawRed, SIGNAL(toggled(bool)), this, SLOT(on_drawRed_toggled(bool)));
-  QObject::connect(drawBlack, SIGNAL(toggled(bool)), this, SLOT(on_drawBlack_toggled(bool)));
-  QObject::connect(drawBrown, SIGNAL(toggled(bool)), this, SLOT(on_drawBrown_toggled(bool)));
-  QObject::connect(drawYellow, SIGNAL(toggled(bool)), this, SLOT(on_drawYellow_toggled(bool)));
-  QObject::connect(drawMagenta, SIGNAL(toggled(bool)), this, SLOT(on_drawMagenta_toggled(bool)));
-  QObject::connect(drawAqua, SIGNAL(toggled(bool)), this, SLOT(on_drawAqua_toggled(bool)));
-
-  QObject::connect(showBlue, SIGNAL(toggled(bool)), this, SLOT(on_showBlue_toggled(bool)));
-  QObject::connect(showRed, SIGNAL(toggled(bool)), this, SLOT(on_showRed_toggled(bool)));
-  QObject::connect(showBlack, SIGNAL(toggled(bool)), this, SLOT(on_showBlack_toggled(bool)));
-  QObject::connect(showBrown, SIGNAL(toggled(bool)), this, SLOT(on_showBrown_toggled(bool)));
-  QObject::connect(showYellow, SIGNAL(toggled(bool)), this, SLOT(on_showYellow_toggled(bool)));
-  QObject::connect(showMagenta, SIGNAL(toggled(bool)), this, SLOT(on_showMagenta_toggled(bool)));
-  QObject::connect(showAqua, SIGNAL(toggled(bool)), this, SLOT(on_showAqua_toggled(bool)));
-  QObject::connect(showResult, SIGNAL(toggled(bool)), this, SLOT(on_showResult_toggled(bool)));
-
-  //showing all the side panels
-  //todo::implement the console and the information channel quickly
-  QObject::connect(showColorBucket, SIGNAL(toggled(bool)), this, SLOT(on_showColorBucket_toggled(bool)));
-  QObject::connect(showConsole, SIGNAL(toggled(bool)), this, SLOT(on_showConsole_toggled(bool)));
   QObject::connect(actionErrorOperand, &QAction::toggled, this, [this](bool a_check) { operand_error_warn = a_check; });
   QObject::connect(actionWarnNotEmpty, &QAction::toggled, this, [this](bool a_check) { empty_warn = a_check; });
-  QObject::connect(showInfo, SIGNAL(toggled(bool)), this, SLOT(on_showInfo_toggled(bool)));
-
-  QObject::connect(showClear, SIGNAL(toggled(bool)), this, SLOT(on_showClear_toggled(bool)));
-  QObject::connect(VisibleHeader, SIGNAL(toggled(bool)), this, SLOT(on_VisibleHeader_toggled(bool)));
-
-  //copy paste for all polygons(not a boolean operation)
-  QObject::connect(copyBlue, SIGNAL(toggled(bool)), this, SLOT(on_copyBlue_toggled(bool)));
-  QObject::connect(copyRed, SIGNAL(toggled(bool)), this, SLOT(on_copyRed_toggled(bool)));
-  QObject::connect(copyBlack, SIGNAL(toggled(bool)), this, SLOT(on_copyBlack_toggled(bool)));
-  QObject::connect(copyBrown, SIGNAL(toggled(bool)), this, SLOT(on_copyBrown_toggled(bool)));
-  QObject::connect(copyYellow, SIGNAL(toggled(bool)), this, SLOT(on_copyYellow_toggled(bool)));
-  QObject::connect(copyMagenta, SIGNAL(toggled(bool)), this, SLOT(on_copyMagenta_toggled(bool)));
-  QObject::connect(copyAqua, SIGNAL(toggled(bool)), this, SLOT(on_copyAqua_toggled(bool)));
-
-  //move button usage (not an operation)
-  QObject::connect(moveBlue, SIGNAL(toggled(bool)), this, SLOT(on_moveBlue_toggled(bool)));
-  QObject::connect(moveRed, SIGNAL(toggled(bool)), this, SLOT(on_moveRed_toggled(bool)));
-  QObject::connect(moveBlack, SIGNAL(toggled(bool)), this, SLOT(on_moveBlack_toggled(bool)));
-  QObject::connect(moveBrown, SIGNAL(toggled(bool)), this, SLOT(on_moveBrown_toggled(bool)));
-  QObject::connect(moveYellow, SIGNAL(toggled(bool)), this, SLOT(on_moveYellow_toggled(bool)));
-  QObject::connect(moveMagenta, SIGNAL(toggled(bool)), this, SLOT(on_moveMagenta_toggled(bool)));
-  QObject::connect(moveAqua, SIGNAL(toggled(bool)), this, SLOT(on_moveAqua_toggled(bool)));
-
-  //complement operation
-  QObject::connect(showBlueComp, SIGNAL(toggled(bool)), this, SLOT(on_showBlueComp_toggled(bool)));
-  QObject::connect(showRedComp, SIGNAL(toggled(bool)), this, SLOT(on_showRedComp_toggled(bool)));
-  QObject::connect(showBlackComp, SIGNAL(toggled(bool)), this, SLOT(on_showBlackComp_toggled(bool)));
-  QObject::connect(showBrownComp, SIGNAL(toggled(bool)), this, SLOT(on_showBrownComp_toggled(bool)));
-  QObject::connect(showYellowComp, SIGNAL(toggled(bool)), this, SLOT(on_showYellowComp_toggled(bool)));
-  QObject::connect(showMagentaComp, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaComp_toggled(bool)));
-  QObject::connect(showAquaComp, SIGNAL(toggled(bool)), this, SLOT(on_showAquaComp_toggled(bool)));
-
-  //intersection operation
-  QObject::connect(showBlueInt, SIGNAL(toggled(bool)), this, SLOT(on_showBlueInt_toggled(bool)));
-  QObject::connect(showRedInt, SIGNAL(toggled(bool)), this, SLOT(on_showRedInt_toggled(bool)));
-  QObject::connect(showBlackInt, SIGNAL(toggled(bool)), this, SLOT(on_showBlackInt_toggled(bool)));
-  QObject::connect(showBrownInt, SIGNAL(toggled(bool)), this, SLOT(on_showBrownInt_toggled(bool)));
-  QObject::connect(showYellowInt, SIGNAL(toggled(bool)), this, SLOT(on_showYellowInt_toggled(bool)));
-  QObject::connect(showMagentaInt, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaInt_toggled(bool)));
-  QObject::connect(showAquaInt, SIGNAL(toggled(bool)), this, SLOT(on_showAquaInt_toggled(bool)));
-
-  //union operation
-  QObject::connect(showBlueUnion, SIGNAL(toggled(bool)), this, SLOT(on_showBlueUnion_toggled(bool)));
-  QObject::connect(showRedUnion, SIGNAL(toggled(bool)), this, SLOT(on_showRedUnion_toggled(bool)));
-  QObject::connect(showBlackUnion, SIGNAL(toggled(bool)), this, SLOT(on_showBlackUnion_toggled(bool)));
-  QObject::connect(showBrownUnion, SIGNAL(toggled(bool)), this, SLOT(on_showBrownUnion_toggled(bool)));
-  QObject::connect(showYellowUnion, SIGNAL(toggled(bool)), this, SLOT(on_showYellowUnion_toggled(bool)));
-  QObject::connect(showMagentaUnion, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaUnion_toggled(bool)));
-  QObject::connect(showAquaUnion, SIGNAL(toggled(bool)), this, SLOT(on_showAquaUnion_toggled(bool)));
-
-  //difference operation
-  QObject::connect(showBlueDiff, SIGNAL(toggled(bool)), this, SLOT(on_showBlueDiff_toggled(bool)));
-  QObject::connect(showRedDiff, SIGNAL(toggled(bool)), this, SLOT(on_showRedDiff_toggled(bool)));
-  QObject::connect(showBlackDiff, SIGNAL(toggled(bool)), this, SLOT(on_showBlackDiff_toggled(bool)));
-  QObject::connect(showBrownDiff, SIGNAL(toggled(bool)), this, SLOT(on_showBrownDiff_toggled(bool)));
-  QObject::connect(showYellowDiff, SIGNAL(toggled(bool)), this, SLOT(on_showYellowDiff_toggled(bool)));
-  QObject::connect(showMagentaDiff, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaDiff_toggled(bool)));
-  QObject::connect(showAquaDiff, SIGNAL(toggled(bool)), this, SLOT(on_showAquaDiff_toggled(bool)));
-
-  //sym_difference operation
-  QObject::connect(showBlueSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showBlueSym_Diff_toggled(bool)));
-  QObject::connect(showRedSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showRedSym_Diff_toggled(bool)));
-  QObject::connect(showBlackSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showBlackSym_Diff_toggled(bool)));
-  QObject::connect(showBrownSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showBrownSym_Diff_toggled(bool)));
-  QObject::connect(showYellowSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showYellowSym_Diff_toggled(bool)));
-  QObject::connect(showMagentaSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaSym_Diff_toggled(bool)));
-  QObject::connect(showAquaSym_Diff, SIGNAL(toggled(bool)), this, SLOT(on_showAquaSym_Diff_toggled(bool)));
-
-  //minkowski_sum
-  QObject::connect(showBlueMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showBlueMink_Sum_toggled(bool)));
-  QObject::connect(showRedMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showRedMink_Sum_toggled(bool)));
-  QObject::connect(showBlackMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showBlackMink_Sum_toggled(bool)));
-  QObject::connect(showBrownMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showBrownMink_Sum_toggled(bool)));
-  QObject::connect(showYellowMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showYellowMink_Sum_toggled(bool)));
-  QObject::connect(showMagentaMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showMagentaMink_Sum_toggled(bool)));
-  QObject::connect(showAquaMink_Sum, SIGNAL(toggled(bool)), this, SLOT(on_showAquaMink_Sum_toggled(bool)));
 
   //clear
   this->graphicsView->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
@@ -3191,234 +2517,108 @@ MainWindow::MainWindow() :
   actionOpenDXF->setEnabled(false);
   actionOpenBezier->setEnabled(false);
   actionOpenPolyline->setEnabled(false);
-
-  states_stack.back().blue_set().clear();
-  states_stack.back().red_set().clear();
-  states_stack.back().black_set().clear();
-  states_stack.back().brown_set().clear();
-  states_stack.back().yellow_set().clear();
-  states_stack.back().magenta_set().clear();
-  states_stack.back().aqua_set().clear();
 }
 
-void MainWindow::on_showBlue_toggled(bool a_check) {
-  states_stack.back().ToggleView(BLUE_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
+void MainWindow::on_showResult_toggled(bool a_check) { states_stack.back().ToggleView(result_index, a_check); }
+
+void MainWindow::show_bucket(std::size_t aIndex, bool aChecked) {
+  states_stack.back().ToggleView(aIndex, aChecked);
+  m_draw_column[aIndex]->setEnabled(aChecked);
+  if (aIndex >= m_number_of_buckets) return;
+  auto visible = number_of_visible_buckets();
+  if (aChecked) {
+    if (visible == 1) m_scene.installEventFilter(current_input());
+  }
+  else if (visible == 0) remove_inputs();
+  else if (aIndex == m_color_active) {
+    for (std::size_t i = 0; i < m_number_of_buckets; ++i) {
+      if (m_show_column[i]->isChecked()) {
+        m_draw_column[i]->setChecked(true);
+        break;
+      }
     }
-    m_color_visible++;
-    drawBlue->setEnabled(true);
+  }
+  // The header is checked when all buckets are visible.
+  QSignalBlocker blocker(VisibleHeader);
+  VisibleHeader->setChecked(visible == m_number_of_buckets);
+}
+
+void MainWindow::set_draw_bucket(std::size_t aIndex) {
+  m_color_active = aIndex;
+  const QPen& pen = sPens[aIndex];
+  auto& bucket = states_stack.back().set(aIndex);
+  if (bucket.is_linear()) {
+    m_linear_input->mOngoingPieceGI->setPen(pen);
+    m_linear_input->mLinearGI->setPen(pen);
+    m_linear_input->mHandleGI->setPen(pen);
+  }
+  else if (bucket.is_circular()) {
+    m_circular_input->mOngoingPieceGI->setPen(pen);
+    m_circular_input->mCircularGI->setPen(pen);
+    m_circular_input->mHandleGI->setPen(pen);
+  }
+  else if (bucket.is_bezier()) {
+    m_bezier_input->mOngoingPieceGI->setPen(pen);
+    m_bezier_input->mBezierGI->setPen(pen);
+    m_bezier_input->mHandle0GI->setPen(pen);
+    m_bezier_input->mHandle1GI->setPen(pen);
   }
   else {
-    m_color_visible--;
-    if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawBlue->setEnabled(false);
+    m_polyline_input->mOngoingPieceGI->setPen(pen);
+    m_polyline_input->mPolylineGI->setPen(pen);
+    m_polyline_input->mHandleGI->setPen(pen);
   }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
+  set_conic_pen(pen);
 }
 
-void MainWindow::on_showRed_toggled(bool a_check) {
-  states_stack.back().ToggleView(RED_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawRed->setEnabled(true);
-  }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawRed->setEnabled(false);
-  }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
+std::size_t MainWindow::number_of_visible_buckets() const {
+  return std::count_if(m_show_column.begin(), m_show_column.begin() + m_number_of_buckets,
+                       [](QAbstractButton* box) { return box->isChecked(); });
 }
 
-void MainWindow::on_showBlack_toggled(bool a_check) {
-  states_stack.back().ToggleView(BLACK_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawBlack->setEnabled(true);
+void MainWindow::set_number_of_buckets(std::size_t aNumber) {
+  m_number_of_buckets = aNumber;
+  const Column* columns[] = {&m_show_column, &m_draw_column, &m_complement_column, &m_intersection_column,
+                             &m_union_column, &m_difference_column, &m_symmetric_difference_column,
+                             &m_minkowski_sum_column, &m_copy_column, &m_move_column, &m_clear_column};
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+    bool exists = (i < aNumber);
+    for (const Column* column : columns) (*column)[i]->setVisible(exists);
+    m_bucket_labels[i]->setVisible(exists);
+    if (m_bucket_separators[i]) m_bucket_separators[i]->setVisible(exists);
   }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawBlack->setEnabled(false);
+
+  // The vertical lines between the columns span the rows.
+  int height = 155 + 30 * int(aNumber - min_number_of_buckets);
+  for (auto* line : {line0006, line1, line2, line3, line4, line5, line6, line0007, line06, line061, line062, line063})
+    line->setGeometry(QRect(line->x(), 0, 7, height));
+
+  bool can_add = (aNumber < number_of_buckets);
+  actionAddColor->setEnabled(can_add);
+  actionAddColor->setText(can_add ? "Add a Bucket" : "Maximum Number of Buckets Reached");
+  bool can_remove = (aNumber > min_number_of_buckets);
+  actionMinusColor->setEnabled(can_remove);
+  if (can_remove) {
+    QString name = bucket_name(aNumber - 1);
+    name[0] = name[0].toUpper();
+    actionMinusColor->setText("Remove " + name);
   }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
+  else actionMinusColor->setText("Minimum Number of Buckets Reached");
 }
 
-void MainWindow::on_showBrown_toggled(bool a_check) {
-  states_stack.back().ToggleView(BROWN_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawBrown->setEnabled(true);
-  }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawBrown->setEnabled(false);
-  }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
+std::optional<std::size_t> MainWindow::checked_bucket(const Column& aColumn) const {
+  auto buckets = checked_buckets(aColumn);
+  if (buckets.empty()) return std::nullopt;
+  return buckets.front();
 }
-
-void MainWindow::on_showYellow_toggled(bool a_check) {
-  states_stack.back().ToggleView(YELLOW_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawYellow->setEnabled(true);
-  }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawYellow->setEnabled(false);
-  }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
-}
-
-void MainWindow::on_showMagenta_toggled(bool a_check) {
-  states_stack.back().ToggleView(MAGENTA_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawMagenta->setEnabled(true);
-  }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showAqua->isChecked()) drawAqua->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawMagenta->setEnabled(false);
-  }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
-}
-
-void MainWindow::on_showAqua_toggled(bool a_check) {
-  states_stack.back().ToggleView(AQUA_GROUP, a_check);
-  if (a_check) {
-    if (m_color_visible == 0) {
-      m_scene.installEventFilter(current_input());
-    }
-    m_color_visible++;
-    drawAqua->setEnabled(true);
-  }
-  else {
-    m_color_visible--;
-    if (showBlue->isChecked()) drawBlue->setChecked(true);
-    else if (showRed->isChecked()) drawRed->setChecked(true);
-    else if (showBlack->isChecked()) drawBlack->setChecked(true);
-    else if (showBrown->isChecked()) drawBrown->setChecked(true);
-    else if (showYellow->isChecked()) drawYellow->setChecked(true);
-    else if (showMagenta->isChecked()) drawMagenta->setChecked(true);
-    else {
-      remove_inputs();
-    }
-    drawAqua->setEnabled(false);
-  }
-  if (m_color_visible == 7) VisibleHeader->setChecked(true);
-}
-
-void MainWindow::on_showResult_toggled(bool a_check) { states_stack.back().ToggleView(RESULT_GROUP, a_check); }
 
 void MainWindow::on_VisibleHeader_toggled(bool a_check) {
-  if (a_check) {
-    showRed->setChecked(true);
-    showBlue->setChecked(true);
-    showBlack->setChecked(true);
-    showBrown->setChecked(true);
-    showYellow->setChecked(true);
-    showMagenta->setChecked(true);
-    showAqua->setChecked(true);
-    drawBlue->setChecked(true);
-  }
-  else {
-    showRed->setChecked(false);
-    showBlue->setChecked(false);
-    showBlack->setChecked(false);
-    showBrown->setChecked(false);
-    showYellow->setChecked(false);
-    showMagenta->setChecked(false);
-    showAqua->setChecked(false);
-  }
+  for (auto* box : m_show_column) box->setChecked(a_check);
+  if (a_check) m_draw_column[0]->setChecked(true);
 }
 
 void MainWindow::on_showClear_toggled(bool a_check) {
-  if (a_check) {
-    clearRed->setChecked(true);
-    clearBlue->setChecked(true);
-    clearBrown->setChecked(true);
-    clearYellow->setChecked(true);
-    clearMagenta->setChecked(true);
-    clearAqua->setChecked(true);
-    clearBlack->setChecked(true);
-  }
-  else {
-    clearRed->setChecked(false);
-    clearBlue->setChecked(false);
-    clearBrown->setChecked(false);
-    clearYellow->setChecked(false);
-    clearMagenta->setChecked(false);
-    clearAqua->setChecked(false);
-    clearBlack->setChecked(false);
-  }
+  for (auto* box : m_clear_column) box->setChecked(a_check);
 }
 
 void MainWindow::on_sceneDockWidget_visibilityChanged(bool a_check) {
@@ -3451,1375 +2651,32 @@ void MainWindow::on_showInfo_toggled(bool a_check) {
   else infoDockWidget->setVisible(false);
 }
 
-void MainWindow::on_showBlueComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 0;
-    showRedComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showBlueComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showRedComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 1;
-    showBlueComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showRedComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showBlackComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 2;
-    showRedComp->setChecked(false);
-    showBlueComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showBlackComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showBrownComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 3;
-    showRedComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBlueComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showBrownComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showYellowComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 4;
-    showRedComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showBlueComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showYellowComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showMagentaComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 5;
-    showRedComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showBlueComp->setChecked(false);
-    showAquaComp->setChecked(false);
-  }
-  else {
-    showMagentaComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_showAquaComp_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_complement = 6;
-    showRedComp->setChecked(false);
-    showBlackComp->setChecked(false);
-    showBrownComp->setChecked(false);
-    showYellowComp->setChecked(false);
-    showMagentaComp->setChecked(false);
-    showBlueComp->setChecked(false);
-  }
-  else {
-    showAquaComp->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyBlue_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 0;
-    copyRed->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBrown->setChecked(false);
-    copyYellow->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyBlue->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyRed_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 1;
-    copyBlue->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBrown->setChecked(false);
-    copyYellow->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyRed->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyBlack_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 2;
-    copyRed->setChecked(false);
-    copyBlue->setChecked(false);
-    copyBrown->setChecked(false);
-    copyYellow->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyBlack->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyBrown_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 3;
-    copyRed->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBlue->setChecked(false);
-    copyYellow->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyBrown->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyYellow_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 4;
-    copyRed->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBrown->setChecked(false);
-    copyBlue->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyYellow->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyMagenta_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 5;
-    copyRed->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBrown->setChecked(false);
-    copyYellow->setChecked(false);
-    copyBlue->setChecked(false);
-    copyAqua->setChecked(false);
-  }
-  else {
-    copyMagenta->setChecked(false);
-  }
-}
-
-void MainWindow::on_copyAqua_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_copy = 6;
-    copyRed->setChecked(false);
-    copyBlack->setChecked(false);
-    copyBrown->setChecked(false);
-    copyYellow->setChecked(false);
-    copyMagenta->setChecked(false);
-    copyBlue->setChecked(false);
-  }
-  else {
-    copyAqua->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveBlue_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 0;
-    moveRed->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBrown->setChecked(false);
-    moveYellow->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    moveBlue->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveRed_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 1;
-    moveBlue->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBrown->setChecked(false);
-    moveYellow->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    moveRed->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveBlack_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 2;
-    moveRed->setChecked(false);
-    moveBlue->setChecked(false);
-    moveBrown->setChecked(false);
-    moveYellow->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    moveBlack->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveBrown_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 3;
-    moveRed->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBlue->setChecked(false);
-    moveYellow->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    copyBrown->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveYellow_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 4;
-    moveRed->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBrown->setChecked(false);
-    moveBlue->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    moveYellow->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveMagenta_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 5;
-    moveRed->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBrown->setChecked(false);
-    moveYellow->setChecked(false);
-    moveBlue->setChecked(false);
-    moveAqua->setChecked(false);
-  }
-  else {
-    moveMagenta->setChecked(false);
-  }
-}
-
-void MainWindow::on_moveAqua_toggled(bool aCheck) {
-  if (aCheck) {
-    m_color_move_ext = 6;
-    moveRed->setChecked(false);
-    moveBlack->setChecked(false);
-    moveBrown->setChecked(false);
-    moveYellow->setChecked(false);
-    moveMagenta->setChecked(false);
-    moveBlue->setChecked(false);
-  }
-  else {
-    moveAqua->setChecked(false);
-  }
-}
-
-void MainWindow::on_showBlueInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_blue_int = true;
-  }
-  else {
-    m_blue_int = false;
-  }
-}
-
-void MainWindow::on_showRedInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_red_int = true;
-  }
-  else {
-    m_red_int = false;
-  }
-
-}
-
-void MainWindow::on_showBlackInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_black_int = true;
-  }
-  else {
-    m_black_int = false;
-  }
-
-}
-
-void MainWindow::on_showBrownInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_brown_int = true;
-  }
-  else {
-    m_brown_int = false;
-  }
-
-}
-
-void MainWindow::on_showYellowInt_toggled(bool aCheck) {
-
-  if (aCheck) {
-    m_yellow_int = true;
-  }
-  else {
-    m_yellow_int = false;
-  }
-}
-
-void MainWindow::on_showMagentaInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_magenta_int = true;
-  }
-  else {
-    m_magenta_int = false;
-  }
-
-}
-
-void MainWindow::on_showAquaInt_toggled(bool aCheck) {
-  if (aCheck) {
-    m_aqua_int = true;
-  }
-  else {
-    m_aqua_int = false;
-  }
-}
-
-void MainWindow::on_showBlueUnion_toggled(bool aCheck) {
-  if (aCheck) {
-    m_blue_union = true;
-  }
-  else {
-    m_blue_union = false;
-  }
-}
-
-void MainWindow::on_showRedUnion_toggled(bool aCheck) {
-  if (aCheck) {
-    m_red_union = true;
-  }
-  else {
-    m_red_union = false;
-  }
-
-}
-
-void MainWindow::on_showBlackUnion_toggled(bool aCheck) {
-
-  if (aCheck) {
-    m_black_union = true;
-  }
-  else {
-    m_black_union = false;
-  }
-}
-
-void MainWindow::on_showBrownUnion_toggled(bool aCheck) {
-
-  if (aCheck) {
-    m_brown_union = true;
-  }
-  else {
-    m_brown_union = false;
-  }
-}
-
-void MainWindow::on_showYellowUnion_toggled(bool aCheck) {
-
-  if (aCheck) {
-    m_yellow_union = true;
-  }
-  else {
-    m_yellow_union = false;
-  }
-}
-
-void MainWindow::on_showMagentaUnion_toggled(bool aCheck) {
-  if (aCheck) {
-    m_magenta_union = true;
-  }
-  else {
-    m_magenta_union = false;
-  }
-}
-
-void MainWindow::on_showAquaUnion_toggled(bool aCheck) {
-  if (aCheck) {
-    m_aqua_union = true;
-  }
-  else {
-    m_aqua_union = false;
-  }
-}
-
-void MainWindow::on_showBlueDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showRedDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showBlackDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showBrownDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showYellowDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showMagentaDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showAquaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showAquaDiff_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionDifferenceH->setEnabled(false);
-    }
-    else {
-      actionDifferenceH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedDiff->isChecked()) count++;
-    if (showBlackDiff->isChecked()) count++;
-    if (showBrownDiff->isChecked()) count++;
-    if (showYellowDiff->isChecked()) count++;
-    if (showMagentaDiff->isChecked()) count++;
-    if (showBlueDiff->isChecked()) count++;
-
-    if (count == 2) {
-      actionDifferenceH->setEnabled(true);
-    }
-    else {
-      actionDifferenceH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showBlueSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_blue_sym_diff = true;
-  }
-  else {
-    m_blue_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showRedSym_Diff_toggled(bool aCheck) {
-
-  if (aCheck) {
-    m_red_sym_diff = true;
-  }
-  else {
-    m_red_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showBlackSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_black_sym_diff = true;
-  }
-  else {
-    m_black_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showBrownSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_brown_sym_diff = true;
-  }
-  else {
-    m_brown_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showYellowSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_yellow_sym_diff = true;
-  }
-  else {
-    m_yellow_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showMagentaSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_magenta_sym_diff = true;
-  }
-  else {
-    m_magenta_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showAquaSym_Diff_toggled(bool aCheck) {
-  if (aCheck) {
-    m_aqua_sym_diff = true;
-  }
-  else {
-    m_aqua_sym_diff = false;
-  }
-}
-
-void MainWindow::on_showBlueMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showRedMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showBlackMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showBrownMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showYellowMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showMagentaMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showAquaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-void MainWindow::on_showAquaMink_Sum_toggled(bool aCheck) {
-  if (aCheck) {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count >= 2 or count == 0) {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-  }
-  else {
-    size_t count = 0;
-    if (showRedMink_Sum->isChecked()) count++;
-    if (showBlackMink_Sum->isChecked()) count++;
-    if (showBrownMink_Sum->isChecked()) count++;
-    if (showYellowMink_Sum->isChecked()) count++;
-    if (showMagentaMink_Sum->isChecked()) count++;
-    if (showBlueMink_Sum->isChecked()) count++;
-
-    if (count == 2) {
-      actionMinkowski_SumH->setEnabled(true);
-    }
-    else {
-      actionMinkowski_SumH->setEnabled(false);
-    }
-  }
-}
-
-//////////###################### Add Color Plus Button ###########################////////////
-//done in GSoC 2020
-
 void MainWindow::on_actionAddColor_triggered() {
-  //these colors are not present by default
-  if (! m_visible_brown) {
-    m_visible_brown = true;
-    log_statements({"brown = Polygon_set_2()"}, true);
-    showBrown->setVisible(true);
-    drawBrown->setVisible(true);
-    clearBrown->setVisible(true);
-    showBrownComp->setVisible(true);
-    showBrownDiff->setVisible(true);
-    showBrownUnion->setVisible(true);
-    showBrownInt->setVisible(true);
-    showBrownSym_Diff->setVisible(true);
-    showBrownMink_Sum->setVisible(true);
-    copyBrown->setVisible(true);
-    moveBrown->setVisible(true);
-    showBrownLabel->setVisible(true);
-
-    line10->setVisible(true);
-
-    line1->setGeometry(QRect(115, 0, 7, 185));
-    line2->setGeometry(QRect(155, 0, 7, 185));
-    line3->setGeometry(QRect(200, 0, 7, 185));
-    line4->setGeometry(QRect(245, 0, 7, 185));
-    line5->setGeometry(QRect(290, 0, 7, 185));
-    line6->setGeometry(QRect(335, 0, 7, 185));
-    line06->setGeometry(QRect(425, 0, 7, 185));
-    line061->setGeometry(QRect(470, 0, 7, 185));
-    line062->setGeometry(QRect(515, 0, 7, 185));
-    line063->setGeometry(QRect(560, 0, 7, 185));
-    line0007->setGeometry(QRect(380, 0, 7, 185));
-    line0006->setGeometry(QRect(70, 0, 7, 185));
-
-    actionMinusColor->setEnabled(true);
-    actionMinusColor->setText("Remove Brown");
-  }
-  else if (! m_visible_yellow) {
-    m_visible_yellow = true;
-    log_statements({"yellow = Polygon_set_2()"}, true);
-    showYellow->setVisible(true);
-    drawYellow->setVisible(true);
-    clearYellow->setVisible(true);
-    showYellowComp->setVisible(true);
-    showYellowDiff->setVisible(true);
-    showYellowUnion->setVisible(true);
-    showYellowInt->setVisible(true);
-    showYellowSym_Diff->setVisible(true);
-    showYellowMink_Sum->setVisible(true);
-    copyYellow->setVisible(true);
-    moveYellow->setVisible(true);
-    showYellowLabel->setVisible(true);
-
-    line9->setVisible(true);
-
-    line1->setGeometry(QRect(115, 0, 7, 215));
-    line2->setGeometry(QRect(155, 0, 7, 215));
-    line3->setGeometry(QRect(200, 0, 7, 215));
-    line4->setGeometry(QRect(245, 0, 7, 215));
-    line5->setGeometry(QRect(290, 0, 7, 215));
-    line6->setGeometry(QRect(335, 0, 7, 215));
-    line06->setGeometry(QRect(425, 0, 7, 215));
-    line061->setGeometry(QRect(470, 0, 7, 215));
-    line062->setGeometry(QRect(515, 0, 7, 215));
-    line063->setGeometry(QRect(560, 0, 7, 215));
-    line0007->setGeometry(QRect(380, 0, 7, 215));
-    line0006->setGeometry(QRect(70, 0, 7, 215));
-
-    actionMinusColor->setText("Remove Yellow");
-  }
-  else if (! m_visible_magenta) {
-    m_visible_magenta = true;
-    log_statements({"magenta = Polygon_set_2()"}, true);
-    showMagenta->setVisible(true);
-    drawMagenta->setVisible(true);
-    clearMagenta->setVisible(true);
-    showMagentaComp->setVisible(true);
-    showMagentaDiff->setVisible(true);
-    showMagentaUnion->setVisible(true);
-    showMagentaInt->setVisible(true);
-    showMagentaSym_Diff->setVisible(true);
-    showMagentaMink_Sum->setVisible(true);
-    copyMagenta->setVisible(true);
-    moveMagenta->setVisible(true);
-    showMagentaLabel->setVisible(true);
-
-    line8->setVisible(true);
-
-    line1->setGeometry(QRect(115, 0, 7, 245));
-    line2->setGeometry(QRect(155, 0, 7, 245));
-    line3->setGeometry(QRect(200, 0, 7, 245));
-    line4->setGeometry(QRect(245, 0, 7, 245));
-    line5->setGeometry(QRect(290, 0, 7, 245));
-    line6->setGeometry(QRect(335, 0, 7, 245));
-    line06->setGeometry(QRect(425, 0, 7, 245));
-    line061->setGeometry(QRect(470, 0, 7, 245));
-    line062->setGeometry(QRect(515, 0, 7, 245));
-    line063->setGeometry(QRect(560, 0, 7, 245));
-    line0007->setGeometry(QRect(380, 0, 7, 245));
-    line0006->setGeometry(QRect(70, 0, 7, 245));
-
-    actionMinusColor->setText("Remove Magenta");
-  }
-  else if (! m_visible_aqua) {
-    m_visible_aqua = true;
-    log_statements({"aqua = Polygon_set_2()"}, true);
-    showAqua->setVisible(true);
-    drawAqua->setVisible(true);
-    clearAqua->setVisible(true);
-    showAquaComp->setVisible(true);
-    showAquaDiff->setVisible(true);
-    showAquaUnion->setVisible(true);
-    showAquaInt->setVisible(true);
-    showAquaSym_Diff->setVisible(true);
-    showAquaMink_Sum->setVisible(true);
-    copyAqua->setVisible(true);
-    moveAqua->setVisible(true);
-    showAquaLabel->setVisible(true);
-
-    line7->setVisible(true);
-
-    line1->setGeometry(QRect(115, 0, 7, 275));
-    line2->setGeometry(QRect(155, 0, 7, 275));
-    line3->setGeometry(QRect(200, 0, 7, 275));
-    line4->setGeometry(QRect(245, 0, 7, 275));
-    line5->setGeometry(QRect(290, 0, 7, 275));
-    line6->setGeometry(QRect(335, 0, 7, 275));
-    line06->setGeometry(QRect(425, 0, 7, 275));
-    line061->setGeometry(QRect(470, 0, 7, 275));
-    line062->setGeometry(QRect(515, 0, 7, 275));
-    line063->setGeometry(QRect(560, 0, 7, 275));
-    line0007->setGeometry(QRect(380, 0, 7, 275));
-    line0006->setGeometry(QRect(70, 0, 7, 275));
-
-    actionAddColor->setEnabled(false);
-    actionAddColor->setText("Maximum Number of Buckets Reached");
-    actionMinusColor->setText("Remove Aqua");
-  }
-
+  if (m_number_of_buckets == number_of_buckets) return;
+  log_statements({QString("%1 = Polygon_set_2()").arg(bucket_name(m_number_of_buckets))}, true);
+  set_number_of_buckets(m_number_of_buckets + 1);
   modelChanged();
 }
 
 void MainWindow::on_actionMinusColor_triggered() {
-  if (! (m_visible_yellow || m_visible_magenta || m_visible_aqua)) {
-    log_statements({"del brown"}, true);
-    states_stack.back().m_curve_sets[3].clear();
+  if (m_number_of_buckets == min_number_of_buckets) return;
+  std::size_t i = m_number_of_buckets - 1;
+  log_statements({QString("del %1").arg(bucket_name(i))}, true);
+  states_stack.back().clear(i);
 
-    states_stack.back().brown_circular_sources().clear();
-    states_stack.back().brown_linear_sources().clear();
-    states_stack.back().brown_bezier_sources().clear();
-    states_stack.back().brown_polyline_sources().clear();
-
-    m_visible_brown = false;
-    showBrown->setVisible(false);
-    drawBrown->setVisible(false);
-    clearBrown->setVisible(false);
-    showBrownComp->setVisible(false);
-    showBrownDiff->setVisible(false);
-    showBrownUnion->setVisible(false);
-    showBrownInt->setVisible(false);
-    showBrownSym_Diff->setVisible(false);
-    showBrownMink_Sum->setVisible(false);
-    copyBrown->setVisible(false);
-    moveBrown->setVisible(false);
-    showBrownLabel->setVisible(false);
-
-    // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
-    if (m_color_active == 3) drawBlue->setChecked(true);
-    if (m_color_complement == 3) showBlueComp->setChecked(true);
-    // Unmark the removed bucket as an operand of the two-operand operations;
-    // this disables an operation that no longer has two operands.
-    showBrownDiff->setChecked(false);
-    showBrownSym_Diff->setChecked(false);
-    showBrownMink_Sum->setChecked(false);
-    // Unmark it as an intersection or union operand, and keep at least one remaining bucket unmarked, for the result.
-    showBrownInt->setChecked(false);
-    showBrownUnion->setChecked(false);
-    keep_one_unchecked(m_intersection_column);
-    keep_one_unchecked(m_union_column);
-
-    line10->setVisible(false);
-
-    line1->setGeometry(QRect(115, 0, 7, 155));
-    line2->setGeometry(QRect(155, 0, 7, 155));
-    line3->setGeometry(QRect(200, 0, 7, 155));
-    line4->setGeometry(QRect(245, 0, 7, 155));
-    line5->setGeometry(QRect(290, 0, 7, 155));
-    line6->setGeometry(QRect(335, 0, 7, 155));
-    line06->setGeometry(QRect(425, 0, 7, 155));
-    line061->setGeometry(QRect(470, 0, 7, 155));
-    line062->setGeometry(QRect(515, 0, 7, 155));
-    line063->setGeometry(QRect(560, 0, 7, 155));
-    line0007->setGeometry(QRect(380, 0, 7, 155));
-    line0006->setGeometry(QRect(70, 0, 7, 155));
-
-    actionMinusColor->setText("Minimum Number of Buckets Reached");
-    actionMinusColor->setEnabled(false);
-  }
-  else if (! (m_visible_magenta || m_visible_aqua)) {
-    log_statements({"del yellow"}, true);
-    states_stack.back().m_curve_sets[4].clear();
-
-    states_stack.back().yellow_circular_sources().clear();
-    states_stack.back().yellow_linear_sources().clear();
-    states_stack.back().yellow_bezier_sources().clear();
-    states_stack.back().yellow_polyline_sources().clear();
-
-    m_visible_yellow = false;
-    showYellow->setVisible(false);
-    drawYellow->setVisible(false);
-    clearYellow->setVisible(false);
-    showYellowComp->setVisible(false);
-    showYellowDiff->setVisible(false);
-    showYellowUnion->setVisible(false);
-    showYellowInt->setVisible(false);
-    showYellowSym_Diff->setVisible(false);
-    showYellowMink_Sum->setVisible(false);
-    copyYellow->setVisible(false);
-    moveYellow->setVisible(false);
-    showYellowLabel->setVisible(false);
-
-    // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
-    if (m_color_active == 4) drawBlue->setChecked(true);
-    if (m_color_complement == 4) showBlueComp->setChecked(true);
-    // Unmark the removed bucket as an operand of the two-operand operations;
-    // this disables an operation that no longer has two operands.
-    showYellowDiff->setChecked(false);
-    showYellowSym_Diff->setChecked(false);
-    showYellowMink_Sum->setChecked(false);
-    // Unmark it as an intersection or union operand, and keep at least one remaining bucket unmarked, for the result.
-    showYellowInt->setChecked(false);
-    showYellowUnion->setChecked(false);
-    keep_one_unchecked(m_intersection_column);
-    keep_one_unchecked(m_union_column);
-
-    line9->setVisible(false);
-
-    line1->setGeometry(QRect(115, 0, 7, 185));
-    line2->setGeometry(QRect(155, 0, 7, 185));
-    line3->setGeometry(QRect(200, 0, 7, 185));
-    line4->setGeometry(QRect(245, 0, 7, 185));
-    line5->setGeometry(QRect(290, 0, 7, 185));
-    line6->setGeometry(QRect(335, 0, 7, 185));
-    line06->setGeometry(QRect(425, 0, 7, 185));
-    line061->setGeometry(QRect(470, 0, 7, 185));
-    line062->setGeometry(QRect(515, 0, 7, 185));
-    line063->setGeometry(QRect(560, 0, 7, 185));
-    line0007->setGeometry(QRect(380, 0, 7, 185));
-    line0006->setGeometry(QRect(70, 0, 7, 185));
-
-    actionMinusColor->setText("Remove Brown");
-  }
-  else if (! m_visible_aqua) {
-    log_statements({"del magenta"}, true);
-    states_stack.back().m_curve_sets[5].clear();
-
-    states_stack.back().magenta_circular_sources().clear();
-    states_stack.back().magenta_linear_sources().clear();
-    states_stack.back().magenta_bezier_sources().clear();
-    states_stack.back().magenta_polyline_sources().clear();
-
-    m_visible_magenta = false;
-    showMagenta->setVisible(false);
-    drawMagenta->setVisible(false);
-    clearMagenta->setVisible(false);
-    showMagentaComp->setVisible(false);
-    showMagentaDiff->setVisible(false);
-    showMagentaUnion->setVisible(false);
-    showMagentaInt->setVisible(false);
-    showMagentaSym_Diff->setVisible(false);
-    showMagentaMink_Sum->setVisible(false);
-    copyMagenta->setVisible(false);
-    moveMagenta->setVisible(false);
-    showMagentaLabel->setVisible(false);
-
-    // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
-    if (m_color_active == 5) drawBlue->setChecked(true);
-    if (m_color_complement == 5) showBlueComp->setChecked(true);
-    // Unmark the removed bucket as an operand of the two-operand operations;
-    // this disables an operation that no longer has two operands.
-    showMagentaDiff->setChecked(false);
-    showMagentaSym_Diff->setChecked(false);
-    showMagentaMink_Sum->setChecked(false);
-    // Unmark it as an intersection or union operand, and keep at least one remaining bucket unmarked, for the result.
-    showMagentaInt->setChecked(false);
-    showMagentaUnion->setChecked(false);
-    keep_one_unchecked(m_intersection_column);
-    keep_one_unchecked(m_union_column);
-
-    line8->setVisible(false);
-
-    line1->setGeometry(QRect(115, 0, 7, 215));
-    line2->setGeometry(QRect(155, 0, 7, 215));
-    line3->setGeometry(QRect(200, 0, 7, 215));
-    line4->setGeometry(QRect(245, 0, 7, 215));
-    line5->setGeometry(QRect(290, 0, 7, 215));
-    line6->setGeometry(QRect(335, 0, 7, 215));
-    line06->setGeometry(QRect(425, 0, 7, 215));
-    line061->setGeometry(QRect(470, 0, 7, 215));
-    line062->setGeometry(QRect(515, 0, 7, 215));
-    line063->setGeometry(QRect(560, 0, 7, 215));
-    line0007->setGeometry(QRect(380, 0, 7, 215));
-    line0006->setGeometry(QRect(70, 0, 7, 215));
-
-    actionMinusColor->setText("Remove Yellow");
-  }
-  else {
-    log_statements({"del aqua"}, true);
-    states_stack.back().m_curve_sets[6].clear();
-
-    states_stack.back().aqua_circular_sources().clear();
-    states_stack.back().aqua_linear_sources().clear();
-    states_stack.back().aqua_bezier_sources().clear();
-    states_stack.back().aqua_polyline_sources().clear();
-
-    m_visible_aqua = false;
-    showAqua->setVisible(false);
-    drawAqua->setVisible(false);
-    clearAqua->setVisible(false);
-    showAquaComp->setVisible(false);
-    showAquaDiff->setVisible(false);
-    showAquaUnion->setVisible(false);
-    showAquaInt->setVisible(false);
-    showAquaSym_Diff->setVisible(false);
-    showAquaMink_Sum->setVisible(false);
-    copyAqua->setVisible(false);
-    moveAqua->setVisible(false);
-    showAquaLabel->setVisible(false);
-
-    // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
-    if (m_color_active == 6) drawBlue->setChecked(true);
-    if (m_color_complement == 6) showBlueComp->setChecked(true);
-    // Unmark the removed bucket as an operand of the two-operand operations;
-    // this disables an operation that no longer has two operands.
-    showAquaDiff->setChecked(false);
-    showAquaSym_Diff->setChecked(false);
-    showAquaMink_Sum->setChecked(false);
-    // Unmark it as an intersection or union operand, and keep at least one remaining bucket unmarked, for the result.
-    showAquaInt->setChecked(false);
-    showAquaUnion->setChecked(false);
-    keep_one_unchecked(m_intersection_column);
-    keep_one_unchecked(m_union_column);
-
-    line7->setVisible(false);
-
-    line1->setGeometry(QRect(115, 0, 7, 245));
-    line2->setGeometry(QRect(155, 0, 7, 245));
-    line3->setGeometry(QRect(200, 0, 7, 245));
-    line4->setGeometry(QRect(245, 0, 7, 245));
-    line5->setGeometry(QRect(290, 0, 7, 245));
-    line6->setGeometry(QRect(335, 0, 7, 245));
-    line06->setGeometry(QRect(425, 0, 7, 245));
-    line061->setGeometry(QRect(470, 0, 7, 245));
-    line062->setGeometry(QRect(515, 0, 7, 245));
-    line063->setGeometry(QRect(560, 0, 7, 245));
-    line0007->setGeometry(QRect(380, 0, 7, 245));
-    line0006->setGeometry(QRect(70, 0, 7, 245));
-
-    actionAddColor->setEnabled(true);
-    actionAddColor->setText("Add a Bucket");
-    actionMinusColor->setText("Remove Magenta");
-  }
-
+  // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
+  if (m_color_active == i) m_draw_column[0]->setChecked(true);
+  if (m_complement_column[i]->isChecked()) m_complement_column[0]->setChecked(true);
+  // Unmark the removed bucket as an operand (this disables an operation that no longer has two operands), and as the
+  // bucket to copy, move, or clear.
+  for (const Column* column : {&m_intersection_column, &m_union_column, &m_difference_column,
+                               &m_symmetric_difference_column, &m_minkowski_sum_column, &m_copy_column, &m_move_column,
+                               &m_clear_column})
+    (*column)[i]->setChecked(false);
+  set_number_of_buckets(i);
+  // Keep at least one remaining bucket unmarked in the Intersection and Union columns, for the result.
+  keep_one_unchecked(m_intersection_column);
+  keep_one_unchecked(m_union_column);
   modelChanged();
 }
 
@@ -4866,80 +2723,22 @@ void MainWindow::on_actionUndo_triggered() {
 }
 
 void MainWindow::on_actionNew_triggered() {
-
   if (m_state_num > 1) get_new_state(State_op::Reset);
 
-  // Reset starts a new program, which constructs the existing buckets.
+  // Reset starts a new program, which constructs the initial buckets.
   m_program.clear();
   if (m_log) m_log->clear();
   QStringList program;
-  for (std::size_t i = 0; i < 7; ++i) {
-    if (bucket_exists(i))
-      program << QString("%1 = Polygon_set_2()").arg(bucket_name(i));
-  }
+  for (std::size_t i = 0; i < min_number_of_buckets; ++i)
+    program << QString("%1 = Polygon_set_2()").arg(bucket_name(i));
   log_statements(program, true);
 
-  for (auto si = states_stack.back().m_curve_sets.begin(); si != states_stack.back().m_curve_sets.end(); ++si)
-    si->clear();
+  for (std::size_t i = 0; i <= number_of_buckets; ++i) states_stack.back().clear(i);
 
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphicsView->setScene(&m_scene);
   this->graphicsView->fitInView(m_scene.sceneRect(), Qt::KeepAspectRatio);
   this->graphicsView->scale(2.5, 2.5);
-
-  states_stack.back().result_set().clear();
-  states_stack.back().blue_set().clear();
-  states_stack.back().black_set().clear();
-  states_stack.back().brown_set().clear();
-  states_stack.back().red_set().clear();
-  states_stack.back().yellow_set().clear();
-  states_stack.back().magenta_set().clear();
-  states_stack.back().aqua_set().clear();
-
-  states_stack.back().blue_circular_sources().clear();
-  states_stack.back().red_circular_sources().clear();
-  states_stack.back().black_circular_sources().clear();
-  states_stack.back().brown_circular_sources().clear();
-  states_stack.back().yellow_circular_sources().clear();
-  states_stack.back().magenta_circular_sources().clear();
-  states_stack.back().aqua_circular_sources().clear();
-  states_stack.back().result_circular_sources().clear();
-
-  states_stack.back().blue_linear_sources().clear();
-  states_stack.back().red_linear_sources().clear();
-  states_stack.back().black_linear_sources().clear();
-  states_stack.back().brown_linear_sources().clear();
-  states_stack.back().yellow_linear_sources().clear();
-  states_stack.back().magenta_linear_sources().clear();
-  states_stack.back().result_linear_sources().clear();
-
-  states_stack.back().blue_bezier_sources().clear();
-  states_stack.back().red_bezier_sources().clear();
-  states_stack.back().black_bezier_sources().clear();
-  states_stack.back().brown_bezier_sources().clear();
-  states_stack.back().yellow_bezier_sources().clear();
-  states_stack.back().magenta_bezier_sources().clear();
-  states_stack.back().result_bezier_sources().clear();
-
-  states_stack.back().blue_polyline_sources().clear();
-  states_stack.back().red_polyline_sources().clear();
-  states_stack.back().black_polyline_sources().clear();
-  states_stack.back().brown_polyline_sources().clear();
-  states_stack.back().yellow_polyline_sources().clear();
-  states_stack.back().magenta_polyline_sources().clear();
-  states_stack.back().result_polyline_sources().clear();
-
-  SetViewBlue(true);
-  SetViewRed(true);
-  SetViewBlack(true);
-  SetViewBrown(true);
-  SetViewYellow(true);
-  SetViewMagenta(true);
-  SetViewAqua(true);
-  SetViewResult(true);
-
-  actionAddColor->setEnabled(true);
-  actionMinusColor->setEnabled(false);
 
   m_disjoint = false;
 
@@ -4951,7 +2750,6 @@ void MainWindow::on_actionNew_triggered() {
   m_pan = false;
 
   m_color_active = 0;
-  m_color_visible = 7;
 
   m_linear_input->mOngoingPieceGI->setPen(sPens[0]);
   m_linear_input->mLinearGI->setPen(sPens[0]);
@@ -4983,588 +2781,80 @@ void MainWindow::on_actionNew_triggered() {
 
   actionDifferenceH->setEnabled(true);
 
-  m_color_copy.reset();
-  m_color_move_ext.reset();
-  m_color_complement = 0; //default
-  m_blue_int = true; //default
-  m_red_int = true; //default
-  m_black_int = false; //default
-  m_brown_int = false; //default
-  m_yellow_int = false; //default
-  m_magenta_int = false; //default
-  m_aqua_int = false; //default
-
-  m_blue_union = true; //default
-  m_red_union = true; //default
-  m_black_union = false; //default
-  m_brown_union = false; //default
-  m_yellow_union = false; //default
-  m_magenta_union = false; //default
-  m_aqua_union = false; //default
-
-  m_blue_sym_diff = true; //default
-  m_red_sym_diff = true; //default
-  m_black_sym_diff = false; //default
-  m_brown_sym_diff = false; //default
-  m_yellow_sym_diff = false; //default
-  m_magenta_sym_diff = false; //default
-  m_aqua_sym_diff = false; //default
-
-  m_blue_mink = true; //default
-  m_red_mink = true; //default
-  m_black_mink = false; //default
-  m_brown_mink = false; //default
-  m_yellow_mink = false; //default
-  m_magenta_mink = false; //default
-  m_aqua_mink = false; //default
-
-  drawBlue->setChecked(true);
-
-  showBlue->setChecked(true);
-  showRed->setChecked(true);
-  showBlack->setChecked(true);
-  showBrown->setChecked(true);
-  showYellow->setChecked(true);
-  showMagenta->setChecked(true);
-  showAqua->setChecked(true);
+  // The initial marks: all buckets are visible, the first one is the Draw/Insert bucket and the complement operand,
+  // and the first two are the operands of the other operations. (Unmark the other operands first, so that marking the
+  // first two is not undone.)
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+    m_show_column[i]->setChecked(true);
+    for (const Column* column : {&m_copy_column, &m_move_column, &m_clear_column})
+      (*column)[i]->setChecked(false);
+  }
+  const Column* operand_columns[] = {&m_intersection_column, &m_union_column, &m_difference_column,
+                                     &m_symmetric_difference_column, &m_minkowski_sum_column};
+  for (const Column* column : operand_columns) {
+    for (std::size_t i = 2; i < number_of_buckets; ++i) (*column)[i]->setChecked(false);
+  }
+  for (const Column* column : operand_columns) {
+    for (std::size_t i = 0; i < 2; ++i) (*column)[i]->setChecked(true);
+  }
+  m_draw_column[0]->setChecked(true);
+  m_complement_column[0]->setChecked(true);
   showResult->setChecked(false);
 
-  clearBlue->setChecked(false);
-  clearRed->setChecked(false);
-  clearBlack->setChecked(false);
-  clearBrown->setChecked(false);
-  clearYellow->setChecked(false);
-  clearMagenta->setChecked(false);
-  clearAqua->setChecked(false);
-
-  clearBrown->setVisible(false);
-  clearYellow->setVisible(false);
-  clearMagenta->setVisible(false);
-  clearAqua->setVisible(false);
-
-  showBrownLabel->setVisible(false);
-  showYellowLabel->setVisible(false);
-  showMagentaLabel->setVisible(false);
-  showAquaLabel->setVisible(false);
-
-  showBlueComp->setChecked(true);
-  showRedComp->setChecked(false);
-  showBlackComp->setChecked(false);
-  showBrownComp->setChecked(false);
-  showYellowComp->setChecked(false);
-  showMagentaComp->setChecked(false);
-  showAquaComp->setChecked(false);
-
-  copyBlue->setChecked(false);
-  copyRed->setChecked(false);
-  copyBlack->setChecked(false);
-  copyBrown->setChecked(false);
-  copyYellow->setChecked(false);
-  copyMagenta->setChecked(false);
-  copyAqua->setChecked(false);
-
-  moveBlue->setChecked(false);
-  moveRed->setChecked(false);
-  moveBlack->setChecked(false);
-  moveBrown->setChecked(false);
-  moveYellow->setChecked(false);
-  moveMagenta->setChecked(false);
-  moveAqua->setChecked(false);
-
-  showBlackInt->setChecked(false);
-  showBrownInt->setChecked(false);
-  showYellowInt->setChecked(false);
-  showMagentaInt->setChecked(false);
-  showAquaInt->setChecked(false);
-  showBlueInt->setChecked(true);
-  showRedInt->setChecked(true);
-
-  showBlackUnion->setChecked(false);
-  showBrownUnion->setChecked(false);
-  showYellowUnion->setChecked(false);
-  showMagentaUnion->setChecked(false);
-  showAquaUnion->setChecked(false);
-  showBlueUnion->setChecked(true);
-  showRedUnion->setChecked(true);
-
-  showBlackDiff->setChecked(false);
-  showBrownDiff->setChecked(false);
-  showYellowDiff->setChecked(false);
-  showMagentaDiff->setChecked(false);
-  showAquaDiff->setChecked(false);
-  showBlueDiff->setChecked(true);
-  showRedDiff->setChecked(true);
-
-  showBlackSym_Diff->setChecked(false);
-  showBrownSym_Diff->setChecked(false);
-  showYellowSym_Diff->setChecked(false);
-  showMagentaSym_Diff->setChecked(false);
-  showAquaSym_Diff->setChecked(false);
-  showBlueSym_Diff->setChecked(true);
-  showRedSym_Diff->setChecked(true);
-
-  showBlackMink_Sum->setChecked(false);
-  showBrownMink_Sum->setChecked(false);
-  showYellowMink_Sum->setChecked(false);
-  showMagentaMink_Sum->setChecked(false);
-  showAquaMink_Sum->setChecked(false);
-  showBlueMink_Sum->setChecked(true);
-  showRedMink_Sum->setChecked(true);
-
-  m_visible_black = true;
-  showBlack->setVisible(true);
-  drawBlack->setVisible(true);
-  showBlackComp->setVisible(true);
-  showBlackDiff->setVisible(true);
-  showBlackUnion->setVisible(true);
-  showBlackInt->setVisible(true);
-  showBlackSym_Diff->setVisible(true);
-  showBlackMink_Sum->setVisible(true);
-  copyBlack->setVisible(true);
-  moveBlack->setVisible(true);
-
-  m_visible_brown = false;
-  showBrown->setVisible(false);
-  drawBrown->setVisible(false);
-  showBrownComp->setVisible(false);
-  showBrownDiff->setVisible(false);
-  showBrownUnion->setVisible(false);
-  showBrownInt->setVisible(false);
-  showBrownSym_Diff->setVisible(false);
-  showBrownMink_Sum->setVisible(false);
-  copyBrown->setVisible(false);
-  moveBrown->setVisible(false);
-
-  m_visible_yellow = false;
-  showYellow->setVisible(false);
-  drawYellow->setVisible(false);
-  showYellowComp->setVisible(false);
-  showYellowDiff->setVisible(false);
-  showYellowUnion->setVisible(false);
-  showYellowInt->setVisible(false);
-  showYellowSym_Diff->setVisible(false);
-  showYellowMink_Sum->setVisible(false);
-  copyYellow->setVisible(false);
-  moveYellow->setVisible(false);
-
-  m_visible_magenta = false;
-  showMagenta->setVisible(false);
-  drawMagenta->setVisible(false);
-  showMagentaComp->setVisible(false);
-  showMagentaDiff->setVisible(false);
-  showMagentaUnion->setVisible(false);
-  showMagentaInt->setVisible(false);
-  showMagentaSym_Diff->setVisible(false);
-  showMagentaMink_Sum->setVisible(false);
-  copyMagenta->setVisible(false);
-  moveMagenta->setVisible(false);
-
-  m_visible_aqua = false;
-  showAqua->setVisible(false);
-  drawAqua->setVisible(false);
-  showAquaComp->setVisible(false);
-  showAquaDiff->setVisible(false);
-  showAquaUnion->setVisible(false);
-  showAquaInt->setVisible(false);
-  showAquaSym_Diff->setVisible(false);
-  showAquaMink_Sum->setVisible(false);
-  copyAqua->setVisible(false);
-  moveAqua->setVisible(false);
-
-  actionAddColor->setEnabled(true);
-  actionAddColor->setText("Add a Bucket");
-  actionMinusColor->setText("Minimum Number of Buckets Reached");
+  set_number_of_buckets(min_number_of_buckets);
   VisibleHeader->setChecked(true);
   showClear->setChecked(false);
-
-  line7->setVisible(false);
-  line8->setVisible(false);
-  line9->setVisible(false);
-  line10->setVisible(false);
   line11->setVisible(true);
-
-  line1->setGeometry(QRect(115, 0, 7, 155));
-  line2->setGeometry(QRect(155, 0, 7, 155));
-  line3->setGeometry(QRect(200, 0, 7, 155));
-  line4->setGeometry(QRect(245, 0, 7, 155));
-  line5->setGeometry(QRect(290, 0, 7, 155));
-  line6->setGeometry(QRect(335, 0, 7, 155));
-  line06->setGeometry(QRect(425, 0, 7, 155));
-  line061->setGeometry(QRect(470, 0, 7, 155));
-  line062->setGeometry(QRect(515, 0, 7, 155));
-  line063->setGeometry(QRect(560, 0, 7, 155));
-  line0007->setGeometry(QRect(380, 0, 7, 155));
-  line0006->setGeometry(QRect(70, 0, 7, 155));
 
   zoomToFit();
   modelChanged();
 }
 
 void MainWindow::on_actionDeleteAll_triggered() {
-  bool lDone = false;
+  actionComplementH->setChecked(false);
+  actionIntersectionH->setChecked(false);
+  actionUnionH->setChecked(false);
+  actionDifferenceH->setChecked(false);
+  actionSymmetric_DifferenceH->setChecked(false);
+  actionMinkowski_SumH->setChecked(false);
 
-  //ask: what is the use of if(true)
-  if (true) {
-    actionComplementH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionUnionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionComplementH->setChecked(false);
-    actionComplementH->setChecked(false);
-
-    get_new_state(State_op::Delete_all);
-    {
-      QStringList program;
-      for (std::size_t i = 0; i < 7; ++i) {
-        if (! states_stack.back().set(i).is_empty())
-          program << QString("%1.clear()").arg(bucket_name(i));
-      }
-      log_statements(program);
-    }
-
-
-    states_stack.back().blue_set().clear();
-    states_stack.back().blue_circular_sources().clear();
-    states_stack.back().blue_bezier_sources().clear();
-    states_stack.back().blue_linear_sources().clear();
-    states_stack.back().blue_polyline_sources().clear();
-    states_stack.back().red_set().clear();
-    states_stack.back().red_circular_sources().clear();
-    states_stack.back().red_bezier_sources().clear();
-    states_stack.back().red_linear_sources().clear();
-    states_stack.back().red_polyline_sources().clear();
-    states_stack.back().black_set().clear();
-    states_stack.back().black_circular_sources().clear();
-    states_stack.back().black_bezier_sources().clear();
-    states_stack.back().black_linear_sources().clear();
-    states_stack.back().black_polyline_sources().clear();
-    states_stack.back().brown_set().clear();
-    states_stack.back().brown_circular_sources().clear();
-    states_stack.back().brown_bezier_sources().clear();
-    states_stack.back().brown_linear_sources().clear();
-    states_stack.back().brown_polyline_sources().clear();
-    states_stack.back().yellow_set().clear();
-    states_stack.back().yellow_circular_sources().clear();
-    states_stack.back().yellow_bezier_sources().clear();
-    states_stack.back().yellow_linear_sources().clear();
-    states_stack.back().yellow_polyline_sources().clear();
-    states_stack.back().magenta_set().clear();
-    states_stack.back().magenta_circular_sources().clear();
-    states_stack.back().magenta_bezier_sources().clear();
-    states_stack.back().magenta_linear_sources().clear();
-    states_stack.back().magenta_polyline_sources().clear();
-    states_stack.back().aqua_set().clear();
-    states_stack.back().aqua_circular_sources().clear();
-    states_stack.back().aqua_bezier_sources().clear();
-    states_stack.back().aqua_linear_sources().clear();
-    states_stack.back().aqua_polyline_sources().clear();
-
-    on_actionDeleteResult();
+  get_new_state(State_op::Delete_all);
+  QStringList program;
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+    if (! states_stack.back().set(i).is_empty()) program << QString("%1.clear()").arg(bucket_name(i));
   }
-  lDone = true;
-  if (lDone) modelChanged();
+  log_statements(program);
+
+  for (std::size_t i = 0; i < number_of_buckets; ++i) states_stack.back().clear(i);
+  on_actionDeleteResult();
+  modelChanged();
 }
 
 void MainWindow::on_actionDeleteResult() {
-  bool lDone = false;
-  bool lProceed;
-
-  if (true) {
-    states_stack.back().result_set().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
-    lDone = true;
-  }
-  if (lDone) modelChanged();
+  states_stack.back().clear(result_index);
+  modelChanged();
 }
 
 void MainWindow::on_actionClearH_toggled(bool aChecked) {
-  if (aChecked) {
-    bool lDone = false;
-    bool lProceed;
+  if (! aChecked) return;
+  actionComplementH->setChecked(false);
+  actionIntersectionH->setChecked(false);
+  actionUnionH->setChecked(false);
+  actionDifferenceH->setChecked(false);
+  actionSymmetric_DifferenceH->setChecked(false);
+  actionMinkowski_SumH->setChecked(false);
 
-    actionComplementH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionUnionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionComplementH->setChecked(false);
-    actionComplementH->setChecked(false);
+  auto buckets = checked_buckets(m_clear_column);
+  get_new_state(State_op::Clear);
+  QStringList program;
+  for (auto i : buckets) program << QString("%1.clear()").arg(bucket_name(i));
+  log_statements(program);
 
-    get_new_state(State_op::Clear);
-    {
-      QStringList program;
-      std::size_t i = 0;
-      for (auto* box : {clearBlue, clearRed, clearBlack, clearBrown, clearYellow, clearMagenta, clearAqua}) {
-        if (box->isChecked() && bucket_exists(i))
-          program << QString("%1.clear()").arg(bucket_name(i));
-        ++i;
-      }
-      log_statements(program);
-    }
+  for (auto i : buckets) states_stack.back().clear(i);
+  if (buckets.empty()) show_error("Please select color bucket to be cleaned!!!");
 
-
-    if (clearBlue->isChecked()) {
-      states_stack.back().blue_set().clear();
-      states_stack.back().blue_linear_sources().clear();
-      states_stack.back().blue_circular_sources().clear();
-      states_stack.back().blue_bezier_sources().clear();
-      states_stack.back().blue_polyline_sources().clear();
-    }
-    if (clearBlack->isChecked()) {
-      states_stack.back().black_set().clear();
-      states_stack.back().black_linear_sources().clear();
-      states_stack.back().black_circular_sources().clear();
-      states_stack.back().black_bezier_sources().clear();
-      states_stack.back().black_polyline_sources().clear();
-    }
-    if (clearRed->isChecked()) {
-      states_stack.back().red_set().clear();
-      states_stack.back().red_linear_sources().clear();
-      states_stack.back().red_circular_sources().clear();
-      states_stack.back().red_bezier_sources().clear();
-      states_stack.back().red_polyline_sources().clear();
-    }
-    if (clearBrown->isChecked()) {
-      states_stack.back().brown_set().clear();
-      states_stack.back().brown_linear_sources().clear();
-      states_stack.back().brown_circular_sources().clear();
-      states_stack.back().brown_bezier_sources().clear();
-      states_stack.back().brown_polyline_sources().clear();
-    }
-    if (clearYellow->isChecked()) {
-      states_stack.back().yellow_set().clear();
-      states_stack.back().yellow_linear_sources().clear();
-      states_stack.back().yellow_circular_sources().clear();
-      states_stack.back().yellow_bezier_sources().clear();
-      states_stack.back().yellow_polyline_sources().clear();
-    }
-    if (clearMagenta->isChecked()) {
-      states_stack.back().magenta_set().clear();
-      states_stack.back().magenta_linear_sources().clear();
-      states_stack.back().magenta_circular_sources().clear();
-      states_stack.back().magenta_bezier_sources().clear();
-      states_stack.back().magenta_polyline_sources().clear();
-    }
-    if (clearAqua->isChecked()) {
-      states_stack.back().aqua_set().clear();
-      states_stack.back().aqua_linear_sources().clear();
-      states_stack.back().aqua_circular_sources().clear();
-      states_stack.back().aqua_bezier_sources().clear();
-      states_stack.back().aqua_polyline_sources().clear();
-    }
-
-    if (! (clearBlue->isChecked()) && ! (clearRed->isChecked()) && ! (clearBlack->isChecked()) &&
-        ! (clearBrown->isChecked()) && ! (clearYellow->isChecked()) && ! (clearMagenta->isChecked()) &&
-        ! (clearAqua->isChecked()))
-      show_error("Please select color bucket to be cleaned!!!");
-
-    actionClearH->setChecked(false);
-    lDone = true;
-
-    if (lDone) modelChanged();
-  }
-}
-
-void MainWindow::on_drawBlue_toggled(bool /* a_check */) {
-  m_color_active = 0;
-
-  if (states_stack.back().blue_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[0]);
-    m_linear_input->mLinearGI->setPen(sPens[0]);
-    m_linear_input->mHandleGI->setPen(sPens[0]);
-  }
-  else if (states_stack.back().blue_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[0]);
-    m_circular_input->mCircularGI->setPen(sPens[0]);
-    m_circular_input->mHandleGI->setPen(sPens[0]);
-  }
-  else if (states_stack.back().blue_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[0]);
-    m_bezier_input->mBezierGI->setPen(sPens[0]);
-    m_bezier_input->mHandle0GI->setPen(sPens[0]);
-    m_bezier_input->mHandle1GI->setPen(sPens[0]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[0]);
-    m_polyline_input->mPolylineGI->setPen(sPens[0]);
-    m_polyline_input->mHandleGI->setPen(sPens[0]);
-  }
-  set_conic_pen(sPens[0]);
-
-}
-
-void MainWindow::on_drawRed_toggled(bool /* a_check */) {
-  m_color_active = 1;
-
-  if (states_stack.back().red_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[1]);
-    m_linear_input->mLinearGI->setPen(sPens[1]);
-    m_linear_input->mHandleGI->setPen(sPens[1]);
-  }
-  else if (states_stack.back().red_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[1]);
-    m_circular_input->mCircularGI->setPen(sPens[1]);
-    m_circular_input->mHandleGI->setPen(sPens[1]);
-  }
-  else if (states_stack.back().red_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[1]);
-    m_bezier_input->mBezierGI->setPen(sPens[1]);
-    m_bezier_input->mHandle0GI->setPen(sPens[1]);
-    m_bezier_input->mHandle1GI->setPen(sPens[1]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[1]);
-    m_polyline_input->mPolylineGI->setPen(sPens[1]);
-    m_polyline_input->mHandleGI->setPen(sPens[1]);
-  }
-  set_conic_pen(sPens[1]);
-
-}
-
-void MainWindow::on_drawBlack_toggled(bool /* a_check */) {
-  m_color_active = 2;
-
-  if (states_stack.back().black_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[2]);
-    m_linear_input->mLinearGI->setPen(sPens[2]);
-    m_linear_input->mHandleGI->setPen(sPens[2]);
-  }
-  else if (states_stack.back().black_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[2]);
-    m_circular_input->mCircularGI->setPen(sPens[2]);
-    m_circular_input->mHandleGI->setPen(sPens[2]);
-  }
-  else if (states_stack.back().black_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[2]);
-    m_bezier_input->mBezierGI->setPen(sPens[2]);
-    m_bezier_input->mHandle0GI->setPen(sPens[2]);
-    m_bezier_input->mHandle1GI->setPen(sPens[2]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[2]);
-    m_polyline_input->mPolylineGI->setPen(sPens[2]);
-    m_polyline_input->mHandleGI->setPen(sPens[2]);
-  }
-  set_conic_pen(sPens[2]);
-
-}
-
-void MainWindow::on_drawBrown_toggled(bool /* a_check */) {
-  m_color_active = 3;
-
-  if (states_stack.back().brown_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[3]);
-    m_linear_input->mLinearGI->setPen(sPens[3]);
-    m_linear_input->mHandleGI->setPen(sPens[3]);
-  }
-  else if (states_stack.back().brown_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[3]);
-    m_circular_input->mCircularGI->setPen(sPens[3]);
-    m_circular_input->mHandleGI->setPen(sPens[3]);
-  }
-  else if (states_stack.back().brown_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[3]);
-    m_bezier_input->mBezierGI->setPen(sPens[3]);
-    m_bezier_input->mHandle0GI->setPen(sPens[3]);
-    m_bezier_input->mHandle1GI->setPen(sPens[3]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[3]);
-    m_polyline_input->mPolylineGI->setPen(sPens[3]);
-    m_polyline_input->mHandleGI->setPen(sPens[3]);
-  }
-  set_conic_pen(sPens[3]);
-
-}
-
-void MainWindow::on_drawYellow_toggled(bool /* a_check */) {
-  m_color_active = 4;
-
-  if (states_stack.back().yellow_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[4]);
-    m_linear_input->mLinearGI->setPen(sPens[4]);
-    m_linear_input->mHandleGI->setPen(sPens[4]);
-  }
-  else if (states_stack.back().yellow_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[4]);
-    m_circular_input->mCircularGI->setPen(sPens[4]);
-    m_circular_input->mHandleGI->setPen(sPens[4]);
-  }
-  else if (states_stack.back().yellow_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[4]);
-    m_bezier_input->mBezierGI->setPen(sPens[4]);
-    m_bezier_input->mHandle0GI->setPen(sPens[4]);
-    m_bezier_input->mHandle1GI->setPen(sPens[4]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[4]);
-    m_polyline_input->mPolylineGI->setPen(sPens[4]);
-    m_polyline_input->mHandleGI->setPen(sPens[4]);
-  }
-  set_conic_pen(sPens[4]);
-
-}
-
-void MainWindow::on_drawMagenta_toggled(bool /* a_check */) {
-  m_color_active = 5;
-
-  if (states_stack.back().magenta_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[5]);
-    m_linear_input->mLinearGI->setPen(sPens[5]);
-    m_linear_input->mHandleGI->setPen(sPens[5]);
-  }
-  else if (states_stack.back().magenta_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[5]);
-    m_circular_input->mCircularGI->setPen(sPens[5]);
-    m_circular_input->mHandleGI->setPen(sPens[5]);
-  }
-  else if (states_stack.back().magenta_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[5]);
-    m_bezier_input->mBezierGI->setPen(sPens[5]);
-    m_bezier_input->mHandle0GI->setPen(sPens[5]);
-    m_bezier_input->mHandle1GI->setPen(sPens[5]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[5]);
-    m_polyline_input->mPolylineGI->setPen(sPens[5]);
-    m_polyline_input->mHandleGI->setPen(sPens[5]);
-  }
-  set_conic_pen(sPens[5]);
-
-}
-
-void MainWindow::on_drawAqua_toggled(bool /* a_check */) {
-  m_color_active = 6;
-
-  if (states_stack.back().aqua_set().is_linear()) {
-    m_linear_input->mOngoingPieceGI->setPen(sPens[6]);
-    m_linear_input->mLinearGI->setPen(sPens[6]);
-    m_linear_input->mHandleGI->setPen(sPens[6]);
-  }
-  else if (states_stack.back().aqua_set().is_circular()) {
-    m_circular_input->mOngoingPieceGI->setPen(sPens[6]);
-    m_circular_input->mCircularGI->setPen(sPens[6]);
-    m_circular_input->mHandleGI->setPen(sPens[6]);
-  }
-  else if (states_stack.back().aqua_set().is_bezier()) {
-    m_bezier_input->mOngoingPieceGI->setPen(sPens[6]);
-    m_bezier_input->mBezierGI->setPen(sPens[6]);
-    m_bezier_input->mHandle0GI->setPen(sPens[6]);
-    m_bezier_input->mHandle1GI->setPen(sPens[6]);
-  }
-  else {
-    m_polyline_input->mOngoingPieceGI->setPen(sPens[6]);
-    m_polyline_input->mPolylineGI->setPen(sPens[6]);
-    m_polyline_input->mHandleGI->setPen(sPens[6]);
-  }
-  set_conic_pen(sPens[6]);
-
+  actionClearH->setChecked(false);
+  modelChanged();
 }
 
 void MainWindow::on_actionRecenter_triggered() { zoomToFit(); }
@@ -5669,17 +2959,17 @@ bool MainWindow::read_linear(QString aFileName, Linear_polygon_set& rSet, Linear
 
             if (r == 0) {
               get_new_state(State_op::Draw);
-              states_stack.back().active_set(m_color_active).linear().join(lCPWH);
-              states_stack.back().active_linear_sources(m_color_active).push_back(lCPWH);
+              states_stack.back().set(m_color_active).linear().join(lCPWH);
+              states_stack.back().linear_sources(m_color_active).push_back(lCPWH);
             }
             else {
               states_stack.back().result_set().clear();
-              states_stack.back().result_linear_sources().clear();
+              states_stack.back().linear_sources(result_index).clear();
               states_stack.back().result_set().linear().join(lCPWH);
-              states_stack.back().result_linear_sources().push_back(lCPWH);
-              states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
+              states_stack.back().linear_sources(result_index).push_back(lCPWH);
+              states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
               states_stack.back().result_set().clear();
-              states_stack.back().result_linear_sources().clear();
+              states_stack.back().linear_sources(result_index).clear();
             }
             mLinearPolygonPieces.clear();
           }
@@ -5795,17 +3085,17 @@ bool MainWindow::read_circular(QString aFileName, Circular_polygon_set& rSet,
 
               if (r == 0) {
                 get_new_state(State_op::Draw);
-                states_stack.back().active_set(m_color_active).circular().join(lCPWH);
-                states_stack.back().active_circular_sources(m_color_active).push_back(lCPWH);
+                states_stack.back().set(m_color_active).circular().join(lCPWH);
+                states_stack.back().circular_sources(m_color_active).push_back(lCPWH);
               }
               else {
                 states_stack.back().result_set().clear();
-                states_stack.back().result_circular_sources().clear();
+                states_stack.back().circular_sources(result_index).clear();
                 states_stack.back().result_set().circular().join(lCPWH);
-                states_stack.back().result_circular_sources().push_back(lCPWH);
-                states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
+                states_stack.back().circular_sources(result_index).push_back(lCPWH);
+                states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
                 states_stack.back().result_set().clear();
-                states_stack.back().result_circular_sources().clear();
+                states_stack.back().circular_sources(result_index).clear();
               }
             }
             mCircularPolygonPieces.clear();
@@ -5921,17 +3211,17 @@ bool MainWindow::read_polyline(QString aFileName, Polyline_polygon_set& rSet,
             }
             if (r == 0) {
               get_new_state(State_op::Draw);
-              states_stack.back().active_set(m_color_active).polyline().join(PPWH);
-              states_stack.back().active_polyline_sources(m_color_active).push_back(PPWH);
+              states_stack.back().set(m_color_active).polyline().join(PPWH);
+              states_stack.back().polyline_sources(m_color_active).push_back(PPWH);
             }
             else {
               states_stack.back().result_set().clear();
-              states_stack.back().result_polyline_sources().clear();
+              states_stack.back().polyline_sources(result_index).clear();
               states_stack.back().result_set().polyline().join(PPWH);
-              states_stack.back().result_polyline_sources().push_back(PPWH);
-              states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
+              states_stack.back().polyline_sources(result_index).push_back(PPWH);
+              states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
               states_stack.back().result_set().clear();
-              states_stack.back().result_polyline_sources().clear();
+              states_stack.back().polyline_sources(result_index).clear();
             }
             mPolylinePolygonPieces.clear();
           }
@@ -6013,21 +3303,21 @@ bool MainWindow::read_bezier(QString aFileName) {
 
           if (b == 0) {
             get_new_state(State_op::Draw);
-            states_stack.back().active_set(m_color_active).bezier().join(Bezier_polygon_with_holes(pgn));
+            states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(pgn));
             Bezier_region_source br;
             br.push_back(bb_source);
-            states_stack.back().active_bezier_sources(m_color_active).push_back(br);
+            states_stack.back().bezier_sources(m_color_active).push_back(br);
           }
           else {
             states_stack.back().result_set().clear();
-            states_stack.back().result_bezier_sources().clear();
+            states_stack.back().bezier_sources(result_index).clear();
             states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(pgn));
             Bezier_region_source br;
             br.push_back(bb_source);
-            states_stack.back().result_bezier_sources().push_back(br);
-            states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
+            states_stack.back().bezier_sources(result_index).push_back(br);
+            states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
             states_stack.back().result_set().clear();
-            states_stack.back().result_bezier_sources().clear();
+            states_stack.back().bezier_sources(result_index).clear();
           }
         }
         rOK = true;
@@ -6359,14 +3649,14 @@ void MainWindow::on_actionSaveCurrentBucket_triggered() {
   if (m_circular_active) {
     if (! save_circular(QFileDialog::getSaveFileName(this, tr("Save Result Circular Polygon Set"), "/data/index.cps",
                                                     tr("Circular Curve files (*.cps)")),
-                       states_stack.back().active_set(m_color_active).circular())) {
+                       states_stack.back().set(m_color_active).circular())) {
       show_error("Cannot save circular polygon set.");
     }
   }
   else if (m_bezier_active) {
     if (! save_bezier_result(QFileDialog::getSaveFileName(this, tr("Save Result Bezier Polygon Set"), "/data/index.bps",
                                                          tr("Bezier Curve files (*.bps)")),
-                            states_stack.back().active_set(m_color_active).bezier())) {
+                            states_stack.back().set(m_color_active).bezier())) {
       show_error("Cannot save bezier polygon set.");
     }
   }
@@ -6376,14 +3666,14 @@ void MainWindow::on_actionSaveCurrentBucket_triggered() {
   else if (m_polyline_active) {
     if (! save_polyline(QFileDialog::getSaveFileName(this, tr("Save Result Polyline Polygon Set"), "/data/index.mps",
                                                     tr("Polyline Curve files (*.mps)")),
-                       states_stack.back().active_set(m_color_active).polyline())) {
+                       states_stack.back().set(m_color_active).polyline())) {
       show_error("Cannot save polyline polygon set.");
     }
   }
   else {
     if (! save_linear(QFileDialog::getSaveFileName(this, tr("Save Result Linear Polygon Set"), "/data/index.lps",
                                                   tr("Linear Curve files (*.lps)")),
-                     states_stack.back().active_set(m_color_active).linear())) {
+                     states_stack.back().set(m_color_active).linear())) {
       show_error("Cannot save linear polygon set.");
     }
   }
@@ -6397,22 +3687,12 @@ void MainWindow::switch_set_type(Curve_set& aSet, int aType) {
 }
 
 void MainWindow::switch_sets_type(int aType) {
-  switch_set_type(states_stack.back().blue_set(), aType);
-  switch_set_type(states_stack.back().red_set(), aType);
-  switch_set_type(states_stack.back().black_set(), aType);
-  switch_set_type(states_stack.back().brown_set(), aType);
-  switch_set_type(states_stack.back().yellow_set(), aType);
-  switch_set_type(states_stack.back().magenta_set(), aType);
-  switch_set_type(states_stack.back().aqua_set(), aType);
-  switch_set_type(states_stack.back().result_set(), aType);
+  for (std::size_t i = 0; i <= number_of_buckets; ++i) switch_set_type(states_stack.back().set(i), aType);
 }
 
 bool MainWindow::ensure_circular_mode() {
   if (! m_circular_active) {
-    bool lProceed = states_stack.back().blue_set().is_empty() && states_stack.back().red_set().is_empty() &&
-      states_stack.back().black_set().is_empty() && states_stack.back().brown_set().is_empty() &&
-      states_stack.back().yellow_set().is_empty() && states_stack.back().magenta_set().is_empty() &&
-      states_stack.back().aqua_set().is_empty() && states_stack.back().result_set().is_empty();
+    bool lProceed = are_all_sets_empty();
 
     if (! lProceed)
       lProceed = ask_user_yesno("Circular mode switch",
@@ -6440,10 +3720,7 @@ bool MainWindow::ensure_circular_mode() {
 
 bool MainWindow::ensure_bezier_mode() {
   if (! m_bezier_active) {
-    bool lProceed = states_stack.back().blue_set().is_empty() && states_stack.back().red_set().is_empty() &&
-      states_stack.back().black_set().is_empty() && states_stack.back().brown_set().is_empty() &&
-      states_stack.back().yellow_set().is_empty() && states_stack.back().magenta_set().is_empty() &&
-      states_stack.back().aqua_set().is_empty() && states_stack.back().result_set().is_empty();
+    bool lProceed = are_all_sets_empty();
 
     if (! lProceed)
       lProceed = ask_user_yesno("Bezier mode switch",
@@ -6471,10 +3748,7 @@ bool MainWindow::ensure_bezier_mode() {
 
 bool MainWindow::ensure_linear_mode() {
   if (active_type() != 1) {
-    bool lProceed = states_stack.back().blue_set().is_empty() && states_stack.back().red_set().is_empty() &&
-      states_stack.back().black_set().is_empty() && states_stack.back().brown_set().is_empty() &&
-      states_stack.back().yellow_set().is_empty() && states_stack.back().magenta_set().is_empty() &&
-      states_stack.back().aqua_set().is_empty() && states_stack.back().result_set().is_empty();
+    bool lProceed = are_all_sets_empty();
 
     if (! lProceed)
       lProceed = ask_user_yesno("Linear mode switch",
@@ -6501,10 +3775,7 @@ bool MainWindow::ensure_linear_mode() {
 
 bool MainWindow::ensure_polyline_mode() {
   if (! m_polyline_active) {
-    bool lProceed = states_stack.back().blue_set().is_empty() && states_stack.back().red_set().is_empty() &&
-      states_stack.back().black_set().is_empty() && states_stack.back().brown_set().is_empty() &&
-      states_stack.back().yellow_set().is_empty() && states_stack.back().magenta_set().is_empty() &&
-      states_stack.back().aqua_set().is_empty() && states_stack.back().result_set().is_empty();
+    bool lProceed = are_all_sets_empty();
 
     if (! lProceed)
       lProceed = ask_user_yesno("Polyline mode switch",
@@ -6535,13 +3806,13 @@ void MainWindow::open(QString fileName) {
     bool lRead = false;
     if (fileName.endsWith(".lps")) {
       if (ensure_linear_mode())
-        lRead = read_linear(fileName, states_stack.back().active_set(m_color_active).linear(),
-                            states_stack.back().active_linear_sources(m_color_active));
+        lRead = read_linear(fileName, states_stack.back().set(m_color_active).linear(),
+                            states_stack.back().linear_sources(m_color_active));
     }
     else if (fileName.endsWith(".cps")) {
       if (ensure_circular_mode())
-        lRead = read_circular(fileName, states_stack.back().active_set(m_color_active).circular(),
-                              states_stack.back().active_circular_sources(m_color_active));
+        lRead = read_circular(fileName, states_stack.back().set(m_color_active).circular(),
+                              states_stack.back().circular_sources(m_color_active));
     }
     else if (fileName.endsWith(".bps")) {
       if (ensure_bezier_mode())
@@ -6549,8 +3820,8 @@ void MainWindow::open(QString fileName) {
     }
     else if (fileName.endsWith(".mps")) {
       if (ensure_polyline_mode())
-        lRead = read_polyline(fileName, states_stack.back().active_set(m_color_active).polyline(),
-                              states_stack.back().active_polyline_sources(m_color_active));
+        lRead = read_polyline(fileName, states_stack.back().set(m_color_active).polyline(),
+                              states_stack.back().polyline_sources(m_color_active));
     }
     if (lRead) {
       modelChanged();
@@ -6745,7 +4016,8 @@ void MainWindow::on_actionUnionH_toggled(bool /* aChecked */) {
 
 void MainWindow::on_actionCopyH_toggled(bool aChecked) {
   if (actionCopyH->isChecked()) {
-    if (abort_for_draw_bucket(actionCopyH, m_color_copy == m_color_active)) return;
+    auto source = checked_bucket(m_copy_column);
+    if (abort_for_draw_bucket(actionCopyH, source == m_color_active)) return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6758,29 +4030,21 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
     actionMoveH->setChecked(false);
 
     get_new_state(State_op::Copy);
-    if (m_color_copy)
-      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*m_color_copy))});
+    if (source)
+      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*source))});
 
 
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
+    states_stack.back().clear(result_index);
 
-    if (! m_color_copy) show_warning("Please select a Bucket!!!");
-    else if (! states_stack.back().set(*m_color_copy).is_empty())
-      states_stack.back().result_set().assign(states_stack.back().set(*m_color_copy));
+    if (! source) show_warning("Please select a Bucket!!!");
+    else if (! states_stack.back().set(*source).is_empty())
+      states_stack.back().result_set().assign(states_stack.back().set(*source));
 
     actionCopyH->setChecked(false);
     lDone = true;
     if (! states_stack.back().result_set().is_empty())
-      states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
+      states_stack.back().set(m_color_active).join(states_stack.back().result_set());
+    states_stack.back().clear(result_index);
     this->setCursor(old);
     if (lDone) modelChanged();
   }
@@ -6788,7 +4052,8 @@ void MainWindow::on_actionCopyH_toggled(bool aChecked) {
 
 void MainWindow::on_actionMoveH_toggled(bool aChecked) {
   if (actionMoveH->isChecked()) {
-    if (abort_for_draw_bucket(actionMoveH, m_color_move_ext == m_color_active)) return;
+    auto source = checked_bucket(m_move_column);
+    if (abort_for_draw_bucket(actionMoveH, source == m_color_active)) return;
     bool lDone = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
@@ -6801,31 +4066,23 @@ void MainWindow::on_actionMoveH_toggled(bool aChecked) {
     actionCopyH->setChecked(false);
 
     get_new_state(State_op::Move);
-    if (m_color_move_ext)
-      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*m_color_move_ext)),
-                      QString("%1.clear()").arg(bucket_name(*m_color_move_ext))});
+    if (source)
+      log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*source)),
+                      QString("%1.clear()").arg(bucket_name(*source))});
 
 
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
+    states_stack.back().clear(result_index);
 
-    if (! m_color_move_ext) show_warning("Please select a Bucket!!!");
-    else if (! states_stack.back().set(*m_color_move_ext).is_empty()) {
-      auto& source = states_stack.back().set(*m_color_move_ext);
-      states_stack.back().result_set().assign(source);
-      states_stack.back().active_set(m_color_active).join(states_stack.back().result_set());
-      source.clear();
+    if (! source) show_warning("Please select a Bucket!!!");
+    else if (! states_stack.back().set(*source).is_empty()) {
+      auto& source_set = states_stack.back().set(*source);
+      states_stack.back().result_set().assign(source_set);
+      states_stack.back().set(m_color_active).join(states_stack.back().result_set());
+      source_set.clear();
     }
 
     actionMoveH->setChecked(false);
-    states_stack.back().result_set().clear();
-    states_stack.back().result_linear_sources().clear();
-    states_stack.back().result_circular_sources().clear();
-    states_stack.back().result_bezier_sources().clear();
-    states_stack.back().result_polyline_sources().clear();
+    states_stack.back().clear(result_index);
 
     lDone = true;
     this->setCursor(old);
@@ -6839,22 +4096,7 @@ Polygon_with_holes_2 MainWindow::getMinkInputPolygon(size_t color) {
   using Point = typename Kernel::Point_2;
   std::list<Polygon_2> pgns;
 
-  switch (color) {
-   case 0: lps = states_stack.back().blue_set().linear();
-    break;
-   case 1: lps = states_stack.back().red_set().linear();
-    break;
-   case 2: lps = states_stack.back().black_set().linear();
-    break;
-   case 3: lps = states_stack.back().brown_set().linear();
-    break;
-   case 4: lps = states_stack.back().yellow_set().linear();
-    break;
-   case 5: lps = states_stack.back().magenta_set().linear();
-    break;
-   case 6: lps = states_stack.back().aqua_set().linear();
-    break;
-  }
+  lps = states_stack.back().set(color).linear();
 
   Pgn_with_holes_container res(lps.number_of_polygons_with_holes());
   res.begin() = lps.polygons_with_holes(res.begin());
@@ -6902,9 +4144,7 @@ Polygon_with_holes_2 MainWindow::getMinkInputPolygon(size_t color) {
 void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
   if (actionMinkowski_SumH->isChecked()) {
     if (abort_for_draw_bucket(actionMinkowski_SumH,
-                              draw_row_checked({ showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum,
-                                                 showBrownMink_Sum, showYellowMink_Sum, showMagentaMink_Sum,
-                                                 showAquaMink_Sum })))
+                              draw_row_checked(m_minkowski_sum_column)))
       return;
     bool lDone = false;
     QCursor old = this->cursor();
@@ -6922,11 +4162,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
 
 
       // The two checked buckets, in order.
-      const QAbstractButton* mink_boxes[] = { showBlueMink_Sum, showRedMink_Sum, showBlackMink_Sum, showBrownMink_Sum,
-                                              showYellowMink_Sum, showMagentaMink_Sum, showAquaMink_Sum };
-      std::vector<std::size_t> operands;
-      for (std::size_t i = 0; i < 7; ++i)
-        if (mink_boxes[i]->isChecked()) operands.push_back(i);
+      auto operands = checked_buckets(m_minkowski_sum_column);
 
       if (operands.size() == 2) {
 
@@ -6951,7 +4187,7 @@ void MainWindow::on_actionMinkowski_SumH_toggled(bool aChecked) {
             m_linear_input->m_hole = true;
             m_linear_input->get_Minkowski_holes(mink_sum_res, p0);
             states_stack.back().result_set().clear();
-            states_stack.back().result_linear_sources().clear();
+            states_stack.back().linear_sources(result_index).clear();
             m_linear_input->m_hole = false;
             m_linear_input->m_is_mink = false;
           }
@@ -7304,7 +4540,7 @@ void MainWindow::show_operand_error() {
 }
 
 void MainWindow::
-limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn, QAbstractButton* aBox, bool aChecked,
+limit_to_all_but_one(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
                      QAbstractButton* aOperation) {
   if (aChecked && ! aBox->isHidden()) {
     bool all_checked = std::all_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box) {
@@ -7322,7 +4558,7 @@ limit_to_all_but_one(const std::array<QAbstractButton*, 7>& aColumn, QAbstractBu
 }
 
 void MainWindow::
-keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn) {
+keep_one_unchecked(const Column& aColumn) {
   QAbstractButton* last = nullptr;
   for (auto* box : aColumn) {
     if (box->isHidden()) continue;
@@ -7333,7 +4569,7 @@ keep_one_unchecked(const std::array<QAbstractButton*, 7>& aColumn) {
 }
 
 void MainWindow::
-limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn, QAbstractButton* aBox, bool aChecked,
+limit_to_two_operands(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
                       QAbstractButton* aOperation) {
   auto count = std::count_if(aColumn.begin(), aColumn.end(), [](QAbstractButton* box) { return box->isChecked(); });
   if (aChecked && (count > 2)) {
@@ -7344,7 +4580,7 @@ limit_to_two_operands(const std::array<QAbstractButton*, 7>& aColumn, QAbstractB
 }
 
 std::vector<std::size_t> MainWindow::
-checked_buckets(const std::array<QAbstractButton*, 7>& aColumn) const {
+checked_buckets(const Column& aColumn) const {
   std::vector<std::size_t> buckets;
   for (std::size_t i = 0; i < aColumn.size(); ++i) {
     if (! aColumn[i]->isHidden() && aColumn[i]->isChecked())
@@ -7365,11 +4601,7 @@ void MainWindow::uncheck_operations_except(QAbstractButton* aOperation) {
 
 void MainWindow::clear_result() {
   auto& state = states_stack.back();
-  state.result_set().clear();
-  state.result_linear_sources().clear();
-  state.result_circular_sources().clear();
-  state.result_bezier_sources().clear();
-  state.result_polyline_sources().clear();
+  state.clear(result_index);
 }
 
 void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aOperands, QAbstractButton* aOperation) {
@@ -7394,7 +4626,7 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
   clear_result();
   auto& state = states_stack.back();
   auto bucket = [&state](std::size_t aIndex) -> Curve_set& { return state.set(aIndex); };
-  Curve_set& draw_bucket = state.active_set(m_color_active);
+  Curve_set& draw_bucket = state.set(m_color_active);
   bool direct = draw_bucket.is_empty() && (std::find(aOperands.begin(), aOperands.end(), m_color_active) ==
      aOperands.end());
   Curve_set& result = direct ? draw_bucket : state.result_set();
@@ -7480,27 +4712,18 @@ void MainWindow::trim_program_to_states() {
   m_log->setPlainText(lines.join("\n"));
 }
 
-bool MainWindow::bucket_exists(std::size_t aIndex) const {
-  switch (aIndex) {
-   case 0: case 1: case 2: return true;
-   case 3: return m_visible_brown;
-   case 4: return m_visible_yellow;
-   case 5: return m_visible_magenta;
-   case 6: return m_visible_aqua;
-   default: return false;
-  }
-}
+bool MainWindow::bucket_exists(std::size_t aIndex) const { return aIndex < m_number_of_buckets; }
 
 std::size_t MainWindow::bucket_index(const QString& aName) const {
-  for (std::size_t i = 0; i < 7; ++i) {
+  for (std::size_t i = 0; i < number_of_buckets; ++i) {
     if (aName == bucket_name(i)) return i;
   }
-  return 7;
+  return number_of_buckets;
 }
 
 Curve_set* MainWindow::polygon_set(const QString& aName) {
   std::size_t i = bucket_index(aName);
-  if (i < 7) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
+  if (i < number_of_buckets) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
   auto it = m_variables.find(aName);
   return (it == m_variables.end()) ? nullptr : &it->second;
 }
@@ -7528,7 +4751,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
   using Kind = Py_statement::Kind;
   const QString& target = aStatement.m_target;
   std::size_t index = bucket_index(target);
-  bool is_bucket = (index < 7);
+  bool is_bucket = (index < number_of_buckets);
 
   auto set_of = [this](const Py_expr& aExpr) -> Curve_set& {
     if (aExpr.m_kind != Py_expr::Kind::Name)
@@ -7551,12 +4774,9 @@ QString MainWindow::execute(const Py_statement& aStatement) {
       return QString();
     }
     // Only the last added bucket can be removed.
-    std::size_t last = 2;
-    for (std::size_t i = 3; i < 7; ++i) {
-      if (bucket_exists(i)) last = i;
-    }
-    if ((index < 3) || (index != last))
-      throw std::runtime_error(index < 3 ? "the red, black, and blue buckets cannot be deleted" :
+    std::size_t last = m_number_of_buckets - 1;
+    if ((index < min_number_of_buckets) || (index != last))
+      throw std::runtime_error(index < min_number_of_buckets ? "the red, black, and blue buckets cannot be deleted" :
         ("only the last bucket (" + QString(bucket_name(last)) + ") can be deleted").toStdString());
     on_actionMinusColor_triggered();      // logs "del <name>"
     return QString();
@@ -7571,8 +4791,7 @@ QString MainWindow::execute(const Py_statement& aStatement) {
     const Py_expr* arg = value.m_arg.get();
     if (is_bucket && ! bucket_exists(index)) {
       // Buckets are added in order.
-      std::size_t next = 3;
-      while ((next < 7) && bucket_exists(next)) ++next;
+      std::size_t next = m_number_of_buckets;
       if (index != next)
         throw std::runtime_error(("buckets are added in order; the next one " "is " + QString(bucket_name(next)))
                                  .toStdString());
@@ -7795,11 +5014,11 @@ void MainWindow::save_program() {
 }
 
 bool MainWindow::
-draw_row_checked(const std::array<QAbstractButton*, 7>& aColumn) const
+draw_row_checked(const Column& aColumn) const
 { return (m_color_active < aColumn.size()) && aColumn[m_color_active]->isChecked(); }
 
 bool MainWindow::abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOperand) {
-  if (states_stack.back().active_set(m_color_active).is_empty()) return false;
+  if (states_stack.back().set(m_color_active).is_empty()) return false;
   if (aIsOperand) {
     aOperation->setChecked(false);
     if (operand_error_warn) show_operand_error();
@@ -7980,7 +5199,7 @@ void MainWindow::processInput(CGAL::Object o) {
         if (lConicPI.orientation() == CGAL::CLOCKWISE)
           lConicPI.reverse_orientation();
         get_new_state(State_op::Draw);
-        states_stack.back().active_set(m_color_active).conic().
+        states_stack.back().set(m_color_active).conic().
           join(Conic_polygon_with_holes(lConicPI));
       }
     }
@@ -7992,16 +5211,16 @@ void MainWindow::processInput(CGAL::Object o) {
 
         if (! m_bezier_input->isboundingRect()) {
           get_new_state(State_op::Draw);
-          states_stack.back().active_set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
+          states_stack.back().set(m_color_active).bezier().join(Bezier_polygon_with_holes(lBI.first));
           Bezier_region_source br;
           br.push_back(lBI.second);
-          states_stack.back().active_bezier_sources(m_color_active).push_back(br);
+          states_stack.back().bezier_sources(m_color_active).push_back(br);
         }
         else {
           states_stack.back().result_set().bezier().join(Bezier_polygon_with_holes(lBI.first));
           Bezier_region_source br;
           br.push_back(lBI.second);
-          states_stack.back().result_bezier_sources().push_back(br);
+          states_stack.back().bezier_sources(result_index).push_back(br);
         }
       }
     }
@@ -8017,19 +5236,19 @@ void MainWindow::processInput(CGAL::Object o) {
           if (! m_linear_input->is_mink()) {
             get_new_state(State_op::Draw);
           }
-          states_stack.back().active_set(m_color_active).linear().join(lCPWH);
-          states_stack.back().active_linear_sources(m_color_active).push_back(lCPWH);
+          states_stack.back().set(m_color_active).linear().join(lCPWH);
+          states_stack.back().linear_sources(m_color_active).push_back(lCPWH);
           if (! m_linear_input->is_mink())
             log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
         }
         else {
           states_stack.back().result_set().linear().join(lCPWH);
-          states_stack.back().result_linear_sources().push_back(lCPWH);
+          states_stack.back().linear_sources(result_index).push_back(lCPWH);
           if (m_linear_input->ishole()) {
             log_statements({QString("%1.difference(%2)").arg(bucket_name(m_color_active), to_python(lLI))});
-            states_stack.back().active_set(m_color_active).difference(states_stack.back().result_set());
+            states_stack.back().set(m_color_active).difference(states_stack.back().result_set());
             states_stack.back().result_set().clear();
-            states_stack.back().result_linear_sources().clear();
+            states_stack.back().linear_sources(result_index).clear();
           }
         }
       }
@@ -8044,12 +5263,12 @@ void MainWindow::processInput(CGAL::Object o) {
 
         if (! m_circular_input->isboundingRect()) {
           get_new_state(State_op::Draw);
-          states_stack.back().active_set(m_color_active).circular().join(lCPWH);
-          states_stack.back().active_circular_sources(m_color_active).push_back(lCPWH);
+          states_stack.back().set(m_color_active).circular().join(lCPWH);
+          states_stack.back().circular_sources(m_color_active).push_back(lCPWH);
         }
         else {
           states_stack.back().result_set().circular().join(lCPWH);
-          states_stack.back().result_circular_sources().push_back(lCPWH);
+          states_stack.back().circular_sources(result_index).push_back(lCPWH);
         }
       }
     }
@@ -8063,12 +5282,12 @@ void MainWindow::processInput(CGAL::Object o) {
 
         if (! m_polyline_input->isboundingRect()) {
           get_new_state(State_op::Draw);
-          states_stack.back().active_set(m_color_active).polyline().join(lPPWH);
-          states_stack.back().active_polyline_sources(m_color_active).push_back(lPPWH);
+          states_stack.back().set(m_color_active).polyline().join(lPPWH);
+          states_stack.back().polyline_sources(m_color_active).push_back(lPPWH);
         }
         else {
           states_stack.back().result_set().polyline().join(lPPWH);
-          states_stack.back().result_polyline_sources().push_back(lPPWH);
+          states_stack.back().polyline_sources(result_index).push_back(lPPWH);
         }
       }
     }
