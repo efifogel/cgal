@@ -2416,22 +2416,23 @@ MainWindow::MainWindow() :
     const std::vector<std::tuple<QString, QString, Conic_input::Mode, QString>>
       conic_tools = {
       {"line", "Line", Conic_input::LINE,
-       "Line: click at two of its points"},
+       "Line: press at one of its points and drag to another"},
       {"circle", "Circle", Conic_input::CIRCLE,
        "Circle: press at the center and drag to the radius"},
       {"ellipse", "Ellipse", Conic_input::ELLIPSE,
-       "Ellipse: click at the center, at the end of an axis, and at the "
-       "width of the other axis"},
+       "Ellipse: click at the center, press at the end of an axis, and "
+       "drag to the width of the other axis"},
       {"full circle", "Full Circle", Conic_input::FULL_CIRCLE,
        "Full Circle: press at the center and drag to the radius"},
       {"full ellipse", "Full Ellipse", Conic_input::FULL_ELLIPSE,
-       "Full Ellipse: click at the center, at the end of an axis, and at the "
-       "width of the other axis"}};
+       "Full Ellipse: click at the center, press at the end of an axis, and "
+       "drag to the width of the other axis"}};
     const QString boundary_help =
       ". Every conic you add meets the previous one at the next vertex (click "
       "at it when there are several); on a circle or an ellipse, click near "
-      "the arc to keep; right-click to close the boundary. Backspace removes "
-      "the last conic; Escape discards the boundary.";
+      "the arc to keep; right-click to close the boundary. Escape or Backspace "
+      "discards the conic under construction, or else removes the last "
+      "conic.";
     std::vector<QAction*> conic_actions;
     for (const auto& [icon, text, mode, tip] : conic_tools) {
       if (mode == Conic_input::FULL_CIRCLE)
