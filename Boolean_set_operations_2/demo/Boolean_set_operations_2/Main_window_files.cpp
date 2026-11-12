@@ -29,19 +29,23 @@
 
 #include "Polygon_io.h"
 
-void Main_window::open_linear()
-{ open(QFileDialog::getOpenFileName(this, tr("Open Linear Polygon"), "./data", tr("Linear Curve files (*.lps)"))); }
-
-void Main_window::open_circular() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Line segments and circular arcs"), "./data",
-                                    tr("Circular curve files (*.cps)")));
+void Main_window::open_linear() {
+  open(QFileDialog::getOpenFileName(this, tr("Open Linear Polygon"), data_directory(Curve_type::CT_LINEAR),
+                                    tr("Linear Curve files (*.lps)")));
 }
 
-void Main_window::open_bezier()
-{ open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), "./data", tr("Bezier Curve files (*.bps)"))); }
+void Main_window::open_circular() {
+  open(QFileDialog::getOpenFileName(this, tr("Open Line segments and circular arcs"),
+                                    data_directory(Curve_type::CT_CIRCULAR), tr("Circular curve files (*.cps)")));
+}
+
+void Main_window::open_bezier() {
+  open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), data_directory(Curve_type::CT_BEZIER),
+                                    tr("Bezier Curve files (*.bps)")));
+}
 
 void Main_window::open_polyline() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data",
+  open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), data_directory(Curve_type::CT_POLYLINE),
                                     tr("Polyline Curve files (*.plps)")));
 }
 
@@ -106,7 +110,7 @@ void Main_window::save_draw_bucket() {
   const auto& selected = family(m_curve_type);
   QString name = capitalized(selected.m_name);
   QString file_name = QFileDialog::getSaveFileName(this, "Save " + name + " Polygon Set",
-                                                   QString("/data/index") + selected.m_extension,
+                                                   data_directory(m_curve_type) + "/index" + selected.m_extension,
                                                    QString("%1 Curve files (*%2)").arg(name, selected.m_extension));
   if (file_name.isEmpty()) return;
   auto& bucket = states_stack.back().set(m_color_active);

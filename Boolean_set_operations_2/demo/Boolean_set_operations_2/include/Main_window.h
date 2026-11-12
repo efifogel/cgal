@@ -436,6 +436,10 @@ public slots:
    */
   const Curve_family& family(Curve_type a_type) const { return m_families[std::size_t(a_type)]; }
 
+  /*! obtains the directory of the sample files of a curve family (a subdirectory of data named after the family).
+   */
+  QString data_directory(Curve_type a_type) const { return "./data/" + QString(family(a_type).m_name).toLower(); }
+
   /*! switches to a curve family; if there are polygons of another family, asks the user first. \return true if the
    * family is active.
    */
