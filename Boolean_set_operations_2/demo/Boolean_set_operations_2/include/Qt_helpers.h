@@ -122,7 +122,7 @@ public:
 
   /*! shows or hides the grid.
    */
-  void set_grid_visible(bool aVisible) { m_grid_visible = aVisible; update(); }
+  void set_grid_visible(bool a_visible) { m_grid_visible = a_visible; update(); }
 
   /*! obtains the grid spacing.
    */
@@ -130,16 +130,16 @@ public:
 
   /*! sets the grid spacing.
    */
-  void set_grid_spacing(double aSpacing) {
-    m_grid_spacing = aSpacing;
+  void set_grid_spacing(double a_spacing) {
+    m_grid_spacing = a_spacing;
     update();
   }
 
   /*! obtains the grid point nearest to a point.
    */
-  QPointF snap(const QPointF& aP) const {
-    return QPointF(std::round(aP.x() / m_grid_spacing) * m_grid_spacing,
-                   std::round(aP.y() / m_grid_spacing) * m_grid_spacing);
+  QPointF snap(const QPointF& a_p) const {
+    return QPointF(std::round(a_p.x() / m_grid_spacing) * m_grid_spacing,
+                   std::round(a_p.y() / m_grid_spacing) * m_grid_spacing);
   }
 
 protected:
@@ -184,7 +184,7 @@ class Grid_snapper : public QObject {
 public:
   /*! constructs from the scene and the parent object.
    */
-  Grid_snapper(Grid_scene* aScene, QObject* aParent) : QObject(aParent), m_scene(aScene) {}
+  Grid_snapper(Grid_scene* a_scene, QObject* a_parent) : QObject(a_parent), m_scene(a_scene) {}
 
   /*! determines whether snapping to the grid is enabled.
    */
@@ -192,7 +192,7 @@ public:
 
   /*! enables or disables snapping to the grid.
    */
-  void set_enabled(bool aEnabled) { m_enabled = aEnabled; }
+  void set_enabled(bool a_enabled) { m_enabled = a_enabled; }
 
 protected:
   /*! snaps or rounds the position of a mouse event of the scene.
@@ -217,13 +217,13 @@ private:
   /*! rounds a point to a multiple of the largest power of 2 that does not exceed half a pixel of the view whose
    * viewport is given. Dividing and multiplying by a power of 2 is exact.
    */
-  static QPointF round_to_pixel(const QPointF& aP, QWidget* aViewport) {
-    auto* view = aViewport ? qobject_cast<QGraphicsView*>(aViewport->parentWidget()) : nullptr;
-    if (! view) return aP;
+  static QPointF round_to_pixel(const QPointF& a_p, QWidget* a_viewport) {
+    auto* view = a_viewport ? qobject_cast<QGraphicsView*>(a_viewport->parentWidget()) : nullptr;
+    if (! view) return a_p;
     double scale = std::abs(view->transform().m11());
-    if (! (scale > 0) || ! std::isfinite(scale)) return aP;
+    if (! (scale > 0) || ! std::isfinite(scale)) return a_p;
     double step = std::ldexp(1.0, int(std::floor(std::log2(0.5 / scale))));
-    return QPointF(std::round(aP.x() / step) * step, std::round(aP.y() / step) * step);
+    return QPointF(std::round(a_p.x() / step) * step, std::round(a_p.y() / step) * step);
   }
 
   Grid_scene* m_scene;

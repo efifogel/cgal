@@ -44,18 +44,18 @@
 /*! obtains the shortest decimal representation that reads back as the same double, so that the program reproduces the
  * exact coordinates.
  */
-inline QString to_python(double aValue) {
+inline QString to_python(double a_value) {
   char buffer[64];
-  auto res = std::to_chars(buffer, buffer + sizeof(buffer), aValue);
+  auto res = std::to_chars(buffer, buffer + sizeof(buffer), a_value);
   return QString::fromLatin1(buffer, int(res.ptr - buffer));
 }
 
 /*! obtains a linear polygon as a Python expression. (Its curves are segments along the boundary, in order; their
  * sources are the vertices.)
  */
-inline QString to_python(const Linear_polygon& aPolygon) {
+inline QString to_python(const Linear_polygon& a_polygon) {
   QStringList points;
-  for (auto cit = aPolygon.curves_begin(); cit != aPolygon.curves_end(); ++cit)
+  for (auto cit = a_polygon.curves_begin(); cit != a_polygon.curves_end(); ++cit)
     points << QString("Point_2(%1, %2)")
       .arg(to_python(CGAL::to_double(cit->source().x())), to_python(CGAL::to_double(cit->source().y())));
   return QString("Polygon_2([%1])").arg(points.join(", "));
@@ -72,16 +72,16 @@ inline QString to_python(const Linear_polygon& aPolygon) {
 //   del name
 // Statements may be separated by ';'; '#' starts a comment.
 struct Py_expr {
-  enum class Kind { Name, Polygon, Polygon_set };
-  Kind m_kind = Kind::Name;
+  enum class Kind { KI_NAME, KI_POLYGON, POLYGON_SET };
+  Kind m_kind = Kind::KI_NAME;
   QString m_name;                                   // Name
   std::vector<std::pair<double, double>> m_points;  // Polygon
   std::shared_ptr<Py_expr> m_arg;                   // Polygon_set (optional)
 };
 
 struct Py_statement {
-  enum class Kind { Assign, Call, Delete };
-  Kind m_kind = Kind::Call;
+  enum class Kind { KI_ASSIGN, KI_CALL, KI_DELETE };
+  Kind m_kind = Kind::KI_CALL;
   QString m_target;              // the assigned, called, or deleted name
   QString m_method;              // Call
   std::vector<Py_expr> m_args;   // Call arguments; Assign: the value
@@ -89,33 +89,33 @@ struct Py_statement {
 
 /*! obtains an expression as normalized Python text.
  */
-inline QString to_python(const Py_expr& aExpr) {
-  switch (aExpr.m_kind) {
-   case Py_expr::Kind::Name: return aExpr.m_name;
-   case Py_expr::Kind::Polygon: {
+inline QString to_python(const Py_expr& a_expr) {
+  switch (a_expr.m_kind) {
+   case Py_expr::Kind::KI_NAME: return a_expr.m_name;
+   case Py_expr::Kind::KI_POLYGON: {
      QStringList points;
-     for (const auto& [x, y] : aExpr.m_points)
+     for (const auto& [x, y] : a_expr.m_points)
        points << QString("Point_2(%1, %2)").arg(to_python(x), to_python(y));
      return QString("Polygon_2([%1])").arg(points.join(", "));
    }
-   case Py_expr::Kind::Polygon_set:
+   case Py_expr::Kind::POLYGON_SET:
     return QString("Polygon_set_2(%1)")
-      .arg(aExpr.m_arg ? to_python(*aExpr.m_arg) : QString());
+      .arg(a_expr.m_arg ? to_python(*a_expr.m_arg) : QString());
   }
   return QString();
 }
 
 /*! obtains a statement as normalized Python text.
  */
-inline QString to_python(const Py_statement& aStatement) {
-  switch (aStatement.m_kind) {
-   case Py_statement::Kind::Assign:
-    return aStatement.m_target + " = " + to_python(aStatement.m_args[0]);
-   case Py_statement::Kind::Delete: return "del " + aStatement.m_target;
-   case Py_statement::Kind::Call: {
+inline QString to_python(const Py_statement& a_statement) {
+  switch (a_statement.m_kind) {
+   case Py_statement::Kind::KI_ASSIGN:
+    return a_statement.m_target + " = " + to_python(a_statement.m_args[0]);
+   case Py_statement::Kind::KI_DELETE: return "del " + a_statement.m_target;
+   case Py_statement::Kind::KI_CALL: {
      QStringList args;
-     for (const auto& arg : aStatement.m_args) args << to_python(arg);
-     return QString("%1.%2(%3)").arg(aStatement.m_target, aStatement.m_method, args.join(", "));
+     for (const auto& arg : a_statement.m_args) args << to_python(arg);
+     return QString("%1.%2(%3)").arg(a_statement.m_target, a_statement.m_method, args.join(", "));
    }
   }
   return QString();
@@ -126,7 +126,7 @@ class Py_parser {
 public:
   /*! constructs from a console line, which is tokenized.
    */
-  explicit Py_parser(const QString& aLine) { tokenize(aLine); }
+  explicit Py_parser(const QString& a_line) { tokenize(a_line); }
 
   /*! parses the statements of the line.
    */
@@ -141,60 +141,60 @@ public:
   }
 
 private:
-  enum class Tok { Ident, Number, Punct, End };
+  enum class Tok { TO_IDENT, TO_NUMBER, TO_PUNCT, TO_END };
   struct Token { Tok m_kind; QString m_text; };
   std::vector<Token> m_tokens;
   std::size_t m_pos = 0;
 
   /*! throws a std::runtime_error with a given message.
    */
-  [[noreturn]] void error(const QString& aMessage) const { throw std::runtime_error(aMessage.toStdString()); }
+  [[noreturn]] void error(const QString& a_message) const { throw std::runtime_error(a_message.toStdString()); }
 
   /*! splits a line into tokens.
    */
-  void tokenize(const QString& aLine) {
+  void tokenize(const QString& a_line) {
     static const QRegularExpression number(R"(^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)");
     static const QRegularExpression ident(R"(^[A-Za-z_]\w*)");
     int i = 0;
-    while (i < aLine.size()) {
-      QChar c = aLine[i];
+    while (i < a_line.size()) {
+      QChar c = a_line[i];
       if (c.isSpace()) { ++i; continue; }
       if (c == '#') break;
-      QStringView rest = QStringView(aLine).mid(i);
+      QStringView rest = QStringView(a_line).mid(i);
       auto m = ident.matchView(rest);
       if (m.hasMatch()) {
-        m_tokens.push_back({Tok::Ident, m.captured(0)});
+        m_tokens.push_back({Tok::TO_IDENT, m.captured(0)});
         i += m.capturedLength(0);
         continue;
       }
       m = number.matchView(rest);
       if (m.hasMatch()) {
-        m_tokens.push_back({Tok::Number, m.captured(0)});
+        m_tokens.push_back({Tok::TO_NUMBER, m.captured(0)});
         i += m.capturedLength(0);
         continue;
       }
       if (QString("()[],.=;-+").contains(c)) {
-        m_tokens.push_back({Tok::Punct, QString(c)});
+        m_tokens.push_back({Tok::TO_PUNCT, QString(c)});
         ++i;
         continue;
       }
       error(QString("unexpected character '%1'").arg(c));
     }
-    m_tokens.push_back({Tok::End, QString()});
+    m_tokens.push_back({Tok::TO_END, QString()});
   }
 
   /*! obtains the token a given number of tokens ahead, without consuming it.
    */
-  const Token& peek(std::size_t aAhead = 0) const { return m_tokens[std::min(m_pos + aAhead, m_tokens.size() - 1)]; }
+  const Token& peek(std::size_t a_ahead = 0) const { return m_tokens[std::min(m_pos + a_ahead, m_tokens.size() - 1)]; }
 
   /*! determines whether all tokens are consumed.
    */
-  bool at_end() const { return peek().m_kind == Tok::End; }
+  bool at_end() const { return peek().m_kind == Tok::TO_END; }
 
   /*! consumes a given punctuation token if it is next.
    */
-  bool accept(const QString& aPunct) {
-    if ((peek().m_kind == Tok::Punct) && (peek().m_text == aPunct)) {
+  bool accept(const QString& a_punct) {
+    if ((peek().m_kind == Tok::TO_PUNCT) && (peek().m_text == a_punct)) {
       ++m_pos;
       return true;
     }
@@ -203,7 +203,7 @@ private:
 
   /*! consumes a given punctuation token, which must be next.
    */
-  void expect(const QString& aPunct) { if (! accept(aPunct)) error(QString("expected '%1'%2").arg(aPunct, near())); }
+  void expect(const QString& a_punct) { if (! accept(a_punct)) error(QString("expected '%1'%2").arg(a_punct, near())); }
 
   /*! obtains a description of the position of the next token, for error messages.
    */
@@ -212,7 +212,7 @@ private:
   /*! consumes a name.
    */
   QString identifier() {
-    if (peek().m_kind != Tok::Ident) error("expected a name" + near());
+    if (peek().m_kind != Tok::TO_IDENT) error("expected a name" + near());
     return m_tokens[m_pos++].m_text;
   }
 
@@ -222,7 +222,7 @@ private:
     bool negative = false;
     if (accept("-")) negative = true;
     else accept("+");
-    if (peek().m_kind != Tok::Number) error("expected a number" + near());
+    if (peek().m_kind != Tok::TO_NUMBER) error("expected a number" + near());
     double value = m_tokens[m_pos++].m_text.toDouble();
     return negative ? -value : value;
   }
@@ -233,18 +233,18 @@ private:
     Py_statement st;
     QString name = identifier();
     if (name == "del") {
-      st.m_kind = Py_statement::Kind::Delete;
+      st.m_kind = Py_statement::Kind::KI_DELETE;
       st.m_target = identifier();
       return st;
     }
     st.m_target = name;
     if (accept("=")) {
-      st.m_kind = Py_statement::Kind::Assign;
+      st.m_kind = Py_statement::Kind::KI_ASSIGN;
       st.m_args.push_back(expression());
       return st;
     }
     expect(".");
-    st.m_kind = Py_statement::Kind::Call;
+    st.m_kind = Py_statement::Kind::KI_CALL;
     st.m_method = identifier();
     expect("(");
     if (! accept(")")) {
@@ -260,7 +260,7 @@ private:
     Py_expr e;
     QString name = identifier();
     if (name == "Polygon_set_2") {
-      e.m_kind = Py_expr::Kind::Polygon_set;
+      e.m_kind = Py_expr::Kind::POLYGON_SET;
       expect("(");
       if (! accept(")")) {
         e.m_arg = std::make_shared<Py_expr>(expression());
@@ -269,7 +269,7 @@ private:
       return e;
     }
     if (name == "Polygon_2") {
-      e.m_kind = Py_expr::Kind::Polygon;
+      e.m_kind = Py_expr::Kind::KI_POLYGON;
       expect("(");
       expect("[");
       while (! accept("]")) {
@@ -288,7 +288,7 @@ private:
     if ((name == "Point_2") || (peek().m_text == "("))
       error(QString("unexpected '%1'; expected a polygon set name, "
                     "Polygon_2([...]), or Polygon_set_2(...)").arg(name));
-    e.m_kind = Py_expr::Kind::Name;
+    e.m_kind = Py_expr::Kind::KI_NAME;
     e.m_name = name;
     return e;
   }

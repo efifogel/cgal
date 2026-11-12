@@ -42,10 +42,10 @@ class Piecewise_region_graphics_item :
 public:
   /*! constructs from the polygon with holes, a functor that draws a curve, and a functor that bounds a curve.
    */
-  Piecewise_region_graphics_item(Piecewise_region* aRegion, const Draw_piece& aPieceDrawer = Draw_piece(),
-                                 const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    Base(aPieceDrawer, aPieceBBox),
-    m_region(aRegion)
+  Piecewise_region_graphics_item(Piecewise_region* a_region, const Draw_piece& a_piece_drawer = Draw_piece(),
+                                 const Piece_bbox& a_piece_bbox = Piece_bbox()) :
+    Base(a_piece_drawer, a_piece_bbox),
+    m_region(a_region)
   {}
 
   /*! determines whether there is no polygon with holes to draw.
@@ -55,29 +55,29 @@ public:
 protected:
   /*! constructs from a functor that draws a curve and a functor that bounds a curve.
    */
-  Piecewise_region_graphics_item(const Draw_piece& aPieceDrawer = Draw_piece(),
-                                 const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    Base(aPieceDrawer, aPieceBBox),
+  Piecewise_region_graphics_item(const Draw_piece& a_piece_drawer = Draw_piece(),
+                                 const Piece_bbox& a_piece_bbox = Piece_bbox()) :
+    Base(a_piece_drawer, a_piece_bbox),
     m_region(nullptr)
   {}
 
   /*! extends the bounding box with the box of the polygon with holes.
    */
-  virtual void update_bbox(Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder)
-  { if (m_region) update_region_bbox(*m_region, aBboxBuilder); }
+  virtual void update_bbox(Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder)
+  { if (m_region) update_region_bbox(*m_region, a_bbox_builder); }
 
   /*! adds the polygon with holes to the path.
    */
-  virtual void draw_model(QPainterPath& aPath) { if (m_region) draw_region(*m_region, aPath); }
+  virtual void draw_model(QPainterPath& a_path) { if (m_region) draw_region(*m_region, a_path); }
 
   /*! extends the bounding box with the boxes of the boundaries of a polygon with holes. An unbounded polygon marks
    * the box as unbounded.
    */
-  void update_region_bbox(const Piecewise_region& aRegion, Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder);
+  void update_region_bbox(const Piecewise_region& a_region, Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder);
 
   /*! adds the boundaries of a polygon with holes to the path.
    */
-  void draw_region(const Piecewise_region& aRegion, QPainterPath& aPath);
+  void draw_region(const Piecewise_region& a_region, QPainterPath& a_path);
 
 protected:
   Piecewise_region* m_region;
@@ -85,20 +85,20 @@ protected:
 
 template <typename R, typename D, typename P>
 void Piecewise_region_graphics_item<R, D, P>::
-update_region_bbox(const Piecewise_region& aRegion, Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder) {
-  if (aRegion.is_unbounded()) aBboxBuilder.unbounded = true;
-  this->update_boundary_bbox(aRegion.outer_boundary(), aBboxBuilder);
-  for (auto hit = aRegion.holes_begin(); hit != aRegion.holes_end(); ++hit)
-    this->update_boundary_bbox(*hit, aBboxBuilder);
+update_region_bbox(const Piecewise_region& a_region, Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder) {
+  if (a_region.is_unbounded()) a_bbox_builder.unbounded = true;
+  this->update_boundary_bbox(a_region.outer_boundary(), a_bbox_builder);
+  for (auto hit = a_region.holes_begin(); hit != a_region.holes_end(); ++hit)
+    this->update_boundary_bbox(*hit, a_bbox_builder);
 }
 
 template <typename R, typename D, typename P>
-void Piecewise_region_graphics_item<R, D, P>::draw_region(const Piecewise_region& aRegion, QPainterPath& aPath) {
+void Piecewise_region_graphics_item<R, D, P>::draw_region(const Piecewise_region& a_region, QPainterPath& a_path) {
   // An unbounded region (e.g., a complement) has no outer boundary; use a rectangle that covers the view instead, so
   // that the area outside its holes is filled (the path uses the odd-even fill rule).
-  if (aRegion.is_unbounded()) aPath.addRect(this->unbounded_rect());
-  this->draw_boundary(aRegion.outer_boundary(), aPath);
-  for (auto hit = aRegion.holes_begin(); hit != aRegion.holes_end(); ++hit) this->draw_boundary(*hit, aPath);
+  if (a_region.is_unbounded()) a_path.addRect(this->unbounded_rect());
+  this->draw_boundary(a_region.outer_boundary(), a_path);
+  for (auto hit = a_region.holes_begin(); hit != a_region.holes_end(); ++hit) this->draw_boundary(*hit, a_path);
 }
 
 } // namespace Qt

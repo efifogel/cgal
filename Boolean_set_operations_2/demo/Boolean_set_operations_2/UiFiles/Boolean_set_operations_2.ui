@@ -18,9 +18,9 @@
     <normaloff>:/cgal/icons/resources/cgal_logo.xpm</normaloff>:/cgal/icons/resources/cgal_logo.xpm</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="vertical_layout_2">
     <item>
-     <widget class="QGraphicsView" name="graphicsView">
+     <widget class="QGraphicsView" name="graphics_view">
       <property name="focusPolicy">
        <enum>Qt::StrongFocus</enum>
       </property>
@@ -46,74 +46,74 @@
      <height>25</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="menu_file">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNew" />
+    <addaction name="action_new" />
     <addaction name="separator" />
-    <addaction name="actionOpenLinear" />
-    <addaction name="actionOpenDXF" />
-    <addaction name="actionOpenBezier" />
-    <addaction name="actionOpenPolyline" />f
+    <addaction name="action_open_linear" />
+    <addaction name="action_open_circular" />
+    <addaction name="action_open_bezier" />
+    <addaction name="action_open_polyline" />
     <addaction name="separator" />
-    <addaction name="actionSaveCurrentBucket" />
+    <addaction name="action_save_current_bucket" />
     <addaction name="separator" />
-    <addaction name="actionQuit" />
+    <addaction name="action_quit" />
    </widget>
-   <widget class="QMenu" name="menuEdit">
+   <widget class="QMenu" name="menu_edit">
     <property name="title">
      <string>Edit</string>
     </property>
-      <addaction name="actionInsertLinear"/> 
-      <addaction name="actionInsertCircular"/>
-      <addaction name="actionInsertBezier" />
-      <addaction name="actionInsertPolyline" />
+      <addaction name="action_insert_linear"/> 
+      <addaction name="action_insert_circular"/>
+      <addaction name="action_insert_bezier" />
+      <addaction name="action_insert_polyline" />
       <addaction name="separator"/>
-      <addaction name="actionAddColor" />
-      <addaction name="actionMinusColor" />
+      <addaction name="action_add_color" />
+      <addaction name="action_minus_color" />
       <addaction name="separator"/>
-      <addaction name="actionDeleteAll"/>
-      <addaction name="actionUndo"/>
-      <addaction name="actionNew"/>
+      <addaction name="action_delete_all"/>
+      <addaction name="action_undo"/>
+      <addaction name="action_new"/>
       <addaction name="separator"/>
-      <addaction name="actionErrorOperand"/>
-      <addaction name="actionWarnNotEmpty"/>
+      <addaction name="action_error_operand"/>
+      <addaction name="action_warn_not_empty"/>
    </widget>
-   <widget class="QMenu" name="menuView">
+   <widget class="QMenu" name="menu_view">
     <property name="title">
      <string>View</string>
     </property>
-    <addaction name="actionRecenter"/>
-    <addaction name="actionPAN"/>
+    <addaction name="action_recenter"/>
+    <addaction name="action_pan"/>
     <addaction name="separator"/>
-    <addaction name="showColorBucket"/>
-    <addaction name="showConsole"/>
-    <addaction name="showInfo"/>
+    <addaction name="show_color_bucket"/>
+    <addaction name="show_console"/>
+    <addaction name="show_info"/>
     <addaction name="separator"/>
-    <addaction name="actionAxis"/>
-    <addaction name="actionGrid"/>
-    <addaction name="actionGridDenser"/>
-    <addaction name="actionGridSparser"/>
-    <addaction name="actionSnapToGrid"/>
+    <addaction name="action_axis"/>
+    <addaction name="action_grid"/>
+    <addaction name="action_grid_denser"/>
+    <addaction name="action_grid_sparser"/>
+    <addaction name="action_snap_to_grid"/>
    </widget>
-   <widget class="QMenu" name="menu_Help">
+   <widget class="QMenu" name="menu_help">
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="aboutCGAL"/>
-    <addaction name="aboutBolop"/>
-    <addaction name="aboutMinkop"/>
-    <addaction name="aboutDemo"/>
+    <addaction name="action_about_cgal"/>
+    <addaction name="action_about_bolop"/>
+    <addaction name="action_about_minkop"/>
+    <addaction name="action_about_demo"/>
    </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <!-- <addaction name="menuOperations"/> -->
-   <addaction name="menuView"/>
-   <addaction name="menu_Help"/>
+   <addaction name="menu_file"/>
+   <addaction name="menu_edit"/>
+   <!-- <addaction name="menu_operations"/> -->
+   <addaction name="menu_view"/>
+   <addaction name="menu_help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QDockWidget" name="consoleDockWidget">
+  <widget class="QDockWidget" name="console_dock_widget">
    <property name="minimumSize" >
     <size>
       <width>400</width>
@@ -129,10 +129,10 @@
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
-   <widget class="QWidget" name="dockWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+   <widget class="QWidget" name="dock_widget_contents">
+    <layout class="QVBoxLayout" name="vertical_layout_3">
      <item>
-      <widget class="QTextEdit" name="consoleTextEdit">
+      <widget class="QTextEdit" name="console_text_edit">
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -141,7 +141,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="sceneDockWidget">
+  <widget class="QDockWidget" name="scene_dock_widget">
    <property name="minimumSize" >
     <size>
       <width>593</width>
@@ -166,7 +166,7 @@
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
-   <widget class="QWidget" name="dockWidgetContent">
+   <widget class="QWidget" name="dock_widget_content">
     <property name="styleSheet">
      <string notr="true">QToolButton {
   background-color: #f4f4f4;
@@ -186,27 +186,27 @@ QToolButton:checked, QToolButton:pressed {
   background-color: #cfe3ff;
   border-color: #3a7bd5;
 }
-QLabel#VisibleIcon, QLabel#DrawHeader {
+QLabel#visible_icon, QLabel#draw_header {
   background-color: #f4f4f4;
   border: 1px solid #b0b0b0;
   border-radius: 3px;
 }
-QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
+QLabel#visible_icon:hover, QLabel#draw_header:hover {
   background-color: white;
   border-color: #505050;
 }</string>
     </property>
-    <layout class="QGridLayout" name="gridLayout_2">
+    <layout class="QGridLayout" name="grid_layout_2">
      <item row="0" column="0">
-      <layout class="QVBoxLayout" name="verticalLayout">
+      <layout class="QVBoxLayout" name="vertical_layout">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QHBoxLayout" name="horizontal_layout">
          <property name="spacing">
           <number>0</number>
          </property>
          <item>
           <!-- One toolbar for all traits; add new traits actions here. -->
-          <widget class="QToolBar" name="traitsToolBar">
+          <widget class="QToolBar" name="traits_tool_bar">
            <attribute name="toolBarArea">
             <enum>TopToolBarArea</enum>
            </attribute>
@@ -219,16 +219,16 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
              <height>32</height>
             </size>
            </property>
-           <addaction name="actionInsertLinear"/>
-           <addaction name="actionInsertCircular"/>
-           <addaction name="actionInsertConic"/>
-           <addaction name="actionInsertBezier"/>
-           <addaction name="actionInsertPolyline"/>
-           <addaction name="actionInsertAlgebraic"/>
+           <addaction name="action_insert_linear"/>
+           <addaction name="action_insert_circular"/>
+           <addaction name="action_insert_conic"/>
+           <addaction name="action_insert_bezier"/>
+           <addaction name="action_insert_polyline"/>
+           <addaction name="action_insert_algebraic"/>
           </widget>
          </item>
          <item>
-          <spacer name="traitsToolBarSpacer">
+          <spacer name="traits_tool_bar_spacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -243,32 +243,32 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
         </layout>
        </item>  
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <layout class="QHBoxLayout" name="horizontal_layout_3">
          <property name="spacing">
           <number>0</number>
          </property>
          <item>
-          <widget class="QToolBar" name="toolsToolBar">
+          <widget class="QToolBar" name="tools_tool_bar">
            <attribute name="toolBarArea">
             <enum>TopToolBarArea</enum>
            </attribute>
            <attribute name="toolBarBreak">
             <bool>false</bool>
            </attribute>
-           <addaction name="actionAddColor"/>
-           <addaction name="actionMinusColor"/>
-           <addaction name="actionRecenter"/>
-           <addaction name="actionPAN"/>
-           <addaction name="actionDeleteAll"/>
-           <addaction name="actionAxis"/>
-           <addaction name="actionGrid"/>
-           <addaction name="actionSnapToGrid"/>
-           <addaction name="actionUndo"/>
-           <addaction name="actionNew"/>
+           <addaction name="action_add_color"/>
+           <addaction name="action_minus_color"/>
+           <addaction name="action_recenter"/>
+           <addaction name="action_pan"/>
+           <addaction name="action_delete_all"/>
+           <addaction name="action_axis"/>
+           <addaction name="action_grid"/>
+           <addaction name="action_snap_to_grid"/>
+           <addaction name="action_undo"/>
+           <addaction name="action_new"/>
           </widget>
          </item>
          <item>
-          <spacer name="toolsToolBarSpacer">
+          <spacer name="tools_tool_bar_spacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -283,11 +283,11 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
         </layout>
       </item>
       <item>
-        <widget class="QScrollArea" name="scrollArea_2">
+        <widget class="QScrollArea" name="scroll_area_2">
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents_2">
+         <widget class="QWidget" name="scroll_area_widget_contents_2">
             <property name="geometry">
              <rect>
               <x>0</x>
@@ -296,7 +296,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <height>350</height>
              </rect>
             </property>
-            <widget class="QLabel" name="showRedLabel">
+            <widget class="QLabel" name="show_red_label">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -309,7 +309,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Red</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showBlackLabel">
+            <widget class="QLabel" name="show_black_label">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -322,7 +322,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Black</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showBlueLabel">
+            <widget class="QLabel" name="show_blue_label">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -338,7 +338,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Blue</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showBrownLabel">
+            <widget class="QLabel" name="show_brown_label">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -354,7 +354,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Brown</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showYellowLabel">
+            <widget class="QLabel" name="show_yellow_label">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -370,7 +370,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Yellow</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showMagentaLabel">
+            <widget class="QLabel" name="show_magenta_label">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -386,7 +386,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Magenta</string>
              </property>
             </widget>
-            <widget class="QLabel" name="showAquaLabel">
+            <widget class="QLabel" name="show_aqua_label">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -402,7 +402,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Aqua</string>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRed">
+            <widget class="QCheckBox" name="show_red">
              <property name="geometry">
               <rect>
                <x>85</x>
@@ -418,7 +418,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlack">
+            <widget class="QCheckBox" name="show_black">
              <property name="geometry">
               <rect>
                <x>85</x>
@@ -434,7 +434,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlue">
+            <widget class="QCheckBox" name="show_blue">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -453,7 +453,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrown">
+            <widget class="QCheckBox" name="show_brown">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -472,7 +472,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellow">
+            <widget class="QCheckBox" name="show_yellow">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -491,7 +491,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagenta">
+            <widget class="QCheckBox" name="show_magenta">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -510,7 +510,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAqua">
+            <widget class="QCheckBox" name="show_aqua">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -529,7 +529,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawRed">
+            <widget class="QRadioButton" name="draw_red">
              <property name="geometry">
               <rect>
                <x>130</x>
@@ -545,7 +545,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawBlack">
+            <widget class="QRadioButton" name="draw_black">
              <property name="geometry">
               <rect>
                <x>130</x>
@@ -558,7 +558,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawBlue">
+            <widget class="QRadioButton" name="draw_blue">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -574,7 +574,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawBrown">
+            <widget class="QRadioButton" name="draw_brown">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -590,7 +590,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawYellow">
+            <widget class="QRadioButton" name="draw_yellow">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -606,7 +606,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawMagenta">
+            <widget class="QRadioButton" name="draw_magenta">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -622,7 +622,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QRadioButton" name="drawAqua">
+            <widget class="QRadioButton" name="draw_aqua">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -638,7 +638,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string></string>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedComp">
+            <widget class="QCheckBox" name="show_red_comp">
              <property name="geometry">
               <rect>
                <x>175</x>
@@ -654,7 +654,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedInt">
+            <widget class="QCheckBox" name="show_red_int">
              <property name="geometry">
               <rect>
                <x>220</x>
@@ -670,7 +670,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedUnion">
+            <widget class="QCheckBox" name="show_red_union">
              <property name="geometry">
               <rect>
                <x>265</x>
@@ -686,7 +686,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedDiff">
+            <widget class="QCheckBox" name="show_red_diff">
              <property name="geometry">
               <rect>
                <x>310</x>
@@ -702,7 +702,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedSym_Diff">
+            <widget class="QCheckBox" name="show_red_sym_diff">
              <property name="geometry">
               <rect>
                <x>355</x>
@@ -718,7 +718,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showRedMink_Sum">
+            <widget class="QCheckBox" name="show_red_mink_sum">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -737,7 +737,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackComp">
+            <widget class="QCheckBox" name="show_black_comp">
              <property name="geometry">
               <rect>
                <x>175</x>
@@ -753,7 +753,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackInt">
+            <widget class="QCheckBox" name="show_black_int">
              <property name="geometry">
               <rect>
                <x>220</x>
@@ -769,7 +769,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackUnion">
+            <widget class="QCheckBox" name="show_black_union">
              <property name="geometry">
               <rect>
                <x>265</x>
@@ -785,7 +785,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackDiff">
+            <widget class="QCheckBox" name="show_black_diff">
              <property name="geometry">
               <rect>
                <x>310</x>
@@ -801,7 +801,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackSym_Diff">
+            <widget class="QCheckBox" name="show_black_sym_diff">
              <property name="geometry">
               <rect>
                <x>355</x>
@@ -817,7 +817,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlackMink_Sum">
+            <widget class="QCheckBox" name="show_black_mink_sum">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -836,7 +836,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueComp">
+            <widget class="QCheckBox" name="show_blue_comp">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -855,7 +855,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueInt">
+            <widget class="QCheckBox" name="show_blue_int">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -874,7 +874,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueUnion">
+            <widget class="QCheckBox" name="show_blue_union">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -893,7 +893,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueDiff">
+            <widget class="QCheckBox" name="show_blue_diff">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -912,7 +912,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueSym_Diff">
+            <widget class="QCheckBox" name="show_blue_sym_diff">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -931,7 +931,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBlueMink_Sum">
+            <widget class="QCheckBox" name="show_blue_mink_sum">
               <property name="Visible">
                 <bool>true</bool>
               </property>
@@ -950,7 +950,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownComp">
+            <widget class="QCheckBox" name="show_brown_comp">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -969,7 +969,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownInt">
+            <widget class="QCheckBox" name="show_brown_int">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -988,7 +988,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownUnion">
+            <widget class="QCheckBox" name="show_brown_union">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1007,7 +1007,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownDiff">
+            <widget class="QCheckBox" name="show_brown_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1026,7 +1026,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownSym_Diff">
+            <widget class="QCheckBox" name="show_brown_sym_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1045,7 +1045,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showBrownMink_Sum">
+            <widget class="QCheckBox" name="show_brown_mink_sum">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1064,7 +1064,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowComp">
+            <widget class="QCheckBox" name="show_yellow_comp">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1083,7 +1083,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowInt">
+            <widget class="QCheckBox" name="show_yellow_int">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1102,7 +1102,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowUnion">
+            <widget class="QCheckBox" name="show_yellow_union">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1121,7 +1121,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowDiff">
+            <widget class="QCheckBox" name="show_yellow_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1140,7 +1140,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowSym_Diff">
+            <widget class="QCheckBox" name="show_yellow_sym_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1159,7 +1159,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showYellowMink_Sum">
+            <widget class="QCheckBox" name="show_yellow_mink_sum">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1178,7 +1178,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaComp">
+            <widget class="QCheckBox" name="show_magenta_comp">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1197,7 +1197,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaInt">
+            <widget class="QCheckBox" name="show_magenta_int">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1216,7 +1216,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaUnion">
+            <widget class="QCheckBox" name="show_magenta_union">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1235,7 +1235,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaDiff">
+            <widget class="QCheckBox" name="show_magenta_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1254,7 +1254,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaSym_Diff">
+            <widget class="QCheckBox" name="show_magenta_sym_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1273,7 +1273,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showMagentaMink_Sum">
+            <widget class="QCheckBox" name="show_magenta_mink_sum">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1292,7 +1292,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaComp">
+            <widget class="QCheckBox" name="show_aqua_comp">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1311,7 +1311,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaInt">
+            <widget class="QCheckBox" name="show_aqua_int">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1330,7 +1330,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaUnion">
+            <widget class="QCheckBox" name="show_aqua_union">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1349,7 +1349,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaDiff">
+            <widget class="QCheckBox" name="show_aqua_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1368,7 +1368,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaSym_Diff">
+            <widget class="QCheckBox" name="show_aqua_sym_diff">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1387,7 +1387,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showAquaMink_Sum">
+            <widget class="QCheckBox" name="show_aqua_mink_sum">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1407,7 +1407,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
              </property>
             </widget>
 
-            <widget class="QCheckBox" name="copyRed">
+            <widget class="QCheckBox" name="copy_red">
              <property name="geometry">
               <rect>
                <x>445</x>
@@ -1423,7 +1423,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyBlack">
+            <widget class="QCheckBox" name="copy_black">
              <property name="geometry">
               <rect>
                <x>445</x>
@@ -1439,7 +1439,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyBlue">
+            <widget class="QCheckBox" name="copy_blue">
              <property name="geometry">
               <rect>
                <x>445</x>
@@ -1455,7 +1455,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyBrown">
+            <widget class="QCheckBox" name="copy_brown">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1474,7 +1474,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyYellow">
+            <widget class="QCheckBox" name="copy_yellow">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1493,7 +1493,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyMagenta">
+            <widget class="QCheckBox" name="copy_magenta">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1512,7 +1512,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="copyAqua">
+            <widget class="QCheckBox" name="copy_aqua">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1533,7 +1533,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
             </widget>
 
 
-            <widget class="QCheckBox" name="moveRed">
+            <widget class="QCheckBox" name="move_red">
              <property name="geometry">
               <rect>
                <x>490</x>
@@ -1549,7 +1549,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveBlack">
+            <widget class="QCheckBox" name="move_black">
              <property name="geometry">
               <rect>
                <x>490</x>
@@ -1565,7 +1565,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveBlue">
+            <widget class="QCheckBox" name="move_blue">
              <property name="geometry">
               <rect>
                <x>490</x>
@@ -1581,7 +1581,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveBrown">
+            <widget class="QCheckBox" name="move_brown">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1600,7 +1600,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveYellow">
+            <widget class="QCheckBox" name="move_yellow">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1619,7 +1619,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveMagenta">
+            <widget class="QCheckBox" name="move_magenta">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1638,7 +1638,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="moveAqua">
+            <widget class="QCheckBox" name="move_aqua">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1657,7 +1657,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearRed">
+            <widget class="QCheckBox" name="clear_red">
              <property name="geometry">
               <rect>
                <x>535</x>
@@ -1673,7 +1673,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearBlack">
+            <widget class="QCheckBox" name="clear_black">
              <property name="geometry">
               <rect>
                <x>535</x>
@@ -1689,7 +1689,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearBlue">
+            <widget class="QCheckBox" name="clear_blue">
              <property name="geometry">
               <rect>
                <x>535</x>
@@ -1705,7 +1705,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearBrown">
+            <widget class="QCheckBox" name="clear_brown">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1724,7 +1724,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearYellow">
+            <widget class="QCheckBox" name="clear_yellow">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1743,7 +1743,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearMagenta">
+            <widget class="QCheckBox" name="clear_magenta">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -1762,7 +1762,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="clearAqua">
+            <widget class="QCheckBox" name="clear_aqua">
               <property name="Visible">
                 <bool>false</bool>
               </property>
@@ -2080,7 +2080,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
             </widget>
 
 
-            <widget class="QLabel" name="colorHeader" >
+            <widget class="QLabel" name="color_header" >
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Fixed" hsizetype="Preferred" >
                 <horstretch>0</horstretch>
@@ -2099,7 +2099,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
                <string>Buckets</string>
               </property>
             </widget>
-            <widget class="QCheckBox" name="VisibleHeader">
+            <widget class="QCheckBox" name="visible_header">
              <property name="geometry">
               <rect>
                <x>85</x>
@@ -2115,7 +2115,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>true</bool>
              </property>
             </widget>
-            <widget class="QLabel" name="VisibleIcon">
+            <widget class="QLabel" name="visible_icon">
               <property name="geometry">  
                 <rect>
                   <x>75</x>
@@ -2140,7 +2140,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
                <set>Qt::AlignCenter</set>
               </property>
             </widget>
-            <widget class="QLabel" name="DrawHeader" >  
+            <widget class="QLabel" name="draw_header" >  
               <property name="pixmap">  
                 <pixmap>:/cgal/icons/resources/draw.png</pixmap>  
               </property> 
@@ -2165,7 +2165,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
                <set>Qt::AlignCenter</set>
               </property>
             </widget>
-            <widget class="QToolButton" name="actionComplementH">
+            <widget class="QToolButton" name="action_complement_h">
               <property name="geometry">
                 <rect>
                   <x>165</x>
@@ -2200,7 +2200,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+C</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionIntersectionH">
+            <widget class="QToolButton" name="action_intersection_h">
               <property name="geometry">
                 <rect>
                   <x>210</x>
@@ -2235,7 +2235,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+I</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionUnionH">
+            <widget class="QToolButton" name="action_union_h">
               <property name="geometry">
                 <rect>
                   <x>255</x>
@@ -2270,7 +2270,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+U</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionDifferenceH">
+            <widget class="QToolButton" name="action_difference_h">
               <property name="geometry">
                 <rect>
                   <x>300</x>
@@ -2305,7 +2305,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+D</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionSymmetric_DifferenceH">
+            <widget class="QToolButton" name="action_symmetric_difference_h">
               <property name="geometry">
                 <rect>
                   <x>345</x>
@@ -2340,7 +2340,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+S</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionMinkowski_SumH">
+            <widget class="QToolButton" name="action_minkowski_sum_h">
               <property name="geometry">
                 <rect>
                   <x>390</x>
@@ -2375,7 +2375,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+M</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionCopyH">
+            <widget class="QToolButton" name="action_copy_h">
               <property name="geometry">
                 <rect>
                   <x>435</x>
@@ -2410,7 +2410,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+Shift+C</string>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionMoveH">
+            <widget class="QToolButton" name="action_move_h">
               <property name="geometry">
                 <rect>
                   <x>480</x>
@@ -2445,7 +2445,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Ctrl+Shift+M</string>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showClear">
+            <widget class="QCheckBox" name="show_clear">
              <property name="geometry">
               <rect>
                <x>535</x>
@@ -2467,7 +2467,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QToolButton" name="actionClearH">
+            <widget class="QToolButton" name="action_clear_h">
               <property name="geometry">
                 <rect>
                   <x>525</x>
@@ -2499,7 +2499,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <string>Clear Selected Bucket</string>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showResult">
+            <widget class="QCheckBox" name="show_result">
              <property name="visible">
               <bool>false</bool>
              </property>
@@ -2518,7 +2518,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QCheckBox" name="showCopy">
+            <widget class="QCheckBox" name="show_copy">
              <property name="visible">
               <bool>false</bool>
              </property>
@@ -2545,7 +2545,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="infoDockWidget">
+  <widget class="QDockWidget" name="info_dock_widget">
    <property name="allowedAreas">
     <set>Qt::LeftDockWidgetArea|Qt::BottomDockWidgetArea</set>
    </property>
@@ -2555,15 +2555,15 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
-   <widget class="QWidget" name="dockWidgetContents_2">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+   <widget class="QWidget" name="dock_widget_contents_2">
+    <layout class="QHBoxLayout" name="horizontal_layout_2">
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,0">
+      <layout class="QVBoxLayout" name="vertical_layout_4" stretch="0,0">
        <property name="spacing">
         <number>0</number>
        </property>
        <item>
-        <widget class="QScrollArea" name="scrollArea">
+        <widget class="QScrollArea" name="scroll_area">
          <property name="minimumSize">
           <size>
            <width>350</width>
@@ -2576,7 +2576,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents">
+         <widget class="QWidget" name="scroll_area_widget_contents">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -2585,9 +2585,9 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
             <height>173</height>
            </rect>
           </property>
-          <layout class="QGridLayout" name="gridLayout">
+          <layout class="QGridLayout" name="grid_layout">
            <item row="0" column="0">
-            <widget class="QLabel" name="infoLabel">
+            <widget class="QLabel" name="info_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -2613,7 +2613,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="displayLabel">
+        <widget class="QLabel" name="display_label">
          <property name="text">
           <string/>
          </property>
@@ -2624,7 +2624,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     </layout>
    </widget>
   </widget>
-  <action name="actionOpenLinear">
+  <action name="action_open_linear">
    <property name="icon">
     <iconset resource="Boolean_operations_2.qrc">
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
@@ -2636,7 +2636,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="actionUndo">
+  <action name="action_undo">
    <property name="icon">
     <iconset resource="Boolean_operations_2.qrc">
      <normaloff>:/cgal/icons/resources/undo.png</normaloff>:/cgal/icons/resources/undo.png</iconset>
@@ -2648,7 +2648,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Z</string>
    </property>
   </action>
-  <action name="actionRecenter">
+  <action name="action_recenter">
    <property name="icon">
     <iconset resource="Boolean_operations_2.qrc">
      <normaloff>:/cgal/icons/resources/fit-page-32.png</normaloff>:/cgal/icons/resources/fit-page-32.png</iconset>
@@ -2660,7 +2660,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+R</string>
    </property>
   </action>
-  <action name="Minkowksi_Sum">
+  <action name="minkowski_sum">
    <property name="checkable" >
     <bool>true</bool>
    </property>
@@ -2678,7 +2678,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Minkowski Mode</string>
    </property>
   </action>
-  <action name="actionInsertLinear">
+  <action name="action_insert_linear">
    <property name="checkable" >
     <bool>true</bool>
    </property>
@@ -2696,7 +2696,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Linear Polygons</string>
    </property>
   </action>
-  <action name="actionInsertCircular">
+  <action name="action_insert_circular">
    <property name="checkable" >
     <bool>true</bool>
    </property>
@@ -2714,7 +2714,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Line Segments and Circular Arcs</string>
    </property>
   </action>
-  <action name="actionVisible">
+  <action name="action_visible">
    <property name="checkable" >
     <bool>true</bool>
    </property> 
@@ -2729,27 +2729,27 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+V</string>
    </property>
   </action>
-  <action name="aboutCGAL">
+  <action name="action_about_cgal">
    <property name="text">
     <string>&amp;About CGAL...</string>
    </property>
   </action>
-  <action name="aboutBolop">
+  <action name="action_about_bolop">
    <property name="text">
     <string>&amp;About 2D Regularized Boolean Operations...</string>
    </property>
   </action>
-  <action name="aboutDemo">
+  <action name="action_about_demo">
    <property name="text">
     <string>&amp;About this demo...</string>
    </property>
   </action>
-  <action name="aboutMinkop">
+  <action name="action_about_minkop">
    <property name="text">
     <string>&amp;About 2D Minkowski sums...</string>
    </property>
   </action>
-  <action name="actionClose">
+  <action name="action_close">
    <property name="text">
     <string>&amp;Quit</string>
    </property>
@@ -2757,12 +2757,12 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionAdd_new_polygon">
+  <action name="action_add_new_polygon">
    <property name="text">
     <string>Add new polygon</string>
    </property>
   </action>
-  <action name="showColorBucket">
+  <action name="show_color_bucket">
    <property name="text">
     <string>Operations</string>
    </property>
@@ -2773,7 +2773,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <bool>true</bool>
    </property>
   </action>
-  <action name="showConsole">
+  <action name="show_console">
    <property name="text">
     <string>Console</string>
    </property>
@@ -2784,7 +2784,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <bool>true</bool>
    </property>
   </action>
-  <action name="actionErrorOperand">
+  <action name="action_error_operand">
    <property name="text">
     <string>Show Error When the Draw/Insert Bucket Is a Non-Empty Operand</string>
    </property>
@@ -2795,7 +2795,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <bool>true</bool>
    </property>
   </action>
-  <action name="actionWarnNotEmpty">
+  <action name="action_warn_not_empty">
    <property name="text">
     <string>Warn When the Draw/Insert Bucket Is Not Empty</string>
    </property>
@@ -2806,7 +2806,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <bool>true</bool>
    </property>
   </action>
-  <action name="showInfo">
+  <action name="show_info">
    <property name="text">
     <string>Log</string>
    </property>
@@ -2817,7 +2817,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <bool>true</bool>
    </property>
   </action>
-  <action name="actionPAN">
+  <action name="action_pan">
    <property name="checkable" >
     <bool>true</bool>
    </property>  
@@ -2832,7 +2832,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+shift+P</string>
    </property>
   </action>
-  <action name="actionAddColor">
+  <action name="action_add_color">
    <property name="checkable" >
     <bool>false</bool>
    </property>  
@@ -2844,7 +2844,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>&amp;Add a Bucket</string>
    </property>
   </action>
-  <action name="actionMinusColor">
+  <action name="action_minus_color">
     <property name="enabled">
       <bool>false</bool>
     </property>
@@ -2862,7 +2862,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
       <string>&amp;Minimum Number of Buckets Reached</string>
     </property>
   </action>
-  <action name="actionDeleteAll">
+  <action name="action_delete_all">
    <property name="icon">
     <iconset resource="Boolean_operations_2.qrc">
      <normaloff>:/cgal/icons/resources/check-off.png</normaloff>:/cgal/icons/resources/check-off.png</iconset>
@@ -2871,7 +2871,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Clear All Buckets</string>
    </property>
   </action>
-  <action name="actionGrid">
+  <action name="action_grid">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -2886,17 +2886,17 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Shift+G</string>
    </property>
   </action>
-  <action name="actionGridDenser">
+  <action name="action_grid_denser">
    <property name="text">
     <string>&amp;Increase Grid Density</string>
    </property>
   </action>
-  <action name="actionGridSparser">
+  <action name="action_grid_sparser">
    <property name="text">
     <string>&amp;Decrease Grid Density</string>
    </property>
   </action>
-  <action name="actionSnapToGrid">
+  <action name="action_snap_to_grid">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -2911,7 +2911,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Shift+N</string>
    </property>
   </action>
-  <action name="actionAxis" >
+  <action name="action_axis" >
    <property name="checkable" >
     <bool>true</bool>
    </property>  
@@ -2926,7 +2926,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Shift+A</string>
    </property>
   </action>
-  <action name="actionNew" >
+  <action name="action_new" >
    <property name="icon" >
     <iconset resource="boolean_operations_2.qrc" >
      <normaloff>:/cgal/icons/resources/reset.png</normaloff>:/cgal/icons/resources/reset.png</iconset>
@@ -2938,7 +2938,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Shift+R</string>
    </property>
   </action>
-  <action name="actionOpenDXF" >
+  <action name="action_open_circular" >
    <property name="icon" >
     <iconset resource="boolean_operations_2.qrc" >
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
@@ -2950,7 +2950,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+X</string>
    </property>
   </action>
-  <action name="actionOpenBezier" >
+  <action name="action_open_bezier" >
    <property name="icon" >
     <iconset resource="boolean_operations_2.qrc" >
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
@@ -2962,7 +2962,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+B</string>
    </property>
   </action>
-  <action name="actionOpenPolyline" >
+  <action name="action_open_polyline" >
    <property name="icon" >
     <iconset resource="boolean_operations_2.qrc" >
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
@@ -2974,7 +2974,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+P</string>
    </property>
   </action>
-  <action name="actionSaveCurrentBucket" >
+  <action name="action_save_current_bucket" >
    <property name="icon" >
     <iconset resource="boolean_operations_2.qrc" >
      <normaloff>:/cgal/fileToolbar/fileSave.png</normaloff>:/cgal/fileToolbar/fileSave.png</iconset>
@@ -2986,7 +2986,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Shift+S</string>
    </property>
   </action>
-  <action name="actionQuit" >
+  <action name="action_quit" >
    <property name="text" >
     <string>&amp;Quit</string>
    </property>
@@ -2994,7 +2994,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionInsertConic">
+  <action name="action_insert_conic">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -3009,7 +3009,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Conic Arcs</string>
    </property>
   </action>
-  <action name="actionInsertAlgebraic">
+  <action name="action_insert_algebraic">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -3027,7 +3027,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Algebraic Curves (not available yet)</string>
    </property>
   </action>
-  <action name="actionInsertBezier" >
+  <action name="action_insert_bezier" >
    <property name="checkable" >
     <bool>true</bool>
    </property>
@@ -3046,7 +3046,7 @@ QLabel#VisibleIcon:hover, QLabel#DrawHeader:hover {
     <string>Bezier Polygons</string>
    </property>
   </action>
-  <action name="actionInsertPolyline" >
+  <action name="action_insert_polyline" >
    <property name="checkable" >
     <bool>true</bool>
    </property>

@@ -38,7 +38,7 @@ struct Polyline_X_monotone_bbox {
   /*! obtains the bounding box of an x-monotone polyline.
    */
   template <typename X_monotone_polyline_segment_2>
-  CGAL::Bbox_2 operator()(const X_monotone_polyline_segment_2& aC) const { return aC.bbox(); }
+  CGAL::Bbox_2 operator()(const X_monotone_polyline_segment_2& a_c) const { return a_c.bbox(); }
 };
 
 /*! Bounds a polyline.
@@ -47,10 +47,10 @@ struct Polyline_bbox {
   /*! obtains the bounding box of a polyline.
    */
   template <typename Polyline_segment_2>
-  CGAL::Bbox_2 operator()(const Polyline_segment_2& aC) const {
-    auto n = aC.number_of_subcurves();
+  CGAL::Bbox_2 operator()(const Polyline_segment_2& a_c) const {
+    auto n = a_c.number_of_subcurves();
     Bbox_2 bbox;
-    for (std::size_t i = 0; i < n; ++i) bbox = (i > 0) ? (bbox + aC[i].bbox()) : aC[i].bbox();
+    for (std::size_t i = 0; i < n; ++i) bbox = (i > 0) ? (bbox + a_c[i].bbox()) : a_c[i].bbox();
     return bbox;
   }
 };
@@ -62,7 +62,7 @@ struct Draw_polyline_X_monotone_curve {
    * starts a new subpath.
    */
   template <typename X_monotone_polyline_segment_2, typename Path>
-  void operator()(const X_monotone_polyline_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const X_monotone_polyline_segment_2& curve, Path& a_path, int a_idx) const {
     using Point = Point_2<Kernel>;
     using Converter = CGAL::Qt::Converter<Kernel>;
     Converter convert;
@@ -71,9 +71,9 @@ struct Draw_polyline_X_monotone_curve {
     Point pt(CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().x()),
              CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().y()));
 
-    if (aIdx == 0) aPath.moveTo(convert(ps));
-    else aPath.lineTo(convert(ps));
-    aPath.lineTo(convert(pt));
+    if (a_idx == 0) a_path.moveTo(convert(ps));
+    else a_path.lineTo(convert(ps));
+    a_path.lineTo(convert(pt));
   }
 };
 
@@ -84,7 +84,7 @@ struct Draw_polyline_curve {
    * subpath.
    */
   template <typename Polyline_segment_2, class Path>
-  void operator()(const Polyline_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const Polyline_segment_2& curve, Path& a_path, int a_idx) const {
     using Point = Point_2<Kernel>;
     using Converter = Qt::Converter<Kernel>;
     Converter convert;
@@ -93,9 +93,9 @@ struct Draw_polyline_curve {
     Point pt(CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().x()),
              CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().y()));
 
-    if (aIdx == 0) aPath.moveTo(convert(ps));
-    else aPath.lineTo(convert(ps));
-    aPath.lineTo(convert(pt));
+    if (a_idx == 0) a_path.moveTo(convert(ps));
+    else a_path.lineTo(convert(ps));
+    a_path.lineTo(convert(pt));
   }
 };
 
@@ -109,7 +109,7 @@ class Polyline_boundary_pieces_graphics_item :
 public:
   /*! constructs from the polylines.
    */
-  Polyline_boundary_pieces_graphics_item(Polyline_boundary_pieces* aPieces) : Base(aPieces) {}
+  Polyline_boundary_pieces_graphics_item(Polyline_boundary_pieces* a_pieces) : Base(a_pieces) {}
 };
 
 /*! A graphics item that draws a set of polygons bounded by polylines.
@@ -122,7 +122,7 @@ class Polyline_set_graphics_item :
 public:
   /*! constructs from the set.
    */
-  Polyline_set_graphics_item(Polyline_set* aSet) : Base(aSet) {}
+  Polyline_set_graphics_item(Polyline_set* a_set) : Base(a_set) {}
 };
 
 } // namespace Qt

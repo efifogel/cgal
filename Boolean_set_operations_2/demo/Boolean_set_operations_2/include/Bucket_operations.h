@@ -31,53 +31,53 @@
 #include "Curve_set.h"
 
 // The Boolean operations on buckets.
-enum class Bucket_op { Complement, Intersection, Join, Difference, Symmetric_difference };
+enum class Bucket_op { BO_COMPLEMENT, BO_INTERSECTION, BO_JOIN, BO_DIFFERENCE, SYMMETRIC_DIFFERENCE };
 
 /*! obtains the name of a Boolean operation in the program (the method of Polygon_set_2).
  */
-inline const char* method_name(Bucket_op aOp) {
-  switch (aOp) {
-   case Bucket_op::Complement: return "complement";
-   case Bucket_op::Intersection: return "intersection";
-   case Bucket_op::Join: return "join";
-   case Bucket_op::Difference: return "difference";
-   case Bucket_op::Symmetric_difference: return "symmetric_difference";
+inline const char* method_name(Bucket_op a_op) {
+  switch (a_op) {
+   case Bucket_op::BO_COMPLEMENT: return "complement";
+   case Bucket_op::BO_INTERSECTION: return "intersection";
+   case Bucket_op::BO_JOIN: return "join";
+   case Bucket_op::BO_DIFFERENCE: return "difference";
+   case Bucket_op::SYMMETRIC_DIFFERENCE: return "symmetric_difference";
   }
   return "";
 }
 
 /*! replaces a set with the result of a Boolean operation (other than the complement) on two sets.
  */
-inline void apply(Bucket_op aOp, Curve_set& rSet, const Curve_set& aFirst, const Curve_set& aSecond) {
-  switch (aOp) {
-   case Bucket_op::Intersection: rSet.intersect(aFirst, aSecond); break;
-   case Bucket_op::Join: rSet.join(aFirst, aSecond); break;
-   case Bucket_op::Difference: rSet.difference(aFirst, aSecond); break;
-   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aFirst, aSecond); break;
+inline void apply(Bucket_op a_op, Curve_set& r_set, const Curve_set& a_first, const Curve_set& a_second) {
+  switch (a_op) {
+   case Bucket_op::BO_INTERSECTION: r_set.intersect(a_first, a_second); break;
+   case Bucket_op::BO_JOIN: r_set.join(a_first, a_second); break;
+   case Bucket_op::BO_DIFFERENCE: r_set.difference(a_first, a_second); break;
+   case Bucket_op::SYMMETRIC_DIFFERENCE: r_set.symmetric_difference(a_first, a_second); break;
    default: break;
   }
 }
 
 /*! applies a Boolean operation (other than the complement) to a set and another set, in place.
  */
-inline void apply(Bucket_op aOp, Curve_set& rSet, const Curve_set& aOther) {
-  switch (aOp) {
-   case Bucket_op::Intersection: rSet.intersect(aOther); break;
-   case Bucket_op::Join: rSet.join(aOther); break;
-   case Bucket_op::Difference: rSet.difference(aOther); break;
-   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aOther); break;
+inline void apply(Bucket_op a_op, Curve_set& r_set, const Curve_set& a_other) {
+  switch (a_op) {
+   case Bucket_op::BO_INTERSECTION: r_set.intersect(a_other); break;
+   case Bucket_op::BO_JOIN: r_set.join(a_other); break;
+   case Bucket_op::BO_DIFFERENCE: r_set.difference(a_other); break;
+   case Bucket_op::SYMMETRIC_DIFFERENCE: r_set.symmetric_difference(a_other); break;
    default: break;
   }
 }
 
 /*! applies a Boolean operation (other than the complement) to a linear set and a polygon, in place.
  */
-inline void apply(Bucket_op aOp, Linear_polygon_set& rSet, const Linear_polygon_with_holes& aPolygon) {
-  switch (aOp) {
-   case Bucket_op::Intersection: rSet.intersection(aPolygon); break;
-   case Bucket_op::Join: rSet.join(aPolygon); break;
-   case Bucket_op::Difference: rSet.difference(aPolygon); break;
-   case Bucket_op::Symmetric_difference: rSet.symmetric_difference(aPolygon); break;
+inline void apply(Bucket_op a_op, Linear_polygon_set& r_set, const Linear_polygon_with_holes& a_polygon) {
+  switch (a_op) {
+   case Bucket_op::BO_INTERSECTION: r_set.intersection(a_polygon); break;
+   case Bucket_op::BO_JOIN: r_set.join(a_polygon); break;
+   case Bucket_op::BO_DIFFERENCE: r_set.difference(a_polygon); break;
+   case Bucket_op::SYMMETRIC_DIFFERENCE: r_set.symmetric_difference(a_polygon); break;
    default: break;
   }
 }

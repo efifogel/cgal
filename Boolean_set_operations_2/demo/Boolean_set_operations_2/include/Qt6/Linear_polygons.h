@@ -38,7 +38,7 @@ struct Linear_X_monotone_bbox {
   /*! obtains the bounding box of an x-monotone segment.
    */
   template <typename X_monotone_linear_segment_2>
-  CGAL::Bbox_2 operator()(const X_monotone_linear_segment_2& aC) const { return aC.bbox(); }
+  CGAL::Bbox_2 operator()(const X_monotone_linear_segment_2& a_c) const { return a_c.bbox(); }
 };
 
 /*! Bounds a segment.
@@ -47,11 +47,11 @@ struct Linear_bbox {
   /*! obtains the bounding box of a segment.
    */
   template <class Linear_segment_2>
-  CGAL::Bbox_2 operator()(const Linear_segment_2& aC) const {
-    double x_min = to_double(aC.source().x());
-    double x_max = to_double(aC.target().x());
-    double y_min = to_double(aC.source().y());
-    double y_max = to_double(aC.target().y());
+  CGAL::Bbox_2 operator()(const Linear_segment_2& a_c) const {
+    double x_min = to_double(a_c.source().x());
+    double x_max = to_double(a_c.target().x());
+    double y_min = to_double(a_c.source().y());
+    double y_max = to_double(a_c.target().y());
     if (x_min > x_max) {
       std::swap(x_min, x_max);
       std::swap(y_min, y_max);
@@ -67,7 +67,7 @@ struct Draw_linear_X_monotone_curve {
   /*! adds an x-monotone segment to the path. The first curve (of index 0) starts a new subpath.
    */
   template <typename X_monotone_linear_segment_2, typename Path>
-  void operator()(const X_monotone_linear_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const X_monotone_linear_segment_2& curve, Path& a_path, int a_idx) const {
     using Linear_point = Point_2<Kernel>;
     using Converter = CGAL::Qt::Converter<Kernel>;
     Converter convert;
@@ -75,9 +75,9 @@ struct Draw_linear_X_monotone_curve {
     Linear_point ps(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
     Linear_point pt(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
 
-    if (aIdx == 0) aPath.moveTo(convert(ps));
-    else aPath.lineTo(convert(ps));
-    aPath.lineTo(convert(pt));
+    if (a_idx == 0) a_path.moveTo(convert(ps));
+    else a_path.lineTo(convert(ps));
+    a_path.lineTo(convert(pt));
   }
 };
 
@@ -87,7 +87,7 @@ struct Draw_linear_curve {
   /*! adds a segment to the path. The first curve (of index 0) starts a new subpath.
    */
   template <typename Linear_segment_2, class Path>
-  void operator()(const Linear_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const Linear_segment_2& curve, Path& a_path, int a_idx) const {
     using Linear_point = Point_2<Kernel>;
     using Converter = Qt::Converter<Kernel>;
     Converter convert;
@@ -95,9 +95,9 @@ struct Draw_linear_curve {
     Linear_point ps(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
     Linear_point pt(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
 
-    if (aIdx == 0) aPath.moveTo(convert(ps));
-    else aPath.lineTo(convert(ps));
-    aPath.lineTo(convert(pt));
+    if (a_idx == 0) a_path.moveTo(convert(ps));
+    else a_path.lineTo(convert(ps));
+    a_path.lineTo(convert(pt));
   }
 };
 
@@ -111,7 +111,7 @@ class Linear_boundary_pieces_graphics_item :
 public:
   /*! constructs from the segments.
    */
-  Linear_boundary_pieces_graphics_item(Linear_boundary_pieces* aPieces) : Base(aPieces) {}
+  Linear_boundary_pieces_graphics_item(Linear_boundary_pieces* a_pieces) : Base(a_pieces) {}
 };
 
 /*! A graphics item that draws a set of linear polygons.
@@ -124,7 +124,7 @@ class Linear_set_graphics_item :
 public:
   /*! constructs from the set.
    */
-  Linear_set_graphics_item(Linear_set* aSet) : Base(aSet) {}
+  Linear_set_graphics_item(Linear_set* a_set) : Base(a_set) {}
 };
 
 } // namespace Qt

@@ -48,8 +48,8 @@ inline const Conic_traits& conic_drawing_traits() {
 struct Conic_X_monotone_bbox {
   /*! obtains the bounding box of an x-monotone conic arc.
    */
-  Bbox_2 operator()(const Conic_X_monotone_curve& aXcv) const
-  { return conic_drawing_traits().construct_bbox_2_object()(aXcv); }
+  Bbox_2 operator()(const Conic_X_monotone_curve& a_xcv) const
+  { return conic_drawing_traits().construct_bbox_2_object()(a_xcv); }
 };
 
 /*! Draws an x-monotone conic arc as a polyline from its source to its target.
@@ -59,14 +59,14 @@ struct Draw_conic_X_monotone_curve {
    * new subpath.
    */
   template <typename Path>
-  void operator()(const Conic_X_monotone_curve& aXcv, Path& aPath, int aIdx) const {
+  void operator()(const Conic_X_monotone_curve& a_xcv, Path& a_path, int a_idx) const {
     using Approx_point = Conic_traits::Approximate_2::Approximate_point_2;
     std::vector<Approx_point> points;
-    conic_drawing_traits().approximate_2_object()(aXcv, 0.05, std::back_inserter(points), aXcv.is_directed_right());
+    conic_drawing_traits().approximate_2_object()(a_xcv, 0.05, std::back_inserter(points), a_xcv.is_directed_right());
     for (std::size_t i = 0; i < points.size(); ++i) {
       QPointF p(points[i].x(), points[i].y());
-      if ((aIdx == 0) && (i == 0)) aPath.moveTo(p);
-      else aPath.lineTo(p);
+      if ((a_idx == 0) && (i == 0)) a_path.moveTo(p);
+      else a_path.lineTo(p);
     }
   }
 };
@@ -83,7 +83,7 @@ using Conic_GI = Piecewise_set_graphics_item<Conic_polygon_set, Draw_conic_X_mon
  */
 class Conic_shape {
 public:
-  enum Kind { LINE, ELLIPSE, HYPERBOLA, PARABOLA };
+  enum class Kind { KI_LINE, KI_ELLIPSE, KI_HYPERBOLA, KI_PARABOLA };
 
   /*! constructs default.
    */
@@ -91,10 +91,10 @@ public:
 
   /*! constructs from the kind of the conic and its six coefficients.
    */
-  Conic_shape(Kind aKind, const double* aC) : m_kind(aKind) {
-    for (int i = 0; i < 6; ++i) m_c[i] = aC[i];
+  Conic_shape(Kind a_kind, const double* a_c) : m_kind(a_kind) {
+    for (int i = 0; i < 6; ++i) m_c[i] = a_c[i];
     double r = m_c[0], s = m_c[1], t = m_c[2], u = m_c[3], v = m_c[4], w = m_c[5];
-    if (m_kind == LINE) {
+    if (m_kind == Kind::KI_LINE) {
       double n2 = u*u + v*v;
       m_p0 = QPointF(-w*u/n2, -w*v/n2);
       m_e1 = QPointF(-v, u) / std::sqrt(n2);
@@ -103,11 +103,11 @@ public:
     // The eigenvalues and eigenvectors of [[r, t/2], [t/2, s]].
     double m = (r + s) / 2, d = std::hypot((r - s) / 2, t / 2);
     double l1 = m + d, l2 = m - d;
-    if (m_kind == PARABOLA) {
+    if (m_kind == Kind::KI_PARABOLA) {
       // The nonzero eigenvalue comes first.
       if (std::abs(l1) < std::abs(l2)) std::swap(l1, l2);
     }
-    else if (m_kind == HYPERBOLA) {
+    else if (m_kind == Kind::KI_HYPERBOLA) {
       // The first axis is the one that crosses the curve.
       double cx, cy;
       center(cx, cy);
@@ -116,7 +116,7 @@ public:
     }
     m_e1 = eigenvector(l1);
     m_e2 = QPointF(-m_e1.y(), m_e1.x());
-    if (m_kind == PARABOLA) {
+    if (m_kind == Kind::KI_PARABOLA) {
       m_lambda = l1;
       m_g = u * m_e1.x() + v * m_e1.y();
       m_h = u * m_e2.x() + v * m_e2.y();
@@ -136,54 +136,54 @@ public:
 
   /*! determines whether the conic is bounded (an ellipse).
    */
-  bool is_bounded() const { return m_kind == ELLIPSE; }
+  bool is_bounded() const { return m_kind == Kind::KI_ELLIPSE; }
 
   /*! obtains the point of a given parameter on a given branch.
    */
-  QPointF point(int aBranch, double aTau) const {
+  QPointF point(int a_branch, double a_tau) const {
     switch (m_kind) {
-     case LINE: return m_p0 + aTau * m_e1;
-     case ELLIPSE: return m_c0 + m_a*std::cos(aTau)*m_e1 + m_b*std::sin(aTau)*m_e2;
-     case HYPERBOLA: return m_c0 + aBranch*m_a*std::cosh(aTau)*m_e1 + m_b*std::sinh(aTau)*m_e2;
-     case PARABOLA: return aTau*m_e1 - (m_lambda*aTau*aTau + m_g*aTau + m_c[5])/m_h*m_e2;
+     case Kind::KI_LINE: return m_p0 + a_tau * m_e1;
+     case Kind::KI_ELLIPSE: return m_c0 + m_a*std::cos(a_tau)*m_e1 + m_b*std::sin(a_tau)*m_e2;
+     case Kind::KI_HYPERBOLA: return m_c0 + a_branch*m_a*std::cosh(a_tau)*m_e1 + m_b*std::sinh(a_tau)*m_e2;
+     case Kind::KI_PARABOLA: return a_tau*m_e1 - (m_lambda*a_tau*a_tau + m_g*a_tau + m_c[5])/m_h*m_e2;
     }
     return QPointF();
   }
 
   /*! obtains the parameter and the branch of a point on the curve.
    */
-  void param(QPointF aP, int& rBranch, double& rTau) const {
-    rBranch = 1;
+  void param(QPointF a_p, int& r_branch, double& r_tau) const {
+    r_branch = 1;
     switch (m_kind) {
-     case LINE: rTau = dot(aP - m_p0, m_e1); return;
-     case ELLIPSE: {
-       QPointF q = aP - m_c0;
-       rTau = std::atan2(dot(q, m_e2) / m_b, dot(q, m_e1) / m_a);
+     case Kind::KI_LINE: r_tau = dot(a_p - m_p0, m_e1); return;
+     case Kind::KI_ELLIPSE: {
+       QPointF q = a_p - m_c0;
+       r_tau = std::atan2(dot(q, m_e2) / m_b, dot(q, m_e1) / m_a);
        return;
      }
-     case HYPERBOLA: {
-       QPointF q = aP - m_c0;
-       rBranch = (dot(q, m_e1) < 0) ? -1 : 1;
-       rTau = std::asinh(dot(q, m_e2) / m_b);
+     case Kind::KI_HYPERBOLA: {
+       QPointF q = a_p - m_c0;
+       r_branch = (dot(q, m_e1) < 0) ? -1 : 1;
+       r_tau = std::asinh(dot(q, m_e2) / m_b);
        return;
      }
-     case PARABOLA: rTau = dot(aP, m_e1); return;
+     case Kind::KI_PARABOLA: r_tau = dot(a_p, m_e1); return;
     }
   }
 
   /*! obtains polylines that approximate the curve within a given rectangle.
    */
-  std::vector<QPolygonF> curve(QRectF aRect) const {
+  std::vector<QPolygonF> curve(QRectF a_rect) const {
     std::vector<QPolygonF> res;
     double far = 0;
-    QPointF origin = (m_kind == LINE) ? m_p0 : (m_kind == PARABOLA) ? QPointF(0, 0) : m_c0;
-    for (QPointF corner : {aRect.topLeft(), aRect.topRight(), aRect.bottomLeft(), aRect.bottomRight()})
+    QPointF origin = (m_kind == Kind::KI_LINE) ? m_p0 : (m_kind == Kind::KI_PARABOLA) ? QPointF(0, 0) : m_c0;
+    for (QPointF corner : {a_rect.topLeft(), a_rect.topRight(), a_rect.bottomLeft(), a_rect.bottomRight()})
       far = std::max(far, std::hypot(corner.x() - origin.x(), corner.y() - origin.y()));
     switch (m_kind) {
-     case ELLIPSE: res.push_back(arc(1, 0, 2 * M_PI, 256)); break;
-     case LINE: res.push_back(arc(1, -far, far, 2)); break;
-     case PARABOLA: res.push_back(arc(1, -far, far, 800)); break;
-     case HYPERBOLA: {
+     case Kind::KI_ELLIPSE: res.push_back(arc(1, 0, 2 * M_PI, 256)); break;
+     case Kind::KI_LINE: res.push_back(arc(1, -far, far, 2)); break;
+     case Kind::KI_PARABOLA: res.push_back(arc(1, -far, far, 800)); break;
+     case Kind::KI_HYPERBOLA: {
        double tau = std::acosh(std::max(1.0, far / m_a)) + 0.1;
        res.push_back(arc(1, -tau, tau, 400));
        res.push_back(arc(-1, -tau, tau, 400));
@@ -193,38 +193,38 @@ public:
     return res;
   }
 
-  /*! obtains the polyline through aN+1 points equally spaced in the parameter range [aTau0, aTau1] of a branch.
+  /*! obtains the polyline through a_n+1 points equally spaced in the parameter range [a_tau0, a_tau1] of a branch.
    */
-  QPolygonF arc(int aBranch, double aTau0, double aTau1, int aN) const {
+  QPolygonF arc(int a_branch, double a_tau0, double a_tau1, int a_n) const {
     QPolygonF res;
-    for (int i = 0; i <= aN; ++i) res << point(aBranch, aTau0 + (aTau1 - aTau0) * i / aN);
+    for (int i = 0; i <= a_n; ++i) res << point(a_branch, a_tau0 + (a_tau1 - a_tau0) * i / a_n);
     return res;
   }
 
-  /*! obtains the arc from aSource to aTarget (both on the curve) and its middle point. On an ellipse, aCcw selects the
-   * counterclockwise arc (in the parameter space, which is counterclockwise in the plane).
+  /*! obtains the arc from a_source to a_target (both on the curve) and its middle point. On an ellipse, a_ccw selects
+   * the counterclockwise arc (in the parameter space, which is counterclockwise in the plane).
    * \return false if there is no such bounded arc (the points are on different branches of a hyperbola).
    */
-  bool arc(QPointF aSource, QPointF aTarget, bool aCcw, QPolygonF& rArc, QPointF& rMid) const {
+  bool arc(QPointF a_source, QPointF a_target, bool a_ccw, QPolygonF& r_arc, QPointF& r_mid) const {
     int b0, b1;
     double t0, t1;
-    param(aSource, b0, t0);
-    param(aTarget, b1, t1);
+    param(a_source, b0, t0);
+    param(a_target, b1, t1);
     if (b0 != b1) return false;
-    if (m_kind == ELLIPSE) {
-      if (aCcw) {
+    if (m_kind == Kind::KI_ELLIPSE) {
+      if (a_ccw) {
         while (t1 <= t0) t1 += 2 * M_PI;
       }
       else {
         while (t1 >= t0) t1 -= 2 * M_PI;
       }
     }
-    int n = (m_kind == LINE) ? 2 : std::max(16, int(std::abs(t1 - t0) / (2 * M_PI) * 256));
-    if (m_kind == PARABOLA || m_kind == HYPERBOLA) n = 200;
-    rArc = arc(b0, t0, t1, n);
-    rArc.front() = aSource;
-    rArc.back() = aTarget;
-    rMid = point(b0, (t0 + t1) / 2);
+    int n = (m_kind == Kind::KI_LINE) ? 2 : std::max(16, int(std::abs(t1 - t0) / (2 * M_PI) * 256));
+    if (m_kind == Kind::KI_PARABOLA || m_kind == Kind::KI_HYPERBOLA) n = 200;
+    r_arc = arc(b0, t0, t1, n);
+    r_arc.front() = a_source;
+    r_arc.back() = a_target;
+    r_mid = point(b0, (t0 + t1) / 2);
     return true;
   }
 
@@ -239,25 +239,25 @@ private:
 
   /*! obtains the center of a central conic: [[2r, t], [t, 2s]] c = -(u, v).
    */
-  void center(double& rX, double& rY) const {
+  void center(double& r_x, double& r_y) const {
     double r = m_c[0], s = m_c[1], t = m_c[2], u = m_c[3], v = m_c[4];
     double det = 4*r*s - t*t;
-    rX = (-u*2*s + v*t) / det;
-    rY = (-v*2*r + u*t) / det;
+    r_x = (-u*2*s + v*t) / det;
+    r_y = (-v*2*r + u*t) / det;
   }
 
   /*! obtains a unit eigenvector of [[r, t/2], [t/2, s]] of a given eigenvalue.
    */
-  QPointF eigenvector(double aL) const {
+  QPointF eigenvector(double a_l) const {
     double r = m_c[0], s = m_c[1], t = m_c[2];
-    QPointF v1(t / 2, aL - r), v2(aL - s, t / 2);
+    QPointF v1(t / 2, a_l - r), v2(a_l - s, t / 2);
     QPointF v = (dot(v1, v1) > dot(v2, v2)) ? v1 : v2;
     double n = std::sqrt(dot(v, v));
-    if (n == 0) return (std::abs(r - aL) < std::abs(s - aL)) ? QPointF(1, 0) : QPointF(0, 1);
+    if (n == 0) return (std::abs(r - a_l) < std::abs(s - a_l)) ? QPointF(1, 0) : QPointF(0, 1);
     return v / n;
   }
 
-  Kind m_kind = LINE;
+  Kind m_kind = Kind::KI_LINE;
   double m_c[6] = {0, 0, 0, 0, 0, 0};
   QPointF m_p0, m_c0, m_e1, m_e2;
   double m_a = 0, m_b = 0, m_lambda = 0, m_g = 0, m_h = 1;

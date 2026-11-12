@@ -32,15 +32,15 @@
 
 /*! shows a warning; the program proceeds.
  */
-void show_warning(std::string aS);
+void show_warning(std::string a_s);
 
 /*! shows an error; the operation does not proceed.
  */
-void show_error(std::string aS);
+void show_error(std::string a_s);
 
 /*! shows an error and throws a std::runtime_error.
  */
-void error(std::string aS);
+void error(std::string a_s);
 
 /*! handles a failed CGAL assertion or precondition by showing an error and throwing a std::runtime_error, except for a
  * few known harmless failures.

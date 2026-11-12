@@ -56,15 +56,14 @@ public:
   using Point = typename Traits::Rat_kernel::Point_2;
 
   using Bezier_curve_vector = std::vector<Bezier_curve>;
-  using const_bezier_curve_iterator = typename Bezier_curve_vector::const_iterator;
 
   using GI = Bezier_boundary_pieces_graphics_item<Bezier_curve_vector>;
 
   /*! constructs from the parent object and the scene.
    */
-  Graphics_view_bezier_polygon_input(QObject* aParent, QGraphicsScene* aScene) :
-    GraphicsViewInput(aParent),
-    m_scene(aScene),
+  Graphics_view_bezier_polygon_input(QObject* a_parent, QGraphicsScene* a_scene) :
+    GraphicsViewInput(a_parent),
+    m_scene(a_scene),
     m_bezier_GI(0),
     m_bezier_polygon_pen(QColor(0, 255, 0)),
     m_ongoing_curve_pen(QColor(255, 0, 0)),
@@ -72,7 +71,7 @@ public:
     m_bound_rect(true),
     m_last_bezier(false),
     m_last(false),
-    m_state(Start) {
+    m_state(State::ST_START) {
     m_ongoing_piece_GI = new GI(&m_ongoing_piece_ctr);
     m_handle0_GI = new QGraphicsLineItem();
     m_handle1_GI = new QGraphicsLineItem();
@@ -102,59 +101,60 @@ public:
   /*! handles the mouse and key events of the scene.
    * \return true if the event is handled.
    */
-  bool eventFilter(QObject* obj, QEvent* aEvent) {
+  bool eventFilter(QObject* obj, QEvent* a_event) {
     bool r_handled = false;
-    if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      r_handled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      r_handled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      r_handled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::KeyPress)
-      r_handled = key_press(static_cast<QKeyEvent*>(aEvent));
-    if (! r_handled) r_handled = QObject::eventFilter(obj, aEvent);
+    if (a_event->type() == QEvent::GraphicsSceneMousePress)
+      r_handled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::GraphicsSceneMouseRelease)
+      r_handled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::GraphicsSceneMouseMove)
+      r_handled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::KeyPress)
+      r_handled = key_press(static_cast<QKeyEvent*>(a_event));
+    if (! r_handled) r_handled = QObject::eventFilter(obj, a_event);
     return r_handled;
   }
 
 public:
-  enum State {
-    Start, Piece_or_first_handle_started, Piece_ongoing, First_handle_ongoing, Handle_ongoing, Piece_ended, Curve_ended
+  enum class State {
+    ST_START, PIECE_OR_FIRST_HANDLE_STARTED, PIECE_ONGOING, FIRST_HANDLE_ONGOING, HANDLE_ONGOING, PIECE_ENDED,
+    CURVE_ENDED
   };
 
   /*! converts a scene point to a point.
    */
-  Point cvt(const QPointF& aP) const { return Point(aP.x(), aP.y()); }
+  Point cvt(const QPointF& a_p) const { return Point(a_p.x(), a_p.y()); }
 
   /*! handles a mouse press. A right press while a curve is under construction lets the user set the handles of the
    * closing curve too.
    * \return true if the event is handled.
    */
-  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_press(QGraphicsSceneMouseEvent* a_event) {
     bool r_handled = false;
     m_bound_rect = false;
-    Point l_p = cvt(aEvent->scenePos());
-    if (aEvent->button() == ::Qt::LeftButton) {
+    Point l_p = cvt(a_event->scenePos());
+    if (a_event->button() == ::Qt::LeftButton) {
       switch (m_state) {
-       case Start:
+       case State::ST_START:
         m_p0 = l_p;
-        m_state = Piece_or_first_handle_started;
+        m_state = State::PIECE_OR_FIRST_HANDLE_STARTED;
         r_handled = true;
         break;
 
-       case Piece_ongoing:
+       case State::PIECE_ONGOING:
         m_p1 = l_p;
-        m_state = Handle_ongoing;
+        m_state = State::HANDLE_ONGOING;
         r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    else if (aEvent->button() == ::Qt::RightButton) {
+    else if (a_event->button() == ::Qt::RightButton) {
       switch (m_state) {
-       case Piece_ongoing:
+       case State::PIECE_ONGOING:
         m_last = true;
-        m_state = Handle_ongoing;
+        m_state = State::HANDLE_ONGOING;
         r_handled = true;
         break;
 
@@ -167,27 +167,27 @@ public:
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_move(QGraphicsSceneMouseEvent* a_event) {
     bool r_handled = false;
-    Point l_p = cvt(aEvent->scenePos());
+    Point l_p = cvt(a_event->scenePos());
     switch (m_state) {
-     case Piece_or_first_handle_started:
-      m_state = First_handle_ongoing;
+     case State::PIECE_OR_FIRST_HANDLE_STARTED:
+      m_state = State::FIRST_HANDLE_ONGOING;
       r_handled = true;
       break;
 
-     case Piece_ongoing:
+     case State::PIECE_ONGOING:
       m_p1 = l_p;
       update_ongoing_piece();
       r_handled = true;
       break;
 
-     case First_handle_ongoing:
+     case State::FIRST_HANDLE_ONGOING:
       update_very_first_handle(l_p);
       r_handled = true;
       break;
 
-     case Handle_ongoing:
+     case State::HANDLE_ONGOING:
       if (m_last) {
         m_p1 = m_bezier_polygon_pieces.front().control_point(0);
         m_last_bezier = true;
@@ -197,8 +197,8 @@ public:
       r_handled = true;
       break;
 
-     case Piece_ended:
-      m_state = Piece_ongoing;
+     case State::PIECE_ENDED:
+      m_state = State::PIECE_ONGOING;
       r_handled = true;
       break;
     }
@@ -208,37 +208,37 @@ public:
   /*! handles a mouse release. A right release closes the polygon.
    * \return true if the event is handled.
    */
-  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
+  bool mouse_release(QGraphicsSceneMouseEvent* a_event) {
     bool r_handled = false;
-    Point l_p = cvt(aEvent->scenePos());
-    if (aEvent->button() == ::Qt::LeftButton) {
+    Point l_p = cvt(a_event->scenePos());
+    if (a_event->button() == ::Qt::LeftButton) {
       switch (m_state) {
-       case Piece_or_first_handle_started:
-        m_state = Piece_ongoing;
+       case State::PIECE_OR_FIRST_HANDLE_STARTED:
+        m_state = State::PIECE_ONGOING;
         r_handled = true;
         break;
 
-       case First_handle_ongoing:
+       case State::FIRST_HANDLE_ONGOING:
         update_very_first_handle(l_p);
         m_prev_h0 = m_h1;
         m_h1 = std::optional<Point>();
-        m_state = Piece_ongoing;
+        m_state = State::PIECE_ONGOING;
         r_handled = true;
         break;
 
-       case Handle_ongoing:
+       case State::HANDLE_ONGOING:
         update_handles(l_p);
         commit_ongoing_piece(l_p);
-        m_state = Piece_ended;
+        m_state = State::PIECE_ENDED;
         r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    else if (aEvent->button() == ::Qt::RightButton) {
+    else if (a_event->button() == ::Qt::RightButton) {
       switch (m_state) {
-       case Handle_ongoing:
+       case State::HANDLE_ONGOING:
         m_bound_rect = false;
         if (m_last_bezier) {
           hide_handles();
@@ -259,16 +259,16 @@ public:
   /*! handles a key press. Delete and Backspace remove the last curve; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool key_press(QKeyEvent* aEvent) {
+  bool key_press(QKeyEvent* a_event) {
     bool r_handled = false;
-    if (aEvent->key() == ::Qt::Key_Delete || aEvent->key() == ::Qt::Key_Backspace) {
+    if (a_event->key() == ::Qt::Key_Delete || a_event->key() == ::Qt::Key_Backspace) {
       remove_last_piece();
-      m_state = m_bezier_polygon_pieces.size() > 0 ? Piece_ended : Start;
+      m_state = m_bezier_polygon_pieces.size() > 0 ? State::PIECE_ENDED : State::ST_START;
       r_handled = true;
     }
-    else if (aEvent->key() == ::Qt::Key_Escape) {
+    else if (a_event->key() == ::Qt::Key_Escape) {
       reset();
-      m_state = Start;
+      m_state = State::ST_START;
       r_handled = true;
     }
     return r_handled;
@@ -283,7 +283,7 @@ public:
    */
   void restart() {
     m_prev_h0 = m_h0 = m_h1 = std::optional<Point>();
-    m_state = Start;
+    m_state = State::ST_START;
   }
 
   /*! discards the polygon under construction.
@@ -347,13 +347,13 @@ public:
 
   /*! determines whether a curve is degenerate, that is, its endpoints coincide.
    */
-  static bool is_degenerate(const Bezier_curve& aCurve) {
-    return aCurve.control_point(0) == aCurve.control_point(aCurve.number_of_control_points() - 1);
+  static bool is_degenerate(const Bezier_curve& a_curve) {
+    return a_curve.control_point(0) == a_curve.control_point(a_curve.number_of_control_points() - 1);
   }
 
   /*! adds the curve under construction to the polygon (unless it is degenerate), and starts the next curve.
    */
-  void commit_ongoing_piece(const Point& aP) {
+  void commit_ongoing_piece(const Point& a_p) {
     if (! ongoing_piece()) return;
     if (! is_degenerate(*ongoing_piece())) {
       m_bezier_polygon_pieces.push_back(*ongoing_piece());
@@ -362,16 +362,16 @@ public:
     m_ongoing_piece_ctr.clear();
     m_ongoing_piece_GI->modelChanged();
     m_p0 = m_p1;
-    m_p1 = aP;
+    m_p1 = a_p;
     m_prev_h0 = m_h0;
     m_h0 = m_h1 = std::optional<Point>();
   }
 
   /*! updates the handle of the first vertex; it is shown only when it is at least 3 units long.
    */
-  void update_very_first_handle(const Point& aP) {
-    if (squared_distance(m_p0, aP) >= 9) {
-      m_h1 = aP;
+  void update_very_first_handle(const Point& a_p) {
+    if (squared_distance(m_p0, a_p) >= 9) {
+      m_h1 = a_p;
       m_handle1_GI->setLine(to_double(m_p0.x()), to_double(m_p0.y()), to_double(m_h1->x()), to_double(m_h1->y()));
       m_handle1_GI->show();
       m_h0 = std::optional<Point>();
@@ -386,10 +386,10 @@ public:
   /*! updates the two (symmetric) handles of the current vertex; they are shown only when they are at least 3 units
    * long.
    */
-  void update_handles(const Point& aP) {
-    if (squared_distance(m_p1, aP) >= 9) {
-      m_h0 = aP;
-      m_h1 = m_p1 - (aP - m_p1);
+  void update_handles(const Point& a_p) {
+    if (squared_distance(m_p1, a_p) >= 9) {
+      m_h0 = a_p;
+      m_h1 = m_p1 - (a_p - m_p1);
       m_handle0_GI->setLine(to_double(m_p1.x()), to_double(m_p1.y()), to_double(m_h0->x()), to_double(m_h0->y()));
       m_handle1_GI->setLine(to_double(m_p1.x()), to_double(m_p1.y()), to_double(m_h1->x()), to_double(m_h1->y()));
       m_handle0_GI->show();
@@ -465,39 +465,39 @@ public:
     m_bound_rect = true;
 
     m_p0 = Point(-15500000, -10000000);
-    m_state = Piece_or_first_handle_started;
+    m_state = State::PIECE_OR_FIRST_HANDLE_STARTED;
 
-    m_state = Piece_ongoing;
+    m_state = State::PIECE_ONGOING;
     m_p1 = Point(-15500000, 10000000);
     update_ongoing_piece();
 
     m_p1 = Point(-15500000, 10000000);
-    m_state = Handle_ongoing;
+    m_state = State::HANDLE_ONGOING;
     update_handles(Point(-15500000, 10000000));
     commit_ongoing_piece(Point(-15500000, 10000000));
-    m_state = Piece_ended;
+    m_state = State::PIECE_ENDED;
 
-    m_state = Piece_ongoing;
+    m_state = State::PIECE_ONGOING;
     m_p1 = Point(15500000, 10000000);
     update_ongoing_piece();
 
     m_p1 = Point(15500000, 10000000);
-    m_state = Handle_ongoing;
+    m_state = State::HANDLE_ONGOING;
     update_handles(Point(15500000, 10000000));
     commit_ongoing_piece(Point(15500000, 10000000));
-    m_state = Piece_ended;
+    m_state = State::PIECE_ENDED;
 
-    m_state = Piece_ongoing;
+    m_state = State::PIECE_ONGOING;
     m_p1 = Point(15500000, -10000000);
     update_ongoing_piece();
 
     m_p1 = Point(15500000, -10000000);
-    m_state = Handle_ongoing;
+    m_state = State::HANDLE_ONGOING;
     update_handles(Point(15500000, -10000000));
     commit_ongoing_piece(Point(15500000, -10000000));
-    m_state = Piece_ended;
+    m_state = State::PIECE_ENDED;
 
-    m_state = Piece_ongoing;
+    m_state = State::PIECE_ONGOING;
     m_p1 = Point(-9000000, -9000000);
     update_ongoing_piece();
 
@@ -528,7 +528,7 @@ public:
   Bezier_curve_vector m_bezier_polygon_pieces;
   Bezier_curve_vector m_ongoing_piece_ctr;
 
-  int m_state;
+  State m_state;
 
   Point m_p0;
   Point m_p1;

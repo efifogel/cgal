@@ -42,7 +42,7 @@ struct Circular_X_monotone_bbox {
   /*! obtains the bounding box of an x-monotone circle segment.
    */
   template <class X_monotone_circle_segment_2>
-  CGAL::Bbox_2 operator()(const X_monotone_circle_segment_2& aC) const { return aC.bbox(); }
+  CGAL::Bbox_2 operator()(const X_monotone_circle_segment_2& a_c) const { return a_c.bbox(); }
 };
 
 /*! Bounds a circle segment (a circular arc or a line segment).
@@ -52,12 +52,12 @@ struct Circular_bbox
   /*! obtains a bounding box of a circle segment. The box of an arc is the box of its supporting circle.
    */
   template <class Circle_segment_2>
-  CGAL::Bbox_2 operator()(const Circle_segment_2& aC) const {
-    if (aC.is_circular()) return aC.supporting_circle().bbox();
-    double x_min = to_double(aC.source().x());
-    double x_max = to_double(aC.target().x());
-    double y_min = to_double(aC.source().y());
-    double y_max = to_double(aC.target().y());
+  CGAL::Bbox_2 operator()(const Circle_segment_2& a_c) const {
+    if (a_c.is_circular()) return a_c.supporting_circle().bbox();
+    double x_min = to_double(a_c.source().x());
+    double x_max = to_double(a_c.target().x());
+    double y_min = to_double(a_c.source().y());
+    double y_max = to_double(a_c.target().y());
     if (x_min > x_max) {
       std::swap(x_min, x_max);
       std::swap(y_min, y_max);
@@ -73,16 +73,16 @@ struct Draw_circular_X_monotone_curve {
   /*! adds an x-monotone circle segment to the path. The first curve (of index 0) starts a new subpath.
    */
   template <typename X_monotone_circle_segment_2, typename Path>
-  void operator()(const X_monotone_circle_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const X_monotone_circle_segment_2& curve, Path& a_path, int a_idx) const {
     using Converter = Qt::Converter<Kernel>;
     Converter convert;
 
     if (! curve.is_circular()) {
-      Circular_Linear_point lS(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
-      Circular_Linear_point lT(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
-      if (aIdx == 0) aPath.moveTo(convert(lS));
-      else aPath.lineTo(convert(lS));
-      aPath.lineTo(convert(lT));
+      Circular_Linear_point l_s(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
+      Circular_Linear_point l_t(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
+      if (a_idx == 0) a_path.moveTo(convert(l_s));
+      else a_path.lineTo(convert(l_s));
+      a_path.lineTo(convert(l_t));
       return;
     }
 
@@ -100,8 +100,8 @@ struct Draw_circular_X_monotone_curve {
 
     bool degenerate = (sx == tx) && (sy == ty);
     if (degenerate) {
-      if (aIdx == 0) aPath.moveTo(sx, sy);
-      aPath.lineTo(sx, sy);
+      if (a_idx == 0) a_path.moveTo(sx, sy);
+      a_path.lineTo(sx, sy);
       return;
     }
 
@@ -119,23 +119,23 @@ struct Draw_circular_X_monotone_curve {
 
     double aspan = atarget - asource;
     const double to_deg = 180.0 / CGAL_PI;
-    Orientation lO = curve.orientation();
+    Orientation l_o = curve.orientation();
 
-    if (lO == CLOCKWISE) aspan = 2.0 * CGAL_PI - aspan;
+    if (l_o == CLOCKWISE) aspan = 2.0 * CGAL_PI - aspan;
 
-    if (aIdx == 0) aPath.moveTo(sx, sy);
-    else aPath.lineTo(sx, sy);
+    if (a_idx == 0) a_path.moveTo(sx, sy);
+    else a_path.lineTo(sx, sy);
 
     QRectF bbox = convert(circ.bbox());
     double dasource = std::atan2(-sdy, sdx) * to_deg;
-    double daspan = aspan * to_deg * (lO == COUNTERCLOCKWISE ? -1.0 : +1.0);
+    double daspan = aspan * to_deg * (l_o == COUNTERCLOCKWISE ? -1.0 : +1.0);
 
     // Prevent the approximations from turning a tiny arc into a full circle by inverting the relative ordering of the
     // source and target angles. (An x-monotone arc never spans an angle greater than pi.)
-    if (daspan < 270) aPath.arcTo(bbox, dasource, daspan);
+    if (daspan < 270) a_path.arcTo(bbox, dasource, daspan);
     else {
-      if (aIdx == 0) aPath.moveTo(sx, sy);
-      aPath.lineTo(sx, sy);
+      if (a_idx == 0) a_path.moveTo(sx, sy);
+      a_path.lineTo(sx, sy);
     }
   }
 };
@@ -146,16 +146,16 @@ struct Draw_circular_curve {
   /*! adds a circle segment to the path. The first curve (of index 0) starts a new subpath.
    */
   template <typename Circle_segment_2, typename Path>
-  void operator()(const Circle_segment_2& curve, Path& aPath, int aIdx) const {
+  void operator()(const Circle_segment_2& curve, Path& a_path, int a_idx) const {
     using Converter = Qt::Converter<Kernel>;
     Converter convert;
 
     if (! curve.is_circular()) {
-      Circular_Linear_point lS(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
-      Circular_Linear_point lT(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
-      if (aIdx == 0) aPath.moveTo(convert(lS));
-      else aPath.lineTo(convert(lS));
-      aPath.lineTo(convert(lT));
+      Circular_Linear_point l_s(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
+      Circular_Linear_point l_t(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
+      if (a_idx == 0) a_path.moveTo(convert(l_s));
+      else a_path.lineTo(convert(l_s));
+      a_path.lineTo(convert(l_t));
       return;
     }
 
@@ -188,18 +188,18 @@ struct Draw_circular_curve {
 
     double aspan = atarget - asource;
     const double to_deg = 180.0 / CGAL_PI;
-    Orientation lO = curve.orientation();
+    Orientation l_o = curve.orientation();
 
-    if (lO == CLOCKWISE) aspan = 2.0 * CGAL_PI - aspan;
+    if (l_o == CLOCKWISE) aspan = 2.0 * CGAL_PI - aspan;
 
-    if (aIdx == 0) aPath.moveTo(sx, sy);
-    else aPath.lineTo(sx, sy);
+    if (a_idx == 0) a_path.moveTo(sx, sy);
+    else a_path.lineTo(sx, sy);
 
     QRectF bbox = convert(circ.bbox());
     double dasource = std::atan2(-sdy, sdx) * to_deg;
-    double daspan = aspan * to_deg * (lO == COUNTERCLOCKWISE ? -1.0 : +1.0);
+    double daspan = aspan * to_deg * (l_o == COUNTERCLOCKWISE ? -1.0 : +1.0);
 
-    aPath.arcTo(bbox, dasource, daspan);
+    a_path.arcTo(bbox, dasource, daspan);
   }
 };
 
@@ -214,7 +214,7 @@ class Circular_boundary_pieces_graphics_item :
 public:
   /*! constructs from the circle segments.
    */
-  Circular_boundary_pieces_graphics_item(Circular_boundary_pieces* aPieces) : Base(aPieces) {}
+  Circular_boundary_pieces_graphics_item(Circular_boundary_pieces* a_pieces) : Base(a_pieces) {}
 };
 
 /*! A graphics item that draws a set of circular polygons.
@@ -227,7 +227,7 @@ class Circular_set_graphics_item :
 public:
   /*! constructs from the set.
    */
-  Circular_set_graphics_item(Circular_set* aSet) : Base(aSet) {}
+  Circular_set_graphics_item(Circular_set* a_set) : Base(a_set) {}
 };
 
 } // namespace Qt

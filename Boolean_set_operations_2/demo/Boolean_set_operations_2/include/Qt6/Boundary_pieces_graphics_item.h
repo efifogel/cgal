@@ -45,11 +45,11 @@ class Boundary_pieces_graphics_item : public Piecewise_graphics_item_base {
 public:
   /*! constructs from the pieces, a functor that draws a piece, and a functor that bounds a piece.
    */
-  Boundary_pieces_graphics_item(Boundary_pieces* aBoundary, const Draw_piece& aPieceDrawer = Draw_piece(),
-                                const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    m_boundary(aBoundary),
-    m_piece_drawer(aPieceDrawer),
-    m_piece_BBox(aPieceBBox)
+  Boundary_pieces_graphics_item(Boundary_pieces* a_boundary, const Draw_piece& a_piece_drawer = Draw_piece(),
+                                const Piece_bbox& a_piece_bbox = Piece_bbox()) :
+    m_boundary(a_boundary),
+    m_piece_drawer(a_piece_drawer),
+    m_piece_BBox(a_piece_bbox)
   {}
 
   /*! determines whether there are no pieces.
@@ -59,17 +59,17 @@ public:
 protected:
   /*! extends the bounding box with the boxes of the pieces.
    */
-  virtual void update_bbox(Bbox_builder& aBboxBuilder) {
+  virtual void update_bbox(Bbox_builder& a_bbox_builder) {
     if (! m_boundary) return;
-    for (auto pit = m_boundary->begin(); pit != m_boundary->end(); ++pit) aBboxBuilder.add(m_piece_BBox(*pit));
+    for (auto pit = m_boundary->begin(); pit != m_boundary->end(); ++pit) a_bbox_builder.add(m_piece_BBox(*pit));
   }
 
   /*! adds the pieces to the path.
    */
-  virtual void draw_model(QPainterPath& aPath) {
+  virtual void draw_model(QPainterPath& a_path) {
     if (! m_boundary) return;
     int c = 0;
-    for (auto pit = m_boundary->begin(); pit != m_boundary->end(); ++pit, ++c) m_piece_drawer(*pit, aPath, c);
+    for (auto pit = m_boundary->begin(); pit != m_boundary->end(); ++pit, ++c) m_piece_drawer(*pit, a_path, c);
   }
 
 protected:
