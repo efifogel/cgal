@@ -82,7 +82,7 @@ public:
 
   /*! paints the model.
    */
-  void paint(QPainter* aPainter, const QStyleOptionGraphicsItem* aOption, QWidget* aWidget);
+  void paint(QPainter* a_painter, const QStyleOptionGraphicsItem* a_option, QWidget* a_widget);
 
   /*! obtains the brush.
    */
@@ -90,7 +90,7 @@ public:
 
   /*! sets the brush.
    */
-  void set_brush(const QBrush& aBrush) { m_brush = aBrush; }
+  void set_brush(const QBrush& a_brush) { m_brush = a_brush; }
 
   /*! obtains the pen.
    */
@@ -98,19 +98,19 @@ public:
 
   /*! sets the pen.
    */
-  void set_pen(const QPen& aPen) { m_pen = aPen; }
+  void set_pen(const QPen& a_pen) { m_pen = a_pen; }
 
 protected:
-  using ToQtConverter = Converter<Kernel>;
+  using To_qt_converter = Converter<Kernel>;
 
   /*! Accumulates bounding boxes.
    */
   struct Bbox_builder {
     /*! extends the box with a given box.
      */
-    void add(const Bbox_2& aBbox) {
-      if (bbox) bbox = *bbox + aBbox;
-      else bbox = aBbox;
+    void add(const Bbox_2& a_bbox) {
+      if (bbox) bbox = *bbox + a_bbox;
+      else bbox = a_bbox;
     }
 
     std::optional<Bbox_2> bbox;
@@ -123,11 +123,11 @@ protected:
 
   /*! adds the model to the path.
    */
-  virtual void draw_model(QPainterPath& aPath) = 0;
+  virtual void draw_model(QPainterPath& a_path) = 0;
 
   /*! extends the bounding box with the box of the model.
    */
-  virtual void update_bbox(Bbox_builder& aBBoxBuilder) = 0;
+  virtual void update_bbox(Bbox_builder& a_bbox_builder) = 0;
 
 protected:
   QRectF m_bounding_rect;
@@ -136,14 +136,14 @@ protected:
   QPen m_pen;
 };
 
-inline void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionGraphicsItem* /* aOption */,
-                                         QWidget* /* aWidget */) {
+inline void Piecewise_graphics_item_base::paint(QPainter* a_painter, const QStyleOptionGraphicsItem* /* a_option */,
+                                         QWidget* /* a_widget */) {
   if (is_model_empty()) return;
   QPainterPath l_path;
   draw_model(l_path);
-  aPainter->setPen(m_pen);
-  aPainter->setBrush(m_brush);
-  aPainter->drawPath(l_path);
+  a_painter->setPen(m_pen);
+  a_painter->setBrush(m_brush);
+  a_painter->drawPath(l_path);
 }
 
 // The bounding box only grows, so that when vertices get removed the maximal bbox gets refreshed in the GraphicsView.
@@ -160,7 +160,7 @@ inline void Piecewise_graphics_item_base::update_bounding_box() {
   update_bbox(l_bbox_builder);
   m_unbounded = l_bbox_builder.unbounded;
   if (l_bbox_builder.bbox) {
-    ToQtConverter to_Qt;
+    To_qt_converter to_Qt;
     m_bounding_rect = to_Qt(*l_bbox_builder.bbox);
   }
 }

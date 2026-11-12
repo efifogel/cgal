@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
   app.setApplicationName("Boolean_operations_2 demo");
   CGAL_QT_INIT_RESOURCES;
   try {
-    MainWindow w;
+    Main_window w;
     w.show();
     return app.exec();
   }

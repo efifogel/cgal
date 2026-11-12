@@ -62,7 +62,6 @@ public:
   using Vector = typename Kernel::Vector_2;
   using Point = typename Kernel::Point_2;
   using Polyline_curve_vector = std::vector<Polyline_curve>;
-  using const_polyline_curve_iterator = typename Polyline_curve_vector::const_iterator;
 
   using GI = Polyline_boundary_pieces_graphics_item<Polyline_curve_vector>;
 
@@ -72,30 +71,30 @@ public:
 
   /*! constructs from the parent object and the scene.
    */
-  Graphics_view_polyline_input(QObject* aParent, QGraphicsScene* aScene) :
-    GraphicsViewInput(aParent),
-    mScene(aScene),
-    mOngoingPieceGI(new GI(&mOngoingPieceCtr)),
-    mHandleGI(new QGraphicsLineItem()),
-    mPolylinePolygonPen(QColor(0, 255, 0)),
-    mOngoingCurvePen(QColor(255, 0, 0)),
-    mHandlePen(QColor(0, 0, 255)),
+  Graphics_view_polyline_input(QObject* a_parent, QGraphicsScene* a_scene) :
+    GraphicsViewInput(a_parent),
+    m_scene(a_scene),
+    m_ongoing_piece_GI(new GI(&m_ongoing_piece_ctr)),
+    m_handle_GI(new QGraphicsLineItem()),
+    m_polyline_polygon_pen(QColor(0, 255, 0)),
+    m_ongoing_curve_pen(QColor(255, 0, 0)),
+    m_handle_pen(QColor(0, 0, 255)),
     m_bound_rect(true),
     m_last_polyline(false),
     m_last(false),
-    mState(Start) {
-    mOngoingPieceGI->set_pen(mOngoingCurvePen);
-    mHandleGI->setPen(mHandlePen);
+    m_state(State::ST_START) {
+    m_ongoing_piece_GI->set_pen(m_ongoing_curve_pen);
+    m_handle_GI->setPen(m_handle_pen);
 
-    mHandleGI->setLine(0, 0, 1, 1);
-    mHandleGI->hide();
+    m_handle_GI->setLine(0, 0, 1, 1);
+    m_handle_GI->hide();
 
-    mPolylineGI = new GI(&mPolylinePolygonPieces);
-    mPolylineGI->set_pen(mPolylinePolygonPen);
+    m_polyline_GI = new GI(&m_polyline_polygon_pieces);
+    m_polyline_GI->set_pen(m_polyline_polygon_pen);
 
-    mScene->addItem(mOngoingPieceGI);
-    mScene->addItem(mHandleGI);
-    mScene->addItem(mPolylineGI);
+    m_scene->addItem(m_ongoing_piece_GI);
+    m_scene->addItem(m_handle_GI);
+    m_scene->addItem(m_polyline_GI);
   }
 
   /*! destructs.
@@ -105,259 +104,261 @@ public:
   /*! handles the mouse and key events of the scene.
    * \return true if the event is handled.
    */
-  bool eventFilter(QObject* obj, QEvent* aEvent) {
-    bool rHandled = false;
-    if (aEvent->type() == QEvent::GraphicsSceneMousePress)
-      rHandled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::GraphicsSceneMouseRelease)
-      rHandled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::GraphicsSceneMouseMove)
-      rHandled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(aEvent));
-    else if (aEvent->type() == QEvent::KeyPress)
-      rHandled = key_press(static_cast<QKeyEvent*>(aEvent));
-    if (! rHandled) rHandled = QObject::eventFilter(obj, aEvent);
-    return rHandled;
+  bool eventFilter(QObject* obj, QEvent* a_event) {
+    bool r_handled = false;
+    if (a_event->type() == QEvent::GraphicsSceneMousePress)
+      r_handled = mouse_press(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::GraphicsSceneMouseRelease)
+      r_handled = mouse_release(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::GraphicsSceneMouseMove)
+      r_handled = mouse_move(static_cast<QGraphicsSceneMouseEvent*>(a_event));
+    else if (a_event->type() == QEvent::KeyPress)
+      r_handled = key_press(static_cast<QKeyEvent*>(a_event));
+    if (! r_handled) r_handled = QObject::eventFilter(obj, a_event);
+    return r_handled;
   }
 
 public:
-  enum State { Start, PieceStarted, PieceOngoing, HandleOngoing, PieceEnded, CurveEnded };
+  enum class State { ST_START, PIECE_STARTED, PIECE_ONGOING, HANDLE_ONGOING, PIECE_ENDED, CURVE_ENDED };
 
   /*! converts a scene point to a point.
    */
-  Point cvt(const QPointF& aP) const { return Point(aP.x(), aP.y()); }
+  Point cvt(const QPointF& a_p) const { return Point(a_p.x(), a_p.y()); }
 
   /*! handles a mouse press. A left press ends the edge under construction; a right press starts closing the polygon.
    * \return true if the event is handled.
    */
-  bool mouse_press(QGraphicsSceneMouseEvent* aEvent) {
-    bool rHandled = false;
+  bool mouse_press(QGraphicsSceneMouseEvent* a_event) {
+    bool r_handled = false;
     m_bound_rect = false;
-    Point lP = cvt(aEvent->scenePos());
-    if (aEvent->button() == ::Qt::LeftButton) {
-      switch (mState) {
-       case Start:
-        mP0 = lP;
-        mState = PieceStarted;
-        rHandled = true;
+    Point l_p = cvt(a_event->scenePos());
+    if (a_event->button() == ::Qt::LeftButton) {
+      switch (m_state) {
+       case State::ST_START:
+        m_p0 = l_p;
+        m_state = State::PIECE_STARTED;
+        r_handled = true;
         break;
 
-       case PieceOngoing:
-        mP1 = lP;
-        mState = HandleOngoing;
-        rHandled = true;
+       case State::PIECE_ONGOING:
+        m_p1 = l_p;
+        m_state = State::HANDLE_ONGOING;
+        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    else if (aEvent->button() == ::Qt::RightButton) {
-      switch (mState) {
-       case PieceOngoing:
+    else if (a_event->button() == ::Qt::RightButton) {
+      switch (m_state) {
+       case State::PIECE_ONGOING:
         m_last = true;
-        mState = HandleOngoing;
-        rHandled = true;
+        m_state = State::HANDLE_ONGOING;
+        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    return rHandled;
+    return r_handled;
   }
 
   /*! handles a mouse move.
    * \return true if the event is handled.
    */
-  bool mouse_move(QGraphicsSceneMouseEvent* aEvent) {
-    bool rHandled = false;
-    Point lP = cvt(aEvent->scenePos());
-    switch (mState) {
-     case PieceOngoing:
-      mP1 = lP;
+  bool mouse_move(QGraphicsSceneMouseEvent* a_event) {
+    bool r_handled = false;
+    Point l_p = cvt(a_event->scenePos());
+    switch (m_state) {
+     case State::PIECE_ONGOING:
+      m_p1 = l_p;
       update_ongoing_piece();
-      rHandled = true;
+      r_handled = true;
       break;
 
-     case HandleOngoing:
+     case State::HANDLE_ONGOING:
       if (m_last) {
-        Point ps(mPolylinePolygonPieces.front()[0].source().x(), mPolylinePolygonPieces.front()[0].source().y());
-        mP1 = ps;
+        Point ps(m_polyline_polygon_pieces.front()[0].source().x(), m_polyline_polygon_pieces.front()[0].source().y());
+        m_p1 = ps;
         m_last_polyline = true;
       }
-      update_handle(lP);
+      update_handle(l_p);
       update_ongoing_piece();
-      rHandled = true;
+      r_handled = true;
       break;
 
-     case PieceEnded:
-      mState = PieceOngoing;
-      rHandled = true;
+     case State::PIECE_ENDED:
+      m_state = State::PIECE_ONGOING;
+      r_handled = true;
       break;
 
      default: break; //! \todo handle default case
     }
-    return rHandled;
+    return r_handled;
   }
 
   /*! handles a mouse release. A left release completes the edge under construction; a right release closes the
    * polygon.
    * \return true if the event is handled.
    */
-  bool mouse_release(QGraphicsSceneMouseEvent* aEvent) {
-    bool rHandled = false;
-    Point lP = cvt(aEvent->scenePos());
-    if (aEvent->button() == ::Qt::LeftButton) {
-      switch (mState) {
-       case PieceStarted:
-        mState = PieceOngoing;
-        rHandled = true;
+  bool mouse_release(QGraphicsSceneMouseEvent* a_event) {
+    bool r_handled = false;
+    Point l_p = cvt(a_event->scenePos());
+    if (a_event->button() == ::Qt::LeftButton) {
+      switch (m_state) {
+       case State::PIECE_STARTED:
+        m_state = State::PIECE_ONGOING;
+        r_handled = true;
         break;
 
-       case HandleOngoing:
+       case State::HANDLE_ONGOING:
         hide_handle();
-        commit_ongoing_piece(lP);
-        mState = PieceEnded;
-        rHandled = true;
+        commit_ongoing_piece(l_p);
+        m_state = State::PIECE_ENDED;
+        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    else if (aEvent->button() == ::Qt::RightButton) {
-      switch (mState) {
-       case HandleOngoing:
+    else if (a_event->button() == ::Qt::RightButton) {
+      switch (m_state) {
+       case State::HANDLE_ONGOING:
         if (m_last_polyline) {
           hide_handle();
-          commit_ongoing_piece(lP);
+          commit_ongoing_piece(l_p);
         }
         m_bound_rect = false;
         commit_curr_polyline_polygon();
         restart();
-        rHandled = true;
+        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
       }
     }
-    return rHandled;
+    return r_handled;
   }
 
   /*! handles a key press. Delete and Backspace remove the last edge; Escape discards the polygon.
    * \return true if the event is handled.
    */
-  bool key_press(QKeyEvent* aEvent) {
-    bool rHandled = false;
-    if ((aEvent->key() == ::Qt::Key_Delete) || (aEvent->key() == ::Qt::Key_Backspace)) {
+  bool key_press(QKeyEvent* a_event) {
+    bool r_handled = false;
+    if ((a_event->key() == ::Qt::Key_Delete) || (a_event->key() == ::Qt::Key_Backspace)) {
       remove_last_piece();
-      mState = (mPolylinePolygonPieces.size() > 0) ? PieceEnded : Start;
-      rHandled = true;
+      m_state = (m_polyline_polygon_pieces.size() > 0) ? State::PIECE_ENDED : State::ST_START;
+      r_handled = true;
     }
-    else if (aEvent->key() == ::Qt::Key_Escape) {
+    else if (a_event->key() == ::Qt::Key_Escape) {
       reset();
-      mState = Start;
-      rHandled = true;
+      m_state = State::ST_START;
+      r_handled = true;
     }
-    return rHandled;
+    return r_handled;
   }
 
 public:
   /*! obtains the edge under construction, or null if there is none.
    */
-  const Polyline_curve* ongoing_piece() const { return (mOngoingPieceCtr.size() == 1) ? &mOngoingPieceCtr[0] : NULL; }
+  const Polyline_curve* ongoing_piece() const
+  { return (m_ongoing_piece_ctr.size() == 1) ? &m_ongoing_piece_ctr[0] : NULL; }
 
   /*! starts a new polygon.
    */
   void restart() {
-    mH = std::optional<Point>();
-    mState = Start;
+    m_h = std::optional<Point>();
+    m_state = State::ST_START;
   }
 
   /*! discards the polygon under construction.
    */
   void reset() {
-    mPolylinePolygonPieces.clear();
-    mOngoingPieceCtr.clear();
-    mPolylineGI->modelChanged();
-    mOngoingPieceGI->modelChanged();
+    m_polyline_polygon_pieces.clear();
+    m_ongoing_piece_ctr.clear();
+    m_polyline_GI->modelChanged();
+    m_ongoing_piece_GI->modelChanged();
     restart();
   }
 
   /*! hides the handle.
    */
-  void hide_handle() { mHandleGI->hide(); }
+  void hide_handle() { m_handle_GI->hide(); }
 
   /*! creates the edge (a one-segment polyline) from the last vertex to the current point.
    */
   Polyline_curve create_piece() {
     Gps_traits poly_tr;
     auto construct_poly = poly_tr.construct_curve_2_object();
-    return Polyline_curve(construct_poly(mP0, mP1));
+    return Polyline_curve(construct_poly(m_p0, m_p1));
   }
 
   /*! removes the last edge.
    */
   void remove_last_piece() {
-    mPolylinePolygonPieces.pop_back();
-    mOngoingPieceCtr.clear();
-    mPolylineGI->modelChanged();
-    mOngoingPieceGI->modelChanged();
-    if (mPolylinePolygonPieces.size() > 0) {
-      auto xx = mPolylinePolygonPieces.back().number_of_subcurves();
-      Point pt(mPolylinePolygonPieces.back()[xx - 1].target().x(), mPolylinePolygonPieces.back()[xx - 1].target().y());
-      mP0 = pt;
+    m_polyline_polygon_pieces.pop_back();
+    m_ongoing_piece_ctr.clear();
+    m_polyline_GI->modelChanged();
+    m_ongoing_piece_GI->modelChanged();
+    if (m_polyline_polygon_pieces.size() > 0) {
+      auto xx = m_polyline_polygon_pieces.back().number_of_subcurves();
+      const auto& last = m_polyline_polygon_pieces.back()[xx - 1];
+      Point pt(last.target().x(), last.target().y());
+      m_p0 = pt;
       update_ongoing_piece();
     }
-    mH = std::optional<Point>();
+    m_h = std::optional<Point>();
   }
 
   /*! updates the edge under construction.
    */
   void update_ongoing_piece() {
-    if (mOngoingPieceCtr.size() > 0) mOngoingPieceCtr.clear();
-    mOngoingPieceCtr.push_back(create_piece());
-    mOngoingPieceGI->modelChanged();
+    if (m_ongoing_piece_ctr.size() > 0) m_ongoing_piece_ctr.clear();
+    m_ongoing_piece_ctr.push_back(create_piece());
+    m_ongoing_piece_GI->modelChanged();
   }
 
   /*! determines whether a piece is degenerate, that is, its endpoints coincide.
    */
-  static bool is_degenerate(const Polyline_curve& aPiece) {
-    auto n = aPiece.number_of_subcurves();
-    return (n == 0) || (aPiece[0].source() == aPiece[n - 1].target());
+  static bool is_degenerate(const Polyline_curve& a_piece) {
+    auto n = a_piece.number_of_subcurves();
+    return (n == 0) || (a_piece[0].source() == a_piece[n - 1].target());
   }
 
   /*! adds the edge under construction to the polygon (unless it is degenerate), and starts the next edge.
    */
-  void commit_ongoing_piece(const Point& aP) {
+  void commit_ongoing_piece(const Point& a_p) {
     if (! ongoing_piece()) return;
     if (! is_degenerate(*ongoing_piece())) {
-      mPolylinePolygonPieces.push_back(*ongoing_piece());
-      mPolylineGI->modelChanged();
+      m_polyline_polygon_pieces.push_back(*ongoing_piece());
+      m_polyline_GI->modelChanged();
     }
-    mOngoingPieceCtr.clear();
-    mOngoingPieceGI->modelChanged();
-    mP0 = mP1;
-    mP1 = aP;
-    mH = std::optional<Point>();
+    m_ongoing_piece_ctr.clear();
+    m_ongoing_piece_GI->modelChanged();
+    m_p0 = m_p1;
+    m_p1 = a_p;
+    m_h = std::optional<Point>();
   }
 
   /*! updates the handle; it is shown only when it is at least 2 units long.
    */
-  void update_handle(const Point& aP) {
-    if (squared_distance(mP1, aP) >= 4) {
-      mH = aP;
-      mHandleGI->setLine(to_double(mP1.x()), to_double(mP1.y()), to_double(mH->x()), to_double(mH->y()));
-      mHandleGI->show();
+  void update_handle(const Point& a_p) {
+    if (squared_distance(m_p1, a_p) >= 4) {
+      m_h = a_p;
+      m_handle_GI->setLine(to_double(m_p1.x()), to_double(m_p1.y()), to_double(m_h->x()), to_double(m_h->y()));
+      m_handle_GI->show();
     }
     else {
       hide_handle();
-      mH = std::optional<Point>();
+      m_h = std::optional<Point>();
     }
   }
 
   /*! obtains the number of segments of given x-monotone polylines.
    */
-  static std::size_t number_of_edges(const std::vector<Polyline_X_monotone_curve>& aXcvs) {
+  static std::size_t number_of_edges(const std::vector<Polyline_X_monotone_curve>& a_xcvs) {
     std::size_t n = 0;
-    for (const auto& xcv : aXcvs) n += xcv.number_of_subcurves();
+    for (const auto& xcv : a_xcvs) n += xcv.number_of_subcurves();
     return n;
   }
 
@@ -365,11 +366,11 @@ public:
    */
   void commit_curr_polyline_polygon() {
     generate_polyline_polygon();
-    mOngoingPieceCtr.clear();
-    mOngoingPieceGI->modelChanged();
-    mPolylinePolygonPieces.clear();
-    mPolylineGI->modelChanged();
-    mH = std::optional<Point>();
+    m_ongoing_piece_ctr.clear();
+    m_ongoing_piece_GI->modelChanged();
+    m_polyline_polygon_pieces.clear();
+    m_polyline_GI->modelChanged();
+    m_h = std::optional<Point>();
     hide_handle();
   }
 
@@ -379,7 +380,7 @@ public:
     bool closed = m_last_polyline;
     m_last = false;
     m_last_polyline = false;
-    if (mPolylinePolygonPieces.size() == 0) return;
+    if (m_polyline_polygon_pieces.size() == 0) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
     using Pnt = typename Gps_traits::Point_2;
@@ -387,7 +388,7 @@ public:
     using Make_x_monotone_result = std::variant<Pnt, Xcv>;
 
     std::vector<Polyline_X_monotone_curve> xcvs;
-    for (auto it = mPolylinePolygonPieces.begin(); it != mPolylinePolygonPieces.end(); ++it) {
+    for (auto it = m_polyline_polygon_pieces.begin(); it != m_polyline_polygon_pieces.end(); ++it) {
       std::vector<Make_x_monotone_result> x_objs;
       make_x_monotone(*it, std::back_inserter(x_objs));
       for (std::size_t i = 0; i < x_objs.size(); ++i) {
@@ -419,11 +420,11 @@ public:
    */
   void commit_complement_curr_polyline_polygon() {
     generate_complement_polyline_polygon();
-    mOngoingPieceCtr.clear();
-    mOngoingPieceGI->modelChanged();
-    mPolylinePolygonPieces.clear();
-    mPolylineGI->modelChanged();
-    mH = std::optional<Point>();
+    m_ongoing_piece_ctr.clear();
+    m_ongoing_piece_GI->modelChanged();
+    m_polyline_polygon_pieces.clear();
+    m_polyline_GI->modelChanged();
+    m_h = std::optional<Point>();
     hide_handle();
   }
 
@@ -433,7 +434,7 @@ public:
     bool closed = m_last_polyline;
     m_last = false;
     m_last_polyline = false;
-    if (mPolylinePolygonPieces.size() == 0) return;
+    if (m_polyline_polygon_pieces.size() == 0) return;
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
     using Pnt = typename Gps_traits::Point_2;
@@ -441,7 +442,7 @@ public:
     using Make_x_monotone_result = std::variant<Pnt, Xcv>;
 
     std::vector<Polyline_X_monotone_curve> xcvs;
-    for (auto it = mPolylinePolygonPieces.begin(); it != mPolylinePolygonPieces.end(); ++it) {
+    for (auto it = m_polyline_polygon_pieces.begin(); it != m_polyline_polygon_pieces.end(); ++it) {
       std::vector<Make_x_monotone_result> x_objs;
       make_x_monotone(*it, std::back_inserter(x_objs));
       for (std::size_t i = 0; i < x_objs.size(); ++i) {
@@ -476,41 +477,41 @@ public:
   void get_bounding_rect() {
     m_bound_rect = true;
 
-    mP0 = Point(-15500000, -10000000);
-    mState = PieceStarted;
+    m_p0 = Point(-15500000, -10000000);
+    m_state = State::PIECE_STARTED;
 
-    mState = PieceOngoing;
-    mP1 = Point(-15500000, 10000000);
+    m_state = State::PIECE_ONGOING;
+    m_p1 = Point(-15500000, 10000000);
     update_ongoing_piece();
 
-    mP1 = Point(-15500000, 10000000);
-    mState = HandleOngoing;
+    m_p1 = Point(-15500000, 10000000);
+    m_state = State::HANDLE_ONGOING;
     hide_handle();
     commit_ongoing_piece(Point(-15500000, 10000000));
-    mState = PieceEnded;
+    m_state = State::PIECE_ENDED;
 
-    mState = PieceOngoing;
-    mP1 = Point(15500000, 10000000);
+    m_state = State::PIECE_ONGOING;
+    m_p1 = Point(15500000, 10000000);
     update_ongoing_piece();
 
-    mP1 = Point(15500000, 10000000);
-    mState = HandleOngoing;
+    m_p1 = Point(15500000, 10000000);
+    m_state = State::HANDLE_ONGOING;
     hide_handle();
     commit_ongoing_piece(Point(15500000, 10000000));
-    mState = PieceEnded;
+    m_state = State::PIECE_ENDED;
 
-    mState = PieceOngoing;
-    mP1 = Point(15500000, -10000000);
+    m_state = State::PIECE_ONGOING;
+    m_p1 = Point(15500000, -10000000);
     update_ongoing_piece();
 
-    mP1 = Point(15500000, -10000000);
-    mState = HandleOngoing;
+    m_p1 = Point(15500000, -10000000);
+    m_state = State::HANDLE_ONGOING;
     hide_handle();
     commit_ongoing_piece(Point(15500000, -10000000));
-    mState = PieceEnded;
+    m_state = State::PIECE_ENDED;
 
-    mState = PieceOngoing;
-    mP1 = Point(-9000000, -9000000);
+    m_state = State::PIECE_ONGOING;
+    m_p1 = Point(-9000000, -9000000);
     update_ongoing_piece();
     commit_complement_curr_polyline_polygon();
     restart();
@@ -521,28 +522,28 @@ public:
   bool is_bounding_rect() { return m_bound_rect; }
 
 public:
-  QGraphicsScene* mScene;
-  GI* mPolylineGI;
-  GI* mOngoingPieceGI;
-  QGraphicsLineItem* mHandleGI;
+  QGraphicsScene* m_scene;
+  GI* m_polyline_GI;
+  GI* m_ongoing_piece_GI;
+  QGraphicsLineItem* m_handle_GI;
 
-  QPen mPolylinePolygonPen;
-  QPen mOngoingCurvePen;
-  QPen mHandlePen;
+  QPen m_polyline_polygon_pen;
+  QPen m_ongoing_curve_pen;
+  QPen m_handle_pen;
 
   bool m_bound_rect;
   bool m_last_polyline;
   bool m_last;
 
-  Polyline_curve_vector mPolylinePolygonPieces;
-  Polyline_curve_vector mOngoingPieceCtr;
+  Polyline_curve_vector m_polyline_polygon_pieces;
+  Polyline_curve_vector m_ongoing_piece_ctr;
 
-  int mState;
+  State m_state;
 
-  Point mP0;
-  Point mP1;
+  Point m_p0;
+  Point m_p1;
 
-  std::optional<Point> mH;
+  std::optional<Point> m_h;
 };
 
 } // namespace Qt

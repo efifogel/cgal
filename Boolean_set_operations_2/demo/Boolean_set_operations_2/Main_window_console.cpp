@@ -28,17 +28,17 @@
 
 #include "Main_window.h"
 
-void MainWindow::log_statements(const QStringList& aStatements, bool aSticky) {
+void Main_window::log_statements(const QStringList& a_statements, bool a_sticky) {
   if (! m_logging) return;
-  for (const auto& statement : aStatements) {
-    m_program.push_back({aSticky ? 0 : states_stack.size(), statement});
+  for (const auto& statement : a_statements) {
+    m_program.push_back({a_sticky ? 0 : states_stack.size(), statement});
     if (m_log) m_log->appendPlainText(statement);
   }
 }
 
-void MainWindow::trim_program_to_states() {
-  auto it = std::remove_if(m_program.begin(), m_program.end(), [this](const Program_line& aLine) {
-    return aLine.m_state_count > states_stack.size();
+void Main_window::trim_program_to_states() {
+  auto it = std::remove_if(m_program.begin(), m_program.end(), [this](const Program_line& a_line) {
+    return a_line.m_state_count > states_stack.size();
   });
   bool changed = (it != m_program.end());
   m_program.erase(it, m_program.end());
@@ -48,24 +48,24 @@ void MainWindow::trim_program_to_states() {
   m_log->setPlainText(lines.join("\n"));
 }
 
-bool MainWindow::bucket_exists(std::size_t aIndex) const { return aIndex < m_number_of_buckets; }
+bool Main_window::bucket_exists(std::size_t a_index) const { return a_index < m_number_of_buckets; }
 
-std::size_t MainWindow::bucket_index(const QString& aName) const {
+std::size_t Main_window::bucket_index(const QString& a_name) const {
   for (std::size_t i = 0; i < number_of_buckets; ++i) {
-    if (aName == bucket_name(i)) return i;
+    if (a_name == bucket_name(i)) return i;
   }
   return number_of_buckets;
 }
 
-Curve_set* MainWindow::polygon_set(const QString& aName) {
-  std::size_t i = bucket_index(aName);
+Curve_set* Main_window::polygon_set(const QString& a_name) {
+  std::size_t i = bucket_index(a_name);
   if (i < number_of_buckets) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
-  auto it = m_variables.find(aName);
+  auto it = m_variables.find(a_name);
   return (it == m_variables.end()) ? nullptr : &it->second;
 }
 
-Linear_polygon_with_holes MainWindow::polygon(const Py_expr& aExpr) const {
-  const auto& pts = aExpr.m_points;
+Linear_polygon_with_holes Main_window::polygon(const Py_expr& a_expr) const {
+  const auto& pts = a_expr.m_points;
   if (pts.size() < 3)
     throw std::runtime_error("a polygon needs at least 3 vertices");
   CGAL::Polygon_2<Kernel> check;
@@ -83,34 +83,34 @@ Linear_polygon_with_holes MainWindow::polygon(const Py_expr& aExpr) const {
   return Linear_polygon_with_holes(Linear_polygon(curves.begin(), curves.end()));
 }
 
-QString MainWindow::execute(const Py_statement& aStatement) {
-  switch (aStatement.m_kind) {
-   case Py_statement::Kind::Delete: execute_delete(aStatement); return QString();
-   case Py_statement::Kind::Assign: execute_assign(aStatement); return QString();
-   case Py_statement::Kind::Call: break;
+QString Main_window::execute(const Py_statement& a_statement) {
+  switch (a_statement.m_kind) {
+   case Py_statement::Kind::KI_DELETE: execute_delete(a_statement); return QString();
+   case Py_statement::Kind::KI_ASSIGN: execute_assign(a_statement); return QString();
+   case Py_statement::Kind::KI_CALL: break;
   }
-  return execute_call(aStatement);
+  return execute_call(a_statement);
 }
 
-Curve_set& MainWindow::existing_set(const QString& aName) {
-  Curve_set* set = polygon_set(aName);
-  if (! set) throw std::runtime_error(("name '" + aName + "' is not defined").toStdString());
+Curve_set& Main_window::existing_set(const QString& a_name) {
+  Curve_set* set = polygon_set(a_name);
+  if (! set) throw std::runtime_error(("name '" + a_name + "' is not defined").toStdString());
   return *set;
 }
 
-Curve_set& MainWindow::named_set(const Py_expr& aExpr) {
-  if (aExpr.m_kind != Py_expr::Kind::Name)
-    throw std::runtime_error(("expected a polygon set name instead of " + to_python(aExpr)).toStdString());
-  return existing_set(aExpr.m_name);
+Curve_set& Main_window::named_set(const Py_expr& a_expr) {
+  if (a_expr.m_kind != Py_expr::Kind::KI_NAME)
+    throw std::runtime_error(("expected a polygon set name instead of " + to_python(a_expr)).toStdString());
+  return existing_set(a_expr.m_name);
 }
 
-void MainWindow::execute_delete(const Py_statement& aStatement) {
-  const QString& target = aStatement.m_target;
+void Main_window::execute_delete(const Py_statement& a_statement) {
+  const QString& target = a_statement.m_target;
   std::size_t index = bucket_index(target);
   if (index == number_of_buckets) {
     if (m_variables.erase(target) == 0)
       throw std::runtime_error(("name '" + target + "' is not defined").toStdString());
-    log_statements({to_python(aStatement)}, true);
+    log_statements({to_python(a_statement)}, true);
     return;
   }
   // Only the last added bucket can be removed.
@@ -121,13 +121,13 @@ void MainWindow::execute_delete(const Py_statement& aStatement) {
   remove_bucket();      // logs "del <name>"
 }
 
-void MainWindow::execute_assign(const Py_statement& aStatement) {
-  const QString& target = aStatement.m_target;
+void Main_window::execute_assign(const Py_statement& a_statement) {
+  const QString& target = a_statement.m_target;
   std::size_t index = bucket_index(target);
-  const Py_expr& value = aStatement.m_args[0];
-  if (value.m_kind != Py_expr::Kind::Polygon_set)
+  const Py_expr& value = a_statement.m_args[0];
+  if (value.m_kind != Py_expr::Kind::POLYGON_SET)
     throw std::runtime_error("only polygon sets can be assigned, e.g., " + (target + " = Polygon_set_2(" +
-       (value.m_kind == Py_expr::Kind::Name ? value.m_name : QString()) + ")").toStdString() + " (copies the set)");
+       (value.m_kind == Py_expr::Kind::KI_NAME ? value.m_name : QString()) + ")").toStdString() + " (copies the set)");
   const Py_expr* arg = value.m_arg.get();
   if ((index < number_of_buckets) && ! bucket_exists(index)) {
     // Buckets are added in order.
@@ -139,16 +139,16 @@ void MainWindow::execute_assign(const Py_statement& aStatement) {
     add_bucket();
     m_logging = true;
     if (! arg) {       // a new, empty bucket
-      log_statements({to_python(aStatement)}, true);
+      log_statements({to_python(a_statement)}, true);
       return;
     }
     log_statements({target + " = Polygon_set_2()"}, true);
   }
-  get_new_state(State_op::Console);
+  get_new_state(State_op::SO_CONSOLE);
   Curve_set* set = polygon_set(target);
-  if (! set) set = &m_variables.emplace(target, Curve_set(Curve_type::Linear, QPen(), QBrush())).first->second;
+  if (! set) set = &m_variables.emplace(target, Curve_set(Curve_type::CT_LINEAR, QPen(), QBrush())).first->second;
   if (! arg) set->clear();
-  else if (arg->m_kind == Py_expr::Kind::Polygon) {
+  else if (arg->m_kind == Py_expr::Kind::KI_POLYGON) {
     Linear_polygon_with_holes pgn = polygon(*arg);
     set->clear();
     set->linear().join(pgn);
@@ -157,18 +157,18 @@ void MainWindow::execute_assign(const Py_statement& aStatement) {
     Curve_set& other = named_set(*arg);
     if (&other != set) set->assign(other);
   }
-  log_statements({to_python(aStatement)});
+  log_statements({to_python(a_statement)});
 }
 
-QString MainWindow::execute_call(const Py_statement& aStatement) {
-  const QString& target = aStatement.m_target;
-  const QString& method = aStatement.m_method;
-  const auto& args = aStatement.m_args;
+QString Main_window::execute_call(const Py_statement& a_statement) {
+  const QString& target = a_statement.m_target;
+  const QString& method = a_statement.m_method;
+  const auto& args = a_statement.m_args;
   Curve_set* set = &existing_set(target);
-  auto arity = [&](std::size_t aMin, std::size_t aMax) {
-    if ((args.size() < aMin) || (args.size() > aMax))
-      throw std::runtime_error((method + "() takes " + ((aMin == aMax) ? QString::number(aMin) :
-         QString("%1 or %2").arg(aMin).arg(aMax)) + " argument(s)").toStdString());
+  auto arity = [&](std::size_t a_min, std::size_t a_max) {
+    if ((args.size() < a_min) || (args.size() > a_max))
+      throw std::runtime_error((method + "() takes " + ((a_min == a_max) ? QString::number(a_min) :
+         QString("%1 or %2").arg(a_min).arg(a_max)) + " argument(s)").toStdString());
   };
 
   // Queries.
@@ -188,21 +188,21 @@ QString MainWindow::execute_call(const Py_statement& aStatement) {
   // Actions; each one is undoable, so the sets are obtained again after the new state is pushed.
   if (method == "clear") {
     arity(0, 0);
-    get_new_state(State_op::Console);
+    get_new_state(State_op::SO_CONSOLE);
     existing_set(target).clear();
   }
   else if (method == "complement") {
     arity(0, 1);
     if (! args.empty() && (&named_set(args[0]) == set))
       throw std::runtime_error("use complement() to complement in place");
-    get_new_state(State_op::Console);
+    get_new_state(State_op::SO_CONSOLE);
     if (args.empty()) existing_set(target).complement();
     else existing_set(target).complement(named_set(args[0]));
   }
   else {
     std::optional<Bucket_op> op;
-    for (auto candidate : {Bucket_op::Intersection, Bucket_op::Join, Bucket_op::Difference,
-                           Bucket_op::Symmetric_difference}) {
+    for (auto candidate : {Bucket_op::BO_INTERSECTION, Bucket_op::BO_JOIN, Bucket_op::BO_DIFFERENCE,
+                           Bucket_op::SYMMETRIC_DIFFERENCE}) {
       if (method == method_name(candidate)) op = candidate;
     }
     if (! op) throw std::runtime_error(("unknown method '" + method + "'").toStdString());
@@ -211,38 +211,39 @@ QString MainWindow::execute_call(const Py_statement& aStatement) {
       // The bivariate form overwrites the target, which must not be an operand.
       if ((&named_set(args[0]) == set) || (&named_set(args[1]) == set))
         throw std::runtime_error(("the target of " + method + "(a, b) must differ from a and b").toStdString());
-      get_new_state(State_op::Console);
+      get_new_state(State_op::SO_CONSOLE);
       apply(*op, existing_set(target), named_set(args[0]), named_set(args[1]));
     }
-    else if (args[0].m_kind == Py_expr::Kind::Polygon) {
+    else if (args[0].m_kind == Py_expr::Kind::KI_POLYGON) {
       Linear_polygon_with_holes pgn = polygon(args[0]);
-      get_new_state(State_op::Console);
+      get_new_state(State_op::SO_CONSOLE);
       apply(*op, existing_set(target).linear(), pgn);
     }
     else {
       named_set(args[0]);      // check the name
-      get_new_state(State_op::Console);
+      get_new_state(State_op::SO_CONSOLE);
       apply(*op, existing_set(target), named_set(args[0]));
     }
   }
-  log_statements({to_python(aStatement)});
+  log_statements({to_python(a_statement)});
   return QString();
 }
 
-void MainWindow::console_print(const QString& aText) { if (m_console_output) m_console_output->appendPlainText(aText); }
+void Main_window::console_print(const QString& a_text)
+{ if (m_console_output) m_console_output->appendPlainText(a_text); }
 
-void MainWindow::run_console_line(const QString& aLine) {
-  console_print(">>> " + aLine);
-  if (! aLine.trimmed().isEmpty()) {
-    m_console_history << aLine;
+void Main_window::run_console_line(const QString& a_line) {
+  console_print(">>> " + a_line);
+  if (! a_line.trimmed().isEmpty()) {
+    m_console_history << a_line;
   }
   m_console_history_pos = m_console_history.size();
-  if (m_curve_type != Curve_type::Linear) {
+  if (m_curve_type != Curve_type::CT_LINEAR) {
     console_print("Error: the console supports linear polygons only");
     return;
   }
   try {
-    auto statements = Py_parser(aLine).parse();
+    auto statements = Py_parser(a_line).parse();
     for (const auto& statement : statements) {
       QString output = execute(statement);
       if (! output.isEmpty()) console_print(output);
@@ -254,7 +255,7 @@ void MainWindow::run_console_line(const QString& aLine) {
   model_changed();
 }
 
-void MainWindow::save_program() {
+void Main_window::save_program() {
   QString file_name = QFileDialog::getSaveFileName(this, "Save Program", "bso_program.py", "Python files (*.py)");
   if (file_name.isEmpty()) return;
   QSaveFile file(file_name);

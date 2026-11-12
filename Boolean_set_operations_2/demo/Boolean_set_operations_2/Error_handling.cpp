@@ -33,13 +33,13 @@
 #include <QMessageBox>
 #include <QString>
 
-void show_warning(std::string aS) { QMessageBox::warning(NULL, "Warning", QString(aS.c_str())); }
+void show_warning(std::string a_s) { QMessageBox::warning(NULL, "Warning", QString(a_s.c_str())); }
 
-void show_error(std::string aS) { QMessageBox::critical(NULL, "Critical Error", QString(aS.c_str())); }
+void show_error(std::string a_s) { QMessageBox::critical(NULL, "Critical Error", QString(a_s.c_str())); }
 
-void error(std::string aS) {
-  show_error(aS);
-  throw std::runtime_error(aS);
+void error(std::string a_s) {
+  show_error(a_s);
+  throw std::runtime_error(a_s);
 }
 
 void error_handler(const char* what, const char* expr, const char* file, int line, const char* msg) {

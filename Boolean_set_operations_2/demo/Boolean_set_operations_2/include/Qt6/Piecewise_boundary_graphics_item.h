@@ -42,11 +42,11 @@ class Piecewise_boundary_graphics_item : public Piecewise_graphics_item_base {
 public:
   /*! constructs from the boundary, a functor that draws a curve, and a functor that bounds a curve.
    */
-  Piecewise_boundary_graphics_item(Piecewise_boundary* aBoundary, const Draw_piece& aPieceDrawer = Draw_piece(),
-                                   const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    m_boundary(aBoundary),
-    m_piece_drawer(aPieceDrawer),
-    m_piece_BBox(aPieceBBox)
+  Piecewise_boundary_graphics_item(Piecewise_boundary* a_boundary, const Draw_piece& a_piece_drawer = Draw_piece(),
+                                   const Piece_bbox& a_piece_bbox = Piece_bbox()) :
+    m_boundary(a_boundary),
+    m_piece_drawer(a_piece_drawer),
+    m_piece_BBox(a_piece_bbox)
   {}
 
   /*! determines whether there is no boundary to draw.
@@ -56,32 +56,32 @@ public:
 protected:
   /*! constructs from a functor that draws a curve and a functor that bounds a curve.
    */
-  Piecewise_boundary_graphics_item(const Draw_piece& aPieceDrawer = Draw_piece(),
-                                   const Piece_bbox& aPieceBBox = Piece_bbox()) :
+  Piecewise_boundary_graphics_item(const Draw_piece& a_piece_drawer = Draw_piece(),
+                                   const Piece_bbox& a_piece_bbox = Piece_bbox()) :
     m_boundary(0),
-    m_piece_drawer(aPieceDrawer),
-    m_piece_BBox(aPieceBBox)
+    m_piece_drawer(a_piece_drawer),
+    m_piece_BBox(a_piece_bbox)
   {}
 
   /*! extends the bounding box with the box of the boundary.
    */
-  virtual void update_bbox(Bbox_builder& aBboxBuilder)
-  { if (m_boundary) update_boundary_bbox(*m_boundary, aBboxBuilder); }
+  virtual void update_bbox(Bbox_builder& a_bbox_builder)
+  { if (m_boundary) update_boundary_bbox(*m_boundary, a_bbox_builder); }
 
   /*! adds the boundary to the path.
    */
-  virtual void draw_model(QPainterPath& aPath) { if (m_boundary) draw_boundary(*m_boundary, aPath); }
+  virtual void draw_model(QPainterPath& a_path) { if (m_boundary) draw_boundary(*m_boundary, a_path); }
 
   /*! extends the bounding box with the boxes of the curves of a boundary.
    */
-  void update_boundary_bbox(const Piecewise_boundary& aBoundary, Bbox_builder& aBboxBuilder) {
-    for (auto pit = aBoundary.curves_begin(); pit != aBoundary.curves_end(); ++pit)
-      aBboxBuilder.add(m_piece_BBox(*pit));
+  void update_boundary_bbox(const Piecewise_boundary& a_boundary, Bbox_builder& a_bbox_builder) {
+    for (auto pit = a_boundary.curves_begin(); pit != a_boundary.curves_end(); ++pit)
+      a_bbox_builder.add(m_piece_BBox(*pit));
   }
 
   /*! adds the curves of a boundary to the path.
    */
-  void draw_boundary(const Piecewise_boundary& aBoundary, QPainterPath& aPath);
+  void draw_boundary(const Piecewise_boundary& a_boundary, QPainterPath& a_path);
 
 protected:
   Piecewise_boundary* m_boundary;
@@ -90,11 +90,11 @@ protected:
 };
 
 template <class B, class D, class P>
-void Piecewise_boundary_graphics_item<B, D, P>::draw_boundary(const Piecewise_boundary& aBoundary,
-                                                              QPainterPath& aPath) {
+void Piecewise_boundary_graphics_item<B, D, P>::draw_boundary(const Piecewise_boundary& a_boundary,
+                                                              QPainterPath& a_path) {
   int c = 0;
-  for (auto pit = aBoundary.curves_begin(); pit != aBoundary.curves_end(); ++pit, ++c)
-    m_piece_drawer(*pit, aPath, c);
+  for (auto pit = a_boundary.curves_begin(); pit != a_boundary.curves_end(); ++pit, ++c)
+    m_piece_drawer(*pit, a_path, c);
 }
 
 } // namespace Qt

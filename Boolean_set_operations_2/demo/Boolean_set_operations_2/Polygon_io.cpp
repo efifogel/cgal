@@ -22,7 +22,7 @@
 //             Apurva Bhatt <response2apurva@gmail.com>
 
 /*! \file Polygon_io.cpp
- * Reading and writing the polygon files of the curve families (.lps, .cps, .mps, and .bps). A file holds polygons with
+ * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, and .bps). A file holds polygons with
  * holes, each one given by its boundaries; a function of each family reads or writes a boundary.
  */
 
@@ -32,20 +32,20 @@
 
 #include "Qt6/Bezier_curves.h"
 
-std::vector<Kernel::Point_2> read_vertices(std::istream& aIs) {
+std::vector<Kernel::Point_2> read_vertices(std::istream& a_is) {
   unsigned int n_points;
-  aIs >> n_points;
+  a_is >> n_points;
   std::vector<Kernel::Point_2> points;
   for (unsigned int i = 0; i < n_points; ++i) {
     double x, y;
-    aIs >> x >> y;
+    a_is >> x >> y;
     points.emplace_back(x, y);
   }
   return points;
 }
 
-std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
-  auto points = read_vertices(aIs);
+std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bool /* a_double_format */) {
+  auto points = read_vertices(a_is);
   std::vector<Linear_curve> curves;
   for (std::size_t i = 0; i < points.size(); ++i) {
     const auto& p = points[i];
@@ -55,8 +55,8 @@ std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& aIs, boo
   return x_monotone_curves<Linear_traits>(curves.begin(), curves.end());
 }
 
-std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
-  auto points = read_vertices(aIs);
+std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is, bool /* a_double_format */) {
+  auto points = read_vertices(a_is);
   Polyline_traits traits;
   auto construct_segment = traits.subcurve_traits_2()->construct_x_monotone_curve_2_object();
   std::vector<Polyline_curve> curves;
@@ -68,24 +68,24 @@ std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& aIs,
   return x_monotone_curves<Polyline_traits>(curves.begin(), curves.end());
 }
 
-std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& aIs, bool /* aDoubleFormat */) {
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is, bool /* a_double_format */) {
   using Point = Kernel::Point_2;
   unsigned int n_curves;
-  aIs >> n_curves;
+  a_is >> n_curves;
   std::vector<Circular_curve> curves;
   for (unsigned int i = 0; i < n_curves; ++i) {
     unsigned int is_arc;
     double sx, sy, mx, my, tx, ty;
-    aIs >> is_arc >> sx >> sy;
-    if (is_arc) aIs >> mx >> my;
-    aIs >> tx >> ty;
+    a_is >> is_arc >> sx >> sy;
+    if (is_arc) a_is >> mx >> my;
+    a_is >> tx >> ty;
     if (is_arc) curves.emplace_back(Point(sx, sy), Point(mx, my), Point(tx, ty));
     else curves.emplace_back(Point(sx, sy), Point(tx, ty));
   }
   return x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
 }
 
-Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat) {
+Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format) {
   // Read the number of control points.
   unsigned int n;
   is >> n;
@@ -95,7 +95,7 @@ Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat) {
 
   for (unsigned int k = 0; k < n; k++) {
     Bezier_rat_point p;
-    if (aDoubleFormat) {
+    if (a_double_format) {
       double x, y;
       is >> x >> y;
       Bezier_rational rx(static_cast<int> (1000 * x + 0.5), 1000);
@@ -120,8 +120,8 @@ Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat) {
     auto next1 = curr + 1;
     auto next2 = next1 + 1;
     do {
-      CGAL::Orientation lOrient = orientation(*curr, *next1, *next2);
-      if (lOrient != CGAL::COLLINEAR)
+      CGAL::Orientation l_orient = orientation(*curr, *next1, *next2);
+      if (l_orient != CGAL::COLLINEAR)
         ctrl_pts2.push_back(*next1);
       ++curr;
       ++next1;
@@ -132,85 +132,85 @@ Bezier_curve read_bezier_curve(std::istream& is, bool aDoubleFormat) {
   return Bezier_curve(ctrl_pts2.begin(), ctrl_pts2.end());
 }
 
-std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& aIs, bool aDoubleFormat) {
+std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is, bool a_double_format) {
   unsigned int n_curves;
-  aIs >> n_curves;
+  a_is >> n_curves;
   std::vector<Bezier_curve> curves;
   for (unsigned int i = 0; i < n_curves; ++i) {
-    Bezier_curve curve = read_bezier_curve(aIs, aDoubleFormat);
+    Bezier_curve curve = read_bezier_curve(a_is, a_double_format);
     if (curve.number_of_control_points() >= 2) curves.push_back(curve);
   }
   return x_monotone_curves<Bezier_traits>(curves.begin(), curves.end());
 }
 
-void write_linear_boundary(std::ostream& aOs, const Linear_polygon& aBoundary) {
-  aOs << "  " << aBoundary.size() << std::endl;
-  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit)
-    aOs << "   " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
+void write_linear_boundary(std::ostream& a_os, const Linear_polygon& a_boundary) {
+  a_os << "  " << a_boundary.size() << std::endl;
+  for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit)
+    a_os << "   " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
 }
 
-void write_polyline_boundary(std::ostream& aOs, const Polyline_polygon& aBoundary) {
-  aOs << "  " << aBoundary.size() << std::endl;
-  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit) {
+void write_polyline_boundary(std::ostream& a_os, const Polyline_polygon& a_boundary) {
+  a_os << "  " << a_boundary.size() << std::endl;
+  for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit) {
     auto it = cit->points_begin();
-    aOs << " " << CGAL::to_double(it->x()) << " " << CGAL::to_double(it->y()) << std::endl;
+    a_os << " " << CGAL::to_double(it->x()) << " " << CGAL::to_double(it->y()) << std::endl;
   }
 }
 
-std::pair<double, double> arc_midpoint(const Circular_X_monotone_curve& aArc) {
-  double r = std::sqrt(CGAL::to_double(aArc.supporting_circle().squared_radius()));
-  double sx = CGAL::to_double(aArc.source().x());
-  double sy = CGAL::to_double(aArc.source().y());
-  double tx = CGAL::to_double(aArc.target().x());
-  double ty = CGAL::to_double(aArc.target().y());
-  double cx = CGAL::to_double(aArc.supporting_circle().center().x());
-  double cy = CGAL::to_double(aArc.supporting_circle().center().y());
+std::pair<double, double> arc_midpoint(const Circular_X_monotone_curve& a_arc) {
+  double r = std::sqrt(CGAL::to_double(a_arc.supporting_circle().squared_radius()));
+  double sx = CGAL::to_double(a_arc.source().x());
+  double sy = CGAL::to_double(a_arc.source().y());
+  double tx = CGAL::to_double(a_arc.target().x());
+  double ty = CGAL::to_double(a_arc.target().y());
+  double cx = CGAL::to_double(a_arc.supporting_circle().center().x());
+  double cy = CGAL::to_double(a_arc.supporting_circle().center().y());
   double st = std::sqrt((sx - tx) * (sx - tx) + (sy - ty) * (sy - ty));    // the length of the chord
   double tnx = tx - cx;                                                     // the target relative to the center
   double tny = ty - cy;
   double frmst = std::sqrt((4 * r * r) - (st * st));
-  if (aArc.supporting_circle().orientation() == CGAL::CLOCKWISE)
+  if (a_arc.supporting_circle().orientation() == CGAL::CLOCKWISE)
     return {(((frmst * tnx) - (st * tny)) / (2 * r)) + cx, (((st * tnx) + (frmst * tny)) / (2 * r)) + cy};
   return {(((tnx * frmst) + (tny * st)) / (2 * r)) + cx, (((tny * frmst) - (st * tnx)) / (2 * r)) + cy};
 }
 
-void write_circular_boundary(std::ostream& aOs, const Circular_polygon& aBoundary) {
-  aOs << "  " << aBoundary.size() << std::endl;
-  for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit) {
-    aOs << "   " << (cit->is_circular() ? 1 : 0) << std::endl;
-    aOs << "    " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
+void write_circular_boundary(std::ostream& a_os, const Circular_polygon& a_boundary) {
+  a_os << "  " << a_boundary.size() << std::endl;
+  for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit) {
+    a_os << "   " << (cit->is_circular() ? 1 : 0) << std::endl;
+    a_os << "    " << CGAL::to_double(cit->source().x()) << " " << CGAL::to_double(cit->source().y()) << std::endl;
     if (cit->is_circular()) {
       auto [mx, my] = arc_midpoint(*cit);
-      aOs << "    " << mx << " " << my << std::endl;
+      a_os << "    " << mx << " " << my << std::endl;
     }
-    aOs << "    " << CGAL::to_double(cit->target().x()) << " " << CGAL::to_double(cit->target().y()) << std::endl;
+    a_os << "    " << CGAL::to_double(cit->target().x()) << " " << CGAL::to_double(cit->target().y()) << std::endl;
   }
 }
 
-void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& aBP) {
+void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& a_bp) {
   using Bezier_rat_point_vector = std::vector<Bezier_rat_point>;
 
-  int cc = aBP.size();
+  int cc = a_bp.size();
   int lc = cc - 1;
   out_file << "  " << cc << std::endl;
-  Bezier_rat_point lFirstP, lPrevP;
+  Bezier_rat_point l_first_p, l_prev_p;
   int i = 0;
 
-  for (auto cit = aBP.curves_begin(); cit != aBP.curves_end(); ++cit, ++i) {
-    Bezier_rat_point_vector lQ;
-    CGAL::Qt::Bezier_helper::clip(*cit, lQ);
-    out_file << "   " << lQ.size() << std::endl;
+  for (auto cit = a_bp.curves_begin(); cit != a_bp.curves_end(); ++cit, ++i) {
+    Bezier_rat_point_vector l_q;
+    CGAL::Qt::Bezier_helper::clip(*cit, l_q);
+    out_file << "   " << l_q.size() << std::endl;
 
     if (i == 0)
-      lFirstP = lQ.front();
+      l_first_p = l_q.front();
 
     if (i == lc)
-      lQ.back() = lFirstP;
+      l_q.back() = l_first_p;
 
-    for (auto pit = lQ.begin(); pit != lQ.end(); ++pit) {
-      Bezier_rat_point lP = pit == lQ.begin() && i > 0 ? lPrevP : *pit;
-      out_file << "    " << CGAL::to_double(lP.x()) << " " << CGAL::to_double(lP.y()) << std::endl;
-      lPrevP = lP;
+    for (auto pit = l_q.begin(); pit != l_q.end(); ++pit) {
+      Bezier_rat_point l_p = pit == l_q.begin() && i > 0 ? l_prev_p : *pit;
+      out_file << "    " << CGAL::to_double(l_p.x()) << " " << CGAL::to_double(l_p.y()) << std::endl;
+      l_prev_p = l_p;
     }
   }
 }

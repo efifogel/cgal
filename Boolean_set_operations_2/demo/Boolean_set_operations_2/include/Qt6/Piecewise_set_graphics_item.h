@@ -44,10 +44,10 @@ class Piecewise_set_graphics_item :
 public:
   /*! constructs from the set, a functor that draws a curve, and a functor that bounds a curve.
    */
-  Piecewise_set_graphics_item(Piecewise_set* aSet, const Draw_piece& aPieceDrawer = Draw_piece(),
-                              const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    Base(aPieceDrawer, aPieceBBox),
-    m_set(aSet)
+  Piecewise_set_graphics_item(Piecewise_set* a_set, const Draw_piece& a_piece_drawer = Draw_piece(),
+                              const Piece_bbox& a_piece_bbox = Piece_bbox()) :
+    Base(a_piece_drawer, a_piece_bbox),
+    m_set(a_set)
   {}
 
   /*! determines whether the set is empty.
@@ -57,20 +57,20 @@ public:
 protected:
   /*! extends the bounding box with the box of the set.
    */
-  virtual void update_bbox(Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder)
-  { if (m_set) update_set_bbox(*m_set, aBboxBuilder); }
+  virtual void update_bbox(Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder)
+  { if (m_set) update_set_bbox(*m_set, a_bbox_builder); }
 
   /*! adds the set to the path.
    */
-  virtual void draw_model(QPainterPath& aPath) { if (m_set) draw_set(*m_set, aPath); }
+  virtual void draw_model(QPainterPath& a_path) { if (m_set) draw_set(*m_set, a_path); }
 
   /*! extends the bounding box with the boxes of the polygons with holes of a set.
    */
-  void update_set_bbox(const Piecewise_set& aSet, Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder);
+  void update_set_bbox(const Piecewise_set& a_set, Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder);
 
   /*! adds the polygons with holes of a set to the path.
    */
-  void draw_set(const Piecewise_set& aSet, QPainterPath& aPath);
+  void draw_set(const Piecewise_set& a_set, QPainterPath& a_path);
 
 protected:
   Piecewise_set* m_set;
@@ -78,17 +78,17 @@ protected:
 
 template <typename S, typename D, typename P>
 void Piecewise_set_graphics_item<S, D, P>::
-update_set_bbox(const Piecewise_set& aSet, Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder) {
+update_set_bbox(const Piecewise_set& a_set, Piecewise_graphics_item_base::Bbox_builder& a_bbox_builder) {
   Region_vector vec;
-  aSet.polygons_with_holes(std::back_inserter(vec));
-  for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->update_region_bbox(*rit, aBboxBuilder);
+  a_set.polygons_with_holes(std::back_inserter(vec));
+  for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->update_region_bbox(*rit, a_bbox_builder);
 }
 
 template <typename S, typename D, typename P>
-void Piecewise_set_graphics_item<S, D, P>::draw_set(const Piecewise_set& aSet, QPainterPath& aPath) {
+void Piecewise_set_graphics_item<S, D, P>::draw_set(const Piecewise_set& a_set, QPainterPath& a_path) {
   Region_vector vec;
-  aSet.polygons_with_holes(std::back_inserter(vec));
-  for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->draw_region(*rit, aPath);
+  a_set.polygons_with_holes(std::back_inserter(vec));
+  for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->draw_region(*rit, a_path);
 }
 
 } // namespace Qt

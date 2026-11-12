@@ -56,7 +56,7 @@ using Polyline_GI = CGAL::Qt::Polyline_set_graphics_item<Polyline_polygon_set>;
 using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
 
 // The curve families.
-enum class Curve_type { Linear, Circular, Bezier, Polyline, Conic };
+enum class Curve_type { CT_LINEAR, CT_CIRCULAR, CT_BEZIER, CT_POLYLINE, CT_CONIC };
 constexpr std::size_t number_of_curve_types = 5;
 
 // The representation of a set of polygons of some curve family.
@@ -75,7 +75,7 @@ struct Rep_base {
 
   /*! assigns another set (of the same family) to the set.
    */
-  virtual void assign(const Rep_base& aOther) = 0;
+  virtual void assign(const Rep_base& a_other) = 0;
 
   /*! obtains the graphics item that draws the set.
    */
@@ -87,11 +87,11 @@ struct Rep_base {
 
   /*! sets the pen of the graphics item.
    */
-  virtual void set_pen(const QPen& aPen) = 0;
+  virtual void set_pen(const QPen& a_pen) = 0;
 
   /*! sets the brush of the graphics item.
    */
-  virtual void set_brush(const QBrush& aBrush) = 0;
+  virtual void set_brush(const QBrush& a_brush) = 0;
 
   /*! obtains the bounding rectangle of the set.
    */
@@ -115,39 +115,39 @@ struct Rep_base {
 
   /*! intersects the set with another set.
    */
-  virtual void intersect(const Rep_base& aOther) = 0;
+  virtual void intersect(const Rep_base& a_other) = 0;
 
   /*! joins the set with another set.
    */
-  virtual void join(const Rep_base& aOther) = 0;
+  virtual void join(const Rep_base& a_other) = 0;
 
   /*! subtracts another set from the set.
    */
-  virtual void difference(const Rep_base& aOther) = 0;
+  virtual void difference(const Rep_base& a_other) = 0;
 
   /*! replaces the set with its symmetric difference with another set.
    */
-  virtual void symmetric_difference(const Rep_base& aOther) = 0;
+  virtual void symmetric_difference(const Rep_base& a_other) = 0;
 
   /*! replaces the set with the complement of another set.
    */
-  virtual void complement(const Rep_base& aOther) = 0;
+  virtual void complement(const Rep_base& a_other) = 0;
 
   /*! replaces the set with the intersection of two sets.
    */
-  virtual void intersect(const Rep_base& aFirst, const Rep_base& aSecond) = 0;
+  virtual void intersect(const Rep_base& a_first, const Rep_base& a_second) = 0;
 
   /*! replaces the set with the union of two sets.
    */
-  virtual void join(const Rep_base& aFirst, const Rep_base& aSecond) = 0;
+  virtual void join(const Rep_base& a_first, const Rep_base& a_second) = 0;
 
   /*! replaces the set with the difference of two sets.
    */
-  virtual void difference(const Rep_base& aFirst, const Rep_base& aSecond) = 0;
+  virtual void difference(const Rep_base& a_first, const Rep_base& a_second) = 0;
 
   /*! replaces the set with the symmetric difference of two sets.
    */
-  virtual void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) = 0;
+  virtual void symmetric_difference(const Rep_base& a_first, const Rep_base& a_second) = 0;
 };
 
 // The representation of a set of a given curve family, with the graphics item that draws the set.
@@ -164,7 +164,7 @@ public:
 
   /*! constructs a copy of a set and its graphics item.
    */
-  explicit Rep(const Set& aSet) : m_set(aSet), m_GI(new GI(&m_set)) {}
+  explicit Rep(const Set& a_set) : m_set(a_set), m_GI(new GI(&m_set)) {}
 
   Rep(const Rep&) = delete;
   Rep& operator=(const Rep&) = delete;
@@ -207,11 +207,11 @@ public:
 
   /*! sets the pen of the graphics item.
    */
-  void set_pen(const QPen& aPen) override { m_GI->set_pen(aPen); }
+  void set_pen(const QPen& a_pen) override { m_GI->set_pen(a_pen); }
 
   /*! sets the brush of the graphics item.
    */
-  void set_brush(const QBrush& aBrush) override { m_GI->set_brush(aBrush); }
+  void set_brush(const QBrush& a_brush) override { m_GI->set_brush(a_brush); }
 
   /*! determines whether the set is empty.
    */
@@ -227,70 +227,70 @@ public:
 
   /*! assigns another set (of the same family) to the set.
    */
-  void assign(const Rep_base& aOther) override { guarded("assign", [&] { m_set = cast(aOther).m_set; }); }
+  void assign(const Rep_base& a_other) override { guarded("assign", [&] { m_set = cast(a_other).m_set; }); }
 
   /*! intersects the set with another set.
    */
-  void intersect(const Rep_base& aOther) override
-  { guarded("intersect", [&] { m_set.intersection(cast(aOther).m_set); }); }
+  void intersect(const Rep_base& a_other) override
+  { guarded("intersect", [&] { m_set.intersection(cast(a_other).m_set); }); }
 
   /*! joins the set with another set.
    */
-  void join(const Rep_base& aOther) override { guarded("union", [&] { m_set.join(cast(aOther).m_set); }); }
+  void join(const Rep_base& a_other) override { guarded("union", [&] { m_set.join(cast(a_other).m_set); }); }
 
   /*! subtracts another set from the set.
    */
-  void difference(const Rep_base& aOther) override
-  { guarded("difference", [&] { m_set.difference(cast(aOther).m_set); }); }
+  void difference(const Rep_base& a_other) override
+  { guarded("difference", [&] { m_set.difference(cast(a_other).m_set); }); }
 
   /*! replaces the set with its symmetric difference with another set.
    */
-  void symmetric_difference(const Rep_base& aOther) override
-  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(aOther).m_set); }); }
+  void symmetric_difference(const Rep_base& a_other) override
+  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(a_other).m_set); }); }
 
   /*! replaces the set with the complement of another set.
    */
-  void complement(const Rep_base& aOther) override
-  { guarded("complement", [&] { m_set.complement(cast(aOther).m_set); }); }
+  void complement(const Rep_base& a_other) override
+  { guarded("complement", [&] { m_set.complement(cast(a_other).m_set); }); }
 
   /*! replaces the set with the intersection of two sets.
    */
-  void intersect(const Rep_base& aFirst, const Rep_base& aSecond) override
-  { guarded("intersect", [&] { m_set.intersection(cast(aFirst).m_set, cast(aSecond).m_set); }); }
+  void intersect(const Rep_base& a_first, const Rep_base& a_second) override
+  { guarded("intersect", [&] { m_set.intersection(cast(a_first).m_set, cast(a_second).m_set); }); }
 
   /*! replaces the set with the union of two sets.
    */
-  void join(const Rep_base& aFirst, const Rep_base& aSecond) override
-  { guarded("union", [&] { m_set.join(cast(aFirst).m_set, cast(aSecond).m_set); }); }
+  void join(const Rep_base& a_first, const Rep_base& a_second) override
+  { guarded("union", [&] { m_set.join(cast(a_first).m_set, cast(a_second).m_set); }); }
 
   /*! replaces the set with the difference of two sets.
    */
-  void difference(const Rep_base& aFirst, const Rep_base& aSecond) override
-  { guarded("difference", [&] { m_set.difference(cast(aFirst).m_set, cast(aSecond).m_set); }); }
+  void difference(const Rep_base& a_first, const Rep_base& a_second) override
+  { guarded("difference", [&] { m_set.difference(cast(a_first).m_set, cast(a_second).m_set); }); }
 
   /*! replaces the set with the symmetric difference of two sets.
    */
-  void symmetric_difference(const Rep_base& aFirst, const Rep_base& aSecond) override
-  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(aFirst).m_set, cast(aSecond).m_set); }); }
+  void symmetric_difference(const Rep_base& a_first, const Rep_base& a_second) override
+  { guarded("symmetric difference", [&] { m_set.symmetric_difference(cast(a_first).m_set, cast(a_second).m_set); }); }
 
   /*! casts a set representation to this type.
    */
-  static const Self& cast(const Rep_base& aOther) { return dynamic_cast<const Self&>(aOther); }
+  static const Self& cast(const Rep_base& a_other) { return dynamic_cast<const Self&>(a_other); }
 
   /*! casts a set representation to this type.
    */
-  static Self& cast(Rep_base& aOther) { return dynamic_cast<Self&>(aOther); }
+  static Self& cast(Rep_base& a_other) { return dynamic_cast<Self&>(a_other); }
 
 private:
   /*! applies an operation to the set; shows an error if it throws.
    */
   template <typename Operation>
-  static void guarded(const char* aName, Operation aOperation) {
+  static void guarded(const char* a_name, Operation a_operation) {
     try {
-      aOperation();
+      a_operation();
     }
     catch (...) {
-      show_error(std::string("Exception thrown during boolean operation ") + aName);
+      show_error(std::string("Exception thrown during boolean operation ") + a_name);
     }
   }
 
@@ -298,11 +298,11 @@ private:
   GI* m_GI;
 };
 
-using Linear_rep = Rep<Linear_GI, Linear_polygon_set, Curve_type::Linear>;
-using Circular_rep = Rep<Circular_GI, Circular_polygon_set, Curve_type::Circular>;
-using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::Bezier>;
-using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::Polyline>;
-using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::Conic>;
+using Linear_rep = Rep<Linear_GI, Linear_polygon_set, Curve_type::CT_LINEAR>;
+using Circular_rep = Rep<Circular_GI, Circular_polygon_set, Curve_type::CT_CIRCULAR>;
+using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::CT_BEZIER>;
+using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::CT_POLYLINE>;
+using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::CT_CONIC>;
 
 // A set of polygons of some curve family, drawn with a given pen and brush.
 class Curve_set {
@@ -311,34 +311,34 @@ class Curve_set {
 public:
   /*! constructs an empty set of a given curve family, drawn with a given pen and brush.
    */
-  Curve_set(Curve_type aType, QPen aPen, QBrush aBrush) : m_pen(aPen), m_brush(aBrush) { reset_type(aType); }
+  Curve_set(Curve_type a_type, QPen a_pen, QBrush a_brush) : m_pen(a_pen), m_brush(a_brush) { reset_type(a_type); }
 
   /*! replaces the set with an empty set of a given curve family.
    */
-  void reset_type(Curve_type aType) {
-    m_rep = Rep_ptr(new_rep(aType));
+  void reset_type(Curve_type a_type) {
+    m_rep = Rep_ptr(new_rep(a_type));
     m_rep->set_pen(m_pen);
     m_rep->set_brush(m_brush);
   }
 
   /*! constructs an empty set of a given curve family.
    */
-  static Rep_base* new_rep(Curve_type aType) {
-    switch (aType) {
-     case Curve_type::Linear: return new Linear_rep();
-     case Curve_type::Circular: return new Circular_rep();
-     case Curve_type::Bezier: return new Bezier_rep();
-     case Curve_type::Polyline: return new Polyline_rep();
-     case Curve_type::Conic: return new Conic_rep();
+  static Rep_base* new_rep(Curve_type a_type) {
+    switch (a_type) {
+     case Curve_type::CT_LINEAR: return new Linear_rep();
+     case Curve_type::CT_CIRCULAR: return new Circular_rep();
+     case Curve_type::CT_BEZIER: return new Bezier_rep();
+     case Curve_type::CT_POLYLINE: return new Polyline_rep();
+     case Curve_type::CT_CONIC: return new Conic_rep();
     }
     return nullptr;
   }
 
   /*! replaces the representation of the set with a given one, keeping the pen, the brush, and the visibility.
    */
-  void replace_rep(Rep_base* aRep) {
+  void replace_rep(Rep_base* a_rep) {
     bool visible = m_rep->gi()->isVisible();
-    m_rep = Rep_ptr(aRep);
+    m_rep = Rep_ptr(a_rep);
     m_rep->set_pen(m_pen);
     m_rep->set_brush(m_brush);
     m_rep->gi()->setVisible(visible);
@@ -368,8 +368,8 @@ public:
    * representations of the sets that do not change. If the representation is shared, it is replaced with a copy, or
    * with an empty set if the contents are about to be replaced anyway.
    */
-  void detach(bool aCopy = true) {
-    if (m_rep.use_count() > 1) replace_rep(aCopy ? m_rep->clone() : new_rep(type()));
+  void detach(bool a_copy = true) {
+    if (m_rep.use_count() > 1) replace_rep(a_copy ? m_rep->clone() : new_rep(type()));
   }
 
   /*! clears the set.
@@ -388,96 +388,96 @@ public:
 
   /*! assigns another set (of the same family) to the set.
    */
-  void assign(const Curve_set& aOther) {
-    if (! same_type(aOther) || (&aOther == this)) return;
+  void assign(const Curve_set& a_other) {
+    if (! same_type(a_other) || (&a_other == this)) return;
     detach(false);
-    m_rep->assign(*aOther.m_rep);
+    m_rep->assign(*a_other.m_rep);
   }
 
   /*! intersects the set with another set (of the same family).
    */
-  void intersect(const Curve_set& aOther) {
-    if (! same_type(aOther)) return;
+  void intersect(const Curve_set& a_other) {
+    if (! same_type(a_other)) return;
     detach();
-    m_rep->intersect(*aOther.m_rep);
+    m_rep->intersect(*a_other.m_rep);
   }
 
   /*! joins the set with another set (of the same family).
    */
-  void join(const Curve_set& aOther) {
-    if (! same_type(aOther)) return;
+  void join(const Curve_set& a_other) {
+    if (! same_type(a_other)) return;
     detach();
-    m_rep->join(*aOther.m_rep);
+    m_rep->join(*a_other.m_rep);
   }
 
   /*! subtracts another set (of the same family) from the set.
    */
-  void difference(const Curve_set& aOther) {
-    if (! same_type(aOther)) return;
+  void difference(const Curve_set& a_other) {
+    if (! same_type(a_other)) return;
     detach();
-    m_rep->difference(*aOther.m_rep);
+    m_rep->difference(*a_other.m_rep);
   }
 
   /*! replaces the set with its symmetric difference with another set (of the same family).
    */
-  void symmetric_difference(const Curve_set& aOther) {
-    if (! same_type(aOther)) return;
+  void symmetric_difference(const Curve_set& a_other) {
+    if (! same_type(a_other)) return;
     detach();
-    m_rep->symmetric_difference(*aOther.m_rep);
+    m_rep->symmetric_difference(*a_other.m_rep);
   }
 
   /*! replaces the set with the complement of another set.
    */
-  void complement(const Curve_set& aOther) {
-    if (! same_type(aOther)) return;
-    detach(&aOther == this);
-    m_rep->complement(*aOther.m_rep);
+  void complement(const Curve_set& a_other) {
+    if (! same_type(a_other)) return;
+    detach(&a_other == this);
+    m_rep->complement(*a_other.m_rep);
   }
 
   /*! replaces the set with the intersection of two sets (of the same family).
    */
-  void intersect(const Curve_set& aFirst, const Curve_set& aSecond) {
-    if (! same_type(aFirst) || ! same_type(aSecond)) return;
-    detach((&aFirst == this) || (&aSecond == this));
-    m_rep->intersect(*aFirst.m_rep, *aSecond.m_rep);
+  void intersect(const Curve_set& a_first, const Curve_set& a_second) {
+    if (! same_type(a_first) || ! same_type(a_second)) return;
+    detach((&a_first == this) || (&a_second == this));
+    m_rep->intersect(*a_first.m_rep, *a_second.m_rep);
   }
 
   /*! replaces the set with the union of two sets (of the same family).
    */
-  void join(const Curve_set& aFirst, const Curve_set& aSecond) {
-    if (! same_type(aFirst) || ! same_type(aSecond)) return;
-    detach((&aFirst == this) || (&aSecond == this));
-    m_rep->join(*aFirst.m_rep, *aSecond.m_rep);
+  void join(const Curve_set& a_first, const Curve_set& a_second) {
+    if (! same_type(a_first) || ! same_type(a_second)) return;
+    detach((&a_first == this) || (&a_second == this));
+    m_rep->join(*a_first.m_rep, *a_second.m_rep);
   }
 
   /*! replaces the set with the difference of two sets (of the same family).
    */
-  void difference(const Curve_set& aFirst, const Curve_set& aSecond) {
-    if (! same_type(aFirst) || ! same_type(aSecond)) return;
-    detach((&aFirst == this) || (&aSecond == this));
-    m_rep->difference(*aFirst.m_rep, *aSecond.m_rep);
+  void difference(const Curve_set& a_first, const Curve_set& a_second) {
+    if (! same_type(a_first) || ! same_type(a_second)) return;
+    detach((&a_first == this) || (&a_second == this));
+    m_rep->difference(*a_first.m_rep, *a_second.m_rep);
   }
 
   /*! replaces the set with the symmetric difference of two sets (of the same family).
    */
-  void symmetric_difference(const Curve_set& aFirst, const Curve_set& aSecond) {
-    if (! same_type(aFirst) || ! same_type(aSecond)) return;
-    detach((&aFirst == this) || (&aSecond == this));
-    m_rep->symmetric_difference(*aFirst.m_rep, *aSecond.m_rep);
+  void symmetric_difference(const Curve_set& a_first, const Curve_set& a_second) {
+    if (! same_type(a_first) || ! same_type(a_second)) return;
+    detach((&a_first == this) || (&a_second == this));
+    m_rep->symmetric_difference(*a_first.m_rep, *a_second.m_rep);
   }
 
   /*! determines whether another set is of the same curve family.
    */
-  bool same_type(const Curve_set& aOther) const
-  { return m_rep && aOther.m_rep && (m_rep->type() == aOther.m_rep->type()); }
+  bool same_type(const Curve_set& a_other) const
+  { return m_rep && a_other.m_rep && (m_rep->type() == a_other.m_rep->type()); }
 
   /*! sets the brush.
    */
-  void change_brush_color(QBrush aBrush) { m_brush = aBrush; }
+  void change_brush_color(QBrush a_brush) { m_brush = a_brush; }
 
   /*! sets the pen.
    */
-  void change_pen_color(QPen aPen) { m_pen = aPen; }
+  void change_pen_color(QPen a_pen) { m_pen = a_pen; }
 
   /*! obtains the representation of the set.
    */
@@ -496,23 +496,23 @@ public:
 
   /*! determines whether the set is linear.
    */
-  bool is_linear() const { return type() == Curve_type::Linear; }
+  bool is_linear() const { return type() == Curve_type::CT_LINEAR; }
 
   /*! determines whether the set is circular.
    */
-  bool is_circular() const { return type() == Curve_type::Circular; }
+  bool is_circular() const { return type() == Curve_type::CT_CIRCULAR; }
 
   /*! determines whether the set is Bezier.
    */
-  bool is_bezier() const { return type() == Curve_type::Bezier; }
+  bool is_bezier() const { return type() == Curve_type::CT_BEZIER; }
 
   /*! determines whether the set is a polyline set.
    */
-  bool is_polyline() const { return type() == Curve_type::Polyline; }
+  bool is_polyline() const { return type() == Curve_type::CT_POLYLINE; }
 
   /*! determines whether the set is conic.
    */
-  bool is_conic() const { return type() == Curve_type::Conic; }
+  bool is_conic() const { return type() == Curve_type::CT_CONIC; }
 
   /*! obtains the conic representation, or null if the set is not conic.
    */

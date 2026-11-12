@@ -29,25 +29,27 @@
 
 #include "Polygon_io.h"
 
-void MainWindow::open_linear()
+void Main_window::open_linear()
 { open(QFileDialog::getOpenFileName(this, tr("Open Linear Polygon"), "./data", tr("Linear Curve files (*.lps)"))); }
 
-void MainWindow::open_circular() {
+void Main_window::open_circular() {
   open(QFileDialog::getOpenFileName(this, tr("Open Line segments and circular arcs"), "./data",
                                     tr("Circular curve files (*.cps)")));
 }
 
-void MainWindow::open_bezier()
+void Main_window::open_bezier()
 { open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), "./data", tr("Bezier Curve files (*.bps)"))); }
 
-void MainWindow::open_polyline()
-{ open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data", tr("Polyline Curve files (*.mps)"))); }
+void Main_window::open_polyline() {
+  open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), "./data",
+                                    tr("Polyline Curve files (*.plps)")));
+}
 
 template <typename Set, typename Read_boundary>
-bool MainWindow::read_polygons(const QString& aFileName, const char* aKind, Read_boundary aReadBoundary) {
-  std::ifstream in_file(qPrintable(aFileName));
+bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, Read_boundary a_read_boundary) {
+  std::ifstream in_file(qPrintable(a_file_name));
   if (! in_file) return false;
-  bool rOK = false;
+  bool r_ok = false;
   try {
     std::string format;
     std::getline(in_file, format);
@@ -59,45 +61,45 @@ bool MainWindow::read_polygons(const QString& aFileName, const char* aKind, Read
       unsigned int n_boundaries;
       in_file >> n_boundaries;
       for (unsigned int b = 0; b < n_boundaries; ++b) {
-        auto xcvs = aReadBoundary(in_file, double_format);
+        auto xcvs = a_read_boundary(in_file, double_format);
         if (xcvs.empty()) continue;
         typename Set::Polygon_2 pgn(xcvs.begin(), xcvs.end());
         if (pgn.orientation() == CGAL::CLOCKWISE) pgn.reverse_orientation();
         typename Set::Polygon_with_holes_2 pwh(pgn);
         // The first boundary is the outer one; the others are holes.
         if (b == 0) {
-          get_new_state(State_op::Draw);
+          get_new_state(State_op::SO_DRAW);
           states_stack.back().set(m_color_active).get<Set>().join(pwh);
         }
         else states_stack.back().set(m_color_active).get<Set>().difference(Set(pwh));
       }
-      rOK = true;
+      r_ok = true;
     }
   }
   catch (...) {
-    show_warning(std::string("Exception occurred during reading of ") + aKind + " polygon set.");
+    show_warning(std::string("Exception occurred during reading of ") + a_kind + " polygon set.");
   }
-  return rOK;
+  return r_ok;
 }
 
-bool MainWindow::read_linear(QString aFileName) {
-  return read_polygons<Linear_polygon_set>(aFileName, "linear", read_linear_boundary);
+bool Main_window::read_linear(QString a_file_name) {
+  return read_polygons<Linear_polygon_set>(a_file_name, "linear", read_linear_boundary);
 }
 
-bool MainWindow::read_circular(QString aFileName) {
-  return read_polygons<Circular_polygon_set>(aFileName, "circular", read_circular_boundary);
+bool Main_window::read_circular(QString a_file_name) {
+  return read_polygons<Circular_polygon_set>(a_file_name, "circular", read_circular_boundary);
 }
 
-bool MainWindow::read_polyline(QString aFileName) {
-  return read_polygons<Polyline_polygon_set>(aFileName, "polyline", read_polyline_boundary);
+bool Main_window::read_polyline(QString a_file_name) {
+  return read_polygons<Polyline_polygon_set>(a_file_name, "polyline", read_polyline_boundary);
 }
 
-bool MainWindow::read_bezier(QString aFileName) {
-  return read_polygons<Bezier_polygon_set>(aFileName, "Bezier", read_bezier_boundary);
+bool Main_window::read_bezier(QString a_file_name) {
+  return read_polygons<Bezier_polygon_set>(a_file_name, "Bezier", read_bezier_boundary);
 }
 
-void MainWindow::save_draw_bucket() {
-  if (m_curve_type == Curve_type::Conic) {
+void Main_window::save_draw_bucket() {
+  if (m_curve_type == Curve_type::CT_CONIC) {
     show_error("Saving conic polygon sets is not supported yet.");
     return;
   }
@@ -110,22 +112,22 @@ void MainWindow::save_draw_bucket() {
   auto& bucket = states_stack.back().set(m_color_active);
   bool saved = false;
   switch (m_curve_type) {
-   case Curve_type::Linear: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
-   case Curve_type::Circular: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
-   case Curve_type::Bezier: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
-   case Curve_type::Polyline: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
+   case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
+   case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
+   case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
+   case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
    default: break;
   }
   if (! saved) show_error("Cannot save " + std::string(selected.m_name) + " polygon set.");
 }
 
-void MainWindow::open(QString fileName) {
-  if (fileName.isEmpty()) return;
+void Main_window::open(QString a_file_name) {
+  if (a_file_name.isEmpty()) return;
   for (const auto& family : m_families) {
-    if (! family.m_extension || ! fileName.endsWith(family.m_extension)) continue;
-    if (ensure_curve_type(family.m_type) && (this->*family.m_read)(fileName)) {
+    if (! family.m_extension || ! a_file_name.endsWith(family.m_extension)) continue;
+    if (ensure_curve_type(family.m_type) && (this->*family.m_read)(a_file_name)) {
       model_changed();
-      this->addToRecentFiles(fileName);
+      this->addToRecentFiles(a_file_name);
     }
     return;
   }

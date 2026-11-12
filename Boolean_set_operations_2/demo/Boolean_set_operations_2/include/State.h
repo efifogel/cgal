@@ -34,19 +34,21 @@
 #include "Curve_set.h"
 
 // The operations recorded on the undo stack.
-enum class State_op { Complement, Intersection, Union, Difference, Symmetric_difference, Minkowski_sum, Reset, Copy,
-                      Move, Clear, Delete_all, Draw, Start, Console };
+enum class State_op {
+  SO_COMPLEMENT, SO_INTERSECTION, SO_UNION, SO_DIFFERENCE, SYMMETRIC_DIFFERENCE, MINKOWSKI_SUM, SO_RESET, SO_COPY,
+  SO_MOVE, SO_CLEAR, DELETE_ALL, SO_DRAW, SO_START, SO_CONSOLE
+};
 
 // The state after an action: the sets of the buckets and of the scratch result set.
 class State_current {
 public:
   /*! constructs the state after a given operation, with empty sets of a given curve family.
    */
-  State_current(State_op aOperation, Curve_type aType);
+  State_current(State_op a_operation, Curve_type a_type);
 
   /*! obtains the set of a given bucket (or the scratch result set, at result_index).
    */
-  Curve_set& set(std::size_t aIndex) { return m_curve_sets[aIndex]; }
+  Curve_set& set(std::size_t a_index) { return m_curve_sets[a_index]; }
 
   /*! obtains the scratch result set.
    */
@@ -54,14 +56,14 @@ public:
 
   /*! shows or hides a bucket.
    */
-  void toggle_view(std::size_t aIndex, bool a_check) {
-    if (a_check) set(aIndex).gi()->show();
-    else set(aIndex).gi()->hide();
+  void toggle_view(std::size_t a_index, bool a_check) {
+    if (a_check) set(a_index).gi()->show();
+    else set(a_index).gi()->hide();
   }
 
   /*! clears a given bucket (or the result).
    */
-  void clear(std::size_t aIndex) { set(aIndex).clear(); }
+  void clear(std::size_t a_index) { set(a_index).clear(); }
 
 public:
   Curve_set_container m_curve_sets;
@@ -70,12 +72,13 @@ public:
   Curve_type m_type;
 };
 
-inline State_current::State_current(State_op aOperation, Curve_type aType) : m_operation(aOperation), m_type(aType) {
-  for (std::size_t i = 0; i <= number_of_buckets; ++i) m_curve_sets.push_back(Curve_set(m_type, sPens[i], sBrushes[i]));
+inline State_current::State_current(State_op a_operation, Curve_type a_type) :
+  m_operation(a_operation),
+  m_type(a_type) {
+  for (std::size_t i = 0; i <= number_of_buckets; ++i)
+    m_curve_sets.push_back(Curve_set(m_type, s_pens[i], s_brushes[i]));
 }
 
-using state_container = std::vector<State_current>;
-using state_const_iterator = state_container::const_iterator;
-using state_iterator = state_container::iterator;
+using State_container = std::vector<State_current>;
 
 #endif

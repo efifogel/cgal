@@ -42,7 +42,7 @@ constexpr std::size_t result_index = number_of_buckets;
 constexpr std::size_t min_number_of_buckets = 3;
 
 // The pens and the brushes of the buckets and of the scratch result set.
-inline QPen sPens[] = {
+inline QPen s_pens[] = {
   QPen(QColor(255, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //red
   QPen(QColor(0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),     //black
   QPen(QColor(0, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //blue
@@ -53,7 +53,7 @@ inline QPen sPens[] = {
   QPen(QColor(0, 0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //Result
 };
 
-inline QBrush sBrushes[] = {
+inline QBrush s_brushes[] = {
   QBrush(QColor(255, 0, 0, 75)),           //red
   QBrush(QColor(0, 0, 0, 75)),             //black
   QBrush(QColor(0, 0, 255, 75)),           //blue
@@ -66,16 +66,16 @@ inline QBrush sBrushes[] = {
 
 /*! obtains the name of a bucket in the program (the color of its row), by its index.
  */
-inline const char* bucket_name(std::size_t aIndex) {
+inline const char* bucket_name(std::size_t a_index) {
   static const char* names[] = { "red", "black", "blue", "brown", "yellow", "magenta", "aqua" };
-  return (aIndex < number_of_buckets) ? names[aIndex] : "result";
+  return (a_index < number_of_buckets) ? names[a_index] : "result";
 }
 
 /*! obtains a string with its first letter capitalized.
  */
-inline QString capitalized(QString aString) {
-  if (! aString.isEmpty()) aString[0] = aString[0].toUpper();
-  return aString;
+inline QString capitalized(QString a_string) {
+  if (! a_string.isEmpty()) a_string[0] = a_string[0].toUpper();
+  return a_string;
 }
 
 #endif

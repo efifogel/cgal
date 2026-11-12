@@ -28,21 +28,21 @@
 
 #include "Main_window.h"
 
-std::optional<std::size_t> MainWindow::checked_bucket(const Column& aColumn) const {
-  auto buckets = checked_buckets(aColumn);
+std::optional<std::size_t> Main_window::checked_bucket(const Column& a_column) const {
+  auto buckets = checked_buckets(a_column);
   if (buckets.empty()) return std::nullopt;
   return buckets.front();
 }
 
-void MainWindow::delete_all() {
-  actionComplementH->setChecked(false);
-  actionIntersectionH->setChecked(false);
-  actionUnionH->setChecked(false);
-  actionDifferenceH->setChecked(false);
-  actionSymmetric_DifferenceH->setChecked(false);
-  actionMinkowski_SumH->setChecked(false);
+void Main_window::delete_all() {
+  action_complement_h->setChecked(false);
+  action_intersection_h->setChecked(false);
+  action_union_h->setChecked(false);
+  action_difference_h->setChecked(false);
+  action_symmetric_difference_h->setChecked(false);
+  action_minkowski_sum_h->setChecked(false);
 
-  get_new_state(State_op::Delete_all);
+  get_new_state(State_op::DELETE_ALL);
   QStringList program;
   for (std::size_t i = 0; i < number_of_buckets; ++i) {
     if (! states_stack.back().set(i).is_empty()) program << QString("%1.clear()").arg(bucket_name(i));
@@ -54,22 +54,22 @@ void MainWindow::delete_all() {
   model_changed();
 }
 
-void MainWindow::delete_result() {
+void Main_window::delete_result() {
   states_stack.back().clear(result_index);
   model_changed();
 }
 
-void MainWindow::apply_clear(bool aChecked) {
-  if (! aChecked) return;
-  actionComplementH->setChecked(false);
-  actionIntersectionH->setChecked(false);
-  actionUnionH->setChecked(false);
-  actionDifferenceH->setChecked(false);
-  actionSymmetric_DifferenceH->setChecked(false);
-  actionMinkowski_SumH->setChecked(false);
+void Main_window::apply_clear(bool a_checked) {
+  if (! a_checked) return;
+  action_complement_h->setChecked(false);
+  action_intersection_h->setChecked(false);
+  action_union_h->setChecked(false);
+  action_difference_h->setChecked(false);
+  action_symmetric_difference_h->setChecked(false);
+  action_minkowski_sum_h->setChecked(false);
 
   auto buckets = checked_buckets(m_clear_column);
-  get_new_state(State_op::Clear);
+  get_new_state(State_op::SO_CLEAR);
   QStringList program;
   for (auto i : buckets) program << QString("%1.clear()").arg(bucket_name(i));
   log_statements(program);
@@ -77,81 +77,81 @@ void MainWindow::apply_clear(bool aChecked) {
   for (auto i : buckets) states_stack.back().clear(i);
   if (buckets.empty()) show_error("Please select color bucket to be cleaned!!!");
 
-  actionClearH->setChecked(false);
+  action_clear_h->setChecked(false);
   model_changed();
 }
 
-void MainWindow::apply_complement(bool /* aChecked */) {
-  if (! actionComplementH->isChecked()) return;
+void Main_window::apply_complement(bool /* a_checked */) {
+  if (! action_complement_h->isChecked()) return;
   auto operands = checked_buckets(m_complement_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
-  if (abort_for_draw_bucket(actionComplementH, is_operand)) return;
-  uncheck_operations_except(actionComplementH);
-  run_operation(Bucket_op::Complement, operands, actionComplementH);
+  if (abort_for_draw_bucket(action_complement_h, is_operand)) return;
+  uncheck_operations_except(action_complement_h);
+  run_operation(Bucket_op::BO_COMPLEMENT, operands, action_complement_h);
 }
 
-void MainWindow::apply_intersection(bool /* aChecked */) {
-  if (! actionIntersectionH->isChecked()) return;
+void Main_window::apply_intersection(bool /* a_checked */) {
+  if (! action_intersection_h->isChecked()) return;
   auto operands = checked_buckets(m_intersection_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
-  if (abort_for_draw_bucket(actionIntersectionH, is_operand)) return;
-  uncheck_operations_except(actionIntersectionH);
-  run_operation(Bucket_op::Intersection, operands, actionIntersectionH);
+  if (abort_for_draw_bucket(action_intersection_h, is_operand)) return;
+  uncheck_operations_except(action_intersection_h);
+  run_operation(Bucket_op::BO_INTERSECTION, operands, action_intersection_h);
 }
 
-void MainWindow::apply_difference(bool /* aChecked */) {
-  if (! actionDifferenceH->isChecked()) return;
+void Main_window::apply_difference(bool /* a_checked */) {
+  if (! action_difference_h->isChecked()) return;
   auto operands = checked_buckets(m_difference_column);
   if (operands.size() != 2) {
-    actionDifferenceH->setChecked(false);
+    action_difference_h->setChecked(false);
     ask_user_ok("Operation Error", "The difference takes exactly two buckets.\n");
     return;
   }
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
-  if (abort_for_draw_bucket(actionDifferenceH, is_operand)) return;
-  uncheck_operations_except(actionDifferenceH);
-  run_operation(Bucket_op::Difference, operands, actionDifferenceH);
+  if (abort_for_draw_bucket(action_difference_h, is_operand)) return;
+  uncheck_operations_except(action_difference_h);
+  run_operation(Bucket_op::BO_DIFFERENCE, operands, action_difference_h);
 }
 
-void MainWindow::apply_symmetric_difference(bool /* aChecked */) {
-  if (! actionSymmetric_DifferenceH->isChecked()) return;
+void Main_window::apply_symmetric_difference(bool /* a_checked */) {
+  if (! action_symmetric_difference_h->isChecked()) return;
   auto operands = checked_buckets(m_symmetric_difference_column);
   if (operands.size() != 2) {
-    actionSymmetric_DifferenceH->setChecked(false);
+    action_symmetric_difference_h->setChecked(false);
     ask_user_ok("Operation Error", "The symmetric difference takes exactly two buckets.\n");
     return;
   }
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
-  if (abort_for_draw_bucket(actionSymmetric_DifferenceH, is_operand)) return;
-  uncheck_operations_except(actionSymmetric_DifferenceH);
-  run_operation(Bucket_op::Symmetric_difference, operands, actionSymmetric_DifferenceH);
+  if (abort_for_draw_bucket(action_symmetric_difference_h, is_operand)) return;
+  uncheck_operations_except(action_symmetric_difference_h);
+  run_operation(Bucket_op::SYMMETRIC_DIFFERENCE, operands, action_symmetric_difference_h);
 }
 
-void MainWindow::apply_union(bool /* aChecked */) {
-  if (! actionUnionH->isChecked()) return;
+void Main_window::apply_union(bool /* a_checked */) {
+  if (! action_union_h->isChecked()) return;
   auto operands = checked_buckets(m_union_column);
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
-  if (abort_for_draw_bucket(actionUnionH, is_operand)) return;
-  uncheck_operations_except(actionUnionH);
-  run_operation(Bucket_op::Join, operands, actionUnionH);
+  if (abort_for_draw_bucket(action_union_h, is_operand)) return;
+  uncheck_operations_except(action_union_h);
+  run_operation(Bucket_op::BO_JOIN, operands, action_union_h);
 }
 
-void MainWindow::apply_copy(bool aChecked) {
-  if (actionCopyH->isChecked()) {
+void Main_window::apply_copy(bool a_checked) {
+  if (action_copy_h->isChecked()) {
     auto source = checked_bucket(m_copy_column);
-    if (abort_for_draw_bucket(actionCopyH, source == m_color_active)) return;
-    bool lDone = false;
+    if (abort_for_draw_bucket(action_copy_h, source == m_color_active)) return;
+    bool l_done = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
 
-    actionUnionH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionMoveH->setChecked(false);
+    action_union_h->setChecked(false);
+    action_intersection_h->setChecked(false);
+    action_difference_h->setChecked(false);
+    action_symmetric_difference_h->setChecked(false);
+    action_minkowski_sum_h->setChecked(false);
+    action_move_h->setChecked(false);
 
-    get_new_state(State_op::Copy);
+    get_new_state(State_op::SO_COPY);
     if (source)
       log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*source))});
 
@@ -161,32 +161,32 @@ void MainWindow::apply_copy(bool aChecked) {
     else if (! states_stack.back().set(*source).is_empty())
       states_stack.back().result_set().assign(states_stack.back().set(*source));
 
-    actionCopyH->setChecked(false);
-    lDone = true;
+    action_copy_h->setChecked(false);
+    l_done = true;
     if (! states_stack.back().result_set().is_empty())
       states_stack.back().set(m_color_active).join(states_stack.back().result_set());
     states_stack.back().clear(result_index);
     this->setCursor(old);
-    if (lDone) model_changed();
+    if (l_done) model_changed();
   }
 }
 
-void MainWindow::apply_move(bool aChecked) {
-  if (actionMoveH->isChecked()) {
+void Main_window::apply_move(bool a_checked) {
+  if (action_move_h->isChecked()) {
     auto source = checked_bucket(m_move_column);
-    if (abort_for_draw_bucket(actionMoveH, source == m_color_active)) return;
-    bool lDone = false;
+    if (abort_for_draw_bucket(action_move_h, source == m_color_active)) return;
+    bool l_done = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
 
-    actionUnionH->setChecked(false);
-    actionIntersectionH->setChecked(false);
-    actionDifferenceH->setChecked(false);
-    actionSymmetric_DifferenceH->setChecked(false);
-    actionMinkowski_SumH->setChecked(false);
-    actionCopyH->setChecked(false);
+    action_union_h->setChecked(false);
+    action_intersection_h->setChecked(false);
+    action_difference_h->setChecked(false);
+    action_symmetric_difference_h->setChecked(false);
+    action_minkowski_sum_h->setChecked(false);
+    action_copy_h->setChecked(false);
 
-    get_new_state(State_op::Move);
+    get_new_state(State_op::SO_MOVE);
     if (source)
       log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), bucket_name(*source)),
                       QString("%1.clear()").arg(bucket_name(*source))});
@@ -201,26 +201,26 @@ void MainWindow::apply_move(bool aChecked) {
       source_set.clear();
     }
 
-    actionMoveH->setChecked(false);
+    action_move_h->setChecked(false);
     states_stack.back().clear(result_index);
 
-    lDone = true;
+    l_done = true;
     this->setCursor(old);
-    if (lDone) model_changed();
+    if (l_done) model_changed();
   }
 }
 
-Polygon_with_holes_2 MainWindow::get_mink_input_polygon(std::size_t aIndex) {
-  const auto& lps = states_stack.back().set(aIndex).linear();
+Polygon_with_holes_2 Main_window::get_mink_input_polygon(std::size_t a_index) {
+  const auto& lps = states_stack.back().set(a_index).linear();
   if (lps.number_of_polygons_with_holes() > 1) m_disjoint = true;
   if (m_disjoint) return Polygon_with_holes_2();
 
   // Converts a boundary to a polygon of a given orientation.
-  auto to_polygon = [](const Linear_polygon& aBoundary, CGAL::Orientation aOrientation) {
+  auto to_polygon = [](const Linear_polygon& a_boundary, CGAL::Orientation a_orientation) {
     Polygon_2 pgn;
-    for (auto cit = aBoundary.curves_begin(); cit != aBoundary.curves_end(); ++cit)
+    for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit)
       pgn.push_back(Kernel::Point_2(CGAL::to_double(cit->source().x()), CGAL::to_double(cit->source().y())));
-    if (pgn.orientation() == CGAL::opposite(aOrientation)) pgn.reverse_orientation();
+    if (pgn.orientation() == CGAL::opposite(a_orientation)) pgn.reverse_orientation();
     return pgn;
   };
   std::vector<Linear_polygon_with_holes> pwhs;
@@ -231,23 +231,23 @@ Polygon_with_holes_2 MainWindow::get_mink_input_polygon(std::size_t aIndex) {
   return Polygon_with_holes_2(to_polygon(pwh.outer_boundary(), CGAL::COUNTERCLOCKWISE), holes.begin(), holes.end());
 }
 
-void MainWindow::apply_minkowski_sum(bool aChecked) {
-  if (actionMinkowski_SumH->isChecked()) {
-    if (abort_for_draw_bucket(actionMinkowski_SumH,
+void Main_window::apply_minkowski_sum(bool a_checked) {
+  if (action_minkowski_sum_h->isChecked()) {
+    if (abort_for_draw_bucket(action_minkowski_sum_h,
                               draw_row_checked(m_minkowski_sum_column)))
       return;
-    bool lDone = false;
+    bool l_done = false;
     QCursor old = this->cursor();
     this->setCursor(Qt::WaitCursor);
 
-    if (m_curve_type == Curve_type::Linear) {
-      actionComplementH->setChecked(false);
-      actionUnionH->setChecked(false);
-      actionIntersectionH->setChecked(false);
-      actionDifferenceH->setChecked(false);
-      actionSymmetric_DifferenceH->setChecked(false);
+    if (m_curve_type == Curve_type::CT_LINEAR) {
+      action_complement_h->setChecked(false);
+      action_union_h->setChecked(false);
+      action_intersection_h->setChecked(false);
+      action_difference_h->setChecked(false);
+      action_symmetric_difference_h->setChecked(false);
 
-      get_new_state(State_op::Minkowski_sum);
+      get_new_state(State_op::MINKOWSKI_SUM);
       log_statements({"# Minkowski sum (not supported in the program yet)"});
 
       // The two checked buckets, in order.
@@ -272,7 +272,7 @@ void MainWindow::apply_minkowski_sum(bool aChecked) {
             m_linear_input->m_is_mink = false;
           }
           else ask_user_ok("Minkowski Sum Operation Error", "resultant polygon is unbounded\n");
-          lDone = true;
+          l_done = true;
           minkowski_sum_operated = true;
         }
         else {
@@ -287,47 +287,47 @@ void MainWindow::apply_minkowski_sum(bool aChecked) {
       }
     }
 
-    actionMinkowski_SumH->setChecked(false);
+    action_minkowski_sum_h->setChecked(false);
     this->setCursor(old);
-    if (lDone) {
+    if (l_done) {
       model_changed();
     }
   }
 }
 
-bool MainWindow::show_not_empty_warning() {
+bool Main_window::show_not_empty_warning() {
   return show_message(QMessageBox::Information, "Warning: Bucket Not Empty", "The Draw/Insert bucket is not empty. "
-                      "Add the result to it?", actionWarnNotEmpty, QMessageBox::Ok | QMessageBox::Cancel) ==
+                      "Add the result to it?", action_warn_not_empty, QMessageBox::Ok | QMessageBox::Cancel) ==
     QMessageBox::Ok;
 }
 
-void MainWindow::show_operand_error() {
+void Main_window::show_operand_error() {
   show_message(QMessageBox::Critical, "Error: Operation Aborted", "The result cannot be stored in a non-empty operand.",
-               actionErrorOperand);
+               action_error_operand);
 }
 
-void MainWindow::
-limit_to_all_but_one(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
-                     QAbstractButton* aOperation) {
-  if (aChecked && ! aBox->isHidden()) {
-    bool all_checked = std::all_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box) {
+void Main_window::
+limit_to_all_but_one(const Column& a_column, QAbstractButton* a_box, bool a_checked,
+                     QAbstractButton* a_operation) {
+  if (a_checked && ! a_box->isHidden()) {
+    bool all_checked = std::all_of(a_column.begin(), a_column.end(), [](QAbstractButton* box) {
       return box->isHidden() || box->isChecked();
     });
     if (all_checked) {
-      aBox->setChecked(false);  // toggles again, and updates the operation
+      a_box->setChecked(false);  // toggles again, and updates the operation
       return;
     }
   }
-  bool any_checked = std::any_of(aColumn.begin(), aColumn.end(), [](QAbstractButton* box) {
+  bool any_checked = std::any_of(a_column.begin(), a_column.end(), [](QAbstractButton* box) {
     return ! box->isHidden() && box->isChecked();
   });
-  aOperation->setEnabled(any_checked);
+  a_operation->setEnabled(any_checked);
 }
 
-void MainWindow::
-keep_one_unchecked(const Column& aColumn) {
+void Main_window::
+keep_one_unchecked(const Column& a_column) {
   QAbstractButton* last = nullptr;
-  for (auto* box : aColumn) {
+  for (auto* box : a_column) {
     if (box->isHidden()) continue;
     if (! box->isChecked()) return;
     last = box;
@@ -335,95 +335,97 @@ keep_one_unchecked(const Column& aColumn) {
   if (last) last->setChecked(false);
 }
 
-void MainWindow::
-limit_to_two_operands(const Column& aColumn, QAbstractButton* aBox, bool aChecked,
-                      QAbstractButton* aOperation) {
-  auto count = std::count_if(aColumn.begin(), aColumn.end(), [](QAbstractButton* box) { return box->isChecked(); });
-  if (aChecked && (count > 2)) {
-    aBox->setChecked(false);    // toggles again, and updates the operation
+void Main_window::
+limit_to_two_operands(const Column& a_column, QAbstractButton* a_box, bool a_checked,
+                      QAbstractButton* a_operation) {
+  auto count = std::count_if(a_column.begin(), a_column.end(), [](QAbstractButton* box) { return box->isChecked(); });
+  if (a_checked && (count > 2)) {
+    a_box->setChecked(false);    // toggles again, and updates the operation
     return;
   }
-  aOperation->setEnabled(count == 2);
+  a_operation->setEnabled(count == 2);
 }
 
-std::vector<std::size_t> MainWindow::
-checked_buckets(const Column& aColumn) const {
+std::vector<std::size_t> Main_window::
+checked_buckets(const Column& a_column) const {
   std::vector<std::size_t> buckets;
-  for (std::size_t i = 0; i < aColumn.size(); ++i) {
-    if (! aColumn[i]->isHidden() && aColumn[i]->isChecked())
+  for (std::size_t i = 0; i < a_column.size(); ++i) {
+    if (! a_column[i]->isHidden() && a_column[i]->isChecked())
       buckets.push_back(i);
   }
   return buckets;
 }
 
-void MainWindow::uncheck_operations_except(QAbstractButton* aOperation) {
-  for (QAbstractButton* button : {static_cast<QAbstractButton*>(actionComplementH),
-          static_cast<QAbstractButton*>(actionIntersectionH), static_cast<QAbstractButton*>(actionUnionH),
-          static_cast<QAbstractButton*>(actionDifferenceH), static_cast<QAbstractButton*>(actionSymmetric_DifferenceH),
-          static_cast<QAbstractButton*>(actionMinkowski_SumH), static_cast<QAbstractButton*>(actionCopyH),
-          static_cast<QAbstractButton*>(actionMoveH)}) {
-    if (button != aOperation) button->setChecked(false);
+void Main_window::uncheck_operations_except(QAbstractButton* a_operation) {
+  for (QAbstractButton* button : {static_cast<QAbstractButton*>(action_complement_h),
+          static_cast<QAbstractButton*>(action_intersection_h), static_cast<QAbstractButton*>(action_union_h),
+          static_cast<QAbstractButton*>(action_difference_h),
+          static_cast<QAbstractButton*>(action_symmetric_difference_h),
+          static_cast<QAbstractButton*>(action_minkowski_sum_h), static_cast<QAbstractButton*>(action_copy_h),
+          static_cast<QAbstractButton*>(action_move_h)}) {
+    if (button != a_operation) button->setChecked(false);
   }
 }
 
-void MainWindow::clear_result() {
+void Main_window::clear_result() {
   auto& state = states_stack.back();
   state.clear(result_index);
 }
 
-void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aOperands, QAbstractButton* aOperation) {
-  if (aOperands.empty() || ((aOp == Bucket_op::Complement) && (aOperands.size() != 1))) {
-    aOperation->setChecked(false);
+void Main_window::run_operation(Bucket_op a_op, const std::vector<std::size_t>& a_operands,
+                                QAbstractButton* a_operation) {
+  if (a_operands.empty() || ((a_op == Bucket_op::BO_COMPLEMENT) && (a_operands.size() != 1))) {
+    a_operation->setChecked(false);
     return;
   }
 
-  State_op code = State_op::Complement;
-  switch (aOp) {
-   case Bucket_op::Complement: code = State_op::Complement; break;
-   case Bucket_op::Intersection: code = State_op::Intersection; break;
-   case Bucket_op::Join: code = State_op::Union; break;
-   case Bucket_op::Difference: code = State_op::Difference; break;
-   case Bucket_op::Symmetric_difference: code = State_op::Symmetric_difference; break;
+  State_op code = State_op::SO_COMPLEMENT;
+  switch (a_op) {
+   case Bucket_op::BO_COMPLEMENT: code = State_op::SO_COMPLEMENT; break;
+   case Bucket_op::BO_INTERSECTION: code = State_op::SO_INTERSECTION; break;
+   case Bucket_op::BO_JOIN: code = State_op::SO_UNION; break;
+   case Bucket_op::BO_DIFFERENCE: code = State_op::SO_DIFFERENCE; break;
+   case Bucket_op::SYMMETRIC_DIFFERENCE: code = State_op::SYMMETRIC_DIFFERENCE; break;
   }
-  const QString name = method_name(aOp);
+  const QString name = method_name(a_op);
 
   QCursor old = this->cursor();
   this->setCursor(Qt::WaitCursor);
   get_new_state(code);
   clear_result();
   auto& state = states_stack.back();
-  auto bucket = [&state](std::size_t aIndex) -> Curve_set& { return state.set(aIndex); };
+  auto bucket = [&state](std::size_t a_index) -> Curve_set& { return state.set(a_index); };
   Curve_set& draw_bucket = state.set(m_color_active);
-  bool direct = draw_bucket.is_empty() && (std::find(aOperands.begin(), aOperands.end(), m_color_active) ==
-     aOperands.end());
+  bool direct = draw_bucket.is_empty() && (std::find(a_operands.begin(), a_operands.end(), m_color_active) ==
+     a_operands.end());
   Curve_set& result = direct ? draw_bucket : state.result_set();
   const QString target = direct ? bucket_name(m_color_active) : "result";
   QStringList program;
 
-  if (aOp == Bucket_op::Complement) {
-    result.complement(bucket(aOperands[0]));
+  if (a_op == Bucket_op::BO_COMPLEMENT) {
+    result.complement(bucket(a_operands[0]));
     if (! direct) program << "result = Polygon_set_2()";
     program << QString("%1.complement(%2)")
-      .arg(target, bucket_name(aOperands[0]));
+      .arg(target, bucket_name(a_operands[0]));
   }
-  else if (aOperands.size() == 1) {
+  else if (a_operands.size() == 1) {
     if (direct) {
-      result.join(bucket(aOperands[0]));
-      program << QString("%1.join(%2)").arg(target, bucket_name(aOperands[0]));
+      result.join(bucket(a_operands[0]));
+      program << QString("%1.join(%2)").arg(target, bucket_name(a_operands[0]));
     }
     else {
-      result.assign(bucket(aOperands[0]));
+      result.assign(bucket(a_operands[0]));
       program << QString("result = Polygon_set_2(%1)")
-        .arg(bucket_name(aOperands[0]));
+        .arg(bucket_name(a_operands[0]));
     }
   }
   else {
-    apply(aOp, result, bucket(aOperands[0]), bucket(aOperands[1]));
+    apply(a_op, result, bucket(a_operands[0]), bucket(a_operands[1]));
     if (! direct) program << "result = Polygon_set_2()";
-    program << QString("%1.%2(%3, %4)").arg(target, name, bucket_name(aOperands[0]), bucket_name(aOperands[1]));
-    for (std::size_t i = 2; i < aOperands.size(); ++i) {
-      apply(aOp, result, bucket(aOperands[i]));
-      program << QString("%1.%2(%3)").arg(target, name, bucket_name(aOperands[i]));
+    program << QString("%1.%2(%3, %4)").arg(target, name, bucket_name(a_operands[0]), bucket_name(a_operands[1]));
+    for (std::size_t i = 2; i < a_operands.size(); ++i) {
+      apply(a_op, result, bucket(a_operands[i]));
+      program << QString("%1.%2(%3)").arg(target, name, bucket_name(a_operands[i]));
     }
   }
 
@@ -433,25 +435,25 @@ void MainWindow::run_operation(Bucket_op aOp, const std::vector<std::size_t>& aO
   }
   clear_result();
 
-  aOperation->setChecked(false);
+  a_operation->setChecked(false);
   this->setCursor(old);
   log_statements(program);
   model_changed();
 }
 
-bool MainWindow::
-draw_row_checked(const Column& aColumn) const
-{ return (m_color_active < aColumn.size()) && aColumn[m_color_active]->isChecked(); }
+bool Main_window::
+draw_row_checked(const Column& a_column) const
+{ return (m_color_active < a_column.size()) && a_column[m_color_active]->isChecked(); }
 
-bool MainWindow::abort_for_draw_bucket(QAbstractButton* aOperation, bool aIsOperand) {
+bool Main_window::abort_for_draw_bucket(QAbstractButton* a_operation, bool a_is_operand) {
   if (states_stack.back().set(m_color_active).is_empty()) return false;
-  if (aIsOperand) {
-    aOperation->setChecked(false);
+  if (a_is_operand) {
+    a_operation->setChecked(false);
     if (operand_error_warn) show_operand_error();
     return true;
   }
   if (empty_warn && ! show_not_empty_warning()) {
-    aOperation->setChecked(false);
+    a_operation->setChecked(false);
     return true;
   }
   return false;
