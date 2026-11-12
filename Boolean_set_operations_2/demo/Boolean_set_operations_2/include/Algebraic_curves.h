@@ -22,10 +22,9 @@
 #define CGAL_ALGEBRAIC_CURVES_H
 
 /*! \file Algebraic_curves.h
- * Algebraic curves given by the user as polynomial equations, e.g., "x^2 + 3*y^2 == 10" or "x^2 + RN(1, 2)*y - 1"
- * (an expression p stands for p == 0). The text is parsed by a Polynomial_parser (to be implemented with Boost.Spirit
- * or Lexy) into a Bivariate_polynomial, using the arithmetic below, and the polynomial is converted into a curve of
- * Arr_algebraic_segment_traits_2.
+ * Algebraic curves given by the user as polynomial equations, e.g., "x^2 + 3*y^2 == 10" or "x^2 + RN(1, 2)*y == 1".
+ * The text is parsed by a Polynomial_parser (see Polynomial_parser.h) into a Bivariate_polynomial, using the arithmetic
+ * below, and the polynomial is converted into a curve of Arr_algebraic_segment_traits_2.
  */
 
 #include <functional>
@@ -49,7 +48,7 @@ using Algebraic_rational = CGAL::Arithmetic_kernel::Rational;
 using Bivariate_polynomial = std::map<std::pair<unsigned int, unsigned int>, Algebraic_rational>;
 
 /*! A parser of polynomial equations over integer and rational numbers (x/y or RN(x, y)) with +, -, *, ^, and ==,
- * which obtains the polynomial p - q of an equation p == q (and p of an expression p).
+ * which obtains the polynomial p - q of an equation p == q.
  * \return the polynomial, or nothing if the text is not an equation, in which case the error describes why.
  */
 using Polynomial_parser = std::function<std::optional<Bivariate_polynomial>(const std::string& a_text,
