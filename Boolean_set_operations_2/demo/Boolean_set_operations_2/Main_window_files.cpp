@@ -113,6 +113,10 @@ bool Main_window::read_bezier(QString a_file_name) {
 
 void Main_window::save_draw_bucket() {
   const auto& selected = family(m_curve_type);
+  if (! selected.m_extension) {
+    show_error("The polygons of " + std::string(selected.m_label) + " cannot be saved yet.");
+    return;
+  }
   QString label = selected.m_label;
   QString file_name = QFileDialog::getSaveFileName(this, "Save " + label,
                                                    data_directory(m_curve_type) + "/index" + selected.m_extension,

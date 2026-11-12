@@ -27,6 +27,9 @@
  */
 
 #include "Main_window.h"
+#include "Polynomial_dialog.h"
+#include "Polynomial_parser.h"
+#include "Algebraic_polygons.h"
 
 Main_window::Main_window() :
   DemosMainWindow(),
@@ -261,6 +264,7 @@ Main_window::Main_window() :
   m_circular_input = new CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>(this, &m_scene);
   m_polyline_input = new CGAL::Qt::Graphics_view_polyline_input<Kernel>(this, &m_scene);
   m_conic_input = new CGAL::Qt::Graphics_view_conic_input(this, &m_scene);
+  m_algebraic_input = new CGAL::Qt::GraphicsViewInput(this);
 
   // The curve families. Selecting one in the tool bar starts constructing its curves.
   m_families = {{
@@ -273,7 +277,9 @@ Main_window::Main_window() :
     {Curve_type::CT_POLYLINE, "polyline", "Polylines", action_insert_polyline, m_polyline_input,
      [this] { m_polyline_input->reset(); }, action_open_polyline, ".plps", &Main_window::read_polyline},
     {Curve_type::CT_CONIC, "conic", "Conics", action_insert_conic, m_conic_input, [this] { m_conic_input->reset(); },
-     action_open_conic, ".qps", &Main_window::read_conic}}};
+     action_open_conic, ".qps", &Main_window::read_conic},
+    {Curve_type::CT_ALGEBRAIC, "algebraic", "Algebraic Curves", action_insert_algebraic, m_algebraic_input, [] {},
+     nullptr, nullptr, nullptr}}};
   // The Polyline/Polycurve button selects the polycurve family, whose subcurve family is selected by the buttons
   // underneath (only Segments, for now). Unchecking a family button by clicking it again keeps it checked.
   for (const auto& family : m_families) {
@@ -292,6 +298,11 @@ Main_window::Main_window() :
   QObject::connect(action_insert_polyline, &QAction::toggled, this, [this](bool checked) {
     if (! m_updating_family_actions) start_inserting(checked ? Curve_type::CT_POLYLINE : Curve_type::CT_LINEAR);
   });
+
+  // Algebraic curves are entered as equations, which requires a parser.
+  action_insert_algebraic->setToolTip(polynomial_parser() ?
+                                      "Algebraic Curves: enter the equation of a curve, e.g., x^2 + y^2 == 25" :
+                                      "Algebraic Curves (not available: the demo was built without Lexy)");
 
   // The curve tool bar, underneath the curve families: the ways to construct curves of the selected family.
   {
@@ -350,6 +361,13 @@ Main_window::Main_window() :
     }
     conic_actions[0]->setChecked(true);
     conic_actions.push_back(bar->addSeparator());
+    std::vector<QAction*> algebraic_actions;
+    auto* equation = bar->addAction(curve_tool_icon("equation"), "Equation...");
+    equation->setToolTip("Equation: enter the equation of an algebraic curve, e.g., x^2 + y^2 == 25, and add the "
+                         "region it encloses");
+    QObject::connect(equation, &QAction::triggered, this, &Main_window::enter_equation);
+    algebraic_actions.push_back(equation);
+
     auto* coefficients = bar->addAction(curve_tool_icon("coefficients"), "Coefficients...");
     coefficients->setToolTip("Coefficients: enter a conic " "r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0, "
                              "and add it to the boundary or construct the full " "ellipse");
@@ -358,16 +376,18 @@ Main_window::Main_window() :
 
     // Keep the height of the bar when it shows no buttons.
     bar->setMinimumHeight(bar->sizeHint().height());
-    auto show_tools = [this, arcs, circle, conic_actions]() {
+    auto show_tools = [this, arcs, circle, conic_actions, algebraic_actions]() {
       bool circular = action_insert_circular->isChecked();
       arcs->setVisible(circular);
       circle->setVisible(circular);
       for (auto* action : conic_actions)
         action->setVisible(action_insert_conic->isChecked());
+      for (auto* action : algebraic_actions) action->setVisible(action_insert_algebraic->isChecked());
     };
     show_tools();
     QObject::connect(action_insert_circular, &QAction::toggled, this, show_tools);
     QObject::connect(action_insert_conic, &QAction::toggled, this, show_tools);
+    QObject::connect(action_insert_algebraic, &QAction::toggled, this, show_tools);
     vertical_layout->insertWidget(1, bar);
   }
 
@@ -821,6 +841,14 @@ QIcon Main_window::curve_tool_icon(const QString& a_kind) {
     painter.setPen(QColor(64, 64, 64));
     painter.drawText(QRectF(0, 0, 24, 24), Qt::AlignCenter, "ax²");
   }
+  else if (a_kind == "equation") {
+    QFont font = painter.font();
+    font.setPixelSize(10);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(QColor(64, 64, 64));
+    painter.drawText(QRectF(0, 0, 24, 24), Qt::AlignCenter, "f=0");
+  }
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor(255, 7, 0));
   for (const auto& p : vertices) painter.drawEllipse(p, 2, 2);
@@ -889,7 +917,8 @@ void Main_window::update_family_actions(bool a_active) {
       continue;
     }
     family.m_insert_action->setChecked(a_active && (family.m_type == selected));
-    if (family.m_type != Curve_type::CT_LINEAR) family.m_insert_action->setEnabled(! polycurve);
+    bool available = (family.m_type != Curve_type::CT_ALGEBRAIC) || polynomial_parser();
+    if (family.m_type != Curve_type::CT_LINEAR) family.m_insert_action->setEnabled(! polycurve && available);
   }
   m_updating_family_actions = false;
 }
@@ -1192,6 +1221,43 @@ bool Main_window::add_constructed_polygon(Curve_type a_type, typename Set::Polyg
 
 void Main_window::log_join(const QString& a_polygon) {
   log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), a_polygon)});
+}
+
+void Main_window::enter_equation() {
+  Polynomial_dialog dialog(polynomial_parser(), this);
+  dialog.set_text(m_equation);
+  if (dialog.exec() != QDialog::Accepted) return;
+  m_equation = dialog.text();
+  QString polynomial = QString::fromStdString(to_string(*dialog.polynomial()));
+  std::vector<Algebraic_polygon> polygons;
+  try {
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    polygons = algebraic_polygons(*dialog.polynomial());
+    QApplication::restoreOverrideCursor();
+  }
+  catch (const std::exception& e) {
+    QApplication::restoreOverrideCursor();
+    show_error("Cannot analyze the curve " + polynomial.toStdString() + " == 0: " + e.what());
+    return;
+  }
+  if (polygons.empty()) {
+    show_warning("The curve " + polynomial.toStdString() + " == 0 encloses no bounded region.");
+    return;
+  }
+  if (! ensure_curve_type(Curve_type::CT_ALGEBRAIC)) return;
+  try {
+    get_new_state(State_op::SO_DRAW);
+    auto& set = states_stack.back().set(m_color_active).algebraic();
+    for (const auto& polygon : polygons) set.join(Algebraic_polygon_with_holes(polygon));
+    // The polygons of algebraic curves are not written to programs yet.
+    log_statements({QString("# %1.join(<the region enclosed by %2 == 0>)")
+                      .arg(bucket_name(m_color_active), polynomial)});
+  }
+  catch (const std::exception& e) {
+    show_error("Cannot add the region enclosed by " + polynomial.toStdString() + " == 0: " + e.what());
+    undo();
+  }
+  model_changed();
 }
 
 void Main_window::process_input(CGAL::Object o) {

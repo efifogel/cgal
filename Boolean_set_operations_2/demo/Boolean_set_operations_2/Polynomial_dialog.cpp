@@ -42,8 +42,9 @@ Polynomial_dialog::Polynomial_dialog(Polynomial_parser a_parser, QWidget* a_pare
   m_buttons(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel))
 {
   setWindowTitle(tr("Algebraic Curve"));
-  auto* prompt = new QLabel(tr("The equation of the curve in x and y, e.g., x^2 + 3*y^2 == 10 (an expression p stands "
-                               "for p == 0). Numbers are integers or rationals, written as 1/2 or RN(1, 2)."));
+  auto* prompt = new QLabel(tr("The equation of the curve in x and y, e.g., x^2 + 3*y^2 == 10, with +, -, *, /, ^, "
+                               "and parentheses. Numbers are integers, decimals (0.5), or rationals (1/2 or "
+                               "RN(1, 2)); a divisor must be a constant."));
   prompt->setWordWrap(true);
   m_edit->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
   m_edit->setPlaceholderText("x^2 + 3*y^2 == 10");

@@ -1,15 +1,20 @@
 1. Algebraic curves
-- Choose the parser of the equations (Boost.Spirit X3 or Lexy) and implement a Polynomial_parser (Algebraic_curves.h)
-  with it. The grammar: equation := expression ['==' expression]; expression := ['-'] term (('+' | '-') term)*;
-  term := factor ('*' factor)*; factor := base ['^' integer]; base := 'x' | 'y' | number | 'RN(' integer ',' integer ')'
-  | '(' expression ')'; number := integer ['/' integer]. The actions use the arithmetic of Bivariate_polynomial.
-- Spirit X3 is part of Boost, which CGAL already depends on, so it adds no dependency; Lexy gives better error
-  messages and compile-time grammars, but it is a new external dependency. (The grammar is also small enough for a
-  hand-written recursive-descent parser, like the console's Py_parser.)
-- Connect the Algebraic Curves button (action_insert_algebraic, disabled) to Polynomial_dialog, and convert the accepted
-  polynomial with algebraic_curve() (tested with Arr_algebraic_segment_traits_2: x^2 + 3*y^2 == 10 gives two
-  x-monotone arcs).
-- Add the family: Curve_type, Rep, a graphics item (drawing approximated arcs), the suffix .aps, and Python logging.
+- The family is enabled when Lexy is found (find_package(lexy); set lexy_DIR to <prefix>/lib/cmake/lexy of an installed
+  Lexy); otherwise its button stays disabled. Linking foonathan::lexy::core compiles the demo as C++20 when the compiler
+  supports it, unless Lexy was configured with LEXY_FORCE_CPP17. The grammar is in Polynomial_parser.h.
+- The Equation button (in the curve tool bar) adds the region the curve encloses: the union of the bounded faces of
+  the arrangement of the curve (Algebraic_polygons.cpp). A curve that encloses nothing (e.g., a parabola) is refused.
+  Other ways to choose the region (e.g., p <= 0, which may be unbounded) could be offered.
+- Library: General_polygon_set_2 over Arr_algebraic_segment_traits_2, whose sides are open, uses the unbounded planar
+  topology, where union, symmetric difference, and complement come out empty, and the precondition that validates the
+  polygons fails in Arr_walk_along_line_point_location (number_of_outer_ccbs() == 1). The demo derives Algebraic_traits
+  with oblivious sides, so the sets use the bounded planar topology.
+- The arcs are drawn through 65 points each (denser near the endpoints), computed once per arc and cached
+  (algebraic_arc_points()).
+- Not yet: files (.aps; a set after operations is not described by equations alone, so arcs would need their curve,
+  arc number, and endpoints), Python programs (the log has a comment instead), and the console.
+- Syntax errors report the first error only, with its column; semantic errors (a divisor or an exponent that is not a
+  constant) have no column.
 
 2. Polycurves
 - Only Segments can be the subcurve family of Polyline/Polycurve; the other family buttons are disabled in polycurve
@@ -21,8 +26,9 @@
   the polygon (e.g., a modifier key while clicking) would need the .plps format to mark them, since now it holds only
   the vertices and the reader subdivides again.
 - The results of operations keep the polylines of the operands, except where they are split at intersections.
-- The marks are painted in pixels around the vertices, slightly outside the bounding rectangle of the item; the view
-  updates fully (FullViewportUpdate), so no traces are left, but a partial update mode would need a margin.
+- The marks are painted in pixels around the vertices, so the bounding rectangle of the item is extended by their
+  extent, converted to scene units at the current scale of the view (marks_margin()). This relies on the scene having
+  no index (NoIndex), since the margin changes with zooming without a call to prepareGeometryChange().
 
 3. Conic polygons
 - Files (.qps) and programs describe an arc by its conic, its orientation, and its endpoints, each approximated and

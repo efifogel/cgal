@@ -48,6 +48,7 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     UiFiles/ChoiseDialogPolygon.ui)
 
   add_executable(Boolean_set_operations_2
+    Algebraic_polygons.cpp
     Boolean_set_operations_2.cpp
     Conic_arcs.cpp
     Error_handling.cpp
@@ -57,7 +58,9 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     Main_window_operations.cpp
     Polygon_io.cpp
     Polynomial_dialog.cpp
+    Polynomial_parser.cpp
     include/Algebraic_curves.h
+    include/Algebraic_polygons.h
     include/Bucket_operations.h
     include/Buckets.h
     include/Circular_source.h
@@ -68,6 +71,7 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/Polygon_io.h
     include/Polyline_boundary.h
     include/Polynomial_dialog.h
+    include/Polynomial_parser.h
     include/Python.h
     include/Qt_helpers.h
     include/State.h
@@ -87,12 +91,22 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/Qt6/Bezier_curves.h
     include/Qt6/Graphics_view_bezier_polygon_input.h
     include/Qt6/Graphics_view_conic_input.h
+    include/Qt6/Algebraic_arcs.h
     ${UI_HEADERS}
     ${CGAL_Qt6_RESOURCE_FILES})
 
   # Link with CGAL and Qt libraries
   target_link_libraries(Boolean_set_operations_2 PRIVATE
     CGAL::CGAL CGAL::CGAL_Qt6 Qt6::Widgets Qt6::Svg Qt6::OpenGL)
+
+  # The equations of algebraic curves are parsed with Lexy (header only).
+  find_package(lexy QUIET)
+  if(lexy_FOUND)
+    target_link_libraries(Boolean_set_operations_2 PRIVATE foonathan::lexy::core)
+    target_compile_definitions(Boolean_set_operations_2 PRIVATE CGAL_USE_LEXY)
+  else()
+    message(STATUS "NOTICE: Lexy was not found (set lexy_DIR), so the equations of algebraic curves cannot be parsed.")
+  endif()
 else()
 
   message(STATUS "NOTICE: This demo requires CGAL and Qt6 (Widges, Script, Svg, OpenGL), and will not be compiled.")
