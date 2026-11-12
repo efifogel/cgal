@@ -147,4 +147,23 @@ using Conic_polygon = Conic_gps_traits::General_polygon_2;
 using Conic_polygon_with_holes = Conic_gps_traits::General_polygon_with_holes_2;
 using Conic_polygon_set = CGAL::General_polygon_set_2<Conic_gps_traits>;
 
+// Algebraic curves. The traits support unbounded curves, so General_polygon_set_2 would use the unbounded planar
+// topology, which it does not support (e.g., unions come out empty). The polygons are bounded, so the derived traits
+// declare the sides oblivious, and the sets use the bounded planar topology, as the sets of the other families do.
+using Algebraic_curve_traits = CGAL::Arr_algebraic_segment_traits_2<CGAL::Arithmetic_kernel::Integer>;
+
+struct Algebraic_traits : public Algebraic_curve_traits {
+  using Left_side_category = CGAL::Arr_oblivious_side_tag;
+  using Bottom_side_category = CGAL::Arr_oblivious_side_tag;
+  using Top_side_category = CGAL::Arr_oblivious_side_tag;
+  using Right_side_category = CGAL::Arr_oblivious_side_tag;
+};
+
+using Algebraic_curve = Algebraic_traits::Curve_2;
+using Algebraic_X_monotone_curve = Algebraic_traits::X_monotone_curve_2;
+using Algebraic_gps_traits = CGAL::Gps_traits_2<Algebraic_traits>;
+using Algebraic_polygon = Algebraic_gps_traits::General_polygon_2;
+using Algebraic_polygon_with_holes = Algebraic_gps_traits::General_polygon_with_holes_2;
+using Algebraic_polygon_set = CGAL::General_polygon_set_2<Algebraic_gps_traits>;
+
 #endif

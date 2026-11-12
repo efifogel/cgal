@@ -200,6 +200,7 @@ private:
   std::map<QString, Curve_set> m_variables;
   Curve_type m_curve_type = Curve_type::CT_LINEAR;     // the curve family of the sets
   bool m_updating_family_actions = false;              // the family buttons are being set by the program
+  QString m_equation;                                  // the last equation of an algebraic curve
 
   // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
   // be loaded, the action that does it, the extension of their files, and the reader.
@@ -240,6 +241,7 @@ private:
   CGAL::Qt::Graphics_view_bezier_polygon_input<Bezier_traits>* m_bezier_input;
   CGAL::Qt::Graphics_view_polyline_input<Kernel>* m_polyline_input;
   CGAL::Qt::Graphics_view_conic_input* m_conic_input;
+  CGAL::Qt::GraphicsViewInput* m_algebraic_input;   // algebraic curves are entered as equations, not with the mouse
 
 public:
   /*! constructs the main window: the scene, the panels, the tool bars, and the inputs.
@@ -664,6 +666,10 @@ private:
   /*! logs the join of a polygon, given as a Python expression, to the Draw/Insert bucket.
    */
   void log_join(const QString& a_polygon);
+
+  /*! asks for the equation of an algebraic curve, and adds the region it encloses to the Draw/Insert bucket.
+   */
+  void enter_equation();
 
   /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has a format line (DOUBLE for
    * coordinates given as doubles), the number of polygons with holes, and for each one the number of its boundaries

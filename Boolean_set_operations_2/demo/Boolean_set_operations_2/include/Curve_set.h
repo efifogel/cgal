@@ -48,6 +48,7 @@
 #include "Qt6/Polyline_curves.h"
 #include "Qt6/Bezier_curves.h"
 #include "Qt6/Conic_curves.h"
+#include "Qt6/Algebraic_arcs.h"
 
 // The graphics items that draw the sets of the curve families.
 using Circular_GI = CGAL::Qt::Circular_set_graphics_item<Circular_polygon_set>;
@@ -56,8 +57,8 @@ using Polyline_GI = CGAL::Qt::Polyline_set_graphics_item<Polyline_polygon_set>;
 using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
 
 // The curve families.
-enum class Curve_type { CT_LINEAR, CT_CIRCULAR, CT_BEZIER, CT_POLYLINE, CT_CONIC };
-constexpr std::size_t number_of_curve_types = 5;
+enum class Curve_type { CT_LINEAR, CT_CIRCULAR, CT_BEZIER, CT_POLYLINE, CT_CONIC, CT_ALGEBRAIC };
+constexpr std::size_t number_of_curve_types = 6;
 
 // The representation of a set of polygons of some curve family.
 struct Rep_base {
@@ -303,6 +304,7 @@ using Circular_rep = Rep<Circular_GI, Circular_polygon_set, Curve_type::CT_CIRCU
 using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::CT_BEZIER>;
 using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::CT_POLYLINE>;
 using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::CT_CONIC>;
+using Algebraic_rep = Rep<CGAL::Qt::Algebraic_GI, Algebraic_polygon_set, Curve_type::CT_ALGEBRAIC>;
 
 // A set of polygons of some curve family, drawn with a given pen and brush.
 class Curve_set {
@@ -330,6 +332,7 @@ public:
      case Curve_type::CT_BEZIER: return new Bezier_rep();
      case Curve_type::CT_POLYLINE: return new Polyline_rep();
      case Curve_type::CT_CONIC: return new Conic_rep();
+     case Curve_type::CT_ALGEBRAIC: return new Algebraic_rep();
     }
     return nullptr;
   }
@@ -533,6 +536,25 @@ public:
    */
   Conic_polygon_set& conic() { return get_conic_rep()->set(); }
 
+  /*! obtains the algebraic representation, or null if the set is not algebraic.
+   */
+  const Algebraic_rep* get_algebraic_rep() const { return dynamic_cast<const Algebraic_rep*>(m_rep.get()); }
+
+  /*! obtains the algebraic representation, or null if the set is not algebraic.
+   */
+  Algebraic_rep* get_algebraic_rep() {
+    detach();
+    return dynamic_cast<Algebraic_rep*>(m_rep.get());
+  }
+
+  /*! obtains the algebraic set.
+   */
+  const Algebraic_polygon_set& algebraic() const { return get_algebraic_rep()->set(); }
+
+  /*! obtains the algebraic set.
+   */
+  Algebraic_polygon_set& algebraic() { return get_algebraic_rep()->set(); }
+
   /*! obtains the linear representation, or null if the set is not linear.
    */
   const Linear_rep* get_linear_rep() const { return dynamic_cast<const Linear_rep*>(m_rep.get()); }
@@ -625,6 +647,7 @@ template <> inline Circular_polygon_set& Curve_set::get<Circular_polygon_set>() 
 template <> inline Bezier_polygon_set& Curve_set::get<Bezier_polygon_set>() { return bezier(); }
 template <> inline Polyline_polygon_set& Curve_set::get<Polyline_polygon_set>() { return polyline(); }
 template <> inline Conic_polygon_set& Curve_set::get<Conic_polygon_set>() { return conic(); }
+template <> inline Algebraic_polygon_set& Curve_set::get<Algebraic_polygon_set>() { return algebraic(); }
 
 using Curve_set_container = std::vector<Curve_set>;
 using Curve_set_const_iterator = Curve_set_container::const_iterator;
