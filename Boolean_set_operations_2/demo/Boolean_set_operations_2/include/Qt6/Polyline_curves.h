@@ -87,6 +87,10 @@ struct Draw_polyline_curve {
  */
 using Draw_polyline_X_monotone_curve = Draw_polyline_curve;
 
+/*! The radius (in pixels) of the largest mark of a vertex, including its pen.
+ */
+constexpr double polyline_marks_extent = 5;
+
 /*! paints the marks of the vertices of a polygon bounded by polylines, in a fixed size on the screen: a filled disc at
  * a vertex of the polygon, and a hollow disc at a vertex of a polyline (that is not a vertex of the polygon).
  * \param a_vertices the vertices, each with a flag that tells whether it is a vertex of the polygon.
@@ -141,6 +145,8 @@ protected:
     for (std::size_t i = 0; i < chain.size(); ++i) vertices.emplace_back(chain[i], ends[i]);
     paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
   }
+
+  double marks_extent() const override { return polyline_marks_extent; }
 };
 
 /*! A graphics item that draws a set of polygons bounded by polylines.
@@ -179,6 +185,8 @@ protected:
     }
     paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
   }
+
+  double marks_extent() const override { return polyline_marks_extent; }
 };
 
 } // namespace Qt

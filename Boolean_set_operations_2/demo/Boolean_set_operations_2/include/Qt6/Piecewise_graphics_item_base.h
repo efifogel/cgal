@@ -23,6 +23,7 @@
 #ifndef CGAL_QT6_PIECEWISE_GRAPHICS_ITEM_BASE_H
 #define CGAL_QT6_PIECEWISE_GRAPHICS_ITEM_BASE_H
 
+#include <cmath>
 #include <optional>
 
 #include <CGAL/function_objects.h>
@@ -30,6 +31,8 @@
 #include <CGAL/Qt/GraphicsItem.h>
 #include <CGAL/Qt/Converter.h>
 
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QPainter>
 #include <QBrush>
 #include <QPen>
@@ -62,7 +65,11 @@ public:
   /*! obtains the bounding rectangle. An unbounded set is painted all over, so its bounding rectangle must cover it
    * all, or else Qt repaints only parts of it.
    */
-  QRectF boundingRect() const { return m_unbounded ? unbounded_rect() : m_bounding_rect; }
+  QRectF boundingRect() const {
+    if (m_unbounded) return unbounded_rect();
+    double margin = marks_margin();
+    return m_bounding_rect.adjusted(-margin, -margin, margin, margin);
+  }
 
   /*! obtains the bounding rectangle of the curves, e.g., for zooming to fit.
    */
@@ -132,6 +139,19 @@ protected:
   /*! paints marks over the model (e.g., at its vertices), after the model is painted. By default, nothing.
    */
   virtual void paint_marks(QPainter* /* a_painter */) {}
+
+  /*! obtains how far (in pixels) the marks extend beyond the curves. By default, 0.
+   */
+  virtual double marks_extent() const { return 0; }
+
+  /*! obtains how far (in scene units, at the scale of the view) the marks extend beyond the curves.
+   */
+  double marks_margin() const {
+    double extent = marks_extent();
+    if ((extent == 0) || ! scene() || scene()->views().empty()) return 0;
+    double scale = std::sqrt(std::abs(scene()->views().front()->transform().determinant()));
+    return (scale > 0) ? extent / scale : 0;
+  }
 
 protected:
   QRectF m_bounding_rect;
