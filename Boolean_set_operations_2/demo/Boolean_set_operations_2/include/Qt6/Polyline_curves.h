@@ -23,11 +23,22 @@
 #ifndef CGAL_QT6_POLYLINE_CURVES_H
 #define CGAL_QT6_POLYLINE_CURVES_H
 
+#include <utility>
+#include <vector>
+
+#include <QBrush>
+#include <QColor>
+#include <QPainter>
+#include <QPen>
+#include <QPointF>
+#include <QTransform>
+
 #include <CGAL/Qt/Converter.h>
 
 #include "Typedefs.h"
 #include "Qt6/Piecewise_set_graphics_item.h"
 #include "Qt6/Boundary_pieces_graphics_item.h"
+#include "Polyline_boundary.h"
 
 namespace CGAL {
 namespace Qt {
@@ -55,49 +66,50 @@ struct Polyline_bbox {
   }
 };
 
-/*! Draws an x-monotone polyline as the segment between its endpoints.
- */
-struct Draw_polyline_X_monotone_curve {
-  /*! adds the segment between the endpoints of an x-monotone polyline to the path. The first curve (of index 0)
-   * starts a new subpath.
-   */
-  template <typename X_monotone_polyline_segment_2, typename Path>
-  void operator()(const X_monotone_polyline_segment_2& curve, Path& a_path, int a_idx) const {
-    using Point = Point_2<Kernel>;
-    using Converter = CGAL::Qt::Converter<Kernel>;
-    Converter convert;
-
-    Point ps(CGAL::to_double(curve[0].source().x()), CGAL::to_double(curve[0].source().y()));
-    Point pt(CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().x()),
-             CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().y()));
-
-    if (a_idx == 0) a_path.moveTo(convert(ps));
-    else a_path.lineTo(convert(ps));
-    a_path.lineTo(convert(pt));
-  }
-};
-
-/*! Draws a polyline as the segment between its endpoints.
+/*! Draws a polyline (x-monotone or not) through its points.
  */
 struct Draw_polyline_curve {
-  /*! adds the segment between the endpoints of a polyline to the path. The first curve (of index 0) starts a new
-   * subpath.
+  /*! adds a polyline to the path. The first curve (of index 0) starts a new subpath.
    */
-  template <typename Polyline_segment_2, class Path>
-  void operator()(const Polyline_segment_2& curve, Path& a_path, int a_idx) const {
-    using Point = Point_2<Kernel>;
-    using Converter = Qt::Converter<Kernel>;
-    Converter convert;
-
-    Point ps(CGAL::to_double(curve[0].source().x()), CGAL::to_double(curve[0].source().y()));
-    Point pt(CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().x()),
-             CGAL::to_double(curve[curve.number_of_subcurves() - 1].target().y()));
-
-    if (a_idx == 0) a_path.moveTo(convert(ps));
-    else a_path.lineTo(convert(ps));
-    a_path.lineTo(convert(pt));
+  template <typename Polyline, typename Path>
+  void operator()(const Polyline& a_curve, Path& a_path, int a_idx) const {
+    bool first = true;
+    for (auto it = a_curve.points_begin(); it != a_curve.points_end(); ++it) {
+      QPointF p(CGAL::to_double(it->x()), CGAL::to_double(it->y()));
+      if (first && (a_idx == 0)) a_path.moveTo(p);
+      else a_path.lineTo(p);
+      first = false;
+    }
   }
 };
+
+/*! Draws an x-monotone polyline through its points.
+ */
+using Draw_polyline_X_monotone_curve = Draw_polyline_curve;
+
+/*! paints the marks of the vertices of a polygon bounded by polylines, in a fixed size on the screen: a filled disc at
+ * a vertex of the polygon, and a hollow disc at a vertex of a polyline (that is not a vertex of the polygon).
+ * \param a_vertices the vertices, each with a flag that tells whether it is a vertex of the polygon.
+ */
+template <typename Point>
+void paint_polyline_vertices(QPainter* a_painter, const std::vector<std::pair<Point, bool>>& a_vertices,
+                             const QColor& a_color) {
+  if (a_vertices.empty()) return;
+  QTransform transform = a_painter->worldTransform();
+  a_painter->save();
+  a_painter->resetTransform();
+  a_painter->setRenderHint(QPainter::Antialiasing);
+  QPen pen(a_color, 1.5);
+  pen.setCosmetic(true);
+  a_painter->setPen(pen);
+  for (const auto& [p, polygon_vertex] : a_vertices) {
+    QPointF q = transform.map(QPointF(CGAL::to_double(p.x()), CGAL::to_double(p.y())));
+    a_painter->setBrush(polygon_vertex ? QBrush(a_color) : QBrush(::Qt::white));
+    double r = polygon_vertex ? 3.5 : 2.5;
+    a_painter->drawEllipse(q, r, r);
+  }
+  a_painter->restore();
+}
 
 /*! A graphics item that draws the polylines of a boundary under construction.
  */
@@ -110,6 +122,25 @@ public:
   /*! constructs from the polylines.
    */
   Polyline_boundary_pieces_graphics_item(Polyline_boundary_pieces* a_pieces) : Base(a_pieces) {}
+
+protected:
+  /*! marks the vertices of the chain under construction. A vertex where the chain stops being x-monotone will be a
+   * vertex of the polygon (see polyline_boundary()); so are, for now, the first and the last vertices.
+   */
+  void paint_marks(QPainter* a_painter) override {
+    if (! this->m_boundary) return;
+    using Point = ::Kernel::Point_2;
+    std::vector<Point> chain;
+    for (const auto& piece : *this->m_boundary) {
+      for (auto it = piece.points_begin(); it != piece.points_end(); ++it) {
+        if (chain.empty() || (*it != chain.back())) chain.push_back(*it);
+      }
+    }
+    auto ends = polyline_endpoints(chain);
+    std::vector<std::pair<Point, bool>> vertices;
+    for (std::size_t i = 0; i < chain.size(); ++i) vertices.emplace_back(chain[i], ends[i]);
+    paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
+  }
 };
 
 /*! A graphics item that draws a set of polygons bounded by polylines.
@@ -123,6 +154,31 @@ public:
   /*! constructs from the set.
    */
   Polyline_set_graphics_item(Polyline_set* a_set) : Base(a_set) {}
+
+protected:
+  /*! marks the vertices of the polygons: the endpoints of the x-monotone polylines are vertices of the polygons, and
+   * the other points of the polylines are vertices of the polylines.
+   */
+  void paint_marks(QPainter* a_painter) override {
+    if (! this->m_set) return;
+    using Polygon = typename Polyline_set::Polygon_2;
+    using Point = typename Polyline_set::Traits_2::Point_2;
+    std::vector<typename Polyline_set::Polygon_with_holes_2> pwhs;
+    this->m_set->polygons_with_holes(std::back_inserter(pwhs));
+    std::vector<std::pair<Point, bool>> vertices;
+    auto add = [&vertices](const Polygon& a_boundary) {
+      for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit) {
+        bool first = true;
+        for (auto it = cit->points_begin(); std::next(it) != cit->points_end(); ++it, first = false)
+          vertices.emplace_back(*it, first);
+      }
+    };
+    for (const auto& pwh : pwhs) {
+      if (! pwh.is_unbounded()) add(pwh.outer_boundary());
+      for (auto hit = pwh.holes_begin(); hit != pwh.holes_end(); ++hit) add(*hit);
+    }
+    paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
+  }
 };
 
 } // namespace Qt

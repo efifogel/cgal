@@ -25,8 +25,8 @@
 #define CGAL_POLYGON_IO_H
 
 /*! \file Polygon_io.h
- * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, and .bps). A file holds polygons with
- * holes, each one given by its boundaries; a function of each family reads or writes a boundary.
+ * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .bps, and .qps). A file holds
+ * polygons with holes, each one given by its boundaries; a function of each family reads or writes a boundary.
  *
  * The suffix of a file is the code of its curves followed by "ps" (polygon set). The code of a basic family is a
  * letter: l (segments), c (circle-segments), q (conics), r (rational function arcs), b (Bezier curves), and a
@@ -70,7 +70,8 @@ std::vector<Kernel::Point_2> read_vertices(std::istream& a_is);
  */
 std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bool /* a_double_format */);
 
-/*! reads the boundary of a polygon bounded by polylines: its vertices. \return the x-monotone curves of the boundary.
+/*! reads the boundary of a polygon bounded by polylines: its vertices. The boundary is subdivided into maximal
+ * x-monotone polylines (see polyline_boundary()). \return the polylines.
  */
 std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is, bool /* a_double_format */);
 
@@ -113,8 +114,8 @@ bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary 
  */
 void write_linear_boundary(std::ostream& a_os, const Linear_polygon& a_boundary);
 
-/*! writes the boundary of a polygon bounded by polylines: the number of its curves followed by the coordinates of their
- * first points.
+/*! writes the boundary of a polygon bounded by polylines: the number of its vertices followed by their coordinates
+ * (all the vertices of the polylines, in order).
  */
 void write_polyline_boundary(std::ostream& a_os, const Polyline_polygon& a_boundary);
 
@@ -130,5 +131,22 @@ void write_circular_boundary(std::ostream& a_os, const Circular_polygon& a_bound
 /*! writes the boundary of a Bezier polygon: the number of its curves followed by their control points.
  */
 void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& a_bp);
+
+/*! reads the boundary of a conic polygon (see write_conic_boundary()). \return the x-monotone arcs of the boundary.
+ */
+std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool /* a_double_format */);
+
+/*! writes the boundary of a conic polygon: the number of its arcs followed by the arcs (see Conic_arc_record), one per
+ * line, either
+ *   full r s t u v w
+ * for a full conic r*x^2 + s*y^2 + t*xy + u*x + v*y + w = 0 (an ellipse), or
+ *   arc r s t u v w o sx sy r1 s1 t1 u1 v1 w1 tx ty r2 s2 t2 u2 v2 w2
+ * for an arc of the conic of orientation o (-1 for clockwise, 1 for counterclockwise, and 0 for a segment), whose
+ * source is the intersection of the conic and the auxiliary conic (r1, ..., w1) nearest to (sx, sy), and whose target
+ * is the intersection of the conic and the auxiliary conic (r2, ..., w2) nearest to (tx, ty). The coefficients are
+ * integers.
+ * \throw std::invalid_argument if the boundary cannot be written exactly (see conic_arc_records()).
+ */
+void write_conic_boundary(std::ostream& a_os, const Conic_polygon& a_boundary);
 
 #endif

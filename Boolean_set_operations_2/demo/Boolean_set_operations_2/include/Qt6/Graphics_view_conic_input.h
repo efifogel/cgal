@@ -585,7 +585,11 @@ private:
       endpoints(i, s, t);
       const Conic& conic = m_conics[i];
       Conic_curve cv;
-      if (conic.m_shape.kind() == Conic_shape::Kind::KI_LINE) cv = ctr(s, t);
+      // A segment is given by the equation of its line (and not only by its endpoints), so it can be written exactly.
+      if (conic.m_shape.kind() == Conic_shape::Kind::KI_LINE) {
+        const Rational* c = conic.m_c;
+        cv = ctr(c[0], c[1], c[2], c[3], c[4], c[5], CGAL::COLLINEAR, s, t);
+      }
       else {
         QPointF mid;
         auto polyline = arc(i, &mid);

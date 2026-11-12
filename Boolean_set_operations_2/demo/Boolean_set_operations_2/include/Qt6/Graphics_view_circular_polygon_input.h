@@ -38,6 +38,8 @@
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 
+#include "Circular_source.h"
+
 #include "Qt6/Circular_polygons.h"
 
 namespace CGAL {
@@ -240,7 +242,7 @@ public:
       switch (m_state) {
        case State::CIRCLE_ONGOING:
         m_circle_GI->hide();
-        if (squared_distance(m_center, l_p) >= 4) generate_circle(Circle(m_center, squared_distance(m_center, l_p)));
+        if (squared_distance(m_center, l_p) >= 4) generate_circle(m_center, l_p);
         m_state = State::ST_START;
         r_handled = true;
         break;
@@ -314,6 +316,7 @@ public:
    */
   void reset() {
     m_circular_polygon_pieces.clear();
+    m_piece_sources.clear();
     m_ongoing_piece_ctr.clear();
     m_circular_GI->modelChanged();
     m_ongoing_piece_GI->modelChanged();
@@ -330,7 +333,11 @@ public:
    * segment otherwise.
    */
   Circular_curve create_piece() {
-    if (m_h && ! collinear(m_p0, *m_h, m_p1)) return Circular_curve(m_p0, *m_h, m_p1);
+    if (m_h && ! collinear(m_p0, *m_h, m_p1)) {
+      m_ongoing_source = {Circular_piece_source::Kind::ARC, {m_p0, *m_h, m_p1}};
+      return Circular_curve(m_p0, *m_h, m_p1);
+    }
+    m_ongoing_source = {Circular_piece_source::Kind::SEGMENT, {m_p0, m_p1, m_p1}};
     return Circular_curve(m_p0, m_p1);
   }
 
@@ -338,6 +345,7 @@ public:
    */
   void remove_last_piece() {
     m_circular_polygon_pieces.pop_back();
+    m_piece_sources.pop_back();
     m_ongoing_piece_ctr.clear();
     m_circular_GI->modelChanged();
     m_ongoing_piece_GI->modelChanged();
@@ -362,6 +370,7 @@ public:
     if (! ongoing_piece()) return;
     if (! ongoing_piece()->source().equals(ongoing_piece()->target())) {
       m_circular_polygon_pieces.push_back(*ongoing_piece());
+      m_piece_sources.push_back(m_ongoing_source);
       m_circular_GI->modelChanged();
     }
     m_ongoing_piece_ctr.clear();
@@ -391,19 +400,22 @@ public:
     m_circle_GI->show();
   }
 
-  /*! emits the polygon bounded by a given circle (counterclockwise).
+  /*! emits the polygon bounded by the circle of a given center through a given point (counterclockwise), together with
+   * its source.
    */
-  void generate_circle(const Circle& a_circle) {
+  void generate_circle(const Point& a_center, const Point& a_point) {
     Gps_traits traits;
     auto make_x_monotone = traits.make_x_monotone_2_object();
     std::vector<std::variant<Circular_X_monotone_curve, Arc_point>> x_objs;
-    make_x_monotone(Circular_curve(a_circle), std::back_inserter(x_objs));
+    make_x_monotone(Circular_curve(Circle(a_center, squared_distance(a_center, a_point))), std::back_inserter(x_objs));
     std::vector<Circular_X_monotone_curve> xcvs;
     for (const auto& obj : x_objs) {
       if (auto* xcv = std::get_if<Circular_X_monotone_curve>(&obj)) xcvs.push_back(*xcv);
     }
     Circular_polygon cp(xcvs.begin(), xcvs.end());
-    emit(generate(std::variant<Circular_polygon>(cp)));
+    Circular_boundary_source source{{Circular_piece_source::Kind::CIRCLE, {a_center, a_point, a_point}}};
+    using Generated = std::variant<std::pair<Circular_polygon, Circular_boundary_source>>;
+    emit(generate(Generated(std::make_pair(cp, source))));
   }
 
   /*! rounds a point of a curve to double precision.
@@ -417,13 +429,15 @@ public:
     m_ongoing_piece_ctr.clear();
     m_ongoing_piece_GI->modelChanged();
     m_circular_polygon_pieces.clear();
+    m_piece_sources.clear();
     m_circular_GI->modelChanged();
     m_h = std::optional<Point>();
     hide_handle();
   }
 
   /*! closes the polygon with a segment from its last vertex to its first (unless the closing piece is an arc or the
-   * vertices coincide), and emits it. A polygon bounded by fewer than three segments, or by a single curve, is dropped.
+   * vertices coincide), and emits it together with its source. A polygon bounded by fewer than three segments, or by a
+   * single curve, is dropped.
    */
   void generate_circular_polygon() {
     bool closed = m_last_circular;
@@ -456,12 +470,15 @@ public:
       FT lxs = last_point.x().alpha();
       FT lys = last_point.y().alpha();
       xcvs.push_back(Circular_X_monotone_curve(Point(lxs, lys), Point(fxs, fys)));
+      Point source(lxs, lys), target(fxs, fys);
+      m_piece_sources.push_back({Circular_piece_source::Kind::SEGMENT, {source, target, target}});
     }
 
     bool linear = std::all_of(xcvs.begin(), xcvs.end(), [](const auto& xcv) { return xcv.is_linear(); });
     if ((xcvs.size() < 2) || (linear && (xcvs.size() < 3))) return;
     Circular_polygon cp(xcvs.begin(), xcvs.end());
-    emit(generate(std::variant<Circular_polygon>(cp)));
+    using Generated = std::variant<std::pair<Circular_polygon, Circular_boundary_source>>;
+    emit(generate(Generated(std::make_pair(cp, m_piece_sources))));
   }
 
   /*! constructs a huge (bounding) polygon.
@@ -530,7 +547,9 @@ public:
   bool m_last;
 
   Circular_curve_vector m_circular_polygon_pieces;
+  Circular_boundary_source m_piece_sources;          // what the pieces were constructed from
   Circular_curve_vector m_ongoing_piece_ctr;
+  Circular_piece_source m_ongoing_source;            // what the piece under construction is constructed from
 
   State m_state;
   Mode m_mode = Mode::MO_ARCS;

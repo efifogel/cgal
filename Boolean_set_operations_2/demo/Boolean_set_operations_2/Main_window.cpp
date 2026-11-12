@@ -264,22 +264,34 @@ Main_window::Main_window() :
 
   // The curve families. Selecting one in the tool bar starts constructing its curves.
   m_families = {{
-    {Curve_type::CT_LINEAR, "linear", action_insert_linear, m_linear_input, [this] { m_linear_input->reset(); },
-     action_open_linear, ".lps", &Main_window::read_linear},
-    {Curve_type::CT_CIRCULAR, "circular", action_insert_circular, m_circular_input,
+    {Curve_type::CT_LINEAR, "linear", "Segments", action_insert_linear, m_linear_input,
+     [this] { m_linear_input->reset(); }, action_open_linear, ".lps", &Main_window::read_linear},
+    {Curve_type::CT_CIRCULAR, "circular", "Line Segments and Circular Arcs", action_insert_circular, m_circular_input,
      [this] { m_circular_input->reset(); }, action_open_circular, ".cps", &Main_window::read_circular},
-    {Curve_type::CT_BEZIER, "Bezier", action_insert_bezier, m_bezier_input, [this] { m_bezier_input->reset(); },
-     action_open_bezier, ".bps", &Main_window::read_bezier},
-    {Curve_type::CT_POLYLINE, "polyline", action_insert_polyline, m_polyline_input,
+    {Curve_type::CT_BEZIER, "Bezier", "Bezier Curves", action_insert_bezier, m_bezier_input,
+     [this] { m_bezier_input->reset(); }, action_open_bezier, ".bps", &Main_window::read_bezier},
+    {Curve_type::CT_POLYLINE, "polyline", "Polylines", action_insert_polyline, m_polyline_input,
      [this] { m_polyline_input->reset(); }, action_open_polyline, ".plps", &Main_window::read_polyline},
-    {Curve_type::CT_CONIC, "conic", action_insert_conic, m_conic_input, [this] { m_conic_input->reset(); }, nullptr,
-     nullptr, nullptr}}};
+    {Curve_type::CT_CONIC, "conic", "Conics", action_insert_conic, m_conic_input, [this] { m_conic_input->reset(); },
+     action_open_conic, ".qps", &Main_window::read_conic}}};
+  // The Polyline/Polycurve button selects the polycurve family, whose subcurve family is selected by the buttons
+  // underneath (only Segments, for now). Unchecking a family button by clicking it again keeps it checked.
   for (const auto& family : m_families) {
     Curve_type type = family.m_type;
+    if (type == Curve_type::CT_POLYLINE) continue;
     QObject::connect(family.m_insert_action, &QAction::toggled, this, [this, type](bool checked) {
-      if (checked) start_inserting(type);
+      if (m_updating_family_actions) return;
+      if (! checked) {
+        update_family_actions(! m_pan);
+        return;
+      }
+      bool polycurve = (m_curve_type == Curve_type::CT_POLYLINE);
+      start_inserting((polycurve && (type == Curve_type::CT_LINEAR)) ? Curve_type::CT_POLYLINE : type);
     });
   }
+  QObject::connect(action_insert_polyline, &QAction::toggled, this, [this](bool checked) {
+    if (! m_updating_family_actions) start_inserting(checked ? Curve_type::CT_POLYLINE : Curve_type::CT_LINEAR);
+  });
 
   // The curve tool bar, underneath the curve families: the ways to construct curves of the selected family.
   {
@@ -359,6 +371,15 @@ Main_window::Main_window() :
     vertical_layout->insertWidget(1, bar);
   }
 
+  // The polycurve tool bar, above the curve families.
+  {
+    auto* bar = new QToolBar;
+    bar->setIconSize(traits_tool_bar->iconSize());
+    bar->addAction(action_insert_polyline);
+    vertical_layout->insertWidget(0, bar);
+  }
+  update_family_actions();
+
   // The polygons constructed by the inputs are added to the Draw/Insert bucket.
   for (const auto& family : m_families) {
     QObject::connect(family.m_input, &CGAL::Qt::GraphicsViewInput::generate, this, &Main_window::process_input);
@@ -384,6 +405,7 @@ Main_window::Main_window() :
   QObject::connect(action_open_circular, &QAction::triggered, this, &Main_window::open_circular);
   QObject::connect(action_open_bezier, &QAction::triggered, this, &Main_window::open_bezier);
   QObject::connect(action_open_polyline, &QAction::triggered, this, &Main_window::open_polyline);
+  QObject::connect(action_open_conic, &QAction::triggered, this, &Main_window::open_conic);
   QObject::connect(action_save_current_bucket, &QAction::triggered, this, &Main_window::save_draw_bucket);
   QObject::connect(action_add_color, &QAction::triggered, this, &Main_window::add_bucket);
   QObject::connect(action_minus_color, &QAction::triggered, this, &Main_window::remove_bucket);
@@ -437,6 +459,7 @@ Main_window::Main_window() :
   action_open_circular->setEnabled(false);
   action_open_bezier->setEnabled(false);
   action_open_polyline->setEnabled(false);
+  action_open_conic->setEnabled(false);
 }
 
 void Main_window::show_result_set(bool a_check) { states_stack.back().toggle_view(result_index, a_check); }
@@ -657,8 +680,7 @@ void Main_window::new_program() {
   action_minkowski_sum_h->setChecked(false);
 
   m_reset = true;
-  for (const auto& family : m_families) family.m_insert_action->setChecked(family.m_type == m_curve_type);
-
+  start_inserting(m_curve_type);
   m_reset = false;
 
   action_difference_h->setEnabled(true);
@@ -703,7 +725,7 @@ void Main_window::toggle_axes() {
 void Main_window::toggle_pan() {
   if (! m_pan) {
     remove_inputs();
-    family(m_curve_type).m_insert_action->setChecked(false);
+    update_family_actions(false);
     this->graphics_view->setDragMode(QGraphicsView::ScrollHandDrag);
 
     this->graphics_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
@@ -712,8 +734,8 @@ void Main_window::toggle_pan() {
     model_changed();
   }
   else {
-    family(m_curve_type).m_insert_action->setChecked(true);
     m_pan = false;
+    update_family_actions();
     model_changed();
   }
 }
@@ -853,14 +875,30 @@ bool Main_window::ensure_curve_type(Curve_type a_type) {
     if (other.m_type != a_type) other.m_reset_input();
   }
   m_curve_type = a_type;
+  update_family_actions(! m_pan);
   return true;
+}
+
+void Main_window::update_family_actions(bool a_active) {
+  m_updating_family_actions = true;
+  bool polycurve = (m_curve_type == Curve_type::CT_POLYLINE);
+  Curve_type selected = polycurve ? Curve_type::CT_LINEAR : m_curve_type;
+  for (const auto& family : m_families) {
+    if (family.m_type == Curve_type::CT_POLYLINE) {
+      family.m_insert_action->setChecked(a_active && polycurve);
+      continue;
+    }
+    family.m_insert_action->setChecked(a_active && (family.m_type == selected));
+    if (family.m_type != Curve_type::CT_LINEAR) family.m_insert_action->setEnabled(! polycurve);
+  }
+  m_updating_family_actions = false;
 }
 
 void Main_window::start_inserting(Curve_type a_type) {
   const auto& selected = family(a_type);
   this->graphics_view->setDragMode(QGraphicsView::NoDrag);
   if (! ensure_curve_type(a_type)) {
-    selected.m_insert_action->setChecked(false);
+    update_family_actions(! m_pan);
     return;
   }
   if (! m_pan && ! m_reset) {
@@ -872,8 +910,8 @@ void Main_window::start_inserting(Curve_type a_type) {
   m_pan = false;
   for (const auto& other : m_families) {
     if (other.m_open_action) other.m_open_action->setEnabled(other.m_type == a_type);
-    if (other.m_type != a_type) other.m_insert_action->setChecked(false);
   }
+  update_family_actions();
   install_input(selected.m_input);
   delete_result();
   action_minkowski_sum_h->setEnabled(a_type == Curve_type::CT_LINEAR);
@@ -1139,28 +1177,48 @@ void Main_window::about_demo() {
 }
 
 template <typename Set>
-void Main_window::add_constructed_polygon(Curve_type a_type, typename Set::Polygon_2 a_polygon, bool a_to_result) {
-  if (! ensure_curve_type(a_type)) return;
+bool Main_window::add_constructed_polygon(Curve_type a_type, typename Set::Polygon_2 a_polygon, bool a_to_result) {
+  if (! ensure_curve_type(a_type)) return false;
   if (a_polygon.orientation() == CGAL::CLOCKWISE) a_polygon.reverse_orientation();
   typename Set::Polygon_with_holes_2 pwh(a_polygon);
   if (a_to_result) {
     states_stack.back().result_set().get<Set>().join(pwh);
-    return;
+    return false;
   }
   get_new_state(State_op::SO_DRAW);
   states_stack.back().set(m_color_active).get<Set>().join(pwh);
+  return true;
+}
+
+void Main_window::log_join(const QString& a_polygon) {
+  log_statements({QString("%1.join(%2)").arg(bucket_name(m_color_active), a_polygon)});
 }
 
 void Main_window::process_input(CGAL::Object o) {
   try {
-    if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o))
-      add_constructed_polygon<Conic_polygon_set>(Curve_type::CT_CONIC, *pgn, false);
+    if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o)) {
+      Conic_polygon ccw = *pgn;
+      if (ccw.orientation() == CGAL::CLOCKWISE) ccw.reverse_orientation();
+      if (add_constructed_polygon<Conic_polygon_set>(Curve_type::CT_CONIC, ccw, false)) {
+        try {
+          log_join(to_python(ccw));
+        }
+        catch (const std::invalid_argument& e) {
+          log_statements({QString("# The %1 polygon cannot be written exactly: %2")
+                            .arg(bucket_name(m_color_active), e.what())});
+        }
+      }
+    }
     else if (auto* bezier = CGAL::object_cast<std::pair<Bezier_polygon, Bezier_boundary_source>>(&o))
       add_constructed_polygon<Bezier_polygon_set>(Curve_type::CT_BEZIER, bezier->first,
                                                   m_bezier_input->is_bounding_rect());
-    else if (auto* pgn = CGAL::object_cast<Circular_polygon>(&o))
-      add_constructed_polygon<Circular_polygon_set>(Curve_type::CT_CIRCULAR, *pgn,
-                                                    m_circular_input->is_bounding_rect());
+    else if (auto* circular = CGAL::object_cast<std::pair<Circular_polygon, Circular_boundary_source>>(&o)) {
+      // The program constructs the polygon from its source, in counterclockwise order.
+      bool clockwise = circular->first.orientation() == CGAL::CLOCKWISE;
+      if (add_constructed_polygon<Circular_polygon_set>(Curve_type::CT_CIRCULAR, circular->first,
+                                                        m_circular_input->is_bounding_rect()))
+        log_join(to_python(clockwise ? reversed(circular->second) : circular->second));
+    }
     else if (auto* pgn = CGAL::object_cast<Polyline_polygon>(&o))
       add_constructed_polygon<Polyline_polygon_set>(Curve_type::CT_POLYLINE, *pgn,
                                                     m_polyline_input->is_bounding_rect());

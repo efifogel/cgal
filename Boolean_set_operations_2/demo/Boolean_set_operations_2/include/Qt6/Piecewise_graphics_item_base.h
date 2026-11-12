@@ -129,6 +129,10 @@ protected:
    */
   virtual void update_bbox(Bbox_builder& a_bbox_builder) = 0;
 
+  /*! paints marks over the model (e.g., at its vertices), after the model is painted. By default, nothing.
+   */
+  virtual void paint_marks(QPainter* /* a_painter */) {}
+
 protected:
   QRectF m_bounding_rect;
   bool m_unbounded = false;
@@ -144,6 +148,7 @@ inline void Piecewise_graphics_item_base::paint(QPainter* a_painter, const QStyl
   a_painter->setPen(m_pen);
   a_painter->setBrush(m_brush);
   a_painter->drawPath(l_path);
+  paint_marks(a_painter);
 }
 
 // The bounding box only grows, so that when vertices get removed the maximal bbox gets refreshed in the GraphicsView.

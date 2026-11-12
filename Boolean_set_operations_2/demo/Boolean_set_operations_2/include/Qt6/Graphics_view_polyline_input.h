@@ -36,6 +36,7 @@
 #include <CGAL/Arr_polyline_traits_2.h>
 
 #include "Qt6/Polyline_curves.h"
+#include "Polyline_boundary.h"
 
 namespace CGAL {
 namespace Qt {
@@ -374,44 +375,30 @@ public:
     hide_handle();
   }
 
-  /*! closes the polygon with an edge from its last vertex to its first (unless they coincide), and emits it.
+  /*! obtains the vertices of the edges constructed so far, in order.
    */
-  void generate_polyline_polygon() {
-    bool closed = m_last_polyline;
-    m_last = false;
-    m_last_polyline = false;
-    if (m_polyline_polygon_pieces.size() == 0) return;
-    Gps_traits traits;
-    auto make_x_monotone = traits.make_x_monotone_2_object();
-    using Pnt = typename Gps_traits::Point_2;
-    using Xcv = typename Gps_traits::X_monotone_curve_2;
-    using Make_x_monotone_result = std::variant<Pnt, Xcv>;
+  std::vector<Point> vertices() const { return chain_vertices(m_polyline_polygon_pieces); }
 
-    std::vector<Polyline_X_monotone_curve> xcvs;
-    for (auto it = m_polyline_polygon_pieces.begin(); it != m_polyline_polygon_pieces.end(); ++it) {
-      std::vector<Make_x_monotone_result> x_objs;
-      make_x_monotone(*it, std::back_inserter(x_objs));
-      for (std::size_t i = 0; i < x_objs.size(); ++i) {
-        auto* xcv = std::get_if<Polyline_X_monotone_curve>(&x_objs[i]);
-        CGAL_assertion(xcv != nullptr);
-        xcvs.push_back(*xcv);
+  /*! obtains the vertices of a chain of polylines, in order.
+   */
+  static std::vector<Point> chain_vertices(const Polyline_curve_vector& a_pieces) {
+    std::vector<Point> r_points;
+    for (const auto& piece : a_pieces) {
+      for (auto it = piece.points_begin(); it != piece.points_end(); ++it) {
+        if (r_points.empty() || (*it != r_points.back())) r_points.push_back(*it);
       }
     }
-    if (xcvs.size() == 0) return;
+    return r_points;
+  }
 
-    const Polyline_point first_point = xcvs.front()[0].source();
-    const Polyline_point last_point = xcvs.back()[xcvs.back().number_of_subcurves() - 1].target();
-    if (! closed && (last_point != first_point)) {
-      FT fxs = first_point.x();
-      FT fys = first_point.y();
-      FT lxs = last_point.x();
-      FT lys = last_point.y();
-      Gps_traits x;
-      X_monotone_subcurve_2 seg =
-        x.subcurve_traits_2()->construct_x_monotone_curve_2_object()(Point(lxs, lys), Point(fxs, fys));
-      xcvs.push_back(Polyline_X_monotone_curve(seg));
-    }
-    if (number_of_edges(xcvs) < 3) return;
+  /*! closes the polygon (with an edge from its last vertex to its first, unless they coincide), subdivides its
+   * boundary into maximal x-monotone polylines (see polyline_boundary()), and emits it.
+   */
+  void generate_polyline_polygon() {
+    m_last = false;
+    m_last_polyline = false;
+    auto xcvs = polyline_boundary(vertices());
+    if (xcvs.empty()) return;
     Polyline_polygon pp(xcvs.begin(), xcvs.end());
     emit(generate(std::variant<Polyline_polygon>(pp)));
   }

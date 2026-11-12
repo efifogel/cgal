@@ -199,12 +199,14 @@ private:
   int m_console_history_pos = 0;
   std::map<QString, Curve_set> m_variables;
   Curve_type m_curve_type = Curve_type::CT_LINEAR;     // the curve family of the sets
+  bool m_updating_family_actions = false;              // the family buttons are being set by the program
 
   // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
   // be loaded, the action that does it, the extension of their files, and the reader.
   struct Curve_family {
     Curve_type m_type;
     const char* m_name;
+    const char* m_label;                        // the name shown to the user
     QAction* m_insert_action;
     CGAL::Qt::GraphicsViewInput* m_input;
     std::function<void()> m_reset_input;
@@ -335,6 +337,10 @@ public slots:
    */
   void open_polyline();
 
+  /*! loads conic polygons from a file.
+   */
+  void open_conic();
+
   /*! zooms the view in or out.
    */
   void wheelEvent(QWheelEvent* event);
@@ -448,6 +454,13 @@ public slots:
   /*! starts constructing curves of a given family.
    */
   void start_inserting(Curve_type a_type);
+
+  /*! checks the tool-bar button of the active curve family and unchecks the others, without acting on the changes. The
+   * family of polylines is a polycurve family: its button (Polyline/Polycurve) is checked together with the button of
+   * its subcurve family (Segments), and the families that cannot be subcurves yet are disabled.
+   * \param a_active false to uncheck all the buttons (while panning).
+   */
+  void update_family_actions(bool a_active = true);
 
   /*! obtains an icon of the curve tool bar: a boundary of a segment and an arc, or a circle with its center and radius.
    */
@@ -627,6 +640,10 @@ public slots:
    */
   bool read_polyline(QString a_file_name);
 
+  /*! reads conic polygons from a file. \return false if the file cannot be read.
+   */
+  bool read_conic(QString a_file_name);
+
   /*! reads Bezier polygons from a file into the Draw/Insert bucket. \return false if the file cannot be read.
    */
   bool read_bezier(QString a_file_name);
@@ -639,9 +656,14 @@ signals:
 private:
   /*! adds a polygon of a given curve family, constructed by its input, to the Draw/Insert bucket (as an undoable
    * action), or to the scratch result set while a bounding rectangle is constructed.
+   * \return true if the polygon is added to the Draw/Insert bucket.
    */
   template <typename Set>
-  void add_constructed_polygon(Curve_type a_type, typename Set::Polygon_2 a_polygon, bool a_to_result);
+  bool add_constructed_polygon(Curve_type a_type, typename Set::Polygon_2 a_polygon, bool a_to_result);
+
+  /*! logs the join of a polygon, given as a Python expression, to the Draw/Insert bucket.
+   */
+  void log_join(const QString& a_polygon);
 
   /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has a format line (DOUBLE for
    * coordinates given as doubles), the number of polygons with holes, and for each one the number of its boundaries
