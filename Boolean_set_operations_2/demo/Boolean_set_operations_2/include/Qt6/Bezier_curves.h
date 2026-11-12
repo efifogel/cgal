@@ -30,8 +30,8 @@
 #include <CGAL/Arr_Bezier_curve_traits_2.h>
 #include <CGAL/Qt/Converter.h>
 
-#include "Qt6/BoundaryPiecesGraphicsItem.h"
-#include "Qt6/PiecewiseSetGraphicsItem.h"
+#include "Qt6/Boundary_pieces_graphics_item.h"
+#include "Qt6/Piecewise_set_graphics_item.h"
 
 #define USE_CLIPPING
 
@@ -43,8 +43,8 @@ namespace Qt {
 struct Bezier_helper {
   /*! converts a point to a point of another type with double coordinates.
    */
-  template <class OPoint, class IPoint>
-  static OPoint cvtp2(const IPoint& p) { return OPoint(to_double(p.x()), to_double(p.y())); }
+  template <class Out_point, class In_point>
+  static Out_point cvtp2(const In_point& p) { return Out_point(to_double(p.x()), to_double(p.y())); }
 
   /*! refines the bounding box of a Bezier point until it is smaller than a given error, and obtains its center.
    */
@@ -55,12 +55,12 @@ struct Bezier_helper {
 
     NT min_x, min_y, max_x, max_y;
     const NT error(aError);
-    bool lCanRefine = true;
+    bool l_can_refine = true;
     do {
       aP.get_bbox(min_x, min_y, max_x, max_y);
-      lCanRefine = ! aP.is_exact() && (CGAL_NTS abs(max_x - min_x) > error || CGAL_NTS abs(max_y - min_y) > error);
-      if (lCanRefine) lCanRefine = aP.refine();
-    } while (lCanRefine);
+      l_can_refine = ! aP.is_exact() && (CGAL_NTS abs(max_x - min_x) > error || CGAL_NTS abs(max_y - min_y) > error);
+      if (l_can_refine) l_can_refine = aP.refine();
+    } while (l_can_refine);
 
     const NT two(2.0);
     double x = to_double((min_x + max_x) / two);
@@ -76,9 +76,9 @@ struct Bezier_helper {
                                                                            unsigned int aXID) {
     using NT = typename Bezier_point::Bez_point_bound::NT;
 
-    auto lOrg = aP.get_originator(aCurve, aXID);
+    auto l_org = aP.get_originator(aCurve, aXID);
     refine_bezier_point(aP);
-    return (lOrg->point_bound().t_min + lOrg->point_bound().t_max) / NT(2.0);
+    return (l_org->point_bound().t_min + l_org->point_bound().t_max) / NT(2.0);
   }
 
   /*! replaces the control points of a Bezier curve with the control points of its part in the parameter range
@@ -91,11 +91,11 @@ struct Bezier_helper {
     if (aS < zero && aT > one) return;
     int nc = rQ.size();
     int ncc = nc - 1;
-    FT lAlfa = aS;
-    FT lBeta = (aT - aS) / (one - aS);
+    FT l_alfa = aS;
+    FT l_beta = (aT - aS) / (one - aS);
     for (int i = 1; i <= ncc; ++i) {
-      for (int j = 0; j < ncc; ++j) rQ[j] = rQ[j] + lAlfa * (rQ[j+1] - rQ[j]);
-      for (int j = nc - i; j <= ncc; ++j) rQ[j] = rQ[j-1] + lBeta * (rQ[j] - rQ[j-1]);
+      for (int j = 0; j < ncc; ++j) rQ[j] = rQ[j] + l_alfa * (rQ[j+1] - rQ[j]);
+      for (int j = nc - i; j <= ncc; ++j) rQ[j] = rQ[j-1] + l_beta * (rQ[j] - rQ[j-1]);
     }
   }
 
@@ -104,22 +104,22 @@ struct Bezier_helper {
   template <class Bezier_X_monotone_curve, class Ctrl_points>
   static void clip(const Bezier_X_monotone_curve& aXMCurve, Ctrl_points& rQ) {
     using Bezier_curve = typename Bezier_X_monotone_curve::Curve_2;
-    using BoundNT = typename Bezier_X_monotone_curve::Bounding_traits::NT;
+    using Bound_nt = typename Bezier_X_monotone_curve::Bounding_traits::NT;
 
-    const Bezier_curve& lBC = aXMCurve.supporting_curve();
+    const Bezier_curve& l_bc = aXMCurve.supporting_curve();
 
-    BoundNT lS = get_endpoint_parameter(aXMCurve.source(), lBC, aXMCurve.xid());
-    BoundNT lT = get_endpoint_parameter(aXMCurve.target(), lBC, aXMCurve.xid());
+    Bound_nt l_s = get_endpoint_parameter(aXMCurve.source(), l_bc, aXMCurve.xid());
+    Bound_nt l_t = get_endpoint_parameter(aXMCurve.target(), l_bc, aXMCurve.xid());
 
-    bool lFwd = lS <= lT;
+    bool l_fwd = l_s <= l_t;
 
-    BoundNT lMin = lFwd ? lS : BoundNT(1.0) - lS;
-    BoundNT lMax = lFwd ? lT : BoundNT(1.0) - lT;
+    Bound_nt l_min = l_fwd ? l_s : Bound_nt(1.0) - l_s;
+    Bound_nt l_max = l_fwd ? l_t : Bound_nt(1.0) - l_t;
 
-    std::copy(lBC.control_points_begin(), lBC.control_points_end(), std::back_inserter(rQ));
-    if (! lFwd) std::reverse(rQ.begin(), rQ.end());
+    std::copy(l_bc.control_points_begin(), l_bc.control_points_end(), std::back_inserter(rQ));
+    if (! l_fwd) std::reverse(rQ.begin(), rQ.end());
 
-    clip_impl(rQ, lMin, lMax);
+    clip_impl(rQ, l_min, l_max);
   }
 
   /*! samples the Bezier curve given by its control points in the parameter range [aMin, aMax] recursively, until the
@@ -131,30 +131,30 @@ struct Bezier_helper {
     using Control_point = typename value_type_traits<Control_point_in_iterator>::type;
     using Sample_point = typename value_type_traits<Control_point_out_iterator>::type;
 
-    Control_point lMinP = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMin);
-    Control_point lMidP = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMid);
-    Control_point lMaxP = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMax);
+    Control_point l_min_p = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMin);
+    Control_point l_mid_p = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMid);
+    Control_point l_max_p = point_on_Bezier_curve_2(aBeginCtrlPts, aEndCtrlPts, aMax);
 
-    NT lB = squared_distance(lMinP, lMaxP);
-    NT lH = squared_distance(lMidP, typename Kernel_traits<Control_point>::Kernel::Line_2(lMinP, lMaxP));
+    NT l_b = squared_distance(l_min_p, l_max_p);
+    NT l_h = squared_distance(l_mid_p, typename Kernel_traits<Control_point>::Kernel::Line_2(l_min_p, l_max_p));
 
-    if (lH > lB * aFlatness) {
+    if (l_h > l_b * aFlatness) {
       recursive_subdivision(aBeginCtrlPts, aEndCtrlPts, aMin, (aMin + aMid) / NT(2.0), aMid, aOut, aFlatness);
-      *aOut++ = cvtp2<Sample_point>(lMidP);
+      *aOut++ = cvtp2<Sample_point>(l_mid_p);
       recursive_subdivision(aBeginCtrlPts, aEndCtrlPts, aMid, (aMid + aMax) / NT(2.0), aMax, aOut, aFlatness);
     }
-    else *aOut++ = cvtp2<Sample_point>(lMaxP);
+    else *aOut++ = cvtp2<Sample_point>(l_max_p);
   }
 
   /*! samples a Bezier curve in the parameter range [aSourceT, aTargetT].
    */
   template <class Bezier_curve, class NT, class Output_iterator>
   static void sample_curve(const Bezier_curve& aCurve, NT aSourceT, NT aTargetT, Output_iterator aOut, NT aFlatness) {
-    bool lFwd = aSourceT < aTargetT;
-    NT lMinT = lFwd ? aSourceT : NT(1.0) - aSourceT;
-    NT lMaxT = lFwd ? aTargetT : NT(1.0) - aTargetT;
-    recursive_subdivision(aCurve.control_points_begin(), aCurve.control_points_end(), lMinT, (lMinT + lMaxT) / NT(2.0),
-                          lMaxT, aOut, aFlatness);
+    bool l_fwd = aSourceT < aTargetT;
+    NT l_min_t = l_fwd ? aSourceT : NT(1.0) - aSourceT;
+    NT l_max_t = l_fwd ? aTargetT : NT(1.0) - aTargetT;
+    recursive_subdivision(aCurve.control_points_begin(), aCurve.control_points_end(), l_min_t,
+                          (l_min_t + l_max_t) / NT(2.0), l_max_t, aOut, aFlatness);
   }
 
   /*! samples a Bezier curve.
@@ -172,12 +172,12 @@ struct Bezier_helper {
     // vertical positions, so the endpoints are added explicitly.
     *aOut++ = refine_bezier_point(aXMCurve.source());
 
-    NT lFromT = get_endpoint_parameter(aFwd ? aXMCurve.source() : aXMCurve.target(), aXMCurve.supporting_curve(),
+    NT l_from_t = get_endpoint_parameter(aFwd ? aXMCurve.source() : aXMCurve.target(), aXMCurve.supporting_curve(),
                                        aXMCurve.xid());
-    NT lToT = get_endpoint_parameter(aFwd ? aXMCurve.target() : aXMCurve.source(), aXMCurve.supporting_curve(),
+    NT l_to_t = get_endpoint_parameter(aFwd ? aXMCurve.target() : aXMCurve.source(), aXMCurve.supporting_curve(),
                                      aXMCurve.xid());
 
-    sample_curve(aXMCurve.supporting_curve(), lFromT, lToT, aOut, aFlatness);
+    sample_curve(aXMCurve.supporting_curve(), l_from_t, l_to_t, aOut, aFlatness);
 
     *aOut++ = refine_bezier_point(aXMCurve.target());
   }
@@ -203,9 +203,9 @@ struct Bezier_X_monotone_bbox
   template <class Bezier_X_monotone_curve>
   CGAL::Bbox_2 operator()(const Bezier_X_monotone_curve& aBXMC) const {
     using Rat_point_2 = typename Bezier_X_monotone_curve::Rat_kernel::Point_2;
-    std::vector<Rat_point_2> lQ;
-    Bezier_helper::clip(aBXMC, lQ);
-    return CGAL::bbox_2(lQ.begin(), lQ.end());
+    std::vector<Rat_point_2> l_q;
+    Bezier_helper::clip(aBXMC, l_q);
+    return CGAL::bbox_2(l_q.begin(), l_q.end());
   }
 };
 
@@ -217,7 +217,7 @@ struct Draw_bezier_curve
    */
   template <class Bezier_curve, class Path>
   void operator()(const Bezier_curve& aBC, Path& aPath, int aIdx) const {
-    using BoundNT = typename Bezier_curve::Bounding_traits::NT;
+    using Bound_nt = typename Bezier_curve::Bounding_traits::NT;
     using Linear_kernel = Simple_cartesian<double>;
     using Linear_point = Point_2<Linear_kernel>;
     using Linear_point_vector = std::vector<Linear_point>;
@@ -233,12 +233,12 @@ struct Draw_bezier_curve
       return;
     }
 
-    Linear_point_vector lSample;
-    Bezier_helper::sample_curve(aBC, std::back_inserter(lSample), BoundNT(1e-4));
-    for (auto it = lSample.begin(); it != lSample.end(); ++it) {
-      QPointF lP = Bezier_helper::cvtp2<QPointF>(*it);
-      if (aIdx == 0 && it == lSample.begin()) aPath.moveTo(lP);
-      else aPath.lineTo(lP);
+    Linear_point_vector l_sample;
+    Bezier_helper::sample_curve(aBC, std::back_inserter(l_sample), Bound_nt(1e-4));
+    for (auto it = l_sample.begin(); it != l_sample.end(); ++it) {
+      QPointF l_p = Bezier_helper::cvtp2<QPointF>(*it);
+      if (aIdx == 0 && it == l_sample.begin()) aPath.moveTo(l_p);
+      else aPath.lineTo(l_p);
     }
   }
 };
@@ -253,18 +253,18 @@ struct Draw_bezier_X_monotone_curve
    */
   template <class Bezier_X_monotone_curve, class Path>
   void operator()(const Bezier_X_monotone_curve& aBXMC, Path& aPath, int aIdx) const {
-    using BoundNT = typename Bezier_X_monotone_curve::Bounding_traits::NT;
+    using Bound_nt = typename Bezier_X_monotone_curve::Bounding_traits::NT;
     using Rat_point_2 = typename Bezier_X_monotone_curve::Rat_kernel::Point_2;
     using Rat_point_vector = std::vector<Rat_point_2>;
     using Linear_kernel = Simple_cartesian<double>;
     using Linear_point = Point_2<Linear_kernel>;
     using Linear_point_vector = std::vector<Linear_point>;
 
-    Rat_point_vector lQ;
-    Bezier_helper::clip(aBXMC, lQ);
+    Rat_point_vector l_q;
+    Bezier_helper::clip(aBXMC, l_q);
 
-    auto cp = [&](int i) { return Bezier_helper::cvtp2<QPointF>(lQ[i]); };
-    auto n = lQ.size();
+    auto cp = [&](int i) { return Bezier_helper::cvtp2<QPointF>(l_q[i]); };
+    auto n = l_q.size();
     if ((n >= 2) && (n <= 4)) {
       if (aIdx == 0) aPath.moveTo(cp(0));
       else aPath.lineTo(cp(0));
@@ -274,12 +274,12 @@ struct Draw_bezier_X_monotone_curve
       return;
     }
 
-    Linear_point_vector lSample;
-    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(lSample), BoundNT(1e-4));
-    for (auto it = lSample.begin(); it != lSample.end(); ++it) {
-      QPointF lP = Bezier_helper::cvtp2<QPointF>(*it);
-      if (aIdx == 0 && it == lSample.begin()) aPath.moveTo(lP);
-      else aPath.lineTo(lP);
+    Linear_point_vector l_sample;
+    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(l_sample), Bound_nt(1e-4));
+    for (auto it = l_sample.begin(); it != l_sample.end(); ++it) {
+      QPointF l_p = Bezier_helper::cvtp2<QPointF>(*it);
+      if (aIdx == 0 && it == l_sample.begin()) aPath.moveTo(l_p);
+      else aPath.lineTo(l_p);
     }
   }
 };
@@ -299,12 +299,12 @@ struct Draw_bezier_X_monotone_curve
     using Linear_point = Point_2<Linear_kernel>;
     using Linear_point_vector = std::vector<Linear_point>;
 
-    Linear_point_vector lSample;
-    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(lSample));
-    for (auto it = lSample.begin(); it != lSample.end(); ++it) {
-      QPointF lP = Bezier_helper::cvtp2<QPointF>(*it);
-      if (aIdx == 0 && it == lSample.begin()) aPath.moveTo(lP);
-      else aPath.lineTo(lP);
+    Linear_point_vector l_sample;
+    Bezier_helper::sample_x_monotone_curve(aBXMC, true, std::back_inserter(l_sample));
+    for (auto it = l_sample.begin(); it != l_sample.end(); ++it) {
+      QPointF l_p = Bezier_helper::cvtp2<QPointF>(*it);
+      if (aIdx == 0 && it == l_sample.begin()) aPath.moveTo(l_p);
+      else aPath.lineTo(l_p);
     }
   }
 };
@@ -315,9 +315,9 @@ struct Draw_bezier_X_monotone_curve
  */
 template <class Bezier_boundary_pieces>
 class Bezier_boundary_pieces_graphics_item :
-    public Boundary_pieces_graphics_item_bezier<Bezier_boundary_pieces, Draw_bezier_curve, Bezier_bbox>
+    public Boundary_pieces_graphics_item<Bezier_boundary_pieces, Draw_bezier_curve, Bezier_bbox>
 {
-  using Base = Boundary_pieces_graphics_item_bezier<Bezier_boundary_pieces, Draw_bezier_curve, Bezier_bbox>;
+  using Base = Boundary_pieces_graphics_item<Bezier_boundary_pieces, Draw_bezier_curve, Bezier_bbox>;
 
 public:
   /*! constructs from the Bezier curves.
@@ -329,11 +329,11 @@ public:
  */
 template <class Bezier_boundary>
 class Bezier_boundary_graphics_item :
-    public Piecewise_boundary_graphics_item_bezier<Bezier_boundary, Draw_bezier_X_monotone_curve,
+    public Piecewise_boundary_graphics_item<Bezier_boundary, Draw_bezier_X_monotone_curve,
                                                    Bezier_X_monotone_bbox>
 {
   using Base =
-    Piecewise_boundary_graphics_item_bezier<Bezier_boundary, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
+    Piecewise_boundary_graphics_item<Bezier_boundary, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
 
 public:
   /*! constructs from the boundary.
@@ -345,10 +345,10 @@ public:
  */
 template <class Bezier_region>
 class Bezier_region_graphics_item :
-    public Piecewise_region_graphics_item_bezier<Bezier_region, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>
+    public Piecewise_region_graphics_item<Bezier_region, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>
 {
   using Base =
-    Piecewise_region_graphics_item_bezier<Bezier_region, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
+    Piecewise_region_graphics_item<Bezier_region, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
 
 public:
   /*! constructs from the polygon with holes.
@@ -360,9 +360,9 @@ public:
  */
 template <class Bezier_set>
 class Bezier_set_graphics_item :
-    public Piecewise_set_graphics_item_bezier<Bezier_set, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>
+    public Piecewise_set_graphics_item<Bezier_set, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>
 {
-  using Base = Piecewise_set_graphics_item_bezier<Bezier_set, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
+  using Base = Piecewise_set_graphics_item<Bezier_set, Draw_bezier_X_monotone_curve, Bezier_X_monotone_bbox>;
 
 public:
   /*! constructs from the set.

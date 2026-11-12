@@ -48,9 +48,17 @@
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/General_polygon_set_2.h>
 #include <CGAL/Gps_traits_2.h>
-#include <CGAL/Arr_segment_traits_2.h>
-
-#include "Qt6/BezierCurves.h"
+#include <CGAL/Gps_circle_segment_traits_2.h>
+#include <CGAL/Arr_Bezier_curve_traits_2.h>
+#include <CGAL/CORE_algebraic_number_traits.h>
+#include <CGAL/Lazy_exact_nt.h>
+#include <CGAL/Polygon_with_holes_2.h>
+#ifdef CGAL_USE_GMP
+#include <CGAL/Gmpq.h>
+#else
+#include <CGAL/MP_Float.h>
+#include <CGAL/Quotient.h>
+#endif
 
 // Linear polygons
 using Kernel = CGAL::Exact_predicates_exact_constructions_kernel;
@@ -118,8 +126,6 @@ using Bezier_polygon = Bezier_gps_traits::General_polygon_2;
 using Bezier_polygon_vector = std::vector<Bezier_polygon>;
 using Bezier_polygon_with_holes = Bezier_gps_traits::General_polygon_with_holes_2;
 using Bezier_polygon_set = CGAL::General_polygon_set_2<Bezier_gps_traits>;
-
-using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
 
 using Bezier_boundary_source = std::vector<Bezier_curve>;
 

@@ -116,16 +116,15 @@ public:
 
 /*! A graphics item that draws a set of linear polygons.
  */
-template <class Linear_set, class Gps_traits>
+template <class Linear_set>
 class Linear_set_graphics_item :
-    public Piecewise_set_graphics_item<Linear_set, Gps_traits, Draw_linear_X_monotone_curve, Linear_X_monotone_bbox> {
-  using Base =
-    Piecewise_set_graphics_item<Linear_set, Gps_traits, Draw_linear_X_monotone_curve, Linear_X_monotone_bbox>;
+    public Piecewise_set_graphics_item<Linear_set, Draw_linear_X_monotone_curve, Linear_X_monotone_bbox> {
+  using Base = Piecewise_set_graphics_item<Linear_set, Draw_linear_X_monotone_curve, Linear_X_monotone_bbox>;
 
 public:
-  /*! constructs from the set and the traits.
+  /*! constructs from the set.
    */
-  Linear_set_graphics_item(Linear_set* aSet, Gps_traits Linear_traits) : Base(aSet, Linear_traits) {}
+  Linear_set_graphics_item(Linear_set* aSet) : Base(aSet) {}
 };
 
 } // namespace Qt

@@ -25,7 +25,6 @@
 
 #include <CGAL/iterator.h>
 
-#include "Typedefs.h"
 #include "Qt6/Piecewise_graphics_item_base.h"
 
 namespace CGAL {
@@ -33,14 +32,23 @@ namespace Qt {
 
 /*! A graphics item that draws the boundary of a general polygon.
  */
-template <typename Gps_traits, class Draw_piece_, typename Piece_bbox_>
+template <typename Piecewise_boundary_, typename Draw_piece_, typename Piece_bbox_>
 class Piecewise_boundary_graphics_item : public Piecewise_graphics_item_base {
-  using Piecewise_boundary = typename Gps_traits::Polygon_2;
+  using Piecewise_boundary = Piecewise_boundary_;
 
   using Draw_piece = Draw_piece_;
   using Piece_bbox = Piece_bbox_;
 
 public:
+  /*! constructs from the boundary, a functor that draws a curve, and a functor that bounds a curve.
+   */
+  Piecewise_boundary_graphics_item(Piecewise_boundary* aBoundary, const Draw_piece& aPieceDrawer = Draw_piece(),
+                                   const Piece_bbox& aPieceBBox = Piece_bbox()) :
+    m_boundary(aBoundary),
+    m_piece_drawer(aPieceDrawer),
+    m_piece_BBox(aPieceBBox)
+  {}
+
   /*! determines whether there is no boundary to draw.
    */
   virtual bool is_model_empty() const { return ! m_boundary || m_boundary->is_empty(); }
@@ -77,8 +85,6 @@ protected:
 
 protected:
   Piecewise_boundary* m_boundary;
-  Gps_traits* m_traits;
-
   Draw_piece m_piece_drawer;
   Piece_bbox m_piece_BBox;
 };

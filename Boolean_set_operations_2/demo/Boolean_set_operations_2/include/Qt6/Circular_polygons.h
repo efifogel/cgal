@@ -219,18 +219,15 @@ public:
 
 /*! A graphics item that draws a set of circular polygons.
  */
-template <typename Circular_set, typename Gps_traits>
+template <typename Circular_set>
 class Circular_set_graphics_item :
-    public Piecewise_set_graphics_item<Circular_set, Gps_traits, Draw_circular_X_monotone_curve,
-                                       Circular_X_monotone_bbox>
-{
-  using Base =
-    Piecewise_set_graphics_item<Circular_set, Gps_traits, Draw_circular_X_monotone_curve, Circular_X_monotone_bbox>;
+    public Piecewise_set_graphics_item<Circular_set, Draw_circular_X_monotone_curve, Circular_X_monotone_bbox> {
+  using Base = Piecewise_set_graphics_item<Circular_set, Draw_circular_X_monotone_curve, Circular_X_monotone_bbox>;
 
 public:
-  /*! constructs from the set and the traits.
+  /*! constructs from the set.
    */
-  Circular_set_graphics_item(Circular_set* aSet, Gps_traits Circular_traits) : Base(aSet, Circular_traits) {}
+  Circular_set_graphics_item(Circular_set* aSet) : Base(aSet) {}
 };
 
 } // namespace Qt

@@ -31,7 +31,7 @@
 #include <QRectF>
 
 #include "Typedefs.h"
-#include "Qt6/PiecewiseSetGraphicsItem.h"
+#include "Qt6/Piecewise_set_graphics_item.h"
 
 namespace CGAL {
 namespace Qt {
@@ -71,8 +71,7 @@ struct Draw_conic_X_monotone_curve {
   }
 };
 
-using Conic_GI =
-  Piecewise_set_graphics_item_bezier<Conic_polygon_set, Draw_conic_X_monotone_curve, Conic_X_monotone_bbox>;
+using Conic_GI = Piecewise_set_graphics_item<Conic_polygon_set, Draw_conic_X_monotone_curve, Conic_X_monotone_bbox>;
 
 /*! A non-degenerate conic, r*x^2 + s*y^2 + t*xy + u*x + v*y + w = 0, in double precision, with a parametrization for
  * previewing and picking:

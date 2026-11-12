@@ -49,7 +49,21 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
 
   add_executable(Boolean_set_operations_2
     Boolean_set_operations_2.cpp
-    # MainWindow.cpp
+    Error_handling.cpp
+    Main_window.cpp
+    Main_window_console.cpp
+    Main_window_files.cpp
+    Main_window_operations.cpp
+    Polygon_io.cpp
+    include/Bucket_operations.h
+    include/Buckets.h
+    include/Curve_set.h
+    include/Error_handling.h
+    include/Main_window.h
+    include/Polygon_io.h
+    include/Python.h
+    include/Qt_helpers.h
+    include/State.h
     include/Typedefs.h
     include/Qt6/Boundary_pieces_graphics_item.h
     include/Qt6/Circular_polygons.h
@@ -62,7 +76,9 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/Qt6/Graphics_view_polyline_input.h
     include/Qt6/Linear_polygons.h
     include/Qt6/Polyline_curves.h
-    include/Qt6/Conic_Curves.h
+    include/Qt6/Conic_curves.h
+    include/Qt6/Bezier_curves.h
+    include/Qt6/Graphics_view_bezier_polygon_input.h
     include/Qt6/Graphics_view_conic_input.h
     ${UI_HEADERS}
     ${CGAL_Qt6_RESOURCE_FILES})
