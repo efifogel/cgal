@@ -1435,8 +1435,9 @@ private:
 
   size_t m_state_num;
 
-  QGraphicsLineItem* xAxis = new QGraphicsLineItem();
-  QGraphicsLineItem* yAxis = new QGraphicsLineItem();
+  // The axes. (Declared after the scene, so that they are deleted first, removing themselves from the scene if shown.)
+  std::unique_ptr<QGraphicsLineItem> xAxis = std::make_unique<QGraphicsLineItem>();
+  std::unique_ptr<QGraphicsLineItem> yAxis = std::make_unique<QGraphicsLineItem>();
 
   state_container states_stack;
   // The graphics items in the scene (null once deleted along with their sets).
@@ -3232,13 +3233,13 @@ void MainWindow::apply_minkowski_sum(bool aChecked) {
 
 void MainWindow::toggle_axes() {
   if (! m_grid) {
-    m_scene.addItem(xAxis);
-    m_scene.addItem(yAxis);
+    m_scene.addItem(xAxis.get());
+    m_scene.addItem(yAxis.get());
     m_grid = true;
   }
   else {
-    m_scene.removeItem(xAxis);
-    m_scene.removeItem(yAxis);
+    m_scene.removeItem(xAxis.get());
+    m_scene.removeItem(yAxis.get());
     m_grid = false;
   }
   // Keep the button checked (highlighted) while the axes are shown.
