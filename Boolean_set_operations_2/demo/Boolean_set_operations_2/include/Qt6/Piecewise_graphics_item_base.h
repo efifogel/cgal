@@ -136,7 +136,7 @@ protected:
   QPen m_pen;
 };
 
-void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionGraphicsItem* /* aOption */,
+inline void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionGraphicsItem* /* aOption */,
                                          QWidget* /* aWidget */) {
   if (is_model_empty()) return;
   QPainterPath l_path;
@@ -147,7 +147,7 @@ void Piecewise_graphics_item_base::paint(QPainter* aPainter, const QStyleOptionG
 }
 
 // The bounding box only grows, so that when vertices get removed the maximal bbox gets refreshed in the GraphicsView.
-void Piecewise_graphics_item_base::update_bounding_box() {
+inline void Piecewise_graphics_item_base::update_bounding_box() {
   if (is_model_empty()) {
     if (m_unbounded) {
       prepareGeometryChange();

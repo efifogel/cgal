@@ -114,17 +114,15 @@ public:
 
 /*! A graphics item that draws a set of polygons bounded by polylines.
  */
-template <typename Polyline_set, typename Gps_traits>
+template <typename Polyline_set>
 class Polyline_set_graphics_item :
-    public Piecewise_set_graphics_item<Polyline_set, Gps_traits, Draw_polyline_X_monotone_curve,
-                                       Polyline_X_monotone_bbox> {
-  using Base =
-    Piecewise_set_graphics_item<Polyline_set, Gps_traits, Draw_polyline_X_monotone_curve, Polyline_X_monotone_bbox>;
+    public Piecewise_set_graphics_item<Polyline_set, Draw_polyline_X_monotone_curve, Polyline_X_monotone_bbox> {
+  using Base = Piecewise_set_graphics_item<Polyline_set, Draw_polyline_X_monotone_curve, Polyline_X_monotone_bbox>;
 
 public:
-  /*! constructs from the set and the traits.
+  /*! constructs from the set.
    */
-  Polyline_set_graphics_item(Polyline_set* aSet, Gps_traits Polyline_traits) : Base(aSet, Polyline_traits) {}
+  Polyline_set_graphics_item(Polyline_set* aSet) : Base(aSet) {}
 };
 
 } // namespace Qt

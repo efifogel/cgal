@@ -23,7 +23,6 @@
 #ifndef CGAL_QT6_PIECEWISE_REGION_GRAPHICS_ITEM_H
 #define CGAL_QT6_PIECEWISE_REGION_GRAPHICS_ITEM_H
 
-#include "Typedefs.h"
 #include "Qt6/Piecewise_boundary_graphics_item.h"
 
 namespace CGAL {
@@ -31,16 +30,24 @@ namespace Qt {
 
 /*! A graphics item that draws a general polygon with holes.
  */
-template <typename Gps_traits, typename Draw_piece_, typename Piece_bbox_>
-class Piecewise_region_graphics_item : public Piecewise_boundary_graphics_item<Gps_traits, Draw_piece_, Piece_bbox_>
-{
-  using Piecewise_region = typename Gps_traits::Polygon_with_holes_2;
-  using Base = Piecewise_boundary_graphics_item<Gps_traits, Draw_piece_, Piece_bbox_>;
+template <typename Piecewise_region_, typename Draw_piece_, typename Piece_bbox_>
+class Piecewise_region_graphics_item :
+    public Piecewise_boundary_graphics_item<typename Piecewise_region_::General_polygon_2, Draw_piece_, Piece_bbox_> {
+  using Piecewise_region = Piecewise_region_;
+  using Base = Piecewise_boundary_graphics_item<typename Piecewise_region::General_polygon_2, Draw_piece_, Piece_bbox_>;
 
   using Draw_piece = Draw_piece_;
   using Piece_bbox = Piece_bbox_;
 
 public:
+  /*! constructs from the polygon with holes, a functor that draws a curve, and a functor that bounds a curve.
+   */
+  Piecewise_region_graphics_item(Piecewise_region* aRegion, const Draw_piece& aPieceDrawer = Draw_piece(),
+                                 const Piece_bbox& aPieceBBox = Piece_bbox()) :
+    Base(aPieceDrawer, aPieceBBox),
+    m_region(aRegion)
+  {}
+
   /*! determines whether there is no polygon with holes to draw.
    */
   virtual bool is_model_empty() const { return ! m_region || m_region->outer_boundary().size(); }
@@ -50,7 +57,8 @@ protected:
    */
   Piecewise_region_graphics_item(const Draw_piece& aPieceDrawer = Draw_piece(),
                                  const Piece_bbox& aPieceBBox = Piece_bbox()) :
-    Base(aPieceDrawer, aPieceBBox)
+    Base(aPieceDrawer, aPieceBBox),
+    m_region(nullptr)
   {}
 
   /*! extends the bounding box with the box of the polygon with holes.
@@ -73,7 +81,6 @@ protected:
 
 protected:
   Piecewise_region* m_region;
-  Gps_traits* m_traits;
 };
 
 template <typename R, typename D, typename P>

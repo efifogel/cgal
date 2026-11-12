@@ -30,24 +30,24 @@ namespace Qt {
 
 /*! A graphics item that draws a general polygon set.
  */
-template <typename Piecewise_set_, typename Gps_traits, typename Draw_piece_, typename Piece_bbox_>
-class Piecewise_set_graphics_item : public Piecewise_region_graphics_item<Gps_traits, Draw_piece_, Piece_bbox_> {
+template <typename Piecewise_set_, typename Draw_piece_, typename Piece_bbox_>
+class Piecewise_set_graphics_item :
+    public Piecewise_region_graphics_item<typename Piecewise_set_::Polygon_with_holes_2, Draw_piece_, Piece_bbox_> {
   using Piecewise_set = Piecewise_set_;
   using Draw_piece = Draw_piece_;
   using Piece_bbox = Piece_bbox_;
 
-  using Region = typename Gps_traits::Polygon_with_holes_2;
-  using Base = Piecewise_region_graphics_item<Gps_traits, Draw_piece, Piece_bbox>;
+  using Region = typename Piecewise_set::Polygon_with_holes_2;
+  using Base = Piecewise_region_graphics_item<Region, Draw_piece, Piece_bbox>;
   using Region_vector = std::vector<Region>;
 
 public:
-  /*! constructs from the set, the traits, a functor that draws a curve, and a functor that bounds a curve.
+  /*! constructs from the set, a functor that draws a curve, and a functor that bounds a curve.
    */
-  Piecewise_set_graphics_item(Piecewise_set* aSet, Gps_traits Traits, const Draw_piece& aPieceDrawer = Draw_piece(),
+  Piecewise_set_graphics_item(Piecewise_set* aSet, const Draw_piece& aPieceDrawer = Draw_piece(),
                               const Piece_bbox& aPieceBBox = Piece_bbox()) :
     Base(aPieceDrawer, aPieceBBox),
-    m_set(aSet),
-    m_traits(Traits)
+    m_set(aSet)
   {}
 
   /*! determines whether the set is empty.
@@ -74,19 +74,18 @@ protected:
 
 protected:
   Piecewise_set* m_set;
-  Gps_traits m_traits;
 };
 
-template <typename S, typename P, typename D, typename F>
-void Piecewise_set_graphics_item<S, P, D, F>::
+template <typename S, typename D, typename P>
+void Piecewise_set_graphics_item<S, D, P>::
 update_set_bbox(const Piecewise_set& aSet, Piecewise_graphics_item_base::Bbox_builder& aBboxBuilder) {
   Region_vector vec;
   aSet.polygons_with_holes(std::back_inserter(vec));
   for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->update_region_bbox(*rit, aBboxBuilder);
 }
 
-template <typename S, typename P, typename D, typename F>
-void Piecewise_set_graphics_item<S, P, D, F>::draw_set(const Piecewise_set& aSet, QPainterPath& aPath) {
+template <typename S, typename D, typename P>
+void Piecewise_set_graphics_item<S, D, P>::draw_set(const Piecewise_set& aSet, QPainterPath& aPath) {
   Region_vector vec;
   aSet.polygons_with_holes(std::back_inserter(vec));
   for (auto rit = vec.begin(); rit != vec.end(); ++rit) this->draw_region(*rit, aPath);

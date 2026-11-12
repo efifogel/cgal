@@ -37,7 +37,7 @@
 #include <CGAL/Arr_geometry_traits/Conic_intersections_2.h>
 
 #include "Typedefs.h"
-#include "Qt6/Conic_Curves.h"
+#include "Qt6/Conic_curves.h"
 
 namespace CGAL {
 namespace Qt {

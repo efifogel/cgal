@@ -32,8 +32,7 @@ using namespace std;
 namespace CGAL {
 namespace Qt {
 
-/*! A graphics item that draws a sequence of curves (the pieces of a boundary under construction). It is used by the
- * circular and linear polygon input.
+/*! A graphics item that draws a sequence of curves (the pieces of a boundary under construction).
  */
 template <typename Boundary_pieces_, typename Draw_piece_, typename Piece_bbox_>
 class Boundary_pieces_graphics_item : public Piecewise_graphics_item_base {
