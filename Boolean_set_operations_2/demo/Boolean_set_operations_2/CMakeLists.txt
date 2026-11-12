@@ -49,18 +49,25 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
 
   add_executable(Boolean_set_operations_2
     Boolean_set_operations_2.cpp
+    Conic_arcs.cpp
     Error_handling.cpp
     Main_window.cpp
     Main_window_console.cpp
     Main_window_files.cpp
     Main_window_operations.cpp
     Polygon_io.cpp
+    Polynomial_dialog.cpp
+    include/Algebraic_curves.h
     include/Bucket_operations.h
     include/Buckets.h
+    include/Circular_source.h
+    include/Conic_arcs.h
     include/Curve_set.h
     include/Error_handling.h
     include/Main_window.h
     include/Polygon_io.h
+    include/Polyline_boundary.h
+    include/Polynomial_dialog.h
     include/Python.h
     include/Qt_helpers.h
     include/State.h

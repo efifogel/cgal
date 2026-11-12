@@ -22,15 +22,20 @@
 //             Apurva Bhatt <response2apurva@gmail.com>
 
 /*! \file Polygon_io.cpp
- * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, and .bps). A file holds polygons with
- * holes, each one given by its boundaries; a function of each family reads or writes a boundary.
+ * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .bps, and .qps). A file holds
+ * polygons with holes, each one given by its boundaries; a function of each family reads or writes a boundary.
  */
 
 #include "Polygon_io.h"
 
 #include <cmath>
+#include <iomanip>
+#include <stdexcept>
+#include <string>
 
 #include "Qt6/Bezier_curves.h"
+#include "Polyline_boundary.h"
+#include "Conic_arcs.h"
 
 std::vector<Kernel::Point_2> read_vertices(std::istream& a_is) {
   unsigned int n_points;
@@ -56,16 +61,7 @@ std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bo
 }
 
 std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is, bool /* a_double_format */) {
-  auto points = read_vertices(a_is);
-  Polyline_traits traits;
-  auto construct_segment = traits.subcurve_traits_2()->construct_x_monotone_curve_2_object();
-  std::vector<Polyline_curve> curves;
-  for (std::size_t i = 0; i < points.size(); ++i) {
-    const auto& p = points[i];
-    const auto& q = points[(i + 1) % points.size()];
-    if (p != q) curves.emplace_back(construct_segment(p, q));
-  }
-  return x_monotone_curves<Polyline_traits>(curves.begin(), curves.end());
+  return polyline_boundary(read_vertices(a_is));
 }
 
 std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is, bool /* a_double_format */) {
@@ -150,10 +146,13 @@ void write_linear_boundary(std::ostream& a_os, const Linear_polygon& a_boundary)
 }
 
 void write_polyline_boundary(std::ostream& a_os, const Polyline_polygon& a_boundary) {
-  a_os << "  " << a_boundary.size() << std::endl;
+  std::size_t n = 0;
+  for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit) n += cit->number_of_subcurves();
+  a_os << "  " << n << std::endl;
+  // The target of each polyline is the source of the next one.
   for (auto cit = a_boundary.curves_begin(); cit != a_boundary.curves_end(); ++cit) {
-    auto it = cit->points_begin();
-    a_os << " " << CGAL::to_double(it->x()) << " " << CGAL::to_double(it->y()) << std::endl;
+    for (auto it = cit->points_begin(); std::next(it) != cit->points_end(); ++it)
+      a_os << "   " << CGAL::to_double(it->x()) << " " << CGAL::to_double(it->y()) << std::endl;
   }
 }
 
@@ -213,4 +212,67 @@ void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& a_bp) {
       l_prev_p = l_p;
     }
   }
+}
+
+namespace {
+
+/*! reads the six coefficients of a conic.
+ */
+void read_coefficients(std::istream& a_is, Conic_arc_record::Coefficients& r_c) {
+  for (auto& c : r_c) {
+    std::string token;
+    a_is >> token;
+    c = Conic_integer(token);
+  }
+}
+
+/*! writes the six coefficients of a conic.
+ */
+void write_coefficients(std::ostream& a_os, const Conic_arc_record::Coefficients& a_c) {
+  for (const auto& c : a_c) a_os << " " << c;
+}
+
+} // namespace
+
+std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool /* a_double_format */) {
+  unsigned int n_arcs;
+  a_is >> n_arcs;
+  std::vector<Conic_arc_record> records(n_arcs);
+  for (auto& record : records) {
+    std::string kind;
+    a_is >> kind;
+    read_coefficients(a_is, record.m_conic);
+    if (kind == "full") {
+      record.m_full = true;
+      continue;
+    }
+    if (kind != "arc") throw std::runtime_error("unknown conic arc kind: " + kind);
+    int orientation;
+    a_is >> orientation;
+    record.m_orientation = CGAL::Orientation(orientation);
+    a_is >> record.m_source[0] >> record.m_source[1];
+    read_coefficients(a_is, record.m_source_conic);
+    a_is >> record.m_target[0] >> record.m_target[1];
+    read_coefficients(a_is, record.m_target_conic);
+  }
+  if (! a_is) throw std::runtime_error("bad conic boundary");
+  return conic_boundary(records);
+}
+
+void write_conic_boundary(std::ostream& a_os, const Conic_polygon& a_boundary) {
+  auto records = conic_arc_records(a_boundary);
+  auto precision = a_os.precision(17);
+  a_os << "  " << records.size() << std::endl;
+  for (const auto& record : records) {
+    a_os << "   " << (record.m_full ? "full" : "arc");
+    write_coefficients(a_os, record.m_conic);
+    if (! record.m_full) {
+      a_os << " " << int(record.m_orientation) << "  " << record.m_source[0] << " " << record.m_source[1];
+      write_coefficients(a_os, record.m_source_conic);
+      a_os << "  " << record.m_target[0] << " " << record.m_target[1];
+      write_coefficients(a_os, record.m_target_conic);
+    }
+    a_os << std::endl;
+  }
+  a_os.precision(precision);
 }

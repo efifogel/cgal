@@ -30,8 +30,8 @@
 #include "Polygon_io.h"
 
 void Main_window::open_linear() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Linear Polygon"), data_directory(Curve_type::CT_LINEAR),
-                                    tr("Linear Curve files (*.lps)")));
+  open(QFileDialog::getOpenFileName(this, tr("Open Segments"), data_directory(Curve_type::CT_LINEAR),
+                                    tr("Segment files (*.lps)")));
 }
 
 void Main_window::open_circular() {
@@ -42,6 +42,11 @@ void Main_window::open_circular() {
 void Main_window::open_bezier() {
   open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), data_directory(Curve_type::CT_BEZIER),
                                     tr("Bezier Curve files (*.bps)")));
+}
+
+void Main_window::open_conic() {
+  open(QFileDialog::getOpenFileName(this, tr("Open Conics"), data_directory(Curve_type::CT_CONIC),
+                                    tr("Conic files (*.qps)")));
 }
 
 void Main_window::open_polyline() {
@@ -98,29 +103,36 @@ bool Main_window::read_polyline(QString a_file_name) {
   return read_polygons<Polyline_polygon_set>(a_file_name, "polyline", read_polyline_boundary);
 }
 
+bool Main_window::read_conic(QString a_file_name) {
+  return read_polygons<Conic_polygon_set>(a_file_name, "conic", read_conic_boundary);
+}
+
 bool Main_window::read_bezier(QString a_file_name) {
   return read_polygons<Bezier_polygon_set>(a_file_name, "Bezier", read_bezier_boundary);
 }
 
 void Main_window::save_draw_bucket() {
-  if (m_curve_type == Curve_type::CT_CONIC) {
-    show_error("Saving conic polygon sets is not supported yet.");
-    return;
-  }
   const auto& selected = family(m_curve_type);
-  QString name = capitalized(selected.m_name);
-  QString file_name = QFileDialog::getSaveFileName(this, "Save " + name + " Polygon Set",
+  QString label = selected.m_label;
+  QString file_name = QFileDialog::getSaveFileName(this, "Save " + label,
                                                    data_directory(m_curve_type) + "/index" + selected.m_extension,
-                                                   QString("%1 Curve files (*%2)").arg(name, selected.m_extension));
+                                                   QString("%1 (*%2)").arg(label, selected.m_extension));
   if (file_name.isEmpty()) return;
   auto& bucket = states_stack.back().set(m_color_active);
   bool saved = false;
-  switch (m_curve_type) {
-   case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
-   case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
-   case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
-   case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
-   default: break;
+  try {
+    switch (m_curve_type) {
+     case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
+     case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
+     case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
+     case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
+     case Curve_type::CT_CONIC: saved = save_polygons(file_name, bucket.conic(), write_conic_boundary); break;
+     default: break;
+    }
+  }
+  catch (const std::exception& e) {
+    show_error("Cannot save the " + std::string(selected.m_name) + " polygon set: " + e.what());
+    return;
   }
   if (! saved) show_error("Cannot save " + std::string(selected.m_name) + " polygon set.");
 }
