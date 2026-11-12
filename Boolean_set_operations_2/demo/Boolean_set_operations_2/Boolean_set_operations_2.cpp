@@ -38,6 +38,7 @@
 #include <qmessagebox.h>
 
 #include <QMainWindow>
+#include <QPointer>
 #include <QGraphicsScene>
 #include <QToolButton>
 #include <QActionGroup>
@@ -348,6 +349,13 @@ public:
   /*! constructs a copy of a set and its graphics item.
    */
   explicit Rep(const Set& aSet) : m_set(aSet) { make_gi(); }
+
+  Rep(const Rep&) = delete;
+  Rep& operator=(const Rep&) = delete;
+
+  /*! destructs the set and its graphics item (which removes the item from its scene).
+   */
+  ~Rep() override { delete m_GI; }
 
   /*! obtains the curve family.
    */
@@ -1431,7 +1439,8 @@ private:
   QGraphicsLineItem* yAxis = new QGraphicsLineItem();
 
   state_container states_stack;
-  std::array<CGAL::Qt::GraphicsItem*, number_of_buckets + 1> m_linked_items{};   // the graphics items in the scene
+  // The graphics items in the scene (null once deleted along with their sets).
+  std::array<QPointer<CGAL::Qt::GraphicsItem>, number_of_buckets + 1> m_linked_items;
 
   CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>* m_linear_input;
   CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>* m_circular_input;
@@ -1886,7 +1895,7 @@ private:
     for (std::size_t i = 0; i < sets.size(); ++i) {
       CGAL::Qt::GraphicsItem* gi = sets[i].gi();
       if (gi == m_linked_items[i]) continue;
-      if (m_linked_items[i]) unlink_gi(m_linked_items[i]);
+      if (m_linked_items[i]) unlink_gi(m_linked_items[i].data());
       gi->setZValue(double(i));       // the sets are drawn in the order of their indices
       link_gi(gi);
       m_linked_items[i] = gi;
@@ -2497,18 +2506,6 @@ void MainWindow::remove_bucket() {
 
 void MainWindow::undo() {
   if (m_state_num > 1) {
-    switch (states_stack.back().m_operation) {
-     case State_op::Complement:
-     case State_op::Delete_all:
-     case State_op::Draw: actionComplementH->setChecked(false); break;
-     case State_op::Intersection: actionIntersectionH->setChecked(false); break;
-     case State_op::Union: actionUnionH->setChecked(false); break;
-     case State_op::Difference: actionDifferenceH->setChecked(false); break;
-     case State_op::Symmetric_difference: actionSymmetric_DifferenceH->setChecked(false); break;
-     case State_op::Minkowski_sum: actionMinkowski_SumH->setChecked(false); break;
-     default: break;
-    }
-
     // The sets of the previous state are shown again by model_changed().
     states_stack.pop_back();
     if (states_stack.size() == 1) actionUndo->setEnabled(false);
