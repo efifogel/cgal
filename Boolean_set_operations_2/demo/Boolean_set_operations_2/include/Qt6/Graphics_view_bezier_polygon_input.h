@@ -256,22 +256,45 @@ public:
     return r_handled;
   }
 
-  /*! handles a key press. Delete and Backspace remove the last curve; Escape discards the polygon.
+  /*! handles a key press. Escape, Delete, and Backspace undo one step: they discard the curve under construction (while
+   * the mouse button is pressed) if there is one, and otherwise remove the last curve of the boundary, or its first
+   * vertex if there is none.
    * \return true if the event is handled.
    */
   bool key_press(QKeyEvent* a_event) {
-    bool r_handled = false;
-    if (a_event->key() == ::Qt::Key_Delete || a_event->key() == ::Qt::Key_Backspace) {
-      remove_last_piece();
-      m_state = m_bezier_polygon_pieces.size() > 0 ? State::PIECE_ENDED : State::ST_START;
-      r_handled = true;
+    if ((a_event->key() != ::Qt::Key_Escape) && (a_event->key() != ::Qt::Key_Delete) &&
+        (a_event->key() != ::Qt::Key_Backspace))
+      return false;
+    return step_back();
+  }
+
+  /*! undoes one step of the construction (see key_press()).
+   * \return false if there is nothing to undo.
+   */
+  bool step_back() {
+    switch (m_state) {
+     case State::HANDLE_ONGOING:
+      hide_handles();
+      m_h0 = m_h1 = std::optional<Point>();
+      m_last = m_last_bezier = false;
+      m_state = State::PIECE_ONGOING;
+      update_ongoing_piece();
+      return true;
+
+     case State::PIECE_OR_FIRST_HANDLE_STARTED:
+     case State::FIRST_HANDLE_ONGOING: reset(); return true;
+
+     case State::PIECE_ONGOING:
+     case State::PIECE_ENDED:
+      if (m_bezier_polygon_pieces.empty()) reset();
+      else {
+        remove_last_piece();
+        m_state = State::PIECE_ONGOING;
+      }
+      return true;
+
+     default: return false;
     }
-    else if (a_event->key() == ::Qt::Key_Escape) {
-      reset();
-      m_state = State::ST_START;
-      r_handled = true;
-    }
-    return r_handled;
   }
 
 public:
@@ -290,7 +313,9 @@ public:
    */
   void reset() {
     m_bezier_polygon_pieces.clear();
+    m_piece_prev_h0s.clear();
     m_ongoing_piece_ctr.clear();
+    hide_handles();
     m_bezier_GI->modelChanged();
     m_ongoing_piece_GI->modelChanged();
     restart();
@@ -299,16 +324,15 @@ public:
   /*! removes the last curve.
    */
   void remove_last_piece() {
+    if (m_bezier_polygon_pieces.empty()) return;
+    m_p0 = m_bezier_polygon_pieces.back().control_point(0);
     m_bezier_polygon_pieces.pop_back();
-    m_ongoing_piece_ctr.clear();
+    m_prev_h0 = m_piece_prev_h0s.back();
+    m_piece_prev_h0s.pop_back();
     m_bezier_GI->modelChanged();
-    m_ongoing_piece_GI->modelChanged();
-    if (m_bezier_polygon_pieces.size() > 0) {
-      const Bezier_curve& last = m_bezier_polygon_pieces.back();
-      m_p0 = last.control_point(last.number_of_control_points() - 1);
-      update_ongoing_piece();
-    }
-    m_prev_h0 = m_h0 = m_h1 = std::optional<Point>();
+    m_h0 = m_h1 = std::optional<Point>();
+    hide_handles();
+    update_ongoing_piece();
   }
 
   /*! hides the handles.
@@ -357,6 +381,7 @@ public:
     if (! ongoing_piece()) return;
     if (! is_degenerate(*ongoing_piece())) {
       m_bezier_polygon_pieces.push_back(*ongoing_piece());
+      m_piece_prev_h0s.push_back(m_prev_h0);
       m_bezier_GI->modelChanged();
     }
     m_ongoing_piece_ctr.clear();
@@ -421,6 +446,7 @@ public:
     m_ongoing_piece_GI->modelChanged();
 
     m_bezier_polygon_pieces.clear();
+    m_piece_prev_h0s.clear();
     m_bezier_GI->modelChanged();
 
     m_prev_h0 = m_h0 = m_h1 = std::optional<Point>();
@@ -526,6 +552,7 @@ public:
   bool m_last;
 
   Bezier_curve_vector m_bezier_polygon_pieces;
+  std::vector<std::optional<Point>> m_piece_prev_h0s;  // the handle that leaves the first vertex of each curve
   Bezier_curve_vector m_ongoing_piece_ctr;
 
   State m_state;

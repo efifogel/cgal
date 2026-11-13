@@ -241,22 +241,44 @@ public:
     return r_handled;
   }
 
-  /*! handles a key press. Delete and Backspace remove the last edge; Escape discards the polygon.
+  /*! handles a key press. Escape, Delete, and Backspace undo one step: they discard the edge under construction (while
+   * the mouse button is pressed) if there is one, and otherwise remove the last edge of the boundary, or its first
+   * vertex if there is none.
    * \return true if the event is handled.
    */
   bool key_press(QKeyEvent* a_event) {
-    bool r_handled = false;
-    if ((a_event->key() == ::Qt::Key_Delete) || (a_event->key() == ::Qt::Key_Backspace)) {
-      remove_last_piece();
-      m_state = (m_polyline_polygon_pieces.size() > 0) ? State::PIECE_ENDED : State::ST_START;
-      r_handled = true;
+    if ((a_event->key() != ::Qt::Key_Escape) && (a_event->key() != ::Qt::Key_Delete) &&
+        (a_event->key() != ::Qt::Key_Backspace))
+      return false;
+    return step_back();
+  }
+
+  /*! undoes one step of the construction (see key_press()).
+   * \return false if there is nothing to undo.
+   */
+  bool step_back() {
+    switch (m_state) {
+     case State::HANDLE_ONGOING:
+      hide_handle();
+      m_h = std::optional<Point>();
+      m_last = m_last_polyline = false;
+      m_state = State::PIECE_ONGOING;
+      update_ongoing_piece();
+      return true;
+
+     case State::PIECE_STARTED: reset(); return true;
+
+     case State::PIECE_ONGOING:
+     case State::PIECE_ENDED:
+      if (m_polyline_polygon_pieces.empty()) reset();
+      else {
+        remove_last_piece();
+        m_state = State::PIECE_ONGOING;
+      }
+      return true;
+
+     default: return false;
     }
-    else if (a_event->key() == ::Qt::Key_Escape) {
-      reset();
-      m_state = State::ST_START;
-      r_handled = true;
-    }
-    return r_handled;
   }
 
 public:
@@ -297,18 +319,13 @@ public:
   /*! removes the last edge.
    */
   void remove_last_piece() {
+    if (m_polyline_polygon_pieces.empty()) return;
+    const auto& first = m_polyline_polygon_pieces.back()[0];
+    m_p0 = Point(first.source().x(), first.source().y());
     m_polyline_polygon_pieces.pop_back();
-    m_ongoing_piece_ctr.clear();
     m_polyline_GI->modelChanged();
-    m_ongoing_piece_GI->modelChanged();
-    if (m_polyline_polygon_pieces.size() > 0) {
-      auto xx = m_polyline_polygon_pieces.back().number_of_subcurves();
-      const auto& last = m_polyline_polygon_pieces.back()[xx - 1];
-      Point pt(last.target().x(), last.target().y());
-      m_p0 = pt;
-      update_ongoing_piece();
-    }
     m_h = std::optional<Point>();
+    update_ongoing_piece();
   }
 
   /*! updates the edge under construction.
