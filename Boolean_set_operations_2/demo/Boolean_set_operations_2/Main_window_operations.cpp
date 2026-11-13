@@ -349,9 +349,10 @@ limit_to_two_operands(const Column& a_column, QAbstractButton* a_box, bool a_che
 std::vector<std::size_t> Main_window::
 checked_buckets(const Column& a_column) const {
   std::vector<std::size_t> buckets;
-  for (std::size_t i = 0; i < a_column.size(); ++i) {
-    if (! a_column[i]->isHidden() && a_column[i]->isChecked())
-      buckets.push_back(i);
+  // By their rows, from the top; e.g., the difference subtracts the lower bucket from the upper one.
+  for (std::size_t row = 0; row < m_number_of_buckets; ++row) {
+    std::size_t i = m_row_buckets[row];
+    if (a_column[i]->isChecked()) buckets.push_back(i);
   }
   return buckets;
 }
