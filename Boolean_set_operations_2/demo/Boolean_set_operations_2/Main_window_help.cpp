@@ -66,9 +66,10 @@ void Main_window::setup_help() {
                                        step_back + family_switch);
 
   // The tools.
-  action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds a bucket (a row of the Operations panel), which holds a "
-                                 "set of polygons.</p>");
-  action_minus_color->setWhatsThis("<b>Remove a Bucket</b><p>Removes the last bucket and its polygons.</p>");
+  action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds the bucket of the color of the plus sign (a row at the "
+                                 "bottom of the Operations panel), which holds a set of polygons.</p>");
+  action_minus_color->setWhatsThis("<b>Remove a Bucket</b><p>Removes the bucket of the color of the minus sign (the "
+                                   "last added one) and its polygons.</p>");
   action_recenter->setWhatsThis("<b>Recenter</b><p>Zooms to fit all the polygons in the view.</p>");
   action_pan->setWhatsThis("<b>Pan</b><p>Drag the view to move it; select a curve family to construct polygons "
                            "again. The mouse wheel zooms in either mode.</p>");
@@ -88,6 +89,9 @@ void Main_window::setup_help() {
   visible_icon->setWhatsThis("<b>Visible</b><p>Shows or hides the polygons of each bucket. The box in the Buckets "
                              "row shows or hides all of them.</p>");
   visible_header->setWhatsThis(visible_icon->whatsThis());
+  for (auto* label : m_bucket_labels)
+    label->setWhatsThis("<b>Bucket</b><p>Drag the name of a bucket up or down to move its row. The order matters for "
+                        "the difference, which subtracts the lower bucket from the upper one.</p>");
   draw_header->setWhatsThis("<b>Draw/Insert</b><p>The bucket that receives the polygons you construct or open, and "
                             "the results of the operations.</p>");
   action_complement_h->setWhatsThis("<b>Complement</b><p>The complement of the selected bucket.</p>" + target);

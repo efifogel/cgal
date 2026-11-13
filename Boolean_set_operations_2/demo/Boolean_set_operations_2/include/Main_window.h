@@ -39,6 +39,7 @@
 #include <optional>
 #include <functional>
 #include <type_traits>
+#include <numeric>
 #include <vector>
 
 #include <QApplication>
@@ -181,6 +182,10 @@ private:
   std::array<QLabel*, number_of_buckets> m_bucket_labels;
   std::array<QFrame*, number_of_buckets> m_bucket_separators;   // the lines below the rows (null for the initial rows)
   std::size_t m_number_of_buckets = min_number_of_buckets;     // the existing buckets are the first ones
+  std::array<std::size_t, number_of_buckets> m_row_buckets;    // the bucket of each row, from the top
+  int m_first_row_y = 0;                                       // the y-coordinate of the top row
+  std::optional<std::size_t> m_dragged_bucket;                 // the bucket whose row is dragged
+  QFrame* m_drag_frame = nullptr;                              // the frame around the dragged row
 
   // The program: the statements executed so far, each tagged with the size of the undo stack after its action, so that
   // undo can drop them.
@@ -357,9 +362,25 @@ public slots:
    */
   void add_bucket();
 
-  /*! removes the last bucket (down to three).
+  /*! removes the last added bucket (down to three).
    */
   void remove_bucket();
+
+  /*! obtains the row of a bucket.
+   */
+  std::size_t bucket_row(std::size_t a_index) const;
+
+  /*! moves a bucket to a row; the rows in between shift by one.
+   */
+  void move_bucket_row(std::size_t a_index, std::size_t a_row);
+
+  /*! places the widgets of the buckets in their rows.
+   */
+  void place_bucket_rows();
+
+  /*! drags the row of a bucket by its label, to change the order of the rows.
+   */
+  bool drag_bucket_row(QLabel* a_label, QEvent* a_event);
 
   /*! copies the marked bucket into the Draw/Insert bucket.
    */

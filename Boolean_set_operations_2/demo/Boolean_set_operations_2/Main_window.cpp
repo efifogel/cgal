@@ -35,6 +35,8 @@
 static const char* bezier_hint =
   "click to add a corner; press and drag to add a smooth vertex; right-click to close (drag to smooth the last vertex)";
 
+static QIcon bucket_tool_icon(bool a_add, const QColor& a_color);
+
 Main_window::Main_window() :
   DemosMainWindow(),
   m_color_active(0),
@@ -166,6 +168,15 @@ Main_window::Main_window() :
   m_bucket_labels = {show_red_label, show_black_label, show_blue_label, show_brown_label, show_yellow_label,
                      show_magenta_label, show_aqua_label};
   m_bucket_separators = {nullptr, nullptr, nullptr, line10, line9, line8, line7};
+  std::iota(m_row_buckets.begin(), m_row_buckets.end(), 0);
+  m_first_row_y = m_bucket_labels[0]->y();
+  // Dragging the label of a bucket moves its row.
+  for (auto* label : m_bucket_labels) {
+    label->resize(60, label->height());       // within its cell, so that the highlight of a dragged row is too
+    label->setCursor(Qt::OpenHandCursor);
+    label->installEventFilter(this);
+  }
+  set_number_of_buckets(min_number_of_buckets);       // also sets the icons of the add and remove buttons
 
   // Visible shows or hides a bucket; Draw/Insert selects one bucket (the radio buttons are exclusive).
   for (std::size_t i = 0; i < number_of_buckets; ++i) {
@@ -495,7 +506,8 @@ void Main_window::show_bucket(std::size_t a_index, bool a_checked) {
   }
   else if (visible == 0) remove_inputs();
   else if (a_index == m_color_active) {
-    for (std::size_t i = 0; i < m_number_of_buckets; ++i) {
+    for (std::size_t row = 0; row < m_number_of_buckets; ++row) {
+      std::size_t i = m_row_buckets[row];
       if (m_show_column[i]->isChecked()) {
         m_draw_column[i]->setChecked(true);
         break;
@@ -534,15 +546,84 @@ void Main_window::set_number_of_buckets(std::size_t a_number) {
   for (auto* line : {line0006, line1, line2, line3, line4, line5, line6, line0007, line06, line061, line062, line063})
     line->setGeometry(QRect(line->x(), 0, 7, height));
 
+  // The buttons show the color of the bucket to add and of the bucket to remove (the last added one).
   bool can_add = (a_number < number_of_buckets);
   action_add_color->setEnabled(can_add);
-  action_add_color->setText(can_add ? "Add a Bucket" : "Maximum Number of Buckets Reached");
+  action_add_color->setIcon(bucket_tool_icon(true, s_pens[can_add ? a_number : a_number - 1].color()));
+  action_add_color->setText(can_add ? QString("Add the %1 bucket").arg(bucket_name(a_number)) :
+                            "Maximum Number of Buckets Reached");
   bool can_remove = (a_number > min_number_of_buckets);
   action_minus_color->setEnabled(can_remove);
-  if (can_remove) {
-    action_minus_color->setText("Remove " + capitalized(bucket_name(a_number - 1)));
+  action_minus_color->setIcon(bucket_tool_icon(false, s_pens[a_number - 1].color()));
+  action_minus_color->setText(can_remove ? QString("Remove the %1 bucket").arg(bucket_name(a_number - 1)) :
+                              "Minimum Number of Buckets Reached");
+}
+
+std::size_t Main_window::bucket_row(std::size_t a_index) const {
+  return std::find(m_row_buckets.begin(), m_row_buckets.end(), a_index) - m_row_buckets.begin();
+}
+
+void Main_window::move_bucket_row(std::size_t a_index, std::size_t a_row) {
+  auto it = m_row_buckets.begin() + bucket_row(a_index);
+  auto target = m_row_buckets.begin() + a_row;
+  if (it < target) std::rotate(it, it + 1, target + 1);
+  else std::rotate(target, it, it + 1);
+  place_bucket_rows();
+}
+
+void Main_window::place_bucket_rows() {
+  const Column* columns[] = {&m_show_column, &m_draw_column, &m_complement_column, &m_intersection_column,
+                             &m_union_column, &m_difference_column, &m_symmetric_difference_column,
+                             &m_minkowski_sum_column, &m_copy_column, &m_move_column, &m_clear_column};
+  for (std::size_t row = 0; row < number_of_buckets; ++row) {
+    std::size_t i = m_row_buckets[row];
+    int y = m_first_row_y + 30 * int(row);
+    for (const Column* column : columns) (*column)[i]->move((*column)[i]->x(), y);
+    m_bucket_labels[i]->move(m_bucket_labels[i]->x(), y);
+    if (m_dragged_bucket && (*m_dragged_bucket == i))
+      m_drag_frame->setGeometry(2, y - 4, line10->x() + line10->width() - 4, 29);
   }
-  else action_minus_color->setText("Minimum Number of Buckets Reached");
+}
+
+bool Main_window::drag_bucket_row(QLabel* a_label, QEvent* a_event) {
+  auto type = a_event->type();
+  if ((type != QEvent::MouseButtonPress) && (type != QEvent::MouseMove) && (type != QEvent::MouseButtonRelease))
+    return false;
+  auto* event = static_cast<QMouseEvent*>(a_event);
+  if (type == QEvent::MouseButtonPress) {
+    if (event->button() != Qt::LeftButton) return false;
+    m_dragged_bucket = std::find(m_bucket_labels.begin(), m_bucket_labels.end(), a_label) - m_bucket_labels.begin();
+    a_label->setCursor(Qt::ClosedHandCursor);
+    a_label->setStyleSheet("background-color: palette(highlight); color: palette(highlighted-text);");
+    // A tinted frame around the row shows that it is dragged.
+    if (! m_drag_frame) {
+      m_drag_frame = new QFrame(a_label->parentWidget());
+      m_drag_frame->setAttribute(Qt::WA_TransparentForMouseEvents);
+      QColor color = palette().color(QPalette::Highlight);
+      m_drag_frame->setStyleSheet(QString("QFrame { border: 2px solid %1; border-radius: 3px; "
+                                          "background-color: rgba(%2, %3, %4, 40); }")
+                                  .arg(color.name()).arg(color.red()).arg(color.green()).arg(color.blue()));
+    }
+    place_bucket_rows();
+    m_drag_frame->raise();
+    m_drag_frame->show();
+    return true;
+  }
+  if (! m_dragged_bucket) return false;
+  if (type == QEvent::MouseButtonRelease) {
+    if (event->button() != Qt::LeftButton) return false;
+    a_label->setCursor(Qt::OpenHandCursor);
+    a_label->setStyleSheet(QString());
+    m_drag_frame->hide();
+    m_dragged_bucket.reset();
+    return true;
+  }
+  // The dragged row follows the cursor: it moves to the row under the cursor, so it shows where it ends up.
+  int y = a_label->parentWidget()->mapFromGlobal(event->globalPosition().toPoint()).y();
+  int row = std::clamp((y - m_first_row_y + 4) / 30, 0, int(m_number_of_buckets) - 1);
+  if (y < m_first_row_y - 4) row = 0;
+  if (std::size_t(row) != bucket_row(*m_dragged_bucket)) move_bucket_row(*m_dragged_bucket, row);
+  return true;
 }
 
 void Main_window::show_all_buckets(bool a_check) {
@@ -587,6 +668,8 @@ void Main_window::show_log_panel(bool a_check) {
 void Main_window::add_bucket() {
   if (m_number_of_buckets == number_of_buckets) return;
   log_statements({QString("%1 = Polygon_set_2()").arg(bucket_name(m_number_of_buckets))}, true);
+  // The new bucket is the bottom one.
+  move_bucket_row(m_number_of_buckets, m_number_of_buckets);
   set_number_of_buckets(m_number_of_buckets + 1);
   model_changed();
 }
@@ -597,9 +680,12 @@ void Main_window::remove_bucket() {
   log_statements({QString("del %1").arg(bucket_name(i))}, true);
   states_stack.back().clear(i);
 
-  // If the removed bucket is marked for Draw/Insert or Complement, mark the first bucket instead.
-  if (m_color_active == i) m_draw_column[0]->setChecked(true);
-  if (m_complement_column[i]->isChecked()) m_complement_column[0]->setChecked(true);
+  // The removed bucket leaves the bottom row (so that the existing buckets occupy the top rows).
+  move_bucket_row(i, i);
+  // If the removed bucket is marked for Draw/Insert or Complement, mark the top bucket instead.
+  std::size_t top = m_row_buckets[0];
+  if (m_color_active == i) m_draw_column[top]->setChecked(true);
+  if (m_complement_column[i]->isChecked()) m_complement_column[top]->setChecked(true);
   // Unmark the removed bucket as an operand (this disables an operation that no longer has two operands), and as the
   // bucket to copy, move, or clear.
   for (const Column* column : {&m_intersection_column, &m_union_column, &m_difference_column,
@@ -706,6 +792,8 @@ void Main_window::new_program() {
 
   action_difference_h->setEnabled(true);
 
+  std::iota(m_row_buckets.begin(), m_row_buckets.end(), 0);
+  place_bucket_rows();
   reset_marks();
 
   set_number_of_buckets(min_number_of_buckets);
@@ -790,6 +878,30 @@ void Main_window::wheelEvent(QWheelEvent* event) {
     }
   }
   model_changed();
+}
+
+/*! obtains the icon of the button that adds a bucket (a plus sign) or removes one (a minus sign), in its color.
+ */
+static QIcon bucket_tool_icon(bool a_add, const QColor& a_color) {
+  const qreal ratio = 2;
+  QPixmap pixmap(QSize(24, 24) * ratio);
+  pixmap.setDevicePixelRatio(ratio);
+  pixmap.fill(Qt::transparent);
+  QPainter painter(&pixmap);
+  painter.setRenderHint(QPainter::Antialiasing);
+  // A dark outline keeps light colors (e.g., yellow) visible.
+  QColor outline = (a_color.lightness() < 60) ? QColor(128, 128, 128) : a_color.darker(160);
+  painter.setPen(QPen(outline, 1));
+  painter.setBrush(a_color);
+  QPainterPath path;
+  path.addRoundedRect(QRectF(2.5, 9.5, 19, 5), 1.5, 1.5);
+  if (a_add) {
+    QPainterPath vertical;
+    vertical.addRoundedRect(QRectF(9.5, 2.5, 5, 19), 1.5, 1.5);
+    path = path.united(vertical);
+  }
+  painter.drawPath(path);
+  return QIcon(pixmap);
 }
 
 QIcon Main_window::curve_tool_icon(const QString& a_kind) {
@@ -1048,6 +1160,9 @@ Main_window::show_message(QMessageBox::Icon a_icon, const QString& a_title, cons
 }
 
 bool Main_window::eventFilter(QObject* a_object, QEvent* a_event) {
+  if (auto* label = qobject_cast<QLabel*>(a_object);
+      label && (std::find(m_bucket_labels.begin(), m_bucket_labels.end(), label) != m_bucket_labels.end()))
+    return drag_bucket_row(label, a_event) || CGAL::Qt::DemosMainWindow::eventFilter(a_object, a_event);
   if ((a_object == graphics_view->viewport()) && (a_event->type() == QEvent::Paint))
     update_unbounded_rect();
   if ((a_object == m_console_input) && m_console_input) {
