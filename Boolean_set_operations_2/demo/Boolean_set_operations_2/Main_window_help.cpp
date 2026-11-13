@@ -34,33 +34,36 @@ void Main_window::setup_help() {
   tools_tool_bar->addAction(help);
   menu_help->insertAction(menu_help->actions().value(0), help);
 
+  const QString step_back = "<p>Escape (or Backspace) undoes one step: it discards the curve under construction, if "
+    "there is one, and otherwise removes the last curve.</p>";
   const QString family_switch = "<p>Switching to another family discards the polygons (after a confirmation) and the "
     "undo history.</p>";
 
   // The curve families.
   action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by line segments. Click at each vertex; "
-                                     "right-click to close the polygon. Backspace removes the last vertex; Escape "
-                                     "discards the polygon.</p>" + family_switch);
+                                     "right-click to close the polygon.</p>" + step_back +
+                                     family_switch);
   action_insert_circular->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Polygons bounded by segments and "
                                        "circular arcs, or circles. Choose how to construct them in the tool bar "
-                                       "underneath.</p>" + family_switch);
+                                       "underneath.</p>" + step_back + family_switch);
   action_insert_conic->setWhatsThis("<b>Conic Arcs</b><p>Polygons bounded by arcs of lines, circles, and ellipses, "
                                     "or full circles and ellipses. Choose how to construct them in the tool bar "
-                                    "underneath.</p>" + family_switch);
+                                    "underneath.</p>" + step_back + family_switch);
   action_insert_bezier->setWhatsThis("<b>Bezier Curves</b><p>Polygons bounded by Bezier curves.</p><ul>"
                                      "<li>Click to add a corner.</li>"
                                      "<li>Press and drag to add a smooth vertex; the drag sets its two (symmetric) "
                                      "handles, which bend the curves on both sides.</li>"
                                      "<li>Right-click to close the polygon; right-press and drag to smooth the last "
                                      "vertex.</li></ul>"
-                                     "<p>A polygon of clicks only is bounded by straight curves.</p>" + family_switch);
+                                     "<p>A polygon of clicks only is bounded by straight curves.</p>" + step_back +
+                                     family_switch);
   action_insert_algebraic->setWhatsThis("<b>Algebraic Curves</b><p>Regions bounded by algebraic curves, entered as "
                                         "equations with the Equation button underneath. Available only if the demo "
                                         "is built with Lexy.</p>" + family_switch);
   action_insert_polyline->setWhatsThis("<b>Polyline/Polycurve</b><p>Polygons bounded by polycurves, that is, "
                                        "curves that consist of curves of the family selected underneath (Segments "
                                        "only, for now). Click at each vertex; right-click to close the polygon.</p>" +
-                                       family_switch);
+                                       step_back + family_switch);
 
   // The tools.
   action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds a bucket (a row of the Operations panel), which holds a "
