@@ -42,6 +42,7 @@
 #include <vector>
 
 #include <QApplication>
+#include <QLabel>
 #include <qmessagebox.h>
 
 #include <QMainWindow>
@@ -201,6 +202,7 @@ private:
   Curve_type m_curve_type = Curve_type::CT_LINEAR;     // the curve family of the sets
   bool m_updating_family_actions = false;              // the family buttons are being set by the program
   QString m_equation;                                  // the last equation of an algebraic curve
+  QLabel* m_hint;                                      // how to construct curves, in the status bar
 
   // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
   // be loaded, the action that does it, the extension of their files, and the reader.
@@ -467,6 +469,10 @@ public slots:
   /*! obtains an icon of the curve tool bar: a boundary of a segment and an arc, or a circle with its center and radius.
    */
   QIcon curve_tool_icon(const QString& a_kind);
+
+  /*! sets the help of the buttons, shown in the What's This mode, and adds the button that starts the mode.
+   */
+  void setup_help();
 
   /*! determines whether the bucket with a given index currently exists (is shown).
    */

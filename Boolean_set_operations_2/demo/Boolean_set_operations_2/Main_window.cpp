@@ -31,6 +31,10 @@
 #include "Polynomial_parser.h"
 #include "Algebraic_polygons.h"
 
+// How to construct a Bezier polygon, shown in the status bar.
+static const char* bezier_hint =
+  "click to add a corner; press and drag to add a smooth vertex; right-click to close (drag to smooth the last vertex)";
+
 Main_window::Main_window() :
   DemosMainWindow(),
   m_color_active(0),
@@ -247,6 +251,9 @@ Main_window::Main_window() :
 
   // The menus.
   this->setupStatusBar();
+  // A label rather than a message, which would hide the coordinates of the cursor.
+  m_hint = new QLabel(this);
+  statusBar()->insertWidget(0, m_hint, 1);
   this->setupOptionsMenu();
 
   // The recently opened files.
@@ -311,11 +318,11 @@ Main_window::Main_window() :
     bar->setIconSize(QSize(24, 24));
     auto* group = new QActionGroup(this);
     auto* arcs = bar->addAction(curve_tool_icon("arcs"), "Line Segments and Circular Arcs");
-    arcs->setToolTip("Line Segments and Circular Arcs: click at each vertex; "
-                     "press and drag to bend a piece into an arc through the "
-                     "cursor; right-click to close (drag to bend the last " "piece)");
+    arcs->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Click at each vertex; press and drag to bend a piece "
+                       "into an arc through the cursor; right-click to close the polygon (drag to bend the last "
+                       "piece).</p>");
     auto* circle = bar->addAction(curve_tool_icon("full circle"), "Circle");
-    circle->setToolTip("Circle: press at the center and drag to the radius");
+    circle->setWhatsThis("<b>Circle</b><p>Press at the center and drag to the radius.</p>");
     for (auto* action : {arcs, circle}) {
       action->setCheckable(true);
       group->addAction(action);
@@ -328,31 +335,24 @@ Main_window::Main_window() :
     // The conic tools: conics that bound a polygon, full curves, and a conic given by its coefficients.
     using Conic_input = CGAL::Qt::Graphics_view_conic_input;
     auto* conic_group = new QActionGroup(this);
-    const std::vector<std::tuple<QString, QString, Conic_input::Mode, QString>>
-      conic_tools = {
-      {"line", "Line", Conic_input::Mode::MO_LINE,
-       "Line: press at one of its points and drag to another"},
-      {"circle", "Circle", Conic_input::Mode::MO_CIRCLE,
-       "Circle: press at the center and drag to the radius"},
+    const std::vector<std::tuple<QString, QString, Conic_input::Mode, QString>> conic_tools = {
+      {"line", "Line", Conic_input::Mode::MO_LINE, "Press at one of its points and drag to another."},
+      {"circle", "Circle", Conic_input::Mode::MO_CIRCLE, "Press at the center and drag to the radius."},
       {"ellipse", "Ellipse", Conic_input::Mode::MO_ELLIPSE,
-       "Ellipse: click at the center, press at the end of an axis, and "
-       "drag to the width of the other axis"},
-      {"full circle", "Full Circle", Conic_input::Mode::FULL_CIRCLE,
-       "Full Circle: press at the center and drag to the radius"},
+       "Click at the center, press at the end of an axis, and drag to the width of the other axis."},
+      {"full circle", "Full Circle", Conic_input::Mode::FULL_CIRCLE, "Press at the center and drag to the radius."},
       {"full ellipse", "Full Ellipse", Conic_input::Mode::FULL_ELLIPSE,
-       "Full Ellipse: click at the center, press at the end of an axis, and "
-       "drag to the width of the other axis"}};
-    const QString boundary_help = ". Every conic you add meets the previous one at the next vertex (click "
-      "at it when there are several); on a circle or an ellipse, click near "
-      "the arc to keep; right-click to close the boundary. Escape or Backspace "
-      "discards the conic under construction, or else removes the last "
-      "conic.";
+       "Click at the center, press at the end of an axis, and drag to the width of the other axis."}};
+    const QString boundary_help = "<p>Every conic you add meets the previous one at the next vertex (click at it "
+      "when there are several); on a circle or an ellipse, click near the arc to keep; right-click to close the "
+      "boundary. Escape or Backspace discards the conic under construction, or else removes the last conic.</p>";
     std::vector<QAction*> conic_actions;
     for (const auto& [icon, text, mode, tip] : conic_tools) {
       if (mode == Conic_input::Mode::FULL_CIRCLE)
         conic_actions.push_back(bar->addSeparator());
       auto* action = bar->addAction(curve_tool_icon(icon), text);
-      action->setToolTip((mode < Conic_input::Mode::FULL_CIRCLE) ? tip + boundary_help : tip);
+      QString help = "<b>" + text + "</b><p>" + tip + "</p>";
+      action->setWhatsThis((mode < Conic_input::Mode::FULL_CIRCLE) ? help + boundary_help : help);
       action->setCheckable(true);
       conic_group->addAction(action);
       Conic_input::Mode m = mode;
@@ -363,14 +363,14 @@ Main_window::Main_window() :
     conic_actions.push_back(bar->addSeparator());
     std::vector<QAction*> algebraic_actions;
     auto* equation = bar->addAction(curve_tool_icon("equation"), "Equation...");
-    equation->setToolTip("Equation: enter the equation of an algebraic curve, e.g., x^2 + y^2 == 25, and add the "
-                         "region it encloses");
+    equation->setWhatsThis("<b>Equation</b><p>Enter the equation of an algebraic curve, e.g., x^2 + y^2 == 25, and "
+                           "add the region it encloses (the union of the bounded faces of the curve).</p>");
     QObject::connect(equation, &QAction::triggered, this, &Main_window::enter_equation);
     algebraic_actions.push_back(equation);
 
     auto* coefficients = bar->addAction(curve_tool_icon("coefficients"), "Coefficients...");
-    coefficients->setToolTip("Coefficients: enter a conic " "r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0, "
-                             "and add it to the boundary or construct the full " "ellipse");
+    coefficients->setWhatsThis("<b>Coefficients</b><p>Enter a conic r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0, "
+                               "and add it to the boundary or construct the full ellipse.</p>");
     QObject::connect(coefficients, &QAction::triggered, this, [this]() { m_conic_input->enter_coefficients(this); });
     conic_actions.push_back(coefficients);
 
@@ -399,6 +399,7 @@ Main_window::Main_window() :
     vertical_layout->insertWidget(0, bar);
   }
   update_family_actions();
+  setup_help();
 
   // The polygons constructed by the inputs are added to the Draw/Insert bucket.
   for (const auto& family : m_families) {
@@ -841,6 +842,17 @@ QIcon Main_window::curve_tool_icon(const QString& a_kind) {
     painter.setPen(QColor(64, 64, 64));
     painter.drawText(QRectF(0, 0, 24, 24), Qt::AlignCenter, "ax²");
   }
+  else if (a_kind == "help") {
+    painter.setBrush(QColor(0, 120, 215));
+    painter.setPen(Qt::NoPen);
+    painter.drawEllipse(QPointF(12, 12), 10, 10);
+    QFont font = painter.font();
+    font.setPixelSize(15);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(Qt::white);
+    painter.drawText(QRectF(0, 0, 24, 24), Qt::AlignCenter, "?");
+  }
   else if (a_kind == "equation") {
     QFont font = painter.font();
     font.setPixelSize(10);
@@ -945,6 +957,7 @@ void Main_window::start_inserting(Curve_type a_type) {
   delete_result();
   action_minkowski_sum_h->setEnabled(a_type == Curve_type::CT_LINEAR);
   set_input_pen(s_pens[m_color_active]);
+  m_hint->setText((a_type == Curve_type::CT_BEZIER) ? QString("Bezier: ") + bezier_hint : QString());
 }
 
 void Main_window::zoom_to_fit() {
