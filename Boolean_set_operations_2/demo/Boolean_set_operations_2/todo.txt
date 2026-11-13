@@ -1,60 +1,35 @@
 1. Algebraic curves
-- The family is enabled when Lexy is found (find_package(lexy); set lexy_DIR to <prefix>/lib/cmake/lexy of an installed
-  Lexy); otherwise its button stays disabled. Linking foonathan::lexy::core compiles the demo as C++20 when the compiler
-  supports it, unless Lexy was configured with LEXY_FORCE_CPP17. The grammar is in Polynomial_parser.h.
-- The Equation button (in the curve tool bar) adds the region the curve encloses: the union of the bounded faces of
-  the arrangement of the curve (Algebraic_polygons.cpp). A curve that encloses nothing (e.g., a parabola) is refused.
-  Other ways to choose the region (e.g., p <= 0, which may be unbounded) could be offered.
-- Library: General_polygon_set_2 over Arr_algebraic_segment_traits_2, whose sides are open, uses the unbounded planar
-  topology, where union, symmetric difference, and complement come out empty, and the precondition that validates the
-  polygons fails in Arr_walk_along_line_point_location (number_of_outer_ccbs() == 1). The demo derives Algebraic_traits
-  with oblivious sides, so the sets use the bounded planar topology.
-- The arcs are drawn through 65 points each (denser near the endpoints), computed once per arc and cached
-  (algebraic_arc_points()).
-- Not yet: files (.aps; a set after operations is not described by equations alone, so arcs would need their curve,
-  arc number, and endpoints), Python programs (the log has a comment instead), and the console.
-- Syntax errors report the first error only, with its column; semantic errors (a divisor or an exponent that is not a
-  constant) have no column.
+- Implement the Approximate_2 functor of Arr_algebraic_segment_traits_2, in particular the operator that approximates
+  an x-monotone curve (by a polyline, given an error bound), as in the other traits. Then use it to draw the arcs
+  instead of the fixed sampling of algebraic_arc_points().
+- Files (.aps): a set after operations is not described by equations alone, so arcs need their curve, arc number,
+  and endpoints.
+- Python programs (the log has a comment instead) and the console.
+- Other ways to choose the region of a curve (e.g., p <= 0, which may be unbounded) could be offered.
+- Semantic errors of equations (a divisor or an exponent that is not a constant) have no column.
 
 2. Polycurves
-- Only Segments can be the subcurve family of Polyline/Polycurve; the other family buttons are disabled in polycurve
-  mode. Next: polycurves of circle segments (.pcps), conics (.pqps), and Bezier curves (.pbps); then nested ones
-  (.pplps, ...). The suffix scheme is documented in Polygon_io.h.
-- The boundary of a polyline polygon is subdivided into maximal x-monotone polylines (Polyline_boundary.h); the
-  endpoints of the polylines are the vertices of the polygon (filled marks) and the other vertices are vertices of the
-  polylines (hollow marks), also while the boundary is constructed. Other ways to let the user choose the vertices of
-  the polygon (e.g., a modifier key while clicking) would need the .plps format to mark them, since now it holds only
-  the vertices and the reader subdivides again.
-- The results of operations keep the polylines of the operands, except where they are split at intersections.
-- The marks are painted in pixels around the vertices, so the bounding rectangle of the item is extended by their
-  extent, converted to scene units at the current scale of the view (marks_margin()). This relies on the scene having
-  no index (NoIndex), since the margin changes with zooming without a call to prepareGeometryChange().
+- Only Segments can be the subcurve family of Polyline/Polycurve. Next: polycurves of circle segments (.pcps), conics
+  (.pqps), and Bezier curves (.pbps); then nested ones (.pplps, ...). The suffix scheme is documented in Polygon_io.h.
+- Let the user choose the vertices of a polyline polygon (e.g., a modifier key while clicking); the .plps format
+  would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
 3. Conic polygons
-- Files (.qps) and programs describe an arc by its conic, its orientation, and its endpoints, each approximated and
-  given with an auxiliary conic through it (Conic_arcs.h). The auxiliary conic of an endpoint is the conic of the
-  neighboring arc; consecutive arcs of the same conic are merged first. Where the conics of two neighbors coincide
-  anyway (different orientations), the line through the points of vertical tangency is used, which is correct only at
-  such points.
-- A segment must be constructed with the equation of its line (r = s = t = 0); a segment constructed from its
-  endpoints only has no coefficients and cannot be written (saving reports it). The conic input now constructs its
-  segments with their equations.
-- data/conic has samples: a lens, a half disk, a D shape (a segment between irrational points), an ellipse, and the
-  union of two ellipses. Saving a loaded file writes the same arcs, possibly starting at another arc and with negated
-  coefficients.
+- Where the conics of two neighboring arcs coincide (different orientations), the auxiliary conic of their endpoint
+  is the line through the points of vertical tangency, which is correct only at such points.
+- A segment constructed from its endpoints only has no coefficients and cannot be written (saving reports it).
 
 4. Python programs
-- The circle-segment family logs its drawn polygons from the points the user clicked (Circular_source.h), and the conic
-  family from the arc descriptions; the programs import CGALPY_kerEpec_aos2Cs_bso2 and CGALPY_kerEpec_aos2Conic_bso2.
-  Neither program was run, because the bindings are not built yet. Check:
+- The circle-segment and conic programs were not run, because the bindings (CGALPY_kerEpec_aos2Cs_bso2,
+  CGALPY_kerEpec_aos2Conic_bso2) are not built yet. Check:
   - Integer is constructed from a Python int only (init_implicit<int>), so coefficients beyond 32 bits fail;
   - squared_distance() (defined in the program) relies on the arithmetic of Ker.FT;
   - Traits.Point_2 of the conic traits is constructed from floats (Algebraic from double);
   - Result.COLLINEAR (for segments) exists;
   - polygon() filters the results of make_x_monotone with isinstance(o, X_monotone_curve_2).
 - Polygons read from files are not logged, in any family, so a program misses them.
-- The Bezier and polyline families are not logged; the console supports linear polygons only; the Minkowski sum is
-  not logged.
+- The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
+  Minkowski sum is not logged.
 
 5. Small items
 - The writers of .lps, .plps, .cps, and .bps use the default precision of the stream (6 digits), which rounds the
@@ -68,6 +43,10 @@
   new tool bar and the polyline marks.
 
 6. Library
+- General_polygon_set_2 over traits with open sides (e.g., Arr_algebraic_segment_traits_2) uses the unbounded planar
+  topology, where union, symmetric difference, and complement come out empty, and the precondition that validates the
+  polygons fails in Arr_walk_along_line_point_location (number_of_outer_ccbs() == 1). Fix it, then drop
+  Algebraic_traits (oblivious sides) from Typedefs.h.
 - DemosMainWindow::addNavigation() leaks its GraphicsViewNavigation (on hold).
 - Gps_on_surface_base_2 keeps m_traits_adaptor, which only m_traits needs.
 - Replay the inputs under stress_failures/ against the current branch.
