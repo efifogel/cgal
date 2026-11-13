@@ -55,6 +55,7 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     Main_window.cpp
     Main_window_console.cpp
     Main_window_files.cpp
+    Main_window_help.cpp
     Main_window_operations.cpp
     Polygon_io.cpp
     Polynomial_dialog.cpp
