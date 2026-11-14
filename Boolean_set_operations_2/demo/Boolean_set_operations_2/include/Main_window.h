@@ -678,13 +678,12 @@ private:
    */
   void enter_equation();
 
-  /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has a format line (DOUBLE for
-   * coordinates given as doubles), the number of polygons with holes, and for each one the number of its boundaries
-   * followed by the boundaries (the outer one first), each read by a given function. \return false if the file cannot
-   * be read.
+  /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has the number of polygons with
+   * holes, and for each one the number of its boundaries followed by the boundaries (the outer one first), each read
+   * by a given function. Shows an error if the file cannot be read. \return false if the file cannot be read.
    */
   template <typename Set, typename Read_boundary>
-  bool read_polygons(const QString& a_file_name, const char* a_kind, Read_boundary a_read_boundary);
+  bool read_polygons(const QString& a_file_name, Read_boundary a_read_boundary);
 
   /*! pushes a new state onto the undo stack before an operation is applied. The new state shares the sets of the
    * current one; a set is copied when it first changes (see Curve_set::detach()). (Starting pushes empty sets.)

@@ -29,6 +29,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <QFileInfo>
+
 #include "Main_window.h"
 
 #include "Polygon_io.h"
@@ -59,9 +61,13 @@ void Main_window::open_polyline() {
 }
 
 template <typename Set, typename Read_boundary>
-bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, Read_boundary a_read_boundary) {
+bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read_boundary) {
+  QString name = QFileInfo(a_file_name).fileName();
   std::ifstream in_file(qPrintable(a_file_name));
-  if (! in_file) return false;
+  if (! in_file) {
+    show_error("Open", QString("Cannot open %1.").arg(name));
+    return false;
+  }
   bool r_ok = false;
   try {
     // Skip the format line of old files (DOUBLE or RATIONAL); the form of each number determines its kind.
@@ -94,32 +100,32 @@ bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, 
     }
   }
   catch (const std::exception& e) {
-    show_error("Open", QString("Cannot read the %1 polygon set: %2").arg(a_kind, e.what()));
+    show_error("Open", QString("Cannot read %1: %2.").arg(name, e.what()));
   }
   catch (...) {
-    show_error("Open", QString("Cannot read the %1 polygon set.").arg(a_kind));
+    show_error("Open", QString("Cannot read %1.").arg(name));
   }
   return r_ok;
 }
 
 bool Main_window::read_linear(QString a_file_name) {
-  return read_polygons<Linear_polygon_set>(a_file_name, "linear", read_linear_boundary);
+  return read_polygons<Linear_polygon_set>(a_file_name, read_linear_boundary);
 }
 
 bool Main_window::read_circular(QString a_file_name) {
-  return read_polygons<Circular_polygon_set>(a_file_name, "circular", read_circular_boundary);
+  return read_polygons<Circular_polygon_set>(a_file_name, read_circular_boundary);
 }
 
 bool Main_window::read_polyline(QString a_file_name) {
-  return read_polygons<Polyline_polygon_set>(a_file_name, "polyline", read_polyline_boundary);
+  return read_polygons<Polyline_polygon_set>(a_file_name, read_polyline_boundary);
 }
 
 bool Main_window::read_conic(QString a_file_name) {
-  return read_polygons<Conic_polygon_set>(a_file_name, "conic", read_conic_boundary);
+  return read_polygons<Conic_polygon_set>(a_file_name, read_conic_boundary);
 }
 
 bool Main_window::read_bezier(QString a_file_name) {
-  return read_polygons<Bezier_polygon_set>(a_file_name, "Bezier", read_bezier_boundary);
+  return read_polygons<Bezier_polygon_set>(a_file_name, read_bezier_boundary);
 }
 
 void Main_window::save_draw_bucket() {
@@ -146,10 +152,10 @@ void Main_window::save_draw_bucket() {
     }
   }
   catch (const std::exception& e) {
-    show_error("Save", QString("Cannot save the %1 polygon set: %2").arg(selected.m_name, e.what()));
+    show_error("Save", QString("Cannot save %1: %2.").arg(QFileInfo(file_name).fileName(), e.what()));
     return;
   }
-  if (! saved) show_error("Save", QString("Cannot save the %1 polygon set.").arg(selected.m_name));
+  if (! saved) show_error("Save", QString("Cannot save %1.").arg(QFileInfo(file_name).fileName()));
 }
 
 void Main_window::open(QString a_file_name) {
@@ -162,4 +168,5 @@ void Main_window::open(QString a_file_name) {
     }
     return;
   }
+  show_warning("Open", QString("The type of %1 is unknown.").arg(QFileInfo(a_file_name).fileName()));
 }
