@@ -27,7 +27,6 @@
   Minkowski sum is not logged.
 
 4. Small items
-- read_polyline_boundary() ignores the DOUBLE header (as read_linear_boundary() does).
 - The polycurve tool bar pushes the Operations panel down; in a small window the bucket rows scroll. The empty curve
   tool bar (for families without tools) keeps its height.
 - The message that switches the family uses the internal names ("linear polygons"), not the labels ("Segments").

@@ -62,39 +62,49 @@ std::vector<typename Traits::X_monotone_curve_2> x_monotone_curves(Input_iterato
   return xcvs;
 }
 
+/*! reads a number, exactly: an integer (e.g., 1), a decimal number (e.g., 1.0 or 1e-3), or a rational number (e.g.,
+ * 1/3). The form of the number determines its kind.
+ * \throw std::runtime_error if there is no number.
+ */
+Kernel::FT read_number(std::istream& a_is);
+
+/*! reads a point: its two coordinates (see read_number()).
+ */
+Kernel::Point_2 read_point(std::istream& a_is);
+
 /*! reads the vertices of a boundary: their number followed by their coordinates.
  */
 std::vector<Kernel::Point_2> read_vertices(std::istream& a_is);
 
 /*! reads the boundary of a linear polygon: its vertices. \return the x-monotone curves of the boundary.
  */
-std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bool /* a_double_format */);
+std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is);
 
 /*! reads the boundary of a polygon bounded by polylines: its vertices. The boundary is subdivided into maximal
  * x-monotone polylines (see polyline_boundary()). \return the polylines.
  */
-std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is, bool /* a_double_format */);
+std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is);
 
 /*! reads the boundary of a polygon bounded by segments and circular arcs: the number of its curves followed by the
  * curves, each given by a flag (1 for an arc) followed by its source, a point in its interior (for an arc), and its
  * target. \return the x-monotone curves of the boundary.
  */
-std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is, bool /* a_double_format */);
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is);
 
-/*! reads a Bezier curve: the number of its control points followed by their coordinates, as doubles (rounded to
- * 1/1000) or as rationals. Repeated control points and control points collinear with their neighbors are dropped.
+/*! reads a Bezier curve: the number of its control points followed by their coordinates. Repeated control points and
+ * control points collinear with their neighbors are dropped.
  */
-Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format);
+Bezier_curve read_bezier_curve(std::istream& is);
 
 /*! reads the boundary of a Bezier polygon: the number of its curves followed by the curves. \return the x-monotone
  * curves of the boundary.
  */
-std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is, bool a_double_format);
+std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is);
 
-/*! saves a polygon set to a file: a format line, the number of polygons with holes, and for each one the number of its
- * boundaries followed by the boundaries (the outer one first), each written by a given function. The coordinates are
- * written with a given number of significant digits; 17 digits write every double exactly. \return false if the file
- * cannot be written.
+/*! saves a polygon set to a file: the number of polygons with holes, and for each one the number of its boundaries
+ * followed by the boundaries (the outer one first), each written by a given function. The coordinates are written as
+ * decimal numbers with a given number of significant digits; 17 digits write every double exactly. (The readers accept
+ * every form of a number; see read_number().) \return false if the file cannot be written.
  */
 template <typename Set, typename Write_boundary>
 bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary a_write_boundary,
@@ -104,7 +114,7 @@ bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary 
   out_file.precision(a_precision);
   std::vector<typename Set::Polygon_with_holes_2> pwhs;
   a_set.polygons_with_holes(std::back_inserter(pwhs));
-  out_file << "DOUBLE" << std::endl << pwhs.size() << std::endl;
+  out_file << pwhs.size() << std::endl;
   for (const auto& pwh : pwhs) {
     out_file << " " << (1 + pwh.number_of_holes()) << std::endl;
     a_write_boundary(out_file, pwh.outer_boundary());
@@ -137,7 +147,7 @@ void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& a_bp);
 
 /*! reads the boundary of a conic polygon (see write_conic_boundary()). \return the x-monotone arcs of the boundary.
  */
-std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool /* a_double_format */);
+std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is);
 
 /*! writes the boundary of a conic polygon: the number of its arcs followed by the arcs (see Conic_arc_record), one per
  * line, either
