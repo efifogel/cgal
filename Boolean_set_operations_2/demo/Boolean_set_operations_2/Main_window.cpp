@@ -289,9 +289,9 @@ Main_window::Main_window() :
     using Conic_input = CGAL::Qt::Graphics_view_conic_input;
     auto* conic_group = new QActionGroup(this);
     const std::vector<std::tuple<QString, QString, Conic_input::Mode, QString>> conic_tools = {
-      {"line", "Line", Conic_input::Mode::MO_LINE, "Press at one of its points and drag to another."},
-      {"circle", "Circle", Conic_input::Mode::MO_CIRCLE, "Press at the center and drag to the radius."},
-      {"ellipse", "Ellipse", Conic_input::Mode::MO_ELLIPSE,
+      {"line", "Segment", Conic_input::Mode::MO_LINE, "Press at one of its points and drag to another."},
+      {"circle", "Circular Arc", Conic_input::Mode::MO_CIRCLE, "Press at the center and drag to the radius."},
+      {"ellipse", "Elliptic Arc", Conic_input::Mode::MO_ELLIPSE,
        "Click at the center, press at the end of an axis, and drag to the width of the other axis."},
       {"full circle", "Full Circle", Conic_input::Mode::FULL_CIRCLE, "Press at the center and drag to the radius."},
       {"full ellipse", "Full Ellipse", Conic_input::Mode::FULL_ELLIPSE,

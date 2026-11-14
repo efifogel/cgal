@@ -36,7 +36,7 @@ using namespace std;
 namespace CGAL {
 namespace Qt {
 
-/*! Bounds an x-monotone circle segment (a circular arc or a line segment).
+/*! Bounds an x-monotone circle segment (a circular arc or a segment).
  */
 struct Circular_X_monotone_bbox {
   /*! obtains the bounding box of an x-monotone circle segment.
@@ -45,7 +45,7 @@ struct Circular_X_monotone_bbox {
   CGAL::Bbox_2 operator()(const X_monotone_circle_segment_2& a_c) const { return a_c.bbox(); }
 };
 
-/*! Bounds a circle segment (a circular arc or a line segment).
+/*! Bounds a circle segment (a circular arc or a segment).
  */
 struct Circular_bbox
 {

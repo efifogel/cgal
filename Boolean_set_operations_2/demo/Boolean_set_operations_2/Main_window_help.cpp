@@ -42,15 +42,15 @@ void Main_window::setup_help() {
   // The curve families.
   traits_tool_bar->setWhatsThis("<b>Curve Families</b><p>The buttons of the first row select the family of the "
                                 "curves that bound the polygons and the generalized polygons (regions bounded by "
-                                "curves that are not necessarily line segments) you construct and open.</p>" +
+                                "curves that are not necessarily segments) you construct and open.</p>" +
                                 family_switch);
-  action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by line segments. Click at each vertex; "
+  action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by segments. Click at each vertex; "
                                      "right-click to close the polygon.</p>" + step_back +
                                      family_switch);
-  action_insert_circular->setWhatsThis("<b>Segments and Circular Arcs</b><p>Generalized polygons bounded by line "
+  action_insert_circular->setWhatsThis("<b>Segments and Circular Arcs</b><p>Generalized polygons bounded by "
                                        "segments and circular arcs, or circles. Choose how to construct them in the "
                                        "tool bar underneath.</p>" + step_back + family_switch);
-  action_insert_conic->setWhatsThis("<b>Conic Curves</b><p>Generalized polygons bounded by line segments and arcs "
+  action_insert_conic->setWhatsThis("<b>Conic Curves</b><p>Generalized polygons bounded by segments and arcs "
                                     "of circles, ellipses, parabolas, and hyperbolas, or by full circles and "
                                     "ellipses. Choose how to construct them in the tool bar underneath.</p>" +
                                     step_back + family_switch);

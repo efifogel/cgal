@@ -45,7 +45,7 @@
 namespace CGAL {
 namespace Qt {
 
-/*! Constructs a polygon bounded by line segments and circular arcs, or a full circle, from mouse clicks and drags.
+/*! Constructs a polygon bounded by segments and circular arcs, or a full circle, from mouse clicks and drags.
  */
 template <typename Kernel_>
 class Graphics_view_circular_polygon_input : public GraphicsViewInput {
@@ -122,7 +122,7 @@ public:
   // The states of the construction.
   enum class State { ST_START, PIECE_STARTED, PIECE_ONGOING, HANDLE_ONGOING, PIECE_ENDED, CURVE_ENDED, CIRCLE_ONGOING };
 
-  // What the user constructs: a boundary of line segments and circular arcs, or a full circle.
+  // What the user constructs: a boundary of segments and circular arcs, or a full circle.
   enum class Mode { MO_ARCS, CIRCLE_MODE };
 
   /*! sets what the user constructs, and discards the polygon under construction.
