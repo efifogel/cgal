@@ -356,7 +356,7 @@ public:
    */
   void hide_handle() { m_handle_GI->hide(); }
 
-  /*! creates the piece from the last vertex to the current point: an arc through the cursor if it is set, and a
+  /*! creates the piece from the last vertex to the current point: an arc through the middle point if it is set, and a
    * segment otherwise.
    */
   Circular_curve create_piece() {
@@ -404,12 +404,21 @@ public:
     m_h = std::optional<Point>();
   }
 
-  /*! updates the point the arc passes through. Once the cursor is dragged away from where the button was pressed, the
-   * piece becomes an arc through the cursor; otherwise it stays a segment.
+  /*! updates the middle point of the arc. Once the cursor is dragged away from where the button was pressed, the
+   * piece becomes an arc whose distance from the segment (at its middle) is the distance of the cursor from the line
+   * of the segment, on the same side; otherwise it stays a segment.
    */
   void update_handle(const Point& a_p) {
-    if (squared_distance(m_press, a_p) >= 4) m_h = a_p;
-    else m_h = std::optional<Point>();
+    m_h = std::optional<Point>();
+    if (squared_distance(m_press, a_p) < 4) return;
+    auto dx = m_p1.x() - m_p0.x();
+    auto dy = m_p1.y() - m_p0.y();
+    auto length2 = dx * dx + dy * dy;
+    if (CGAL::is_zero(length2)) return;
+    // The signed distance of the cursor from the line, divided by the length of the segment.
+    auto k = (dx * (a_p.y() - m_p0.y()) - dy * (a_p.x() - m_p0.x())) / length2;
+    // Rounded to doubles, as the program writes it.
+    m_h = Point(to_double((m_p0.x() + m_p1.x()) / 2 - k * dy), to_double((m_p0.y() + m_p1.y()) / 2 + k * dx));
   }
 
   /*! updates the circle under construction, whose boundary passes through a given point.
