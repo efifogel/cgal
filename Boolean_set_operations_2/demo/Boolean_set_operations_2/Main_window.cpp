@@ -330,8 +330,8 @@ Main_window::Main_window() :
     auto* group = new QActionGroup(this);
     auto* arcs = bar->addAction(curve_tool_icon("arcs"), "Line Segments and Circular Arcs");
     arcs->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Click at each vertex; press and drag to bend a piece "
-                       "into an arc through the cursor; right-click to close the polygon (drag to bend the last "
-                       "piece).</p>");
+                       "into an arc, as far from the piece (at its middle) as the cursor is from its line; right-click to "
+                       "close the polygon (drag to bend the last piece).</p>");
     auto* circle = bar->addAction(curve_tool_icon("full circle"), "Circle");
     circle->setWhatsThis("<b>Circle</b><p>Press at the center and drag to the radius.</p>");
     for (auto* action : {arcs, circle}) {
