@@ -208,6 +208,7 @@ private:
   bool m_updating_family_actions = false;              // the family buttons are being set by the program
   QString m_equation;                                  // the last equation of an algebraic curve
   QLabel* m_hint;                                      // how to construct curves, in the status bar
+  int m_save_precision = 17;                           // the significant digits of the coordinates in saved files
 
   // A curve family: its tool-bar action, the input that constructs its curves, and its name; and if its polygons can
   // be loaded, the action that does it, the extension of their files, and the reader.

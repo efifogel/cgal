@@ -126,11 +126,11 @@ void Main_window::save_draw_bucket() {
   bool saved = false;
   try {
     switch (m_curve_type) {
-     case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary); break;
-     case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary); break;
-     case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary); break;
-     case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary); break;
-     case Curve_type::CT_CONIC: saved = save_polygons(file_name, bucket.conic(), write_conic_boundary); break;
+     case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary, m_save_precision); break;
+     case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary, m_save_precision); break;
+     case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary, m_save_precision); break;
+     case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary, m_save_precision); break;
+     case Curve_type::CT_CONIC: saved = save_polygons(file_name, bucket.conic(), write_conic_boundary, m_save_precision); break;
      default: break;
     }
   }

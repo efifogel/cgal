@@ -266,6 +266,18 @@ Main_window::Main_window() :
   m_hint = new QLabel(this);
   statusBar()->insertWidget(0, m_hint, 1);
   this->setupOptionsMenu();
+  if (auto* options = menuBar()->findChild<QMenu*>("menuOptions")) {
+    options->addSeparator();
+    auto* precision = options->addAction("Precision of Saved Coordinates...");
+    precision->setStatusTip("The number of significant digits of the coordinates written to files");
+    QObject::connect(precision, &QAction::triggered, this, [this]() {
+      bool ok = false;
+      int digits = QInputDialog::getInt(this, "Precision of Saved Coordinates",
+                                        "Significant digits (17 writes every coordinate exactly; conic files always "
+                                        "use 17):", m_save_precision, 1, 17, 1, &ok);
+      if (ok) m_save_precision = digits;
+    });
+  }
 
   // The recently opened files.
   this->addRecentFiles(this->menu_file, this->action_close);
