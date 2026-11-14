@@ -2836,10 +2836,6 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
    <property name="checkable" >
     <bool>false</bool>
    </property>  
-   <property name="icon">
-    <iconset resource="Boolean_operations_2.qrc">
-    <normaloff>:/cgal/icons/resources/add_bucket.svg</normaloff>:/cgal/icons/resources/add_bucket.svg</iconset>
-   </property>
    <property name="text">
     <string>&amp;Add a Bucket</string>
    </property>
@@ -2853,10 +2849,6 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
     </property>
     <property name="checkable" >
      <bool>false</bool>
-    </property>
-    <property name="icon">
-      <iconset resource="Boolean_operations_2.qrc">
-      <normaloff>:/cgal/icons/minus</normaloff>:/cgal/icons/minus</iconset>
     </property>
     <property name="text">
       <string>&amp;Minimum Number of Buckets Reached</string>
