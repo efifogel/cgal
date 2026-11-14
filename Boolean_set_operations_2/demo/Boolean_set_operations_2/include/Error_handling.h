@@ -28,6 +28,8 @@
  * Reporting errors: message boxes for warnings and errors, and the handler of failed CGAL assertions and preconditions.
  */
 
+#include <optional>
+
 #include <QAction>
 #include <QMessageBox>
 #include <QString>
@@ -43,6 +45,11 @@
 QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
                                          QMessageBox::StandardButtons a_buttons = QMessageBox::Ok,
                                          QAction* a_toggle = nullptr);
+
+/*! asks for an integer in [a_min, a_max], starting at a_value, in a message box like those of show_message() with
+ * a spin box below the text. \return the integer, or nothing if the user cancels.
+ */
+std::optional<int> ask_integer(const QString& a_title, const QString& a_text, int a_value, int a_min, int a_max);
 
 /*! shows a warning: the operation is not carried out because of the input.
  */

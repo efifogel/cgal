@@ -38,6 +38,7 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QStyle>
 #include <QVBoxLayout>
 
@@ -53,10 +54,9 @@ QWidget* message_parent() {
   return nullptr;
 }
 
-} // namespace
-
-QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
-                                         QMessageBox::StandardButtons a_buttons, QAction* a_toggle) {
+// Shows a message with an optional input widget below the text; the input dialog makes its OK button the default.
+QMessageBox::StandardButton run_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
+                                        QMessageBox::StandardButtons a_buttons, QAction* a_toggle, QWidget* a_input) {
   QWidget* parent = message_parent();
   // Declared before the dialog, so that it outlives the check box using it.
   Visible_indicator_style indicator_style;
@@ -135,12 +135,21 @@ QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString
     button->setAutoDefault(false);
     button->setDefault(false);
   }
-  if (! no_button) yes_button->setDefault(true);
+  if (! no_button || a_input) yes_button->setDefault(true);
   QObject::connect(yes_button, &QPushButton::clicked, &dialog, &QDialog::accept);
   if (no_button) QObject::connect(no_button, &QPushButton::clicked, &dialog, &QDialog::reject);
 
   auto* layout = new QVBoxLayout(&dialog);
   layout->addLayout(message_row);
+  if (a_input) {
+    // Aligned with the text.
+    auto* input_row = new QHBoxLayout;
+    input_row->addSpacing(icon_size + 12);
+    input_row->addWidget(a_input);
+    input_row->addStretch();
+    layout->addSpacing(6);
+    layout->addLayout(input_row);
+  }
   QCheckBox* check_box = nullptr;
   if (a_toggle) {
     check_box = new QCheckBox("Don't show this message again");
@@ -166,6 +175,27 @@ QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString
   bool accepted = (dialog.exec() == QDialog::Accepted);
   if (check_box && check_box->isChecked()) a_toggle->setChecked(false);
   return (no_button && ! accepted) ? no : yes;
+}
+
+} // namespace
+
+QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
+                                         QMessageBox::StandardButtons a_buttons, QAction* a_toggle)
+{ return run_message(a_icon, a_title, a_text, a_buttons, a_toggle, nullptr); }
+
+std::optional<int> ask_integer(const QString& a_title, const QString& a_text, int a_value, int a_min, int a_max) {
+  auto* spin_box = new QSpinBox;
+  spin_box->setRange(a_min, a_max);
+  spin_box->setValue(a_value);
+  spin_box->setMinimumWidth(spin_box->sizeHint().width() + spin_box->fontMetrics().horizontalAdvance("000"));
+  spin_box->selectAll();
+  // The dialog takes ownership of the spin box, so read the value before the dialog is destroyed.
+  int value = a_value;
+  QObject::connect(spin_box, &QSpinBox::valueChanged, [&value](int a_new) { value = a_new; });
+  auto button = run_message(QMessageBox::Question, a_title, a_text, QMessageBox::Ok | QMessageBox::Cancel, nullptr,
+                            spin_box);
+  if (button != QMessageBox::Ok) return std::nullopt;
+  return value;
 }
 
 void show_warning(const QString& a_title, const QString& a_text)

@@ -70,7 +70,6 @@
 #include <algorithm>
 #include <map>
 #include <memory>
-#include <QInputDialog>
 #include <QWheelEvent>
 #include <QPainter>
 #include <QSlider>

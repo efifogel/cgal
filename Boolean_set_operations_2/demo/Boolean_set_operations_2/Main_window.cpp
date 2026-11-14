@@ -202,11 +202,10 @@ Main_window::Main_window() :
     auto* precision = options->addAction("Precision of Saved Coordinates...");
     precision->setStatusTip("The number of significant digits of the coordinates written to files");
     QObject::connect(precision, &QAction::triggered, this, [this]() {
-      bool ok = false;
-      int digits = QInputDialog::getInt(this, "Precision of Saved Coordinates",
-                                        "Significant digits (17 writes every coordinate exactly; conic files always "
-                                        "use 17):", m_save_precision, 1, 17, 1, &ok);
-      if (ok) m_save_precision = digits;
+      auto digits = ask_integer("Precision of Saved Coordinates",
+                                "Significant digits of the saved coordinates (17 writes every coordinate exactly; "
+                                "conic files always use 17):", m_save_precision, 1, 17);
+      if (digits) m_save_precision = *digits;
     });
   }
 
@@ -568,14 +567,12 @@ void Main_window::add_bucket_row() {
 }
 
 void Main_window::set_max_number_of_buckets() {
-  bool ok = false;
-  int number = QInputDialog::getInt(this, "Maximum Number of Buckets",
-                                    QString("Maximum number of buckets (at least the %1 existing ones):")
-                                      .arg(m_number_of_buckets),
-                                    int(m_max_number_of_buckets), int(m_number_of_buckets),
-                                    int(max_number_of_buckets), 1, &ok);
-  if (! ok) return;
-  m_max_number_of_buckets = std::size_t(number);
+  auto number = ask_integer("Maximum Number of Buckets",
+                            QString("The maximum number of buckets, from the %1 existing ones up to %2:")
+                              .arg(m_number_of_buckets).arg(max_number_of_buckets),
+                            int(m_max_number_of_buckets), int(m_number_of_buckets), int(max_number_of_buckets));
+  if (! number) return;
+  m_max_number_of_buckets = std::size_t(*number);
   set_number_of_buckets(m_number_of_buckets);       // updates the add button
 }
 
