@@ -55,10 +55,9 @@ Main_window::Main_window() :
   setupUi(this);
 
   // Make the check boxes and radio buttons of the Operations panel visible on dark themes.
-  auto* indicator_style = new Visible_indicator_style;
-  indicator_style->setParent(this);
-  for (auto* box : scene_dock_widget->findChildren<QCheckBox*>()) box->setStyle(indicator_style);
-  for (auto* button : scene_dock_widget->findChildren<QRadioButton*>()) button->setStyle(indicator_style);
+  m_indicator_style = new Visible_indicator_style;
+  m_indicator_style->setParent(this);
+  for (auto* box : scene_dock_widget->findChildren<QCheckBox*>()) box->setStyle(m_indicator_style);
 
   // The Log panel: the program (the executed statements) and a button that saves it as a Python script.
   {
@@ -147,90 +146,19 @@ Main_window::Main_window() :
   QObject::connect(action_grid_sparser, &QAction::triggered, this, [change_density]() { change_density(+1); });
   update_density_actions();
 
-  // The cells of the bucket rows, by column, and the other widgets of the rows.
-  m_show_column = {show_red, show_black, show_blue, show_brown, show_yellow, show_magenta, show_aqua};
-  m_draw_column = {draw_red, draw_black, draw_blue, draw_brown, draw_yellow, draw_magenta, draw_aqua};
-  m_complement_column = {show_red_comp, show_black_comp, show_blue_comp, show_brown_comp, show_yellow_comp,
-                         show_magenta_comp, show_aqua_comp};
-  m_intersection_column = {show_red_int, show_black_int, show_blue_int, show_brown_int, show_yellow_int,
-                           show_magenta_int, show_aqua_int};
-  m_union_column = {show_red_union, show_black_union, show_blue_union, show_brown_union, show_yellow_union,
-                    show_magenta_union, show_aqua_union};
-  m_difference_column = {show_red_diff, show_black_diff, show_blue_diff, show_brown_diff, show_yellow_diff,
-                         show_magenta_diff, show_aqua_diff};
-  m_symmetric_difference_column = {show_red_sym_diff, show_black_sym_diff, show_blue_sym_diff, show_brown_sym_diff,
-                                   show_yellow_sym_diff, show_magenta_sym_diff, show_aqua_sym_diff};
-  m_minkowski_sum_column = {show_red_mink_sum, show_black_mink_sum, show_blue_mink_sum, show_brown_mink_sum,
-                            show_yellow_mink_sum, show_magenta_mink_sum, show_aqua_mink_sum};
-  m_copy_column = {copy_red, copy_black, copy_blue, copy_brown, copy_yellow, copy_magenta, copy_aqua};
-  m_move_column = {move_red, move_black, move_blue, move_brown, move_yellow, move_magenta, move_aqua};
-  m_clear_column = {clear_red, clear_black, clear_blue, clear_brown, clear_yellow, clear_magenta, clear_aqua};
-  m_bucket_labels = {show_red_label, show_black_label, show_blue_label, show_brown_label, show_yellow_label,
-                     show_magenta_label, show_aqua_label};
-  m_bucket_separators = {nullptr, nullptr, nullptr, line10, line9, line8, line7};
-  std::iota(m_row_buckets.begin(), m_row_buckets.end(), 0);
-  m_first_row_y = m_bucket_labels[0]->y();
-  // Dragging the label of a bucket moves its row.
-  for (auto* label : m_bucket_labels) {
-    label->resize(60, label->height());       // within its cell, so that the highlight of a dragged row is too
-    label->setCursor(Qt::OpenHandCursor);
-    label->installEventFilter(this);
-  }
+  // The rows of the initial buckets. Exactly one bucket is the operand of the complement operation: the Complement
+  // column is exclusive, so clicking the marked cell is a no-op.
+  m_complement_group = new QButtonGroup(this);
+  m_complement_group->setExclusive(true);
+  for (std::size_t i = 0; i < min_number_of_buckets; ++i) add_bucket_row();
   set_number_of_buckets(min_number_of_buckets);       // also sets the icons of the add and remove buttons
-
-  // Visible shows or hides a bucket; Draw/Insert selects one bucket (the radio buttons are exclusive).
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
-    QObject::connect(m_show_column[i], &QAbstractButton::toggled, this,
-                     [this, i](bool checked) { show_bucket(i, checked); });
-    QObject::connect(m_draw_column[i], &QAbstractButton::toggled, this, [this, i](bool checked) {
-      if (checked) set_draw_bucket(i);
-    });
-  }
-
-  // Exactly one bucket is the operand of the complement operation: make the Complement column exclusive, so clicking
-  // the marked cell is a no-op.
-  auto* complement_group = new QButtonGroup(this);
-  complement_group->setExclusive(true);
-  for (auto* box : m_complement_column) complement_group->addButton(box);
-
-  // At most one bucket is copied or moved: checking a cell of the Copy or Move column unchecks the others.
-  for (const Column* column : {&m_copy_column, &m_move_column}) {
-    for (auto* box : *column) {
-      QObject::connect(box, &QAbstractButton::toggled, this, [column, box](bool checked) {
-        if (! checked) return;
-        for (auto* other : *column) {
-          if (other != box) other->setChecked(false);
-        }
-      });
-    }
-  }
-
-  // In the Intersection and Union columns at least one bucket stays unchecked, to hold the result, and the operations
-  // are enabled only with at least one operand.
-  const std::pair<const Column*, QAbstractButton*>
-    multi_operand_columns[] = {{&m_intersection_column, action_intersection_h}, {&m_union_column, action_union_h}};
-  for (const auto& [column, operation] : multi_operand_columns) {
-    for (auto* box : *column)
-      QObject::connect(box, &QAbstractButton::toggled, this,
-                       [this, box, column, operation](bool checked)
-                       { limit_to_all_but_one(*column, box, checked, operation); });
-    // Set the initial state of the operation.
-    limit_to_all_but_one(*column, (*column)[0], false, operation);
-  }
-
-  // The Difference, Symmetric Difference, and Minkowski Sum columns have at most two marked cells, and their operations
-  // are enabled only with exactly two.
-  const std::pair<const Column*, QAbstractButton*> two_operand_columns[] = {
-    {&m_difference_column, action_difference_h}, {&m_symmetric_difference_column, action_symmetric_difference_h},
-    {&m_minkowski_sum_column, action_minkowski_sum_h}};
-  for (const auto& [column, operation] : two_operand_columns) {
-    for (auto* box : *column)
-      QObject::connect(box, &QAbstractButton::toggled, this,
-                       [this, box, column, operation](bool checked)
-                       { limit_to_two_operands(*column, box, checked, operation); });
-    // Set the initial state of the operation.
-    limit_to_two_operands(*column, (*column)[0], false, operation);
-  }
+  // Set the initial states of the operations.
+  limit_to_all_but_one(m_intersection_column, m_intersection_column[0], false, action_intersection_h);
+  limit_to_all_but_one(m_union_column, m_union_column[0], false, action_union_h);
+  limit_to_two_operands(m_difference_column, m_difference_column[0], false, action_difference_h);
+  limit_to_two_operands(m_symmetric_difference_column, m_symmetric_difference_column[0], false,
+                        action_symmetric_difference_h);
+  limit_to_two_operands(m_minkowski_sum_column, m_minkowski_sum_column[0], false, action_minkowski_sum_h);
 
   // Fit the Visible and Draw/Insert header images into the same icon area as the operation buttons next to them
   // (27x25), keeping their aspect ratio.
@@ -268,6 +196,9 @@ Main_window::Main_window() :
   this->setupOptionsMenu();
   if (auto* options = menuBar()->findChild<QMenu*>("menuOptions")) {
     options->addSeparator();
+    auto* buckets = options->addAction("Maximum Number of Buckets...");
+    buckets->setStatusTip(QString("The number of buckets that can be added, up to %1").arg(max_number_of_buckets));
+    QObject::connect(buckets, &QAction::triggered, this, &Main_window::set_max_number_of_buckets);
     auto* precision = options->addAction("Precision of Saved Coordinates...");
     precision->setStatusTip("The number of significant digits of the coordinates written to files");
     QObject::connect(precision, &QAction::triggered, this, [this]() {
@@ -499,9 +430,9 @@ Main_window::Main_window() :
   m_y_axis->setLine(0, -100000000000000, 0, 100000000000000);
   m_y_axis->setPen(axis_pen);
 
-  m_linear_input->m_ongoing_piece_GI->set_pen(s_pens[0]);
-  m_linear_input->m_linear_GI->set_pen(s_pens[0]);
-  m_linear_input->m_handle_GI->setPen(s_pens[0]);
+  m_linear_input->m_ongoing_piece_GI->set_pen(bucket_pen(0));
+  m_linear_input->m_linear_GI->set_pen(bucket_pen(0));
+  m_linear_input->m_handle_GI->setPen(bucket_pen(0));
   action_open_linear->setEnabled(true);
   action_open_circular->setEnabled(false);
   action_open_bezier->setEnabled(false);
@@ -536,7 +467,7 @@ void Main_window::show_bucket(std::size_t a_index, bool a_checked) {
 
 void Main_window::set_draw_bucket(std::size_t a_index) {
   m_color_active = a_index;
-  set_input_pen(s_pens[a_index]);
+  set_input_pen(bucket_pen(a_index));
 }
 
 std::size_t Main_window::number_of_visible_buckets() const {
@@ -544,34 +475,138 @@ std::size_t Main_window::number_of_visible_buckets() const {
                        [](QAbstractButton* box) { return box->isChecked(); });
 }
 
+void Main_window::add_bucket_row() {
+  const std::size_t i = m_bucket_labels.size();
+  QWidget* panel = scroll_area_widget_contents_2;
+  const int y = s_first_row_y + s_row_height * int(i);
+
+  // The name of the bucket; dragging it moves the row.
+  QString name = bucket_name(i);
+  name[0] = name[0].toUpper();
+  auto* label = new QLabel(name, panel);
+  label->setGeometry(10, y, 60, 22);       // within its cell, so that the highlight of a dragged row is too
+  label->setCursor(Qt::OpenHandCursor);
+  label->setWhatsThis("<b>Bucket</b><p>Drag the name of a bucket up or down to move its row. The order matters for "
+                      "the difference, which subtracts the lower bucket from the upper one.</p>");
+  label->installEventFilter(this);
+  label->hide();
+  m_bucket_labels.push_back(label);
+  m_row_buckets.push_back(i);
+
+  // The line below the row.
+  auto* separator = new QFrame(panel);
+  separator->setFrameShape(QFrame::HLine);
+  separator->setFrameShadow(QFrame::Sunken);
+  separator->setGeometry(0, y + 25, 560, 7);
+  separator->hide();
+  m_row_separators.push_back(separator);
+
+  // The cells, in the columns of the header. The initial marks: the first bucket is the Draw/Insert bucket and the
+  // complement operand, and the first two are the operands of the other operations.
+  auto add_cell = [&](Column& a_column, QAbstractButton* a_button, int a_x, bool a_checked) {
+    a_button->setParent(panel);
+    a_button->setGeometry(a_x, y, 30, 22);
+    a_button->setStyle(m_indicator_style);
+    a_button->setChecked(a_checked);
+    a_button->hide();
+    a_column.push_back(a_button);
+    return a_button;
+  };
+  auto* show = add_cell(m_show_column, new QCheckBox, 85, true);
+  auto* draw = add_cell(m_draw_column, new QRadioButton, 130, i == 0);
+  m_complement_group->addButton(add_cell(m_complement_column, new QCheckBox, 175, i == 0));
+  add_cell(m_intersection_column, new QCheckBox, 220, i < 2);
+  add_cell(m_union_column, new QCheckBox, 265, i < 2);
+  add_cell(m_difference_column, new QCheckBox, 310, i < 2);
+  add_cell(m_symmetric_difference_column, new QCheckBox, 355, i < 2);
+  add_cell(m_minkowski_sum_column, new QCheckBox, 400, i < 2);
+  add_cell(m_copy_column, new QCheckBox, 445, false);
+  add_cell(m_move_column, new QCheckBox, 490, false);
+  add_cell(m_clear_column, new QCheckBox, 535, false);
+
+  // Visible shows or hides the bucket; Draw/Insert selects one bucket (the radio buttons are exclusive).
+  QObject::connect(show, &QAbstractButton::toggled, this, [this, i](bool a_checked) { show_bucket(i, a_checked); });
+  QObject::connect(draw, &QAbstractButton::toggled, this, [this, i](bool a_checked) {
+    if (a_checked) set_draw_bucket(i);
+  });
+
+  // At most one bucket is copied or moved: checking a cell of the Copy or Move column unchecks the others.
+  for (Column* column : {&m_copy_column, &m_move_column}) {
+    QAbstractButton* box = column->back();
+    QObject::connect(box, &QAbstractButton::toggled, this, [column, box](bool a_checked) {
+      if (! a_checked) return;
+      for (auto* other : *column) {
+        if (other != box) other->setChecked(false);
+      }
+    });
+  }
+
+  // In the Intersection and Union columns at least one bucket stays unchecked, to hold the result, and the operations
+  // are enabled only with at least one operand.
+  const std::pair<Column*, QAbstractButton*>
+    multi_operand_columns[] = {{&m_intersection_column, action_intersection_h}, {&m_union_column, action_union_h}};
+  for (const auto& [a_column, a_operation] : multi_operand_columns) {
+    Column* column = a_column;
+    QAbstractButton* operation = a_operation;
+    QAbstractButton* box = column->back();
+    QObject::connect(box, &QAbstractButton::toggled, this, [this, box, column, operation](bool a_checked)
+                     { limit_to_all_but_one(*column, box, a_checked, operation); });
+  }
+
+  // The Difference, Symmetric Difference, and Minkowski Sum columns have at most two marked cells, and their operations
+  // are enabled only with exactly two.
+  const std::pair<Column*, QAbstractButton*> two_operand_columns[] = {
+    {&m_difference_column, action_difference_h}, {&m_symmetric_difference_column, action_symmetric_difference_h},
+    {&m_minkowski_sum_column, action_minkowski_sum_h}};
+  for (const auto& [a_column, a_operation] : two_operand_columns) {
+    Column* column = a_column;
+    QAbstractButton* operation = a_operation;
+    QAbstractButton* box = column->back();
+    QObject::connect(box, &QAbstractButton::toggled, this, [this, box, column, operation](bool a_checked)
+                     { limit_to_two_operands(*column, box, a_checked, operation); });
+  }
+}
+
+void Main_window::set_max_number_of_buckets() {
+  bool ok = false;
+  int number = QInputDialog::getInt(this, "Maximum Number of Buckets",
+                                    QString("Maximum number of buckets (at least the %1 existing ones):")
+                                      .arg(m_number_of_buckets),
+                                    int(m_max_number_of_buckets), int(m_number_of_buckets),
+                                    int(max_number_of_buckets), 1, &ok);
+  if (! ok) return;
+  m_max_number_of_buckets = std::size_t(number);
+  set_number_of_buckets(m_number_of_buckets);       // updates the add button
+}
+
 void Main_window::set_number_of_buckets(std::size_t a_number) {
   m_number_of_buckets = a_number;
   const Column* columns[] = {&m_show_column, &m_draw_column, &m_complement_column, &m_intersection_column,
                              &m_union_column, &m_difference_column, &m_symmetric_difference_column,
                              &m_minkowski_sum_column, &m_copy_column, &m_move_column, &m_clear_column};
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+  for (std::size_t i = 0; i < m_bucket_labels.size(); ++i) {
     bool exists = (i < a_number);
     for (const Column* column : columns) (*column)[i]->setVisible(exists);
     m_bucket_labels[i]->setVisible(exists);
-    if (m_bucket_separators[i]) m_bucket_separators[i]->setVisible(exists);
+    m_row_separators[i]->setVisible(exists);      // the rows of the existing buckets are the top ones
   }
 
   // The vertical lines between the columns span the rows.
-  int height = 155 + 30 * int(a_number - min_number_of_buckets);
+  int height = s_first_row_y + s_row_height * int(a_number) - 5;
   for (auto* line : {line0006, line1, line2, line3, line4, line5, line6, line0007, line06, line061, line062, line063})
     line->setGeometry(QRect(line->x(), 0, 7, height));
   // The rows are not in a layout; the minimum height of their widget lets the scroll area scroll to the last one.
-  scroll_area_widget_contents_2->setMinimumHeight(m_first_row_y + 30 * int(a_number));
+  scroll_area_widget_contents_2->setMinimumHeight(s_first_row_y + s_row_height * int(a_number));
 
   // The buttons show the color of the bucket to add and of the bucket to remove (the last added one).
-  bool can_add = (a_number < number_of_buckets);
+  bool can_add = (a_number < m_max_number_of_buckets);
   action_add_color->setEnabled(can_add);
-  action_add_color->setIcon(bucket_tool_icon(true, s_pens[can_add ? a_number : a_number - 1].color()));
+  action_add_color->setIcon(bucket_tool_icon(true, bucket_pen(can_add ? a_number : a_number - 1).color()));
   action_add_color->setText(can_add ? QString("Add the %1 bucket").arg(bucket_name(a_number)) :
-                            "Maximum Number of Buckets Reached");
+                            "Maximum Number of Buckets Reached (see the Options menu)");
   bool can_remove = (a_number > min_number_of_buckets);
   action_minus_color->setEnabled(can_remove);
-  action_minus_color->setIcon(bucket_tool_icon(false, s_pens[a_number - 1].color()));
+  action_minus_color->setIcon(bucket_tool_icon(false, bucket_pen(a_number - 1).color()));
   action_minus_color->setText(can_remove ? QString("Remove the %1 bucket").arg(bucket_name(a_number - 1)) :
                               "Minimum Number of Buckets Reached");
 }
@@ -592,13 +627,13 @@ void Main_window::place_bucket_rows() {
   const Column* columns[] = {&m_show_column, &m_draw_column, &m_complement_column, &m_intersection_column,
                              &m_union_column, &m_difference_column, &m_symmetric_difference_column,
                              &m_minkowski_sum_column, &m_copy_column, &m_move_column, &m_clear_column};
-  for (std::size_t row = 0; row < number_of_buckets; ++row) {
+  for (std::size_t row = 0; row < m_row_buckets.size(); ++row) {
     std::size_t i = m_row_buckets[row];
-    int y = m_first_row_y + 30 * int(row);
+    int y = s_first_row_y + s_row_height * int(row);
     for (const Column* column : columns) (*column)[i]->move((*column)[i]->x(), y);
     m_bucket_labels[i]->move(m_bucket_labels[i]->x(), y);
     if (m_dragged_bucket && (*m_dragged_bucket == i))
-      m_drag_frame->setGeometry(2, y - 4, line10->x() + line10->width() - 4, 29);
+      m_drag_frame->setGeometry(2, y - 4, line063->x() - 4, 29);
   }
 }
 
@@ -637,8 +672,8 @@ bool Main_window::drag_bucket_row(QLabel* a_label, QEvent* a_event) {
   }
   // The dragged row follows the cursor: it moves to the row under the cursor, so it shows where it ends up.
   int y = a_label->parentWidget()->mapFromGlobal(event->globalPosition().toPoint()).y();
-  int row = std::clamp((y - m_first_row_y + 4) / 30, 0, int(m_number_of_buckets) - 1);
-  if (y < m_first_row_y - 4) row = 0;
+  int row = std::clamp((y - s_first_row_y + 4) / s_row_height, 0, int(m_number_of_buckets) - 1);
+  if (y < s_first_row_y - 4) row = 0;
   if (std::size_t(row) != bucket_row(*m_dragged_bucket)) move_bucket_row(*m_dragged_bucket, row);
   return true;
 }
@@ -683,7 +718,8 @@ void Main_window::show_log_panel(bool a_check) {
 }
 
 void Main_window::add_bucket() {
-  if (m_number_of_buckets == number_of_buckets) return;
+  if (m_number_of_buckets >= m_max_number_of_buckets) return;
+  if (m_number_of_buckets == m_bucket_labels.size()) add_bucket_row();
   log_statements({QString("%1 = Polygon_set_2()").arg(bucket_name(m_number_of_buckets))}, true);
   // The new bucket is the bottom one.
   move_bucket_row(m_number_of_buckets, m_number_of_buckets);
@@ -734,7 +770,7 @@ void Main_window::reset_marks() {
   // The initial marks: all buckets are visible, the first one is the Draw/Insert bucket and the complement operand,
   // and the first two are the operands of the other operations. (Unmark the other operands first, so that marking the
   // first two is not undone.)
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+  for (std::size_t i = 0; i < m_bucket_labels.size(); ++i) {
     m_show_column[i]->setChecked(true);
     for (const Column* column : {&m_copy_column, &m_move_column, &m_clear_column})
       (*column)[i]->setChecked(false);
@@ -742,7 +778,7 @@ void Main_window::reset_marks() {
   const Column* operand_columns[] = {&m_intersection_column, &m_union_column, &m_difference_column,
                                      &m_symmetric_difference_column, &m_minkowski_sum_column};
   for (const Column* column : operand_columns) {
-    for (std::size_t i = 2; i < number_of_buckets; ++i) (*column)[i]->setChecked(false);
+    for (std::size_t i = 2; i < m_bucket_labels.size(); ++i) (*column)[i]->setChecked(false);
   }
   for (const Column* column : operand_columns) {
     for (std::size_t i = 0; i < 2; ++i) (*column)[i]->setChecked(true);
@@ -763,7 +799,7 @@ void Main_window::new_program() {
     program << QString("%1 = Polygon_set_2()").arg(bucket_name(i));
   log_statements(program, true);
 
-  for (std::size_t i = 0; i <= number_of_buckets; ++i) states_stack.back().clear(i);
+  for (std::size_t i = 0; i <= max_number_of_buckets; ++i) states_stack.back().clear(i);
 
   m_scene.setSceneRect(-320, -210, 640, 420);
   this->graphics_view->setScene(&m_scene);
@@ -781,9 +817,9 @@ void Main_window::new_program() {
 
   m_color_active = 0;
 
-  m_linear_input->m_ongoing_piece_GI->set_pen(s_pens[0]);
-  m_linear_input->m_linear_GI->set_pen(s_pens[0]);
-  m_linear_input->m_handle_GI->setPen(s_pens[0]);
+  m_linear_input->m_ongoing_piece_GI->set_pen(bucket_pen(0));
+  m_linear_input->m_linear_GI->set_pen(bucket_pen(0));
+  m_linear_input->m_handle_GI->setPen(bucket_pen(0));
 
   scene_dock_widget->setVisible(true);
   console_dock_widget->setVisible(true);
@@ -816,7 +852,6 @@ void Main_window::new_program() {
   set_number_of_buckets(min_number_of_buckets);
   visible_header->setChecked(true);
   show_clear->setChecked(false);
-  line11->setVisible(true);
 
   zoom_to_fit();
   model_changed();
@@ -828,7 +863,7 @@ void Main_window::switch_set_type(Curve_set& a_set, Curve_type a_type) {
 }
 
 void Main_window::switch_sets_type(Curve_type a_type) {
-  for (std::size_t i = 0; i <= number_of_buckets; ++i) switch_set_type(states_stack.back().set(i), a_type);
+  for (std::size_t i = 0; i <= max_number_of_buckets; ++i) switch_set_type(states_stack.back().set(i), a_type);
 }
 
 void Main_window::toggle_axes() {
@@ -1081,7 +1116,7 @@ void Main_window::start_inserting(Curve_type a_type) {
   install_input(selected.m_input);
   delete_result();
   action_minkowski_sum_h->setEnabled(a_type == Curve_type::CT_LINEAR);
-  set_input_pen(s_pens[m_color_active]);
+  set_input_pen(bucket_pen(m_color_active));
   m_hint->setText((a_type == Curve_type::CT_BEZIER) ? QString("Bezier: ") + bezier_hint : QString());
 }
 

@@ -75,8 +75,8 @@ public:
 inline State_current::State_current(State_op a_operation, Curve_type a_type) :
   m_operation(a_operation),
   m_type(a_type) {
-  for (std::size_t i = 0; i <= number_of_buckets; ++i)
-    m_curve_sets.push_back(Curve_set(m_type, s_pens[i], s_brushes[i]));
+  for (std::size_t i = 0; i <= max_number_of_buckets; ++i)
+    m_curve_sets.push_back(Curve_set(m_type, bucket_pen(i), bucket_brush(i)));
 }
 
 using State_container = std::vector<State_current>;

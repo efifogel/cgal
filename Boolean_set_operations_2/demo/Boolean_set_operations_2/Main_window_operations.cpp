@@ -44,12 +44,12 @@ void Main_window::delete_all() {
 
   get_new_state(State_op::DELETE_ALL);
   QStringList program;
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+  for (std::size_t i = 0; i < max_number_of_buckets; ++i) {
     if (! states_stack.back().set(i).is_empty()) program << QString("%1.clear()").arg(bucket_name(i));
   }
   log_statements(program);
 
-  for (std::size_t i = 0; i < number_of_buckets; ++i) states_stack.back().clear(i);
+  for (std::size_t i = 0; i < max_number_of_buckets; ++i) states_stack.back().clear(i);
   delete_result();
   model_changed();
 }

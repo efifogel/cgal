@@ -29,46 +29,54 @@
  */
 
 #include <cstddef>
+#include <iterator>
 
 #include <QBrush>
 #include <QColor>
 #include <QPen>
 #include <QString>
 
-// The buckets are identified by their indices: red, black, blue, brown, yellow, magenta, and aqua. The scratch result
-// set follows them. Initially (and at least) the first three buckets exist.
-constexpr std::size_t number_of_buckets = 7;
-constexpr std::size_t result_index = number_of_buckets;
+// The buckets are identified by their indices, in the order of their colors below. The scratch result set follows
+// them. Initially (and at least) the first three buckets exist; the user sets the maximum (up to the number of colors).
+constexpr std::size_t max_number_of_buckets = 16;
+constexpr std::size_t result_index = max_number_of_buckets;
 constexpr std::size_t min_number_of_buckets = 3;
+constexpr std::size_t default_max_number_of_buckets = 7;
 
-// The pens and the brushes of the buckets and of the scratch result set.
-inline QPen s_pens[] = {
-  QPen(QColor(255, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //red
-  QPen(QColor(0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),     //black
-  QPen(QColor(0, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //blue
-  QPen(QColor(210, 105, 30), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),//brown
-  QPen(QColor(255, 255, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), //yellow
-  QPen(QColor(255, 0, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), //magenta
-  QPen(QColor(0, 255, 255), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), //aqua
-  QPen(QColor(0, 0, 0, 0), 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin),   //Result
+// The name of each bucket (in the program, and capitalized in its row) and its color.
+struct Bucket_color {
+  const char* m_name;
+  QColor m_color;
 };
 
-inline QBrush s_brushes[] = {
-  QBrush(QColor(255, 0, 0, 75)),           //red
-  QBrush(QColor(0, 0, 0, 75)),             //black
-  QBrush(QColor(0, 0, 255, 75)),           //blue
-  QBrush(QColor(210, 105, 30, 75)),        //brown
-  QBrush(QColor(255, 255, 0, 75)),         //yellow
-  QBrush(QColor(255, 0, 255, 75)),         //magenta
-  QBrush(QColor(0, 255, 255, 75)),         //aqua
-  QBrush(QColor(0, 0, 0, 0)),              //Result
-};
+inline const Bucket_color s_bucket_colors[] = {
+  {"red", QColor(255, 0, 0)}, {"black", QColor(0, 0, 0)}, {"blue", QColor(0, 0, 255)},
+  {"brown", QColor(210, 105, 30)}, {"yellow", QColor(255, 255, 0)}, {"magenta", QColor(255, 0, 255)},
+  {"aqua", QColor(0, 255, 255)}, {"orange", QColor(255, 140, 0)}, {"green", QColor(0, 160, 0)},
+  {"purple", QColor(128, 0, 128)}, {"gray", QColor(128, 128, 128)}, {"pink", QColor(255, 105, 180)},
+  {"navy", QColor(0, 0, 128)}, {"olive", QColor(128, 128, 0)}, {"teal", QColor(0, 128, 128)},
+  {"maroon", QColor(128, 0, 0)}};
+static_assert(std::size(s_bucket_colors) == max_number_of_buckets);
 
-/*! obtains the name of a bucket in the program (the color of its row), by its index.
+/*! obtains the pen of a bucket, or (at result_index) of the scratch result set, which is not drawn.
  */
-inline const char* bucket_name(std::size_t a_index) {
-  static const char* names[] = { "red", "black", "blue", "brown", "yellow", "magenta", "aqua" };
-  return (a_index < number_of_buckets) ? names[a_index] : "result";
+inline QPen bucket_pen(std::size_t a_index) {
+  QColor color = (a_index < max_number_of_buckets) ? s_bucket_colors[a_index].m_color : QColor(0, 0, 0, 0);
+  return QPen(color, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
 }
+
+/*! obtains the brush of a bucket, or (at result_index) of the scratch result set, which is not drawn.
+ */
+inline QBrush bucket_brush(std::size_t a_index) {
+  if (a_index >= max_number_of_buckets) return QBrush(QColor(0, 0, 0, 0));
+  QColor color = s_bucket_colors[a_index].m_color;
+  color.setAlpha(75);
+  return QBrush(color);
+}
+
+/*! obtains the name of a bucket in the program, by its index.
+ */
+inline const char* bucket_name(std::size_t a_index)
+{ return (a_index < max_number_of_buckets) ? s_bucket_colors[a_index].m_name : "result"; }
 
 #endif

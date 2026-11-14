@@ -51,15 +51,15 @@ void Main_window::trim_program_to_states() {
 bool Main_window::bucket_exists(std::size_t a_index) const { return a_index < m_number_of_buckets; }
 
 std::size_t Main_window::bucket_index(const QString& a_name) const {
-  for (std::size_t i = 0; i < number_of_buckets; ++i) {
+  for (std::size_t i = 0; i < max_number_of_buckets; ++i) {
     if (a_name == bucket_name(i)) return i;
   }
-  return number_of_buckets;
+  return max_number_of_buckets;
 }
 
 Curve_set* Main_window::polygon_set(const QString& a_name) {
   std::size_t i = bucket_index(a_name);
-  if (i < number_of_buckets) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
+  if (i < max_number_of_buckets) return bucket_exists(i) ? &states_stack.back().set(i) : nullptr;
   auto it = m_variables.find(a_name);
   return (it == m_variables.end()) ? nullptr : &it->second;
 }
@@ -107,7 +107,7 @@ Curve_set& Main_window::named_set(const Py_expr& a_expr) {
 void Main_window::execute_delete(const Py_statement& a_statement) {
   const QString& target = a_statement.m_target;
   std::size_t index = bucket_index(target);
-  if (index == number_of_buckets) {
+  if (index == max_number_of_buckets) {
     if (m_variables.erase(target) == 0)
       throw std::runtime_error(("name '" + target + "' is not defined").toStdString());
     log_statements({to_python(a_statement)}, true);
@@ -129,12 +129,15 @@ void Main_window::execute_assign(const Py_statement& a_statement) {
     throw std::runtime_error("only polygon sets can be assigned, e.g., " + (target + " = Polygon_set_2(" +
        (value.m_kind == Py_expr::Kind::KI_NAME ? value.m_name : QString()) + ")").toStdString() + " (copies the set)");
   const Py_expr* arg = value.m_arg.get();
-  if ((index < number_of_buckets) && ! bucket_exists(index)) {
+  if ((index < max_number_of_buckets) && ! bucket_exists(index)) {
     // Buckets are added in order.
     std::size_t next = m_number_of_buckets;
     if (index != next)
       throw std::runtime_error(("buckets are added in order; the next one is " + QString(bucket_name(next)))
                                .toStdString());
+    if (next >= m_max_number_of_buckets)
+      throw std::runtime_error(QString("the maximum number of buckets is %1 (see the Options menu)")
+                               .arg(m_max_number_of_buckets).toStdString());
     m_logging = false;
     add_bucket();
     m_logging = true;

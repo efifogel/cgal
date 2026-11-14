@@ -166,8 +166,9 @@ class Main_window : public CGAL::Qt::DemosMainWindow, public Ui::Boolean_set_ope
 
 private:
   Grid_scene m_scene;
-  // The cells of the bucket rows of the Operations panel, by column, and the other widgets of the rows.
-  using Column = std::array<QAbstractButton*, number_of_buckets>;
+  // The cells of the bucket rows of the Operations panel, by column (indexed by bucket), and the other widgets of the
+  // rows. The rows are created as buckets are added, and hidden when their buckets are removed.
+  using Column = std::vector<QAbstractButton*>;
   Column m_show_column;                         // Visible
   Column m_draw_column;                         // Draw/Insert
   Column m_complement_column;
@@ -179,11 +180,15 @@ private:
   Column m_copy_column;
   Column m_move_column;
   Column m_clear_column;
-  std::array<QLabel*, number_of_buckets> m_bucket_labels;
-  std::array<QFrame*, number_of_buckets> m_bucket_separators;   // the lines below the rows (null for the initial rows)
+  std::vector<QLabel*> m_bucket_labels;
+  std::vector<QFrame*> m_row_separators;                       // the lines below the rows, by row
   std::size_t m_number_of_buckets = min_number_of_buckets;     // the existing buckets are the first ones
-  std::array<std::size_t, number_of_buckets> m_row_buckets;    // the bucket of each row, from the top
-  int m_first_row_y = 0;                                       // the y-coordinate of the top row
+  std::size_t m_max_number_of_buckets = default_max_number_of_buckets;
+  std::vector<std::size_t> m_row_buckets;                      // the bucket of each row, from the top
+  static constexpr int s_first_row_y = 70;                     // the y-coordinate of the top row
+  static constexpr int s_row_height = 30;
+  QButtonGroup* m_complement_group = nullptr;                  // makes the Complement column exclusive
+  QStyle* m_indicator_style = nullptr;                         // draws the check boxes visibly on dark themes
   std::optional<std::size_t> m_dragged_bucket;                 // the bucket whose row is dragged
   QFrame* m_drag_frame = nullptr;                              // the frame around the dragged row
 
@@ -242,7 +247,8 @@ private:
 
   State_container states_stack;
   // The graphics items in the scene (null once deleted along with their sets).
-  std::array<QPointer<CGAL::Qt::GraphicsItem>, number_of_buckets + 1> m_linked_items;
+  std::vector<QPointer<CGAL::Qt::GraphicsItem>> m_linked_items =
+    std::vector<QPointer<CGAL::Qt::GraphicsItem>>(max_number_of_buckets + 1);
 
   CGAL::Qt::Graphics_view_linear_polygon_input<Kernel>* m_linear_input;
   CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>* m_circular_input;
@@ -491,7 +497,7 @@ public slots:
    */
   bool bucket_exists(std::size_t a_index) const;
 
-  /*! obtains the index of the bucket with a given name, or number_of_buckets if there is none.
+  /*! obtains the index of the bucket with a given name, or max_number_of_buckets if there is none.
    */
   std::size_t bucket_index(const QString& a_name) const;
 
@@ -596,6 +602,14 @@ public slots:
   /*! obtains the number of existing buckets that are visible.
    */
   std::size_t number_of_visible_buckets() const;
+
+  /*! creates the row of the next bucket in the Operations panel (hidden), and connects its cells.
+   */
+  void add_bucket_row();
+
+  /*! asks the user for the maximum number of buckets.
+   */
+  void set_max_number_of_buckets();
 
   /*! sets the number of existing buckets (the first ones), and shows their rows of the Operations panel.
    */
@@ -753,7 +767,7 @@ private:
   /*! determines whether all sets (the buckets and the result) are empty.
    */
   bool are_all_sets_empty() {
-    for (std::size_t i = 0; i <= number_of_buckets; ++i) {
+    for (std::size_t i = 0; i <= max_number_of_buckets; ++i) {
       if (! states_stack.back().set(i).is_empty()) return false;
     }
     return true;
