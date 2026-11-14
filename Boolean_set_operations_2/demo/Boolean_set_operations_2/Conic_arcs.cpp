@@ -54,12 +54,13 @@ bool same_conic(const Coefficients& a_c1, const Coefficients& a_c2) {
 bool same_arc(const Conic_X_monotone_curve& a_xcv1, const Conic_X_monotone_curve& a_xcv2)
 { return (a_xcv1.orientation() == a_xcv2.orientation()) && same_conic(coefficients(a_xcv1), coefficients(a_xcv2)); }
 
-/*! obtains the auxiliary conic of an endpoint of an arc: the conic of the neighboring arc, or, if it is the same conic,
- * the line through the points of vertical tangency of the conic, t*x + 2s*y + v = 0.
+/*! obtains the auxiliary conic of an endpoint of an arc: the conic of the neighboring arc.
+ * \throw std::invalid_argument if the neighboring arc has the same conic (the boundary turns back along it).
  */
-Coefficients auxiliary_conic(const Coefficients& a_conic, const Coefficients& a_neighbor) {
-  if (! same_conic(a_conic, a_neighbor)) return a_neighbor;
-  return {Conic_integer(0), Conic_integer(0), Conic_integer(0), a_conic[2], Conic_integer(2) * a_conic[1], a_conic[4]};
+const Coefficients& auxiliary_conic(const Coefficients& a_conic, const Coefficients& a_neighbor) {
+  if (same_conic(a_conic, a_neighbor))
+    throw std::invalid_argument("an endpoint is shared by two arcs of the same conic");
+  return a_neighbor;
 }
 
 /*! obtains an approximation of a point.

@@ -14,12 +14,7 @@
 - Let the user choose the vertices of a polyline polygon (e.g., a modifier key while clicking); the .plps format
   would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
-3. Conic polygons
-- Where the conics of two neighboring arcs coincide (different orientations), the auxiliary conic of their endpoint
-  is the line through the points of vertical tangency, which is correct only at such points.
-- A segment constructed from its endpoints only has no coefficients and cannot be written (saving reports it).
-
-4. Python programs
+3. Python programs
 - The circle-segment and conic programs were not run, because the bindings (CGALPY_kerEpec_aos2Cs_bso2,
   CGALPY_kerEpec_aos2Conic_bso2) are not built yet. Check:
   - Integer is constructed from a Python int only (init_implicit<int>), so coefficients beyond 32 bits fail;
@@ -31,7 +26,7 @@
 - The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
   Minkowski sum is not logged.
 
-5. Small items
+4. Small items
 - The writers of .lps, .plps, .cps, and .bps use the default precision of the stream (6 digits), which rounds the
   coordinates; use the precision of a double (17 digits), as the .qps writer does.
 - read_polyline_boundary() ignores the DOUBLE header (as read_linear_boundary() does).
@@ -42,7 +37,7 @@
 - The GUI regression scripts (drawing, undo, files, console) are not in the repository; their references predate the
   new tool bar and the polyline marks.
 
-6. Library
+5. Library
 - General_polygon_set_2 over traits with open sides (e.g., Arr_algebraic_segment_traits_2) uses the unbounded planar
   topology, where union, symmetric difference, and complement come out empty, and the precondition that validates the
   polygons fails in Arr_walk_along_line_point_location (number_of_outer_ccbs() == 1). Fix it, then drop
