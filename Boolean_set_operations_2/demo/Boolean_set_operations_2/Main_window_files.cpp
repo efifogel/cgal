@@ -25,6 +25,10 @@
  * Opening and saving polygon files in the main window.
  */
 
+#include <cctype>
+#include <stdexcept>
+#include <string>
+
 #include "Main_window.h"
 
 #include "Polygon_io.h"
@@ -60,17 +64,21 @@ bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, 
   if (! in_file) return false;
   bool r_ok = false;
   try {
-    std::string format;
-    std::getline(in_file, format);
-    bool double_format = (format.substr(0, 6) == "DOUBLE");
+    // Skip the format line of old files (DOUBLE or RATIONAL); the form of each number determines its kind.
+    in_file >> std::ws;
+    if (std::isalpha(in_file.peek())) {
+      std::string format;
+      std::getline(in_file, format);
+    }
 
     unsigned int n_regions;
-    in_file >> n_regions;
+    if (! (in_file >> n_regions)) throw std::runtime_error("bad file");
     for (unsigned int r = 0; r < n_regions; ++r) {
       unsigned int n_boundaries;
       in_file >> n_boundaries;
       for (unsigned int b = 0; b < n_boundaries; ++b) {
-        auto xcvs = a_read_boundary(in_file, double_format);
+        auto xcvs = a_read_boundary(in_file);
+        if (! in_file) throw std::runtime_error("bad file");
         if (xcvs.empty()) continue;
         typename Set::Polygon_2 pgn(xcvs.begin(), xcvs.end());
         if (pgn.orientation() == CGAL::CLOCKWISE) pgn.reverse_orientation();
@@ -84,6 +92,9 @@ bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, 
       }
       r_ok = true;
     }
+  }
+  catch (const std::exception& e) {
+    show_warning(std::string("Cannot read the ") + a_kind + " polygon set: " + e.what());
   }
   catch (...) {
     show_warning(std::string("Exception occurred during reading of ") + a_kind + " polygon set.");

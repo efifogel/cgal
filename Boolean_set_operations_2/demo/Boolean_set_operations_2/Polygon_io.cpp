@@ -37,19 +37,36 @@
 #include "Polyline_boundary.h"
 #include "Conic_arcs.h"
 
+namespace {
+
+/*! reads a number of a given type, exactly (see read_number()).
+ */
+template <typename NT>
+NT read_exact(std::istream& a_is) {
+  NT x;
+  CGAL::internal::read_float_or_quotient(a_is, x);
+  if (! a_is) throw std::runtime_error("bad number");
+  return x;
+}
+
+} // namespace
+
+Kernel::FT read_number(std::istream& a_is) { return read_exact<Kernel::FT>(a_is); }
+
+Kernel::Point_2 read_point(std::istream& a_is) {
+  auto x = read_number(a_is);
+  return Kernel::Point_2(x, read_number(a_is));
+}
+
 std::vector<Kernel::Point_2> read_vertices(std::istream& a_is) {
   unsigned int n_points;
   a_is >> n_points;
   std::vector<Kernel::Point_2> points;
-  for (unsigned int i = 0; i < n_points; ++i) {
-    double x, y;
-    a_is >> x >> y;
-    points.emplace_back(x, y);
-  }
+  for (unsigned int i = 0; i < n_points; ++i) points.push_back(read_point(a_is));
   return points;
 }
 
-std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bool /* a_double_format */) {
+std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is) {
   auto points = read_vertices(a_is);
   std::vector<Linear_curve> curves;
   for (std::size_t i = 0; i < points.size(); ++i) {
@@ -60,28 +77,28 @@ std::vector<Linear_X_monotone_curve> read_linear_boundary(std::istream& a_is, bo
   return x_monotone_curves<Linear_traits>(curves.begin(), curves.end());
 }
 
-std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is, bool /* a_double_format */) {
+std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is) {
   return polyline_boundary(read_vertices(a_is));
 }
 
-std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is, bool /* a_double_format */) {
-  using Point = Kernel::Point_2;
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is) {
   unsigned int n_curves;
   a_is >> n_curves;
   std::vector<Circular_curve> curves;
   for (unsigned int i = 0; i < n_curves; ++i) {
     unsigned int is_arc;
-    double sx, sy, mx, my, tx, ty;
-    a_is >> is_arc >> sx >> sy;
-    if (is_arc) a_is >> mx >> my;
-    a_is >> tx >> ty;
-    if (is_arc) curves.emplace_back(Point(sx, sy), Point(mx, my), Point(tx, ty));
-    else curves.emplace_back(Point(sx, sy), Point(tx, ty));
+    if (! (a_is >> is_arc)) throw std::runtime_error("bad circular boundary");
+    auto s = read_point(a_is);
+    if (is_arc) {
+      auto m = read_point(a_is);
+      curves.emplace_back(s, m, read_point(a_is));
+    }
+    else curves.emplace_back(s, read_point(a_is));
   }
   return x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
 }
 
-Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format) {
+Bezier_curve read_bezier_curve(std::istream& is) {
   // Read the number of control points.
   unsigned int n;
   is >> n;
@@ -90,17 +107,8 @@ Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format) {
   std::vector<Bezier_rat_point> ctrl_pts;
 
   for (unsigned int k = 0; k < n; k++) {
-    Bezier_rat_point p;
-    if (a_double_format) {
-      double x, y;
-      is >> x >> y;
-      Bezier_rational rx(static_cast<int> (1000 * x + 0.5), 1000);
-      Bezier_rational ry(static_cast<int> (1000 * y + 0.5), 1000);
-      p = Bezier_rat_point(rx, ry);
-    }
-    else {
-      is >> p;
-    }
+    auto x = read_exact<Bezier_rational>(is);
+    Bezier_rat_point p(x, read_exact<Bezier_rational>(is));
 
     if (k == 0 || ctrl_pts[k - 1] != p) {
       ctrl_pts.push_back(p);
@@ -128,12 +136,12 @@ Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format) {
   return Bezier_curve(ctrl_pts2.begin(), ctrl_pts2.end());
 }
 
-std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is, bool a_double_format) {
+std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is) {
   unsigned int n_curves;
   a_is >> n_curves;
   std::vector<Bezier_curve> curves;
   for (unsigned int i = 0; i < n_curves; ++i) {
-    Bezier_curve curve = read_bezier_curve(a_is, a_double_format);
+    Bezier_curve curve = read_bezier_curve(a_is);
     if (curve.number_of_control_points() >= 2) curves.push_back(curve);
   }
   return x_monotone_curves<Bezier_traits>(curves.begin(), curves.end());
@@ -234,7 +242,7 @@ void write_coefficients(std::ostream& a_os, const Conic_arc_record::Coefficients
 
 } // namespace
 
-std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool /* a_double_format */) {
+std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is) {
   unsigned int n_arcs;
   a_is >> n_arcs;
   std::vector<Conic_arc_record> records(n_arcs);
@@ -250,9 +258,9 @@ std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool
     int orientation;
     a_is >> orientation;
     record.m_orientation = CGAL::Orientation(orientation);
-    a_is >> record.m_source[0] >> record.m_source[1];
+    for (auto& c : record.m_source) c = CGAL::to_double(read_number(a_is));
     read_coefficients(a_is, record.m_source_conic);
-    a_is >> record.m_target[0] >> record.m_target[1];
+    for (auto& c : record.m_target) c = CGAL::to_double(read_number(a_is));
     read_coefficients(a_is, record.m_target_conic);
   }
   if (! a_is) throw std::runtime_error("bad conic boundary");
