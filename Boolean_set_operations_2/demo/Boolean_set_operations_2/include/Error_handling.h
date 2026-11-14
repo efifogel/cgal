@@ -28,10 +28,12 @@
  * Reporting errors: message boxes for warnings and errors, and the handler of failed CGAL assertions and preconditions.
  */
 
+#include <functional>
 #include <optional>
 
 #include <QAction>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QString>
 
 /*! shows a message over the active window (or the main window), centered over its view if it has one. The text is
@@ -45,6 +47,13 @@
 QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
                                          QMessageBox::StandardButtons a_buttons = QMessageBox::Ok,
                                          QAction* a_toggle = nullptr);
+
+/*! asks for input in a message box like those of show_message(), with a_input below the text and the OK (default)
+ * and Cancel buttons. a_setup, if given, is called with the OK button before the box is shown, e.g., to enable it only
+ * while the input is valid. The caller keeps the ownership of a_input. \return whether the user clicked OK.
+ */
+bool ask_input(const QString& a_title, const QString& a_text, QWidget& a_input,
+               const std::function<void(QPushButton*)>& a_setup = {});
 
 /*! asks for an integer in [a_min, a_max], starting at a_value, in a message box like those of show_message() with
  * a spin box below the text. \return the integer, or nothing if the user cancels.

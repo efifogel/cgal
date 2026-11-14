@@ -40,16 +40,21 @@ void Main_window::setup_help() {
     "undo history.</p>";
 
   // The curve families.
+  traits_tool_bar->setWhatsThis("<b>Curve Families</b><p>The buttons of the first row select the family of the "
+                                "curves that bound the polygons and the generalized polygons (regions bounded by "
+                                "curves that are not necessarily line segments) you construct and open.</p>" +
+                                family_switch);
   action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by line segments. Click at each vertex; "
                                      "right-click to close the polygon.</p>" + step_back +
                                      family_switch);
-  action_insert_circular->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Polygons bounded by segments and "
-                                       "circular arcs, or circles. Choose how to construct them in the tool bar "
-                                       "underneath.</p>" + step_back + family_switch);
-  action_insert_conic->setWhatsThis("<b>Conic Arcs</b><p>Polygons bounded by arcs of lines, circles, and ellipses, "
-                                    "or full circles and ellipses. Choose how to construct them in the tool bar "
-                                    "underneath.</p>" + step_back + family_switch);
-  action_insert_bezier->setWhatsThis("<b>Bezier Curves</b><p>Polygons bounded by Bezier curves.</p><ul>"
+  action_insert_circular->setWhatsThis("<b>Segments and Circular Arcs</b><p>Generalized polygons bounded by line "
+                                       "segments and circular arcs, or circles. Choose how to construct them in the "
+                                       "tool bar underneath.</p>" + step_back + family_switch);
+  action_insert_conic->setWhatsThis("<b>Conic Curves</b><p>Generalized polygons bounded by line segments and arcs "
+                                    "of circles, ellipses, parabolas, and hyperbolas, or by full circles and "
+                                    "ellipses. Choose how to construct them in the tool bar underneath.</p>" +
+                                    step_back + family_switch);
+  action_insert_bezier->setWhatsThis("<b>Bezier Curves</b><p>Generalized polygons bounded by Bezier curves.</p><ul>"
                                      "<li>Click to add a corner.</li>"
                                      "<li>Press and drag to add a smooth vertex; the drag sets its two (symmetric) "
                                      "handles, which bend the curves on both sides.</li>"
@@ -57,13 +62,13 @@ void Main_window::setup_help() {
                                      "vertex.</li></ul>"
                                      "<p>A polygon of clicks only is bounded by straight curves.</p>" + step_back +
                                      family_switch);
-  action_insert_algebraic->setWhatsThis("<b>Algebraic Curves</b><p>Regions bounded by algebraic curves, entered as "
-                                        "equations with the Equation button underneath. Available only if the demo "
-                                        "is built with Lexy.</p>" + family_switch);
-  action_insert_polyline->setWhatsThis("<b>Polyline/Polycurve</b><p>Polygons bounded by polycurves, that is, "
-                                       "curves that consist of curves of the family selected underneath (Segments "
-                                       "only, for now). Click at each vertex; right-click to close the polygon.</p>" +
-                                       step_back + family_switch);
+  action_insert_algebraic->setWhatsThis("<b>Algebraic Curves</b><p>Generalized polygons bounded by algebraic "
+                                        "curves, entered as equations with the Equation button underneath. Available "
+                                        "only if the demo is built with Lexy.</p>" + family_switch);
+  action_insert_polyline->setWhatsThis("<b>Polyline/Polycurve</b><p>Generalized polygons bounded by polycurves, "
+                                       "that is, curves that consist of curves of the family selected underneath "
+                                       "(Segments only, for now). Click at each vertex; right-click to close the "
+                                       "polygon.</p>" + step_back + family_switch);
 
   // The tools.
   action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds the bucket of the color of the plus sign (a row at the "

@@ -17,8 +17,6 @@
 #include <string>
 #include <vector>
 
-#include <QDialog>
-#include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
@@ -121,11 +119,10 @@ public:
 
   /*! asks for the coefficients of a conic, and adds it to the boundary or constructs the full curve.
    */
-  void enter_coefficients(QWidget* a_parent) {
-    QDialog dialog(a_parent);
-    dialog.setWindowTitle("Conic Coefficients");
-    auto* layout = new QFormLayout(&dialog);
-    layout->addRow(new QLabel("r x² + s y² + t xy + u x + v y + w = 0"));
+  void enter_coefficients() {
+    QWidget input;
+    auto* layout = new QFormLayout(&input);
+    layout->setContentsMargins(0, 0, 0, 0);
     const char* names[6] = {"r", "s", "t", "u", "v", "w"};
     QLineEdit* edits[6];
     for (int i = 0; i < 6; ++i) {
@@ -140,12 +137,9 @@ public:
     add_button->setChecked(true);
     layout->addRow(add_button);
     layout->addRow(full_button);
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    layout->addRow(buttons);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
     Rational c[6];
+    QPushButton* ok_button = nullptr;
     auto check = [&]() {
       bool ok = true;
       for (int i = 0; i < 6; ++i) ok = parse_rational(edits[i]->text(), c[i]) && ok;
@@ -156,11 +150,18 @@ public:
       bool is_ellipse = kind && (*kind == Conic_shape::Kind::KI_ELLIPSE);
       full_button->setEnabled(is_ellipse);
       if (! is_ellipse && full_button->isChecked()) add_button->setChecked(true);
-      buttons->button(QDialogButtonBox::Ok)->setEnabled(kind.has_value());
+      if (ok_button) ok_button->setEnabled(kind.has_value());
     };
-    for (auto* edit : edits) QObject::connect(edit, &QLineEdit::textChanged, &dialog, check);
+    for (auto* edit : edits) QObject::connect(edit, &QLineEdit::textChanged, &input, check);
     check();
-    if (dialog.exec() != QDialog::Accepted) return;
+    auto setup = [&](QPushButton* a_ok) {
+      ok_button = a_ok;
+      check();
+    };
+    if (! ask_input("Conic Coefficients",
+                    "The coefficients (integers, decimals, or fractions) of the conic\n"
+                    "r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0:", input, setup))
+      return;
     for (int i = 0; i < 6; ++i) m_last_coefficients[i] = edits[i]->text();
     if (full_button->isChecked()) generate_full(c);
     else add_conic(c);
@@ -361,7 +362,7 @@ private:
 
   /*! shows a warning.
    */
-  void message(const QString& a_text) { show_warning("Conic Arcs", a_text); }
+  void message(const QString& a_text) { show_warning("Conic Curves", a_text); }
 
   /*! emits the polygon bounded by the full ellipse of the given coefficients.
    */

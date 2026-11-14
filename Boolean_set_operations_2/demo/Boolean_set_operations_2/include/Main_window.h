@@ -271,6 +271,10 @@ protected slots:
    */
   void open(QString a_file_name);
 
+  /*! loads polygons of a family from a file chosen by the user.
+   */
+  void open_family(Curve_type a_type);
+
 public slots:
   /*! adds a polygon constructed by one of the inputs to the Draw/Insert bucket.
    */
@@ -335,26 +339,6 @@ public slots:
   /*! shows or hides the Log panel.
    */
   void show_log_panel(bool a_checked);
-
-  /*! loads linear polygons from a file.
-   */
-  void open_linear();
-
-  /*! loads polygons bounded by segments and circular arcs from a file.
-   */
-  void open_circular();
-
-  /*! loads Bezier polygons from a file.
-   */
-  void open_bezier();
-
-  /*! loads polygons bounded by polylines from a file.
-   */
-  void open_polyline();
-
-  /*! loads conic polygons from a file.
-   */
-  void open_conic();
 
   /*! zooms the view in or out.
    */

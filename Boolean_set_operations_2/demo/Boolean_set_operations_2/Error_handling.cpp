@@ -54,9 +54,11 @@ QWidget* message_parent() {
   return nullptr;
 }
 
-// Shows a message with an optional input widget below the text; the input dialog makes its OK button the default.
+// Shows a message with an optional input widget below the text; the input dialog makes its OK button the default
+// and calls a_setup with it. The input widget is released before the dialog is destroyed.
 QMessageBox::StandardButton run_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
-                                        QMessageBox::StandardButtons a_buttons, QAction* a_toggle, QWidget* a_input) {
+                                        QMessageBox::StandardButtons a_buttons, QAction* a_toggle, QWidget* a_input,
+                                        const std::function<void(QPushButton*)>& a_setup = {}) {
   QWidget* parent = message_parent();
   // Declared before the dialog, so that it outlives the check box using it.
   Visible_indicator_style indicator_style;
@@ -93,7 +95,8 @@ QMessageBox::StandardButton run_message(QMessageBox::Icon a_icon, const QString&
   text_label->setWordWrap(true);
   int width = 0;
   for (const auto& line : a_text.split('\n')) width = std::max(width, metrics.horizontalAdvance(line));
-  width = std::min(width + 2, max_width);
+  // Wide enough for the title too, which the window manager would otherwise elide.
+  width = std::min(std::max(width + 2, 2 * metrics.horizontalAdvance(a_title)), max_width);
   text_label->setFixedWidth(width);
   text_label->setMinimumHeight(text_label->heightForWidth(width));
 
@@ -172,7 +175,9 @@ QMessageBox::StandardButton run_message(QMessageBox::Icon a_icon, const QString&
     dialog.move(over->mapToGlobal(over->rect().center()) - dialog.rect().center());
   }
 
+  if (a_input && a_setup) a_setup(yes_button);
   bool accepted = (dialog.exec() == QDialog::Accepted);
+  if (a_input) a_input->setParent(nullptr);
   if (check_box && check_box->isChecked()) a_toggle->setChecked(false);
   return (no_button && ! accepted) ? no : yes;
 }
@@ -183,19 +188,20 @@ QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString
                                          QMessageBox::StandardButtons a_buttons, QAction* a_toggle)
 { return run_message(a_icon, a_title, a_text, a_buttons, a_toggle, nullptr); }
 
+bool ask_input(const QString& a_title, const QString& a_text, QWidget& a_input,
+               const std::function<void(QPushButton*)>& a_setup) {
+  return run_message(QMessageBox::Question, a_title, a_text, QMessageBox::Ok | QMessageBox::Cancel, nullptr,
+                     &a_input, a_setup) == QMessageBox::Ok;
+}
+
 std::optional<int> ask_integer(const QString& a_title, const QString& a_text, int a_value, int a_min, int a_max) {
-  auto* spin_box = new QSpinBox;
-  spin_box->setRange(a_min, a_max);
-  spin_box->setValue(a_value);
-  spin_box->setMinimumWidth(spin_box->sizeHint().width() + spin_box->fontMetrics().horizontalAdvance("000"));
-  spin_box->selectAll();
-  // The dialog takes ownership of the spin box, so read the value before the dialog is destroyed.
-  int value = a_value;
-  QObject::connect(spin_box, &QSpinBox::valueChanged, [&value](int a_new) { value = a_new; });
-  auto button = run_message(QMessageBox::Question, a_title, a_text, QMessageBox::Ok | QMessageBox::Cancel, nullptr,
-                            spin_box);
-  if (button != QMessageBox::Ok) return std::nullopt;
-  return value;
+  QSpinBox spin_box;
+  spin_box.setRange(a_min, a_max);
+  spin_box.setValue(a_value);
+  spin_box.setMinimumWidth(spin_box.sizeHint().width() + spin_box.fontMetrics().horizontalAdvance("000"));
+  spin_box.selectAll();
+  if (! ask_input(a_title, a_text, spin_box)) return std::nullopt;
+  return spin_box.value();
 }
 
 void show_warning(const QString& a_title, const QString& a_text)

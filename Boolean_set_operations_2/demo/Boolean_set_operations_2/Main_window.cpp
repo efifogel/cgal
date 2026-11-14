@@ -230,14 +230,14 @@ Main_window::Main_window() :
   m_families = {{
     {Curve_type::CT_LINEAR, "linear", "Segments", action_insert_linear, m_linear_input,
      [this] { m_linear_input->reset(); }, action_open_linear, ".lps", &Main_window::read_linear},
-    {Curve_type::CT_CIRCULAR, "circular", "Line Segments and Circular Arcs", action_insert_circular, m_circular_input,
+    {Curve_type::CT_CIRCULAR, "circular", "Segments and Circular Arcs", action_insert_circular, m_circular_input,
      [this] { m_circular_input->reset(); }, action_open_circular, ".cps", &Main_window::read_circular},
     {Curve_type::CT_BEZIER, "Bezier", "Bezier Curves", action_insert_bezier, m_bezier_input,
      [this] { m_bezier_input->reset(); }, action_open_bezier, ".bps", &Main_window::read_bezier},
     {Curve_type::CT_POLYLINE, "polyline", "Polylines", action_insert_polyline, m_polyline_input,
      [this] { m_polyline_input->reset(); }, action_open_polyline, ".plps", &Main_window::read_polyline},
-    {Curve_type::CT_CONIC, "conic", "Conics", action_insert_conic, m_conic_input, [this] { m_conic_input->reset(); },
-     action_open_conic, ".qps", &Main_window::read_conic},
+    {Curve_type::CT_CONIC, "conic", "Conic Curves", action_insert_conic, m_conic_input,
+     [this] { m_conic_input->reset(); }, action_open_conic, ".qps", &Main_window::read_conic},
     {Curve_type::CT_ALGEBRAIC, "algebraic", "Algebraic Curves", action_insert_algebraic, m_algebraic_input, [] {},
      nullptr, nullptr, nullptr}}};
   // The Polyline/Polycurve button selects the polycurve family, whose subcurve family is selected by the buttons
@@ -259,11 +259,6 @@ Main_window::Main_window() :
     if (! m_updating_family_actions) start_inserting(checked ? Curve_type::CT_POLYLINE : Curve_type::CT_LINEAR);
   });
 
-  // Algebraic curves are entered as equations, which requires a parser.
-  action_insert_algebraic->setToolTip(polynomial_parser() ?
-                                      "Algebraic Curves: enter the equation of a curve, e.g., x^2 + y^2 == 25" :
-                                      "Algebraic Curves (not available: the demo was built without Lexy)");
-
   // The polycurve toggle, after the curve families.
   traits_tool_bar->addSeparator();
   traits_tool_bar->addAction(action_insert_polyline);
@@ -275,10 +270,10 @@ Main_window::Main_window() :
     bar->setIconSize(QSize(24, 24));
     auto* leading_separator = bar->addSeparator();
     auto* group = new QActionGroup(this);
-    auto* arcs = bar->addAction(curve_tool_icon("arcs"), "Line Segments and Circular Arcs");
-    arcs->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Click at each vertex; press and drag to bend a piece "
-                       "into an arc, as far from the piece (at its middle) as the cursor is from its line; right-click to "
-                       "close the polygon (drag to bend the last piece).</p>");
+    auto* arcs = bar->addAction(curve_tool_icon("arcs"), "Segments and Circular Arcs");
+    arcs->setWhatsThis("<b>Segments and Circular Arcs</b><p>Click at each vertex; press and drag to bend a piece "
+                       "into an arc, as far from the piece (at its middle) as the cursor is from its line; right-click "
+                       "to close the polygon (drag to bend the last piece).</p>");
     auto* circle = bar->addAction(curve_tool_icon("full circle"), "Circle");
     circle->setWhatsThis("<b>Circle</b><p>Press at the center and drag to the radius.</p>");
     for (auto* action : {arcs, circle}) {
@@ -329,7 +324,7 @@ Main_window::Main_window() :
     auto* coefficients = bar->addAction(curve_tool_icon("coefficients"), "Coefficients...");
     coefficients->setWhatsThis("<b>Coefficients</b><p>Enter a conic r x\u00b2 + s y\u00b2 + t xy + u x + v y + w = 0, "
                                "and add it to the boundary or construct the full ellipse.</p>");
-    QObject::connect(coefficients, &QAction::triggered, this, [this]() { m_conic_input->enter_coefficients(this); });
+    QObject::connect(coefficients, &QAction::triggered, this, [this]() { m_conic_input->enter_coefficients(); });
     conic_actions.push_back(coefficients);
 
     auto show_tools = [this, leading_separator, arcs, circle, conic_actions, algebraic_actions]() {
@@ -372,11 +367,11 @@ Main_window::Main_window() :
   QObject::connect(action_axis, &QAction::triggered, this, &Main_window::toggle_axes);
   QObject::connect(action_pan, &QAction::triggered, this, &Main_window::toggle_pan);
   QObject::connect(action_recenter, &QAction::triggered, this, &Main_window::zoom_to_fit);
-  QObject::connect(action_open_linear, &QAction::triggered, this, &Main_window::open_linear);
-  QObject::connect(action_open_circular, &QAction::triggered, this, &Main_window::open_circular);
-  QObject::connect(action_open_bezier, &QAction::triggered, this, &Main_window::open_bezier);
-  QObject::connect(action_open_polyline, &QAction::triggered, this, &Main_window::open_polyline);
-  QObject::connect(action_open_conic, &QAction::triggered, this, &Main_window::open_conic);
+  for (const auto& family : m_families) {
+    if (! family.m_open_action) continue;
+    Curve_type type = family.m_type;
+    QObject::connect(family.m_open_action, &QAction::triggered, this, [this, type]() { open_family(type); });
+  }
   QObject::connect(action_save_current_bucket, &QAction::triggered, this, &Main_window::save_draw_bucket);
   QObject::connect(action_add_color, &QAction::triggered, this, &Main_window::add_bucket);
   QObject::connect(action_minus_color, &QAction::triggered, this, &Main_window::remove_bucket);

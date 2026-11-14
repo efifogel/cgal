@@ -54,9 +54,9 @@
     <addaction name="separator" />
     <addaction name="action_open_linear" />
     <addaction name="action_open_circular" />
+    <addaction name="action_open_conic" />
     <addaction name="action_open_bezier" />
     <addaction name="action_open_polyline" />
-    <addaction name="action_open_conic" />
     <addaction name="separator" />
     <addaction name="action_save_current_bucket" />
     <addaction name="separator" />
@@ -68,7 +68,10 @@
     </property>
       <addaction name="action_insert_linear"/> 
       <addaction name="action_insert_circular"/>
+      <addaction name="action_insert_conic" />
       <addaction name="action_insert_bezier" />
+      <addaction name="action_insert_algebraic" />
+      <addaction name="separator"/>
       <addaction name="action_insert_polyline" />
       <addaction name="separator"/>
       <addaction name="action_add_color" />
@@ -1117,10 +1120,10 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/icons/resources/insert_circle.xpm</normaloff>:/cgal/icons/resources/insert_circle.xpm</iconset>
    </property>
    <property name="text">
-    <string>Line Segments and Circular Arcs</string>
+    <string>Segments and Circular Arcs</string>
    </property>
    <property name="toolTip" >
-    <string>Line Segments and Circular Arcs</string>
+    <string>Segments and Circular Arcs</string>
    </property>
   </action>
   <action name="action_visible">
@@ -1345,7 +1348,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
    </property>
    <property name="text" >
-    <string>&amp;Open Line Segment and Circular Arcs</string>
+    <string>Open Segments and Circular Arcs</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
@@ -1357,7 +1360,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
    </property>
    <property name="text" >
-    <string>&amp;Open Bezier Polygon</string>
+    <string>Open Bezier Curves</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
@@ -1369,7 +1372,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
    </property>
    <property name="text" >
-    <string>&amp;Open Polylines</string>
+    <string>Open Polylines</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
@@ -1381,7 +1384,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/fileToolbar/fileOpen.png</normaloff>:/cgal/fileToolbar/fileOpen.png</iconset>
    </property>
    <property name="text" >
-    <string>Open &amp;Conics</string>
+    <string>Open Conic Curves</string>
    </property>
   </action>
   <action name="action_save_current_bucket" >
@@ -1413,10 +1416,10 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
      <normaloff>:/cgal/icons/resources/insert_conic.png</normaloff>:/cgal/icons/resources/insert_conic.png</iconset>
    </property>
    <property name="text">
-    <string>Conic Arcs</string>
+    <string>Conic Curves</string>
    </property>
    <property name="toolTip">
-    <string>Conic Arcs</string>
+    <string>Conic Curves</string>
    </property>
   </action>
   <action name="action_insert_algebraic">
@@ -1434,7 +1437,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
     <string>Algebraic Curves</string>
    </property>
    <property name="toolTip">
-    <string>Algebraic Curves (not available yet)</string>
+    <string>Algebraic Curves</string>
    </property>
   </action>
   <action name="action_insert_bezier" >
@@ -1450,10 +1453,10 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
     </iconset>
    </property>
    <property name="text" >
-    <string>Bezier Polygons</string>
+    <string>Bezier Curves</string>
    </property>
    <property name="toolTip" >
-    <string>Bezier Polygons</string>
+    <string>Bezier Curves</string>
    </property>
   </action>
   <action name="action_insert_polyline" >
@@ -1472,7 +1475,7 @@ QLabel#visible_icon:hover, QLabel#draw_header:hover {
     <string>Polyline/Polycurve</string>
    </property>
    <property name="toolTip" >
-    <string>Polyline/Polycurve: curves that consist of curves of the family selected underneath (Segments only, for now)</string>
+    <string>Polyline/Polycurve</string>
    </property>
   </action>
  </widget>

@@ -35,29 +35,11 @@
 
 #include "Polygon_io.h"
 
-void Main_window::open_linear() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Segments"), data_directory(Curve_type::CT_LINEAR),
-                                    tr("Segment files (*.lps)")));
-}
-
-void Main_window::open_circular() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Line segments and circular arcs"),
-                                    data_directory(Curve_type::CT_CIRCULAR), tr("Circular curve files (*.cps)")));
-}
-
-void Main_window::open_bezier() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Bezier Polygon"), data_directory(Curve_type::CT_BEZIER),
-                                    tr("Bezier Curve files (*.bps)")));
-}
-
-void Main_window::open_conic() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Conics"), data_directory(Curve_type::CT_CONIC),
-                                    tr("Conic files (*.qps)")));
-}
-
-void Main_window::open_polyline() {
-  open(QFileDialog::getOpenFileName(this, tr("Open Polyline Polygon"), data_directory(Curve_type::CT_POLYLINE),
-                                    tr("Polyline Curve files (*.plps)")));
+void Main_window::open_family(Curve_type a_type) {
+  const auto& selected = family(a_type);
+  QString label = selected.m_label;
+  open(QFileDialog::getOpenFileName(this, "Open " + label, data_directory(a_type),
+                                    QString("%1 (*%2)").arg(label, selected.m_extension)));
 }
 
 template <typename Set, typename Read_boundary>
