@@ -334,11 +334,16 @@ Main_window::Main_window() :
                                       "Algebraic Curves: enter the equation of a curve, e.g., x^2 + y^2 == 25" :
                                       "Algebraic Curves (not available: the demo was built without Lexy)");
 
-  // The curve tool bar, underneath the curve families: the ways to construct curves of the selected family.
+  // The polycurve toggle, after the curve families.
+  traits_tool_bar->addSeparator();
+  traits_tool_bar->addAction(action_insert_polyline);
+
+  // The curve tool bar, next to the curve families: the ways to construct curves of the selected family.
   {
     using Circular_input = CGAL::Qt::Graphics_view_circular_polygon_input<Kernel>;
     auto* bar = new QToolBar;
     bar->setIconSize(QSize(24, 24));
+    auto* leading_separator = bar->addSeparator();
     auto* group = new QActionGroup(this);
     auto* arcs = bar->addAction(curve_tool_icon("arcs"), "Line Segments and Circular Arcs");
     arcs->setWhatsThis("<b>Line Segments and Circular Arcs</b><p>Click at each vertex; press and drag to bend a piece "
@@ -397,29 +402,21 @@ Main_window::Main_window() :
     QObject::connect(coefficients, &QAction::triggered, this, [this]() { m_conic_input->enter_coefficients(this); });
     conic_actions.push_back(coefficients);
 
-    // Keep the height of the bar when it shows no buttons.
-    bar->setMinimumHeight(bar->sizeHint().height());
-    auto show_tools = [this, arcs, circle, conic_actions, algebraic_actions]() {
+    auto show_tools = [this, leading_separator, arcs, circle, conic_actions, algebraic_actions]() {
       bool circular = action_insert_circular->isChecked();
+      bool conic = action_insert_conic->isChecked();
+      bool algebraic = action_insert_algebraic->isChecked();
+      leading_separator->setVisible(circular || conic || algebraic);
       arcs->setVisible(circular);
       circle->setVisible(circular);
-      for (auto* action : conic_actions)
-        action->setVisible(action_insert_conic->isChecked());
-      for (auto* action : algebraic_actions) action->setVisible(action_insert_algebraic->isChecked());
+      for (auto* action : conic_actions) action->setVisible(conic);
+      for (auto* action : algebraic_actions) action->setVisible(algebraic);
     };
     show_tools();
     QObject::connect(action_insert_circular, &QAction::toggled, this, show_tools);
     QObject::connect(action_insert_conic, &QAction::toggled, this, show_tools);
     QObject::connect(action_insert_algebraic, &QAction::toggled, this, show_tools);
-    vertical_layout->insertWidget(1, bar);
-  }
-
-  // The polycurve tool bar, above the curve families.
-  {
-    auto* bar = new QToolBar;
-    bar->setIconSize(traits_tool_bar->iconSize());
-    bar->addAction(action_insert_polyline);
-    vertical_layout->insertWidget(0, bar);
+    horizontal_layout->insertWidget(1, bar);
   }
   update_family_actions();
   setup_help();
@@ -563,6 +560,8 @@ void Main_window::set_number_of_buckets(std::size_t a_number) {
   int height = 155 + 30 * int(a_number - min_number_of_buckets);
   for (auto* line : {line0006, line1, line2, line3, line4, line5, line6, line0007, line06, line061, line062, line063})
     line->setGeometry(QRect(line->x(), 0, 7, height));
+  // The rows are not in a layout; the minimum height of their widget lets the scroll area scroll to the last one.
+  scroll_area_widget_contents_2->setMinimumHeight(m_first_row_y + 30 * int(a_number));
 
   // The buttons show the color of the bucket to add and of the bucket to remove (the last added one).
   bool can_add = (a_number < number_of_buckets);
