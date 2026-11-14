@@ -18,7 +18,6 @@
         <file>resources/undo.png</file>
         <file>resources/paste.png</file>
         <file>resources/draw.png</file>
-        <file>resources/add_bucket.svg</file>
     	<file>resources/insert_circle.xpm</file>
         <file>resources/insert_polyline.xpm</file>
         <file>resources/insert_conic.png</file>
@@ -47,9 +46,7 @@
         <file alias="simplification.png">resources/simplification.png</file>
         <file alias="duplicate">resources/editcopy.png</file>
         <file alias="check-on.png">resources/check-on.png</file>
-        <file alias="plus">resources/plus.png</file>
         <file alias="check-off.png">resources/check-off.png</file>
-        <file alias="minus">resources/minus.png</file>
         <file>resources/back.png</file>
 	    <file>resources/hand.png</file>
         <file>resources/front.png</file>
