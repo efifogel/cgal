@@ -52,9 +52,9 @@ struct Conic_arc_record {
 
 /*! obtains the exact description of a boundary. Consecutive x-monotone arcs of the same conic and the same orientation
  * are merged into one arc, so that every endpoint is shared with an arc of another conic, which is its auxiliary
- * conic. (Where the conics of two consecutive arcs coincide anyway, the auxiliary conic is the line through the points
- * of vertical tangency of the conic.) A segment must be given by the equation of its line.
- * \throw std::invalid_argument if a segment is given by its endpoints only.
+ * conic. A segment must be given by the equation of its line.
+ * \throw std::invalid_argument if a segment is given by its endpoints only, or if two consecutive arcs have the same
+ *        conic (and opposite orientations).
  */
 std::vector<Conic_arc_record> conic_arc_records(const Conic_polygon& a_boundary);
 
