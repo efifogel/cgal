@@ -261,6 +261,7 @@ std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is, bool
 
 void write_conic_boundary(std::ostream& a_os, const Conic_polygon& a_boundary) {
   auto records = conic_arc_records(a_boundary);
+  // Always all the digits: an approximate endpoint selects one of the intersections of two conics.
   auto precision = a_os.precision(17);
   a_os << "  " << records.size() << std::endl;
   for (const auto& record : records) {

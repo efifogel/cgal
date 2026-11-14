@@ -92,13 +92,16 @@ Bezier_curve read_bezier_curve(std::istream& is, bool a_double_format);
 std::vector<Bezier_X_monotone_curve> read_bezier_boundary(std::istream& a_is, bool a_double_format);
 
 /*! saves a polygon set to a file: a format line, the number of polygons with holes, and for each one the number of its
- * boundaries followed by the boundaries (the outer one first), each written by a given function. \return false if the
- * file cannot be written.
+ * boundaries followed by the boundaries (the outer one first), each written by a given function. The coordinates are
+ * written with a given number of significant digits; 17 digits write every double exactly. \return false if the file
+ * cannot be written.
  */
 template <typename Set, typename Write_boundary>
-bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary a_write_boundary) {
+bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary a_write_boundary,
+                   int a_precision = 17) {
   std::ofstream out_file(qPrintable(a_file_name));
   if (! out_file) return false;
+  out_file.precision(a_precision);
   std::vector<typename Set::Polygon_with_holes_2> pwhs;
   a_set.polygons_with_holes(std::back_inserter(pwhs));
   out_file << "DOUBLE" << std::endl << pwhs.size() << std::endl;

@@ -27,8 +27,6 @@
   Minkowski sum is not logged.
 
 4. Small items
-- The writers of .lps, .plps, .cps, and .bps use the default precision of the stream (6 digits), which rounds the
-  coordinates; use the precision of a double (17 digits), as the .qps writer does.
 - read_polyline_boundary() ignores the DOUBLE header (as read_linear_boundary() does).
 - The polycurve tool bar pushes the Operations panel down; in a small window the bucket rows scroll. The empty curve
   tool bar (for families without tools) keeps its height.
