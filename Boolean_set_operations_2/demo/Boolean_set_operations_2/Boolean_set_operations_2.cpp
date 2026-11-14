@@ -50,7 +50,6 @@ int main(int argc, char* argv[]) {
     return app.exec();
   }
   catch (const std::exception& e) {
-    std::string s = e.what();
-    show_error("Exception thrown during run of the program:\n" + s);
+    show_error("Error", QString("The program stopped: %1").arg(e.what()));
   }
 }

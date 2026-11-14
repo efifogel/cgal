@@ -45,6 +45,7 @@
 #include <QObject>
 #include <QPainter>
 #include <QProxyStyle>
+#include <QRadioButton>
 #include <QStyleOption>
 #include <QWidget>
 #include <QWindow>

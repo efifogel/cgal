@@ -28,22 +28,31 @@
  * Reporting errors: message boxes for warnings and errors, and the handler of failed CGAL assertions and preconditions.
  */
 
-#include <string>
+#include <QAction>
+#include <QMessageBox>
+#include <QString>
 
-/*! shows a warning; the program proceeds.
+/*! shows a message over the active window (or the main window), centered over its view if it has one. The text is
+ * plain and wrapped to a bounded width. The severity is conveyed by the icon: Critical for a failed operation, Warning
+ * for an operation that is not carried out because of the input, and Question for a question. The buttons may be
+ * Ok, Cancel, Yes, and No; the affirmative one is on the left, the negative one on the right, and neither is the
+ * default unless it is the only one. If a_toggle is given, a "Don't show this message again" check box is added;
+ * checking it unchecks a_toggle. \return the button the user clicked (Escape and the close box count as the
+ * negative button when one is offered, and as Ok otherwise).
  */
-void show_warning(std::string a_s);
+QMessageBox::StandardButton show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text,
+                                         QMessageBox::StandardButtons a_buttons = QMessageBox::Ok,
+                                         QAction* a_toggle = nullptr);
 
-/*! shows an error; the operation does not proceed.
+/*! shows a warning: the operation is not carried out because of the input.
  */
-void show_error(std::string a_s);
+void show_warning(const QString& a_title, const QString& a_text);
 
-/*! shows an error and throws a std::runtime_error.
+/*! shows an error: the operation failed.
  */
-void error(std::string a_s);
+void show_error(const QString& a_title, const QString& a_text);
 
-/*! handles a failed CGAL assertion or precondition by showing an error and throwing a std::runtime_error, except for a
- * few known harmless failures.
+/*! handles a failed CGAL assertion or precondition by showing an error and throwing a std::runtime_error.
  */
 void error_handler(const char* what, const char* expr, const char* file, int line, const char* msg);
 

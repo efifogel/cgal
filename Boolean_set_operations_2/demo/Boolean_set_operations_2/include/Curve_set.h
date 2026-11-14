@@ -233,7 +233,7 @@ public:
   /*! intersects the set with another set.
    */
   void intersect(const Rep_base& a_other) override
-  { guarded("intersect", [&] { m_set.intersection(cast(a_other).m_set); }); }
+  { guarded("intersection", [&] { m_set.intersection(cast(a_other).m_set); }); }
 
   /*! joins the set with another set.
    */
@@ -257,7 +257,7 @@ public:
   /*! replaces the set with the intersection of two sets.
    */
   void intersect(const Rep_base& a_first, const Rep_base& a_second) override
-  { guarded("intersect", [&] { m_set.intersection(cast(a_first).m_set, cast(a_second).m_set); }); }
+  { guarded("intersection", [&] { m_set.intersection(cast(a_first).m_set, cast(a_second).m_set); }); }
 
   /*! replaces the set with the union of two sets.
    */
@@ -291,7 +291,7 @@ private:
       a_operation();
     }
     catch (...) {
-      show_error(std::string("Exception thrown during boolean operation ") + a_name);
+      show_error("Operation Failed", QString("The %1 operation failed.").arg(a_name));
     }
   }
 

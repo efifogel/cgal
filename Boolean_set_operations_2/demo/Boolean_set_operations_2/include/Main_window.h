@@ -391,15 +391,6 @@ public slots:
    */
   void apply_move(bool a_checked);
 
-  /*! shows a message with a "Don't show this message again" check box. a_toggle is the Edit-menu action that controls
-   * whether the message is shown; checking the box unchecks it. Unlike a QMessageBox, OK is always on the left and
-   * Cancel (when offered) on the right, and neither is the default button. \return the button the user clicked (Escape
-   * and the close box count as Cancel when it is offered, and as OK otherwise).
-   */
-  QMessageBox::StandardButton
-  show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text, QAction* a_toggle,
-               QMessageBox::StandardButtons a_buttons = QMessageBox::Ok);
-
   /*! warns that the Draw/Insert bucket, where the result is added, is not empty. \return true if the user chooses to
    * continue.
    */
@@ -618,21 +609,9 @@ public slots:
    */
   std::optional<std::size_t> checked_bucket(const Column& a_column) const;
 
-  /*! shows information about 2D regularized Boolean set-operations.
+  /*! shows an About box with the HTML page of a given resource.
    */
-  void about_boolean_set_operations();
-
-  /*! shows information about CGAL.
-   */
-  void about_cgal();
-
-  /*! shows information about 2D Minkowski sums.
-   */
-  void about_minkowski_sums();
-
-  /*! shows information about the demo.
-   */
-  void about_demo();
+  void show_about(const QString& a_title, const QString& a_resource);
 
   /*! fits the view to the scene after the window is resized.
    */
@@ -749,18 +728,6 @@ private:
     sync_graphics_items();
     emit(changed());
   }
-
-  /*! asks the user a yes/no question. \return true if the answer is yes.
-   */
-  bool ask_user_yesno(const QString& a_title, const QString& a_question) {
-    return QMessageBox::warning(this, a_title, a_question, QMessageBox::Yes | QMessageBox::No, QMessageBox::No) ==
-      QMessageBox::Yes;
-  }
-
-  /*! shows a warning.
-   */
-  void ask_user_ok(std::string a_title, std::string a_question)
-  { QMessageBox::warning(this, QString(a_title.c_str()), QString(a_question.c_str())); }
 
   /*! adds a graphics item to the scene and connects it to the changed() signal.
    */

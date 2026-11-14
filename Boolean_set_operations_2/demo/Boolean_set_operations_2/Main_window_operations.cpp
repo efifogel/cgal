@@ -75,7 +75,7 @@ void Main_window::apply_clear(bool a_checked) {
   log_statements(program);
 
   for (auto i : buckets) states_stack.back().clear(i);
-  if (buckets.empty()) show_error("Please select color bucket to be cleaned!!!");
+  if (buckets.empty()) show_warning("Clear", "Check the buckets to clear.");
 
   action_clear_h->setChecked(false);
   model_changed();
@@ -104,7 +104,7 @@ void Main_window::apply_difference(bool /* a_checked */) {
   auto operands = checked_buckets(m_difference_column);
   if (operands.size() != 2) {
     action_difference_h->setChecked(false);
-    ask_user_ok("Operation Error", "The difference takes exactly two buckets.\n");
+    show_warning("Difference", "The difference takes exactly two buckets.");
     return;
   }
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
@@ -118,7 +118,7 @@ void Main_window::apply_symmetric_difference(bool /* a_checked */) {
   auto operands = checked_buckets(m_symmetric_difference_column);
   if (operands.size() != 2) {
     action_symmetric_difference_h->setChecked(false);
-    ask_user_ok("Operation Error", "The symmetric difference takes exactly two buckets.\n");
+    show_warning("Symmetric Difference", "The symmetric difference takes exactly two buckets.");
     return;
   }
   bool is_operand = std::find(operands.begin(), operands.end(), m_color_active) != operands.end();
@@ -157,7 +157,7 @@ void Main_window::apply_copy(bool a_checked) {
 
     states_stack.back().clear(result_index);
 
-    if (! source) show_warning("Please select a Bucket!!!");
+    if (! source) show_warning("Copy", "Check the bucket to copy.");
     else if (! states_stack.back().set(*source).is_empty())
       states_stack.back().result_set().assign(states_stack.back().set(*source));
 
@@ -193,7 +193,7 @@ void Main_window::apply_move(bool a_checked) {
 
     states_stack.back().clear(result_index);
 
-    if (! source) show_warning("Please select a Bucket!!!");
+    if (! source) show_warning("Move", "Check the bucket to move.");
     else if (! states_stack.back().set(*source).is_empty()) {
       auto& source_set = states_stack.back().set(*source);
       states_stack.back().result_set().assign(source_set);
@@ -271,19 +271,19 @@ void Main_window::apply_minkowski_sum(bool a_checked) {
             m_linear_input->m_hole = false;
             m_linear_input->m_is_mink = false;
           }
-          else ask_user_ok("Minkowski Sum Operation Error", "resultant polygon is unbounded\n");
+          else show_warning("Minkowski Sum", "The Minkowski sum is unbounded.");
           l_done = true;
           minkowski_sum_operated = true;
         }
         else {
           undo();
-          show_error("DISJOINT POLYGON SET ERROR\n\nCannot perform Minkowski Sum operation since Input Bucket contains "
-                     "more than disjoint polygons!!!");
+          show_warning("Minkowski Sum", "Each operand of the Minkowski sum must be a single polygon (possibly with "
+                       "holes).");
           m_disjoint = false;
         }
       }
       else {
-        ask_user_ok("Minkowski Sum Operation Error", "Function supports 2 polygon as input\n");
+        show_warning("Minkowski Sum", "The Minkowski sum takes exactly two buckets.");
       }
     }
 
@@ -296,14 +296,13 @@ void Main_window::apply_minkowski_sum(bool a_checked) {
 }
 
 bool Main_window::show_not_empty_warning() {
-  return show_message(QMessageBox::Information, "Warning: Bucket Not Empty", "The Draw/Insert bucket is not empty. "
-                      "Add the result to it?", action_warn_not_empty, QMessageBox::Ok | QMessageBox::Cancel) ==
-    QMessageBox::Ok;
+  return show_message(QMessageBox::Question, "Bucket Not Empty", "The Draw/Insert bucket is not empty. Add the result "
+                      "to it?", QMessageBox::Ok | QMessageBox::Cancel, action_warn_not_empty) == QMessageBox::Ok;
 }
 
 void Main_window::show_operand_error() {
-  show_message(QMessageBox::Critical, "Error: Operation Aborted", "The result cannot be stored in a non-empty operand.",
-               action_error_operand);
+  show_message(QMessageBox::Warning, "Operation Aborted", "The result cannot be stored in a non-empty operand.",
+               QMessageBox::Ok, action_error_operand);
 }
 
 void Main_window::

@@ -27,7 +27,6 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMessageBox>
 #include <QPainterPath>
 #include <QPushButton>
 #include <QRadioButton>
@@ -38,6 +37,7 @@
 
 #include "Typedefs.h"
 #include "Qt6/Conic_curves.h"
+#include "Error_handling.h"
 
 namespace CGAL {
 namespace Qt {
@@ -223,7 +223,7 @@ private:
     const Rational& r = a_c[0], &s = a_c[1], &t = a_c[2], &u = a_c[3], &v = a_c[4], &w = a_c[5];
     if (CGAL::is_zero(r) && CGAL::is_zero(s) && CGAL::is_zero(t)) {
       if (CGAL::is_zero(u) && CGAL::is_zero(v)) {
-        r_error = "Not a curve";
+        r_error = "Not a curve.";
         return std::nullopt;
       }
       return Conic_shape::Kind::KI_LINE;
@@ -231,14 +231,14 @@ private:
     // The determinant of [[r, t/2, u/2], [t/2, s, v/2], [u/2, v/2, w]].
     Rational det = r*(s*w - v*v/4) - t/2*(t*w/2 - u*v/4) + u/2*(t*v/4 - s*u/2);
     if (CGAL::is_zero(det)) {
-      r_error = "Degenerate (a pair of lines or a point)";
+      r_error = "Degenerate (a pair of lines or a point).";
       return std::nullopt;
     }
     CGAL::Sign disc = CGAL::sign(4*r*s - t*t);
     if (disc == CGAL::ZERO) return Conic_shape::Kind::KI_PARABOLA;
     if (disc == CGAL::NEGATIVE) return Conic_shape::Kind::KI_HYPERBOLA;
     if (CGAL::sign((r + s) * det) != CGAL::NEGATIVE) {
-      r_error = "An ellipse with no real points";
+      r_error = "An ellipse with no real points.";
       return std::nullopt;
     }
     return Conic_shape::Kind::KI_ELLIPSE;
@@ -361,7 +361,7 @@ private:
 
   /*! shows a warning.
    */
-  void message(const QString& a_text) { QMessageBox::warning(qobject_cast<QWidget*>(parent()), "Conic Arcs", a_text); }
+  void message(const QString& a_text) { show_warning("Conic Arcs", a_text); }
 
   /*! emits the polygon bounded by the full ellipse of the given coefficients.
    */
@@ -369,7 +369,7 @@ private:
     std::string error;
     auto conic = make_conic(a_c, error);
     if (! conic || (conic->m_shape.kind() != Conic_shape::Kind::KI_ELLIPSE)) {
-      message(conic ? QString("A full curve must be an ellipse") : QString(error.c_str()));
+      message(conic ? QString("A full curve must be an ellipse.") : QString(error.c_str()));
       return;
     }
     Conic_traits traits;
@@ -385,7 +385,7 @@ private:
   bool append_x_monotone(const Conic_traits& a_traits, const Conic_curve& a_cv,
                          std::vector<Conic_X_monotone_curve>& r_xcvs) {
     if (! a_cv.is_valid()) {
-      message("Failed to construct a conic arc");
+      message("Failed to construct a conic arc.");
       return false;
     }
     std::vector<std::variant<Conic_point, Conic_X_monotone_curve>> objs;
@@ -406,7 +406,7 @@ private:
       return;
     }
     if (! m_conics.empty() && same_conic(m_conics.back(), *conic)) {
-      message("The conic is identical to the previous one");
+      message("The conic is identical to the previous one.");
       return;
     }
     m_conics.push_back(*conic);
@@ -422,7 +422,7 @@ private:
       if (m_vertices.empty() || ! equal(p, m_vertices.back())) m_candidates.push_back(p);
     }
     if (m_candidates.empty()) {
-      message("The conic does not meet the previous conic");
+      message("The conic does not meet the previous conic.");
       remove_last_conic();
       return;
     }
@@ -453,7 +453,7 @@ private:
     // The previous conic now has both of its vertices.
     std::size_t k = m_conics.size() - 2;
     if ((k > 0) && ! check_arc(k)) {
-      message("The two vertices of the conic are on different branches");
+      message("The two vertices of the conic are on different branches.");
       remove_last_conic();
     }
     next_arc();
@@ -504,7 +504,7 @@ private:
    */
   void close() {
     if (m_conics.size() < 2) {
-      message("A boundary needs at least two conics");
+      message("A boundary needs at least two conics.");
       return;
     }
     auto points = intersections(m_conics.back(), m_conics.front());
@@ -513,7 +513,7 @@ private:
       if (! equal(p, m_vertices.back()) && ! equal(p, m_vertices.front())) m_candidates.push_back(p);
     }
     if (m_candidates.empty()) {
-      message("The last conic does not meet the first conic");
+      message("The last conic does not meet the first conic.");
       return;
     }
     if (m_candidates.size() == 1) close_at(0);
@@ -529,7 +529,7 @@ private:
     m_closing = true;
     m_state = State::ST_IDLE;
     if (! check_arc(m_conics.size() - 1) || ! check_arc(0)) {
-      message("The two vertices of a conic are on different branches");
+      message("The two vertices of the conic are on different branches.");
       m_closing = false;
       m_arc_queue.clear();
       update_preview();
@@ -594,7 +594,7 @@ private:
         QPointF mid;
         auto polyline = arc(i, &mid);
         if (! polyline) {
-          message("Failed to determine a conic arc");
+          message("Failed to determine a conic arc.");
           return;
         }
         // The arc turns from its source, through its middle, to its target.

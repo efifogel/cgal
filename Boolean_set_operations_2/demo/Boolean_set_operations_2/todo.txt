@@ -30,7 +30,6 @@
 - The polycurve tool bar pushes the Operations panel down; in a small window the bucket rows scroll. The empty curve
   tool bar (for families without tools) keeps its height.
 - The message that switches the family uses the internal names ("linear polygons"), not the labels ("Segments").
-- help/about_demo.html is out of date (e.g., "Insert Linear polygon").
 - The GUI regression scripts (drawing, undo, files, console) are not in the repository; their references predate the
   new tool bar and the polyline marks.
 

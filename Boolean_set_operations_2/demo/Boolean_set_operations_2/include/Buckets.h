@@ -71,11 +71,4 @@ inline const char* bucket_name(std::size_t a_index) {
   return (a_index < number_of_buckets) ? names[a_index] : "result";
 }
 
-/*! obtains a string with its first letter capitalized.
- */
-inline QString capitalized(QString a_string) {
-  if (! a_string.isEmpty()) a_string[0] = a_string[0].toUpper();
-  return a_string;
-}
-
 #endif

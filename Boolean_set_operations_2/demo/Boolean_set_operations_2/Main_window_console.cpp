@@ -260,7 +260,7 @@ void Main_window::save_program() {
   if (file_name.isEmpty()) return;
   QSaveFile file(file_name);
   if (! file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-    show_error("Cannot open " + file_name.toStdString() + " for writing");
+    show_error("Save Program", "Cannot open " + file_name + " for writing.");
     return;
   }
   QTextStream out(&file);
@@ -268,5 +268,5 @@ void Main_window::save_program() {
   for (const auto& line : m_program) out << line.m_text << "\n";
   out.flush();
   if (! file.commit())
-    show_error("Cannot write " + file_name.toStdString());
+    show_error("Save Program", "Cannot write " + file_name + ".");
 }

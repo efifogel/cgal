@@ -94,10 +94,10 @@ bool Main_window::read_polygons(const QString& a_file_name, const char* a_kind, 
     }
   }
   catch (const std::exception& e) {
-    show_warning(std::string("Cannot read the ") + a_kind + " polygon set: " + e.what());
+    show_error("Open", QString("Cannot read the %1 polygon set: %2").arg(a_kind, e.what()));
   }
   catch (...) {
-    show_warning(std::string("Exception occurred during reading of ") + a_kind + " polygon set.");
+    show_error("Open", QString("Cannot read the %1 polygon set.").arg(a_kind));
   }
   return r_ok;
 }
@@ -125,7 +125,7 @@ bool Main_window::read_bezier(QString a_file_name) {
 void Main_window::save_draw_bucket() {
   const auto& selected = family(m_curve_type);
   if (! selected.m_extension) {
-    show_error("The polygons of " + std::string(selected.m_label) + " cannot be saved yet.");
+    show_warning("Save", QString("The polygons of %1 cannot be saved yet.").arg(selected.m_label));
     return;
   }
   QString label = selected.m_label;
@@ -146,10 +146,10 @@ void Main_window::save_draw_bucket() {
     }
   }
   catch (const std::exception& e) {
-    show_error("Cannot save the " + std::string(selected.m_name) + " polygon set: " + e.what());
+    show_error("Save", QString("Cannot save the %1 polygon set: %2").arg(selected.m_name, e.what()));
     return;
   }
-  if (! saved) show_error("Cannot save " + std::string(selected.m_name) + " polygon set.");
+  if (! saved) show_error("Save", QString("Cannot save the %1 polygon set.").arg(selected.m_name));
 }
 
 void Main_window::open(QString a_file_name) {

@@ -457,10 +457,16 @@ Main_window::Main_window() :
   QObject::connect(show_color_bucket, &QAction::toggled, this, &Main_window::show_operations_panel);
   QObject::connect(show_console, &QAction::toggled, this, &Main_window::show_console_panel);
   QObject::connect(show_info, &QAction::toggled, this, &Main_window::show_log_panel);
-  QObject::connect(action_about_bolop, &QAction::triggered, this, &Main_window::about_boolean_set_operations);
-  QObject::connect(action_about_cgal, &QAction::triggered, this, &Main_window::about_cgal);
-  QObject::connect(action_about_minkop, &QAction::triggered, this, &Main_window::about_minkowski_sums);
-  QObject::connect(action_about_demo, &QAction::triggered, this, &Main_window::about_demo);
+  QObject::connect(action_about_cgal, &QAction::triggered, this, &Main_window::popupAboutCGAL);
+  QObject::connect(action_about_bolop, &QAction::triggered, this, [this]() {
+    show_about("About 2D Regularized Boolean Set-Operations", ":/help/boolean_set_operations.html");
+  });
+  QObject::connect(action_about_minkop, &QAction::triggered, this, [this]() {
+    show_about("About 2D Minkowski Sums", ":/help/minkowski_sums.html");
+  });
+  QObject::connect(action_about_demo, &QAction::triggered, this, [this]() {
+    show_about("About the Demo", ":/help/about_demo.html");
+  });
   QObject::connect(action_complement_h, &QAbstractButton::toggled, this, &Main_window::apply_complement);
   QObject::connect(action_intersection_h, &QAbstractButton::toggled, this, &Main_window::apply_intersection);
   QObject::connect(action_union_h, &QAbstractButton::toggled, this, &Main_window::apply_union);
@@ -721,7 +727,7 @@ void Main_window::undo() {
     model_changed();
   }
   else {
-    show_error("Nothing to Undo!!!");
+    show_warning("Undo", "There is nothing to undo.");
   }
 }
 
@@ -1024,15 +1030,11 @@ void Main_window::set_input_pen(const QPen& a_pen) {
 
 bool Main_window::ensure_curve_type(Curve_type a_type) {
   if (m_curve_type == a_type) return true;
-  QString name = family(a_type).m_name;
   if (! are_all_sets_empty() &&
-      ! ask_user_yesno(capitalized(name) + " mode switch",
-                       QString("You are about to construct or load %1 polygons, but there are polygons of another "
-                               "family already loaded.\n"
-                               "Both families are not interoperable. In order to proceed, the polygons must be removed "
-                               "first.\n"
-                               "Once deleted you cannot undo the action.\n"
-                               "Yes to remove and proceed?\n").arg(name)))
+      show_message(QMessageBox::Question, "Switch Family",
+                   QString("Switching from %1 to %2 removes all the polygons, which cannot be undone. Proceed?")
+                     .arg(family(m_curve_type).m_label, family(a_type).m_label),
+                   QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
     return false;
   switch_sets_type(a_type);
   for (const auto& other : m_families) {
@@ -1100,77 +1102,6 @@ void Main_window::zoom_to_fit() {
   model_changed();
 }
 
-QMessageBox::StandardButton
-Main_window::show_message(QMessageBox::Icon a_icon, const QString& a_title, const QString& a_text, QAction* a_toggle,
-                         QMessageBox::StandardButtons a_buttons) {
-  // Declared before the dialog, so that it outlives the check box using it.
-  Visible_indicator_style indicator_style;
-  QDialog dialog(this);
-  dialog.setWindowTitle(a_title);
-
-  // The same icons QMessageBox uses.
-  QStyle::StandardPixmap pixmap = QStyle::SP_MessageBoxInformation;
-  switch (a_icon) {
-   case QMessageBox::Warning: pixmap = QStyle::SP_MessageBoxWarning; break;
-   case QMessageBox::Critical: pixmap = QStyle::SP_MessageBoxCritical; break;
-   case QMessageBox::Question: pixmap = QStyle::SP_MessageBoxQuestion; break;
-   default: break;
-  }
-  int icon_size = style()->pixelMetric(QStyle::PM_MessageBoxIconSize);
-  auto* icon_label = new QLabel;
-  icon_label->setPixmap(style()->standardIcon(pixmap).pixmap(icon_size));
-  icon_label->setAlignment(Qt::AlignTop);
-  auto* message_row = new QHBoxLayout;
-  message_row->addWidget(icon_label);
-  message_row->addSpacing(12);
-  message_row->addWidget(new QLabel(a_text), 1);
-
-  auto* check_box = new QCheckBox("Don't show this message again");
-  // Make the check box visible on dark themes, like those of the Operations panel.
-  check_box->setStyle(&indicator_style);
-
-  auto* ok_button = new QPushButton("OK");
-  QPushButton* cancel_button = a_buttons.testFlag(QMessageBox::Cancel) ? new QPushButton("Cancel") : nullptr;
-  auto* button_row = new QHBoxLayout;
-  if (cancel_button) {
-    button_row->addWidget(ok_button);
-    button_row->addStretch();
-    button_row->addWidget(cancel_button);
-  }
-  else {
-    button_row->addStretch();
-    button_row->addWidget(ok_button);
-  }
-  for (auto* button : {ok_button, cancel_button}) {
-    if (! button) continue;
-    button->setAutoDefault(false);
-    button->setDefault(false);
-  }
-  QObject::connect(ok_button, &QPushButton::clicked, &dialog, &QDialog::accept);
-  if (cancel_button)
-    QObject::connect(cancel_button, &QPushButton::clicked, &dialog, &QDialog::reject);
-
-  auto* layout = new QVBoxLayout(&dialog);
-  layout->addLayout(message_row);
-  layout->addSpacing(6);
-  layout->addWidget(check_box);
-  layout->addSpacing(6);
-  layout->addLayout(button_row);
-  // Fit the dialog to its content (no clipped text, not resizable).
-  layout->setSizeConstraint(QLayout::SetFixedSize);
-
-  // Center the dialog over the canvas. (Under native Wayland the compositor
-  // places dialogs and ignores the requested position.)
-  dialog.adjustSize();
-  QWidget* canvas = graphics_view->viewport();
-  QPoint center = canvas->mapToGlobal(canvas->rect().center());
-  dialog.move(center - dialog.rect().center());
-
-  bool accepted = (dialog.exec() == QDialog::Accepted);
-  if (check_box->isChecked()) a_toggle->setChecked(false);
-  return (cancel_button && ! accepted) ? QMessageBox::Cancel : QMessageBox::Ok;
-}
-
 bool Main_window::eventFilter(QObject* a_object, QEvent* a_event) {
   if (auto* label = qobject_cast<QLabel*>(a_object);
       label && (std::find(m_bucket_labels.begin(), m_bucket_labels.end(), label) != m_bucket_labels.end()))
@@ -1219,129 +1150,17 @@ void Main_window::resizeEvent(QResizeEvent* e) {
   model_changed();
 }
 
-void Main_window::about_cgal() {
-  QString title = "About CGAL";
-  QString html_resource_name = "help/about_CGAL.html";
-
-  QFile about_CGAL(html_resource_name);
-  about_CGAL.open(QIODevice::ReadOnly);
-  QString about_CGAL_txt = QTextStream(&about_CGAL).readAll();
-#ifdef CGAL_VERSION_STR
-  QString cgal_version(CGAL_VERSION_STR);
-#  ifdef CGAL_FAKE_PUBLIC_RELEASE
-  cgal_version.replace(QRegExp("-Ic?.*"), "");
-#  endif
-  about_CGAL_txt.replace("<!--CGAL_VERSION-->", QString(" (version %1)").arg(cgal_version));
-#endif
-  QMessageBox mb;
-  mb.setStyleSheet("QLabel{min-width: 550px; min-height: 250px;}");
-  mb.setWindowTitle(title);
-  mb.setText(about_CGAL_txt);
-  mb.addButton(QMessageBox::Ok);
-
-  QLabel* mb_label = mb.findChild<QLabel*>("qt_msgbox_label");
-  if (mb_label) {
-    mb_label->setTextInteractionFlags(mb_label->textInteractionFlags() | ::Qt::LinksAccessibleByMouse |
-                                      ::Qt::LinksAccessibleByKeyboard);
+void Main_window::show_about(const QString& a_title, const QString& a_resource) {
+  QFile file(a_resource);
+  if (! file.open(QIODevice::ReadOnly)) {
+    show_error(a_title, "Cannot open " + a_resource + ".");
+    return;
   }
-  else {
-    std::cerr << "Cannot find child \"qt_msgbox_label\" in QMessageBox\n"
-              << "  with Qt version " << QT_VERSION_STR << "!\n";
-  }
-  mb.exec();
-}
-
-void Main_window::about_minkowski_sums() {
-  QString title = "About 2D Minkowski sums";
-  QString html_resource_name = "help/About2DMinkowskisums.html";
-  QFile about_CGAL(html_resource_name);
-  about_CGAL.open(QIODevice::ReadOnly);
-  QString about_CGAL_txt = QTextStream(&about_CGAL).readAll();
-#ifdef CGAL_VERSION_STR
-  QString cgal_version(CGAL_VERSION_STR);
-#  ifdef CGAL_FAKE_PUBLIC_RELEASE
-  cgal_version.replace(QRegExp("-Ic?.*"), "");
-#  endif
-  about_CGAL_txt.replace("<!--CGAL_VERSION-->", QString(" (version %1)").arg(cgal_version));
-#endif
-  QMessageBox mb;
+  QMessageBox mb(QMessageBox::NoIcon, a_title, QTextStream(&file).readAll(), QMessageBox::Ok, this);
   mb.setStyleSheet("QLabel{min-width: 700px; min-height: 300px;}");
-  mb.setWindowTitle(title);
-  mb.setText(about_CGAL_txt);
-  mb.addButton(QMessageBox::Ok);
-
-  QLabel* mb_label = mb.findChild<QLabel*>("qt_msgbox_label");
-  if (mb_label) {
-    mb_label->setTextInteractionFlags(mb_label->textInteractionFlags() | ::Qt::LinksAccessibleByMouse |
-                                      ::Qt::LinksAccessibleByKeyboard);
-  }
-  else {
-    std::cerr << "Cannot find child \"qt_msgbox_label\" in QMessageBox\n"
-              << "  with Qt version " << QT_VERSION_STR << "!\n";
-  }
-  mb.exec();
-}
-
-void Main_window::about_boolean_set_operations() {
-
-  QString title = "About 2D Minkowski sums";
-  QString html_resource_name = "help/About2DRegularizedBooleanOperations.html";
-  QFile about_CGAL(html_resource_name);
-  about_CGAL.open(QIODevice::ReadOnly);
-  QString about_CGAL_txt = QTextStream(&about_CGAL).readAll();
-#ifdef CGAL_VERSION_STR
-  QString cgal_version(CGAL_VERSION_STR);
-#  ifdef CGAL_FAKE_PUBLIC_RELEASE
-  cgal_version.replace(QRegExp("-Ic?.*"), "");
-#  endif
-  about_CGAL_txt.replace("<!--CGAL_VERSION-->", QString(" (version %1)").arg(cgal_version));
-#endif
-  QMessageBox mb;
-  mb.setStyleSheet("QLabel{min-width: 700px; min-height: 300px;}");
-  mb.setWindowTitle(title);
-  mb.setText(about_CGAL_txt);
-  mb.addButton(QMessageBox::Ok);
-
-  QLabel* mb_label = mb.findChild<QLabel*>("qt_msgbox_label");
-  if (mb_label) {
-    mb_label->setTextInteractionFlags(mb_label->textInteractionFlags() | ::Qt::LinksAccessibleByMouse |
-                                      ::Qt::LinksAccessibleByKeyboard);
-  }
-  else {
-    std::cerr << "Cannot find child \"qt_msgbox_label\" in QMessageBox\n"
-              << "  with Qt version " << QT_VERSION_STR << "!\n";
-  }
-  mb.exec();
-}
-
-void Main_window::about_demo() {
-  QString title = "About Demo";
-  QString html_resource_name = "help/aboutThisDemo.html";
-  QFile about_CGAL(html_resource_name);
-  about_CGAL.open(QIODevice::ReadOnly);
-  QString about_CGAL_txt = QTextStream(&about_CGAL).readAll();
-#ifdef CGAL_VERSION_STR
-  QString cgal_version(CGAL_VERSION_STR);
-#  ifdef CGAL_FAKE_PUBLIC_RELEASE
-  cgal_version.replace(QRegExp("-Ic?.*"), "");
-#  endif
-  about_CGAL_txt.replace("<!--CGAL_VERSION-->", QString(" (version %1)").arg(cgal_version));
-#endif
-  QMessageBox mb;
-  mb.setStyleSheet("QLabel{min-width: 700px; min-height: 300px;}");
-  mb.setWindowTitle(title);
-  mb.setText(about_CGAL_txt);
-  mb.addButton(QMessageBox::Ok);
-
-  QLabel* mb_label = mb.findChild<QLabel*>("qt_msgbox_label");
-  if (mb_label) {
-    mb_label->setTextInteractionFlags(mb_label->textInteractionFlags() | ::Qt::LinksAccessibleByMouse |
-                                      ::Qt::LinksAccessibleByKeyboard);
-  }
-  else {
-    std::cerr << "Cannot find child \"qt_msgbox_label\" in QMessageBox\n"
-              << "  with Qt version " << QT_VERSION_STR << "!\n";
-  }
+  if (auto* label = mb.findChild<QLabel*>("qt_msgbox_label"))
+    label->setTextInteractionFlags(label->textInteractionFlags() | ::Qt::LinksAccessibleByMouse |
+                                   ::Qt::LinksAccessibleByKeyboard);
   mb.exec();
 }
 
@@ -1377,11 +1196,11 @@ void Main_window::enter_equation() {
   }
   catch (const std::exception& e) {
     QApplication::restoreOverrideCursor();
-    show_error("Cannot analyze the curve " + polynomial.toStdString() + " == 0: " + e.what());
+    show_error("Algebraic Curve", "Cannot analyze the curve " + polynomial + " == 0: " + e.what());
     return;
   }
   if (polygons.empty()) {
-    show_warning("The curve " + polynomial.toStdString() + " == 0 encloses no bounded region.");
+    show_warning("Algebraic Curve", "The curve " + polynomial + " == 0 encloses no bounded region.");
     return;
   }
   if (! ensure_curve_type(Curve_type::CT_ALGEBRAIC)) return;
@@ -1394,7 +1213,7 @@ void Main_window::enter_equation() {
                       .arg(bucket_name(m_color_active), polynomial)});
   }
   catch (const std::exception& e) {
-    show_error("Cannot add the region enclosed by " + polynomial.toStdString() + " == 0: " + e.what());
+    show_error("Algebraic Curve", "Cannot add the region enclosed by " + polynomial + " == 0: " + e.what());
     undo();
   }
   model_changed();

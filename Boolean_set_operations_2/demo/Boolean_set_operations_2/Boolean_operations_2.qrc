@@ -69,8 +69,6 @@
         <file>resources/help_button.png</file>
     </qresource>
     <qresource prefix="/cgal">
-        <file alias="about.html">resources/about.html</file>
-        <file alias="about_demo.html">help/about_demo.html</file>
         <file>resources/shader_with_light.v</file>
         <file>resources/shader_with_light.f</file>
         <file>resources/shader_without_light.f</file>
@@ -113,5 +111,15 @@
     </qresource>
     <qresource prefix="/cgal/cursors">
         <file>resources/rotate_around_cursor.png</file>
+    </qresource>
+    <qresource prefix="/help">
+        <file alias="about_demo.html">help/about_demo.html</file>
+        <file alias="boolean_set_operations.html">help/boolean_set_operations.html</file>
+        <file alias="minkowski_sums.html">help/minkowski_sums.html</file>
+        <file alias="A.png">resources/A.png</file>
+        <file alias="B.png">resources/B.png</file>
+        <file alias="intersection.png">resources/intersection.png</file>
+        <file alias="sym_diff.png">resources/sym_diff.png</file>
+        <file alias="crushed.png">resources/crushed.png</file>
     </qresource>
 </RCC>
