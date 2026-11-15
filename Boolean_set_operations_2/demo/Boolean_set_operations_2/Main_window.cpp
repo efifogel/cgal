@@ -26,6 +26,8 @@
  * the view, the messages, and the help dialogs.
  */
 
+#include <cmath>
+
 #include "Main_window.h"
 #include "Polynomial_dialog.h"
 #include "Polynomial_parser.h"
@@ -293,6 +295,10 @@ Main_window::Main_window() :
       {"circle", "Circular Arc", Conic_input::Mode::MO_CIRCLE, "Press at the center and drag to the radius."},
       {"ellipse", "Elliptic Arc", Conic_input::Mode::MO_ELLIPSE,
        "Click at the center, press at the end of an axis, and drag to the width of the other axis."},
+      {"parabola", "Parabolic Arc", Conic_input::Mode::MO_PARABOLA,
+       "Click at the vertex, press at a point of the axis, and drag to a point of the parabola."},
+      {"hyperbola", "Hyperbolic Arc", Conic_input::Mode::MO_HYPERBOLA,
+       "Click at the center, press at a vertex, and drag to a point of an asymptote."},
       {"full circle", "Full Circle", Conic_input::Mode::FULL_CIRCLE, "Press at the center and drag to the radius."},
       {"full ellipse", "Full Ellipse", Conic_input::Mode::FULL_ELLIPSE,
        "Click at the center, press at the end of an axis, and drag to the width of the other axis."}};
@@ -989,6 +995,28 @@ QIcon Main_window::curve_tool_icon(const QString& a_kind) {
     painter.drawEllipse(QPointF(0, 0), 10.5, 6);
     painter.resetTransform();
     if (a_kind == "ellipse") vertices << QPointF(3, 17) << QPointF(21, 7);
+  }
+  else if (a_kind == "hyperbola") {
+    // The two branches of x^2/9 - y^2/9 = 1 around (12, 12), for |y - 12| <= 10.
+    for (int branch : {-1, 1}) {
+      QPainterPath path;
+      for (int i = 0; i <= 20; ++i) {
+        double tau = -1.9 + 3.8 * i / 20;
+        QPointF p(12 + branch * 3 * std::cosh(tau), 12 + 3 * std::sinh(tau));
+        if (i == 0) path.moveTo(p);
+        else path.lineTo(p);
+      }
+      painter.drawPath(path);
+    }
+    vertices << QPointF(12 + 3 * std::cosh(1.0), 12 - 3 * std::sinh(1.0))
+             << QPointF(12 + 3 * std::cosh(1.0), 12 + 3 * std::sinh(1.0));
+  }
+  else if (a_kind == "parabola") {
+    // y = 20 - (x - 12)^2 / 5, from x = 2 to x = 22, as a quadratic Bezier curve.
+    QPainterPath path(QPointF(2, 0));
+    path.quadTo(QPointF(12, 40), QPointF(22, 0));
+    painter.drawPath(path);
+    vertices << QPointF(5, 10.2) << QPointF(19, 10.2);
   }
   else if (a_kind == "coefficients") {
     QFont font = painter.font();

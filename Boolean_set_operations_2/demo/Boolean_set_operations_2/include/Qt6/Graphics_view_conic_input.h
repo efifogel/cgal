@@ -51,8 +51,8 @@ public:
   using Algebraic = Conic_algebraic;
   using Kind = Conic_shape::Kind;
 
-  // The tools. The first three add a conic to the boundary under construction; the last two construct a full curve.
-  enum class Mode { MO_LINE, MO_CIRCLE, MO_ELLIPSE, FULL_CIRCLE, FULL_ELLIPSE };
+  // The tools. The first five add a conic to the boundary under construction; the last two construct a full curve.
+  enum class Mode { MO_LINE, MO_CIRCLE, MO_ELLIPSE, MO_PARABOLA, MO_HYPERBOLA, FULL_CIRCLE, FULL_ELLIPSE };
 
   /*! constructs from the parent object and the scene.
    */
@@ -293,6 +293,73 @@ private:
     r_c[4] = 2*(alpha*b1*c1 + beta*b2*c2);
     r_c[5] = alpha*c1*c1 + beta*c2*c2 - alpha*beta;
     return true;
+  }
+
+  /*! obtains the coefficients of the parabola with a given vertex, its axis through a_a, and through a_p:
+   * xi_p*eta^2 - eta_p^2*xi = 0, where xi and eta are the coordinates along d = a_a - a_vertex and its normal (both
+   * scaled by |d|), and (xi_p, eta_p) are those of a_p.
+   * \return false if there is no such parabola (a_p is on the axis or on the tangent at the vertex).
+   */
+  static bool parabola(QPointF a_vertex, QPointF a_a, QPointF a_p, Rational* r_c) {
+    Rational vx = to_rational(a_vertex, 0), vy = to_rational(a_vertex, 1);
+    Rational dx = to_rational(a_a, 0) - vx, dy = to_rational(a_a, 1) - vy;
+    Rational px = to_rational(a_p, 0) - vx, py = to_rational(a_p, 1) - vy;
+    Rational xi_p = dx*px + dy*py, eta_p = -dy*px + dx*py;
+    if (CGAL::is_zero(xi_p) || CGAL::is_zero(eta_p)) return false;
+    Rational alpha = xi_p, beta = eta_p*eta_p;
+    // xi = a1 x + b1 y + c1, eta = a2 x + b2 y + c2.
+    Rational a1 = dx, b1 = dy, c1 = -(dx*vx + dy*vy);
+    Rational a2 = -dy, b2 = dx, c2 = dy*vx - dx*vy;
+    r_c[0] = alpha*a2*a2;
+    r_c[1] = alpha*b2*b2;
+    r_c[2] = 2*alpha*a2*b2;
+    r_c[3] = 2*alpha*a2*c2 - beta*a1;
+    r_c[4] = 2*alpha*b2*c2 - beta*b1;
+    r_c[5] = alpha*c2*c2 - beta*c1;
+    return true;
+  }
+
+  /*! obtains the coefficients of the hyperbola with a given center, a vertex at a_a, and an asymptote through a_p:
+   * eta_p^2*xi^2 - xi_p^2*eta^2 = |d|^4*eta_p^2, where xi and eta are the coordinates along d = a_a - a_center and its
+   * normal (both scaled by |d|), and (xi_p, eta_p) are those of a_p.
+   * \return false if there is no such hyperbola (a_p is on the axis or on its normal through the center).
+   */
+  static bool hyperbola(QPointF a_center, QPointF a_a, QPointF a_p, Rational* r_c) {
+    Rational cx = to_rational(a_center, 0), cy = to_rational(a_center, 1);
+    Rational dx = to_rational(a_a, 0) - cx, dy = to_rational(a_a, 1) - cy;
+    Rational px = to_rational(a_p, 0) - cx, py = to_rational(a_p, 1) - cy;
+    Rational d2 = dx*dx + dy*dy, xi_p = dx*px + dy*py, eta_p = -dy*px + dx*py;
+    if (CGAL::is_zero(d2) || CGAL::is_zero(xi_p) || CGAL::is_zero(eta_p)) return false;
+    Rational alpha = eta_p*eta_p, beta = xi_p*xi_p, gamma = d2*d2*alpha;
+    // xi = a1 x + b1 y + c1, eta = a2 x + b2 y + c2.
+    Rational a1 = dx, b1 = dy, c1 = -(dx*cx + dy*cy);
+    Rational a2 = -dy, b2 = dx, c2 = dy*cx - dx*cy;
+    r_c[0] = alpha*a1*a1 - beta*a2*a2;
+    r_c[1] = alpha*b1*b1 - beta*b2*b2;
+    r_c[2] = 2*(alpha*a1*b1 - beta*a2*b2);
+    r_c[3] = 2*(alpha*a1*c1 - beta*a2*c2);
+    r_c[4] = 2*(alpha*b1*c1 - beta*b2*c2);
+    r_c[5] = alpha*c1*c1 - beta*c2*c2 - gamma;
+    return true;
+  }
+
+  /*! obtains the coefficients of the conic of a tool defined by three points (an ellipse, a parabola, or a
+   * hyperbola).
+   * \return false if there is no such conic.
+   */
+  bool three_point_conic(QPointF a_p0, QPointF a_p1, QPointF a_p2, Rational* r_c) const {
+    switch (m_mode) {
+     case Mode::MO_PARABOLA: return parabola(a_p0, a_p1, a_p2, r_c);
+     case Mode::MO_HYPERBOLA: return hyperbola(a_p0, a_p1, a_p2, r_c);
+     default: return ellipse(a_p0, a_p1, a_p2, r_c);
+    }
+  }
+
+  /*! determines whether the tool is defined by three points.
+   */
+  bool is_three_point_mode() const {
+    return (m_mode == Mode::MO_ELLIPSE) || (m_mode == Mode::FULL_ELLIPSE) || (m_mode == Mode::MO_PARABOLA) ||
+      (m_mode == Mode::MO_HYPERBOLA);
   }
 
   /*! obtains the coefficients of the line through two points.
@@ -656,7 +723,7 @@ private:
     return true;
   }
 
-  /*! handles a mouse release, which completes a circle, a line, or an ellipse.
+  /*! handles a mouse release, which completes a circle, a line, an ellipse, a parabola, or a hyperbola.
    * \return true if the event is handled.
    */
   bool mouse_release(QGraphicsSceneMouseEvent* a_event) {
@@ -686,16 +753,20 @@ private:
       update_preview();
     }
     // An ellipse is defined by clicking at its center, pressing at the end of one semi-axis, and releasing at the
-    // width of the other semi-axis. A release (almost) on the line of the first semi-axis defines no ellipse; then a
-    // third click defines it instead.
-    if (((m_mode == Mode::MO_ELLIPSE) || (m_mode == Mode::FULL_ELLIPSE)) && (m_clicks.size() == 2)) {
+    // width of the other semi-axis. A parabola is defined by clicking at its vertex, pressing at a point of its axis,
+    // and releasing at a point of the parabola. A hyperbola is defined by clicking at its center, pressing at a
+    // vertex, and releasing at a point of an asymptote. A release (almost) on the line of the axis (or, for a parabola
+    // or a hyperbola, on its normal through the first click) defines no conic; then a third click defines it instead.
+    if (is_three_point_mode() && (m_clicks.size() == 2)) {
       QPointF center = m_clicks[0], a = m_clicks[1], p = a_event->scenePos();
       QPointF d = a - center, q = p - center;
       double len = std::hypot(d.x(), d.y());
       if ((len == 0) || (std::abs(d.x()*q.y() - d.y()*q.x()) / len < 3 * pixel())) return true;
+      bool unbounded = (m_mode == Mode::MO_PARABOLA) || (m_mode == Mode::MO_HYPERBOLA);
+      if (unbounded && (std::abs(d.x()*q.x() + d.y()*q.y()) / len < 3 * pixel())) return true;
       m_clicks.clear();
       Rational c[6];
-      if (ellipse(center, a, p, c)) {
+      if (three_point_conic(center, a, p, c)) {
         if (m_mode == Mode::FULL_ELLIPSE) generate_full(c);
         else add_conic(c);
       }
@@ -720,9 +791,11 @@ private:
      case Mode::FULL_CIRCLE: return;          // completed on release
 
      case Mode::MO_ELLIPSE:
+     case Mode::MO_PARABOLA:
+     case Mode::MO_HYPERBOLA:
      case Mode::FULL_ELLIPSE:
       if (m_clicks.size() < 3) return;
-      if (ellipse(m_clicks[0], m_clicks[1], m_clicks[2], c)) {
+      if (three_point_conic(m_clicks[0], m_clicks[1], m_clicks[2], c)) {
         if (m_mode == Mode::FULL_ELLIPSE) generate_full(c);
         else add_conic(c);
       }
@@ -792,15 +865,27 @@ private:
      case Mode::FULL_CIRCLE: ok = (p != m_clicks[0]) && (circle(m_clicks[0], p, c), true); break;
 
      case Mode::MO_ELLIPSE:
+     case Mode::MO_PARABOLA:
+     case Mode::MO_HYPERBOLA:
      case Mode::FULL_ELLIPSE:
-      // The first semi-axis, from the center, follows the cursor until it is picked. Then the ellipse is shown
-      // instead, but while the cursor is on the line of the semi-axis (e.g., right after the second click) there is
-      // no ellipse, and the semi-axis is shown again.
-      ok = (m_clicks.size() == 2) && ellipse(m_clicks[0], m_clicks[1], p, c);
+      // The first semi-axis (or the axis of a parabola), from the center (or the vertex), follows the cursor until it
+      // is picked. Then the conic is shown instead, but while there is no conic (e.g., right after the second click,
+      // when the cursor is on the axis) the axis is shown again.
+      ok = (m_clicks.size() == 2) && three_point_conic(m_clicks[0], m_clicks[1], p, c);
       if (! ok) {
         path.moveTo(m_clicks[0]);
         path.lineTo((m_clicks.size() == 1) ? p : m_clicks[1]);
         return path;
+      }
+      // The asymptotes of a hyperbola, through the center and the cursor and its reflection in the axis.
+      if (m_mode == Mode::MO_HYPERBOLA) {
+        QPointF center = m_clicks[0], d = m_clicks[1] - center, q = p - center;
+        double d2 = d.x()*d.x() + d.y()*d.y();
+        QPointF along = d * ((d.x()*q.x() + d.y()*q.y()) / d2);
+        for (QPointF a : {q, 2 * along - q}) {
+          path.moveTo(center - a);
+          path.lineTo(center + a);
+        }
       }
       break;
     }
