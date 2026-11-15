@@ -45,8 +45,9 @@ void Main_window::setup_help() {
                                 "curves that are not necessarily segments) you construct and open.</p>" +
                                 family_switch);
   action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by segments. Click at each vertex; "
-                                     "right-click to close the polygon.</p>" + step_back +
-                                     family_switch);
+                                     "right-click to close the polygon. A segment that would intersect the boundary "
+                                     "is dashed and cannot be added, and a polygon whose closing segment would "
+                                     "intersect it cannot be closed.</p>" + step_back + family_switch);
   action_insert_circular->setWhatsThis("<b>Segments and Circular Arcs</b><p>Generalized polygons bounded by "
                                        "segments and circular arcs, or circles. Choose how to construct them in the "
                                        "tool bar underneath.</p>" + step_back + family_switch);

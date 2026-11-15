@@ -42,6 +42,7 @@
 
 #include "Typedefs.h"
 #include "Qt6/Linear_polygons.h"
+#include "Error_handling.h"
 
 namespace CGAL {
 namespace Qt {
@@ -143,9 +144,11 @@ public:
         break;
 
        case State::PIECE_ONGOING:
+        // An edge that would make the boundary self-intersecting is not added.
+        r_handled = true;
+        if (! is_valid_edge(m_p0, l_p, false)) break;
         m_p1 = l_p;
         m_state = State::HANDLE_ONGOING;
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -211,9 +214,15 @@ public:
       switch (m_state) {
        case State::PIECE_ONGOING:
         m_bound_rect = false;
+        r_handled = true;
+        if ((m_linear_polygon_pieces.size() > 1) &&
+            ! is_valid_edge(m_linear_polygon_pieces.back().target(), m_linear_polygon_pieces.front().source(), true)) {
+          show_warning("Segments", "The polygon cannot be closed: the segment from the last vertex to the first one "
+                       "would intersect the boundary. Add vertices, or press Escape to remove the last segment.");
+          break;
+        }
         commit_curr_linear_polygon();
         restart();
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -302,11 +311,37 @@ public:
     update_ongoing_piece();
   }
 
-  /*! updates the edge under construction.
+  /*! determines whether the segment from a_source to a_target can be added to the boundary under construction without
+   * making it self-intersecting: it may meet the last segment only at a_source (their common vertex), and, if it closes
+   * the boundary, the first segment only at a_target (the first vertex); it must not meet the other segments.
+   */
+  bool is_valid_edge(const Point& a_source, const Point& a_target, bool a_closing) const {
+    using Segment = typename Kernel::Segment_2;
+    if (a_source == a_target) return true;
+    Segment edge(a_source, a_target);
+    std::size_t n = m_linear_polygon_pieces.size();
+    for (std::size_t i = 0; i < n; ++i) {
+      const auto& piece = m_linear_polygon_pieces[i];
+      Segment other(piece.source(), piece.target());
+      auto res = CGAL::intersection(edge, other);
+      if (! res) continue;
+      const Point* p = std::get_if<Point>(&*res);
+      // An overlap is never allowed.
+      if (! p) return false;
+      bool shared = ((i + 1 == n) && (*p == a_source)) || (a_closing && (i == 0) && (*p == a_target));
+      if (! shared) return false;
+    }
+    return true;
+  }
+
+  /*! updates the edge under construction. It is dashed if it cannot be added (see is_valid_edge()).
    */
   void update_ongoing_piece() {
     if (m_ongoing_piece_ctr.size() > 0) m_ongoing_piece_ctr.clear();
     m_ongoing_piece_ctr.push_back(create_piece());
+    QPen pen = m_ongoing_piece_GI->pen();
+    pen.setStyle(is_valid_edge(m_p0, m_p1, false) ? ::Qt::SolidLine : ::Qt::DashLine);
+    m_ongoing_piece_GI->set_pen(pen);
     m_ongoing_piece_GI->modelChanged();
   }
 
