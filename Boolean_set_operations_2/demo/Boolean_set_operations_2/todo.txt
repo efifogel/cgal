@@ -15,8 +15,6 @@
   would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
 3. Python programs
-- Switching to another family removes the polygons but keeps their statements in the program, and keeps the undo
-  history, although the help says it is discarded.
 - The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
   Minkowski sum is not logged.
 

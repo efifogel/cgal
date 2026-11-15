@@ -48,7 +48,6 @@ Main_window::Main_window() :
   m_disjoint(false),
   m_pan(false),
   m_grid(false),
-  m_reset(false),
   m_state_num(0) {
   CGAL::set_error_handler(error_handler);
   CGAL::set_warning_handler(error_handler);
@@ -837,9 +836,7 @@ void Main_window::new_program() {
   action_symmetric_difference_h->setChecked(false);
   action_minkowski_sum_h->setChecked(false);
 
-  m_reset = true;
   start_inserting(m_curve_type);
-  m_reset = false;
 
   action_difference_h->setEnabled(true);
 
@@ -1090,6 +1087,13 @@ bool Main_window::ensure_curve_type(Curve_type a_type) {
                      .arg(family(m_curve_type).m_label, family(a_type).m_label),
                    QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
     return false;
+  // Discard the history (and the statements of the program that construct its polygons) and the console variables;
+  // the first state gets empty sets of the family.
+  while (states_stack.size() > 1) states_stack.pop_back();
+  m_state_num = states_stack.size();
+  action_undo->setEnabled(false);
+  trim_program_to_states();
+  m_variables.clear();
   switch_sets_type(a_type);
   for (const auto& other : m_families) {
     if (other.m_type != a_type) other.m_reset_input();
@@ -1121,11 +1125,6 @@ void Main_window::start_inserting(Curve_type a_type) {
   if (! ensure_curve_type(a_type)) {
     update_family_actions(! m_pan);
     return;
-  }
-  if (! m_pan && ! m_reset) {
-    // Switching the family discards the history; the first state gets empty sets of the family.
-    while (m_state_num > 1) undo();
-    if (states_stack.back().set(0).type() != a_type) switch_sets_type(a_type);
   }
   action_pan->setChecked(false);
   m_pan = false;

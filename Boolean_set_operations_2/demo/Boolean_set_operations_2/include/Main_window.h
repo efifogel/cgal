@@ -234,7 +234,6 @@ private:
   bool operand_error_warn;
   bool m_grid;
   bool m_pan;
-  bool m_reset;
   bool minkowski_sum_operated;
   bool m_disjoint;
 
