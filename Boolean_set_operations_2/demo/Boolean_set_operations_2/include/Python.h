@@ -193,24 +193,66 @@ inline QString to_python(const Linear_polygon& a_polygon) {
 }
 
 // The console language: a small subset of Python, matching the CGALPY
-// bindings (Polygon_set_2, Polygon_2, Point_2, FT):
+// bindings and the definitions of the programs (see program_header()):
 //   name = Polygon_set_2()            name = Polygon_set_2(other)
-//   name = Polygon_set_2(Polygon_2([Point_2(x, y), ...]))
-// where a coordinate is a number (read exactly, by its form: 1, 1.5, 1e-3),
-// FT("n/d"), FT(n, d), or FT(n).
+//   name = Polygon_set_2(polygon)
 //   name.op(arg)   name.op(set1, set2)  (op: join, intersection, difference,
 //                                         symmetric_difference)
 //   name.complement()   name.complement(other)   name.clear()
 //   name.is_empty()   name.is_plane()   name.number_of_polygons_with_holes()
 //   del name
-// Statements may be separated by ';'; '#' starts a comment.
+// where a polygon of Segments is
+//   Polygon_2([Point_2(x, y), ...])
+// a polygon of Segments and Circular Arcs is polygon([curve, ...]), each curve one of
+//   Curve_2(p, q)   Curve_2(p, m, q)   Curve_2(Circle_2(c, r2))
+// (r2 a number or squared_distance(p, q)), and a polygon of Conic Curves is polygon([curve, ...]), each curve one of
+//   ctr_curve(r, s, t, u, v, w)
+//   ctr_curve(r, s, t, u, v, w, Result.o, Point_2(x, y), r1, ..., w1, Point_2(x, y), r2, ..., w2)
+// (see Conic_arc_record; o is COUNTERCLOCKWISE, CLOCKWISE, or COLLINEAR, and the coefficients are integers). A
+// coordinate is a number (read exactly, by its form: 1, 1.5, 1e-3), FT("n/d"), FT(n, d), or FT(n). Statements may be
+// separated by ';'; '#' starts a comment.
+
+/*! A curve of a polygon(...) expression: a segment (two points), an arc through three points, a circle (its center
+ * and its squared radius, given as a number or as the squared distance between two points), or a conic arc.
+ */
+struct Py_curve {
+  enum class Kind { KI_SEGMENT, KI_ARC, KI_CIRCLE, KI_CONIC };
+  Kind m_kind = Kind::KI_SEGMENT;
+  std::vector<Kernel::Point_2> m_points;    // segment, arc; circle: the center (and the two points of the distance)
+  Kernel::FT m_squared_radius;              // circle
+  Conic_arc_record m_conic;                 // conic
+
+  /*! determines whether the curve is a curve of segments and circular arcs (and not a conic arc).
+   */
+  bool is_circular() const { return m_kind != Kind::KI_CONIC; }
+};
+
 struct Py_expr {
-  enum class Kind { KI_NAME, KI_POLYGON, POLYGON_SET };
+  enum class Kind { KI_NAME, KI_POLYGON, KI_CURVES, POLYGON_SET };
   Kind m_kind = Kind::KI_NAME;
   QString m_name;                                   // Name
   std::vector<std::pair<Kernel::FT, Kernel::FT>> m_points;  // Polygon
+  std::vector<Py_curve> m_curves;                   // polygon([...])
   std::shared_ptr<Py_expr> m_arg;                   // Polygon_set (optional)
 };
+
+/*! obtains a curve as normalized Python text.
+ */
+inline QString to_python(const Py_curve& a_curve) {
+  const auto& p = a_curve.m_points;
+  switch (a_curve.m_kind) {
+   case Py_curve::Kind::KI_SEGMENT: return QString("Curve_2(%1, %2)").arg(to_python(p[0]), to_python(p[1]));
+   case Py_curve::Kind::KI_ARC:
+    return QString("Curve_2(%1, %2, %3)").arg(to_python(p[0]), to_python(p[1]), to_python(p[2]));
+   case Py_curve::Kind::KI_CIRCLE: {
+     QString r2 = (p.size() == 3) ? QString("squared_distance(%1, %2)").arg(to_python(p[1]), to_python(p[2])) :
+       to_python(a_curve.m_squared_radius);
+     return QString("Curve_2(Circle_2(%1, %2))").arg(to_python(p[0]), r2);
+   }
+   case Py_curve::Kind::KI_CONIC: return to_python(a_curve.m_conic);
+  }
+  return QString();
+}
 
 struct Py_statement {
   enum class Kind { KI_ASSIGN, KI_CALL, KI_DELETE };
@@ -230,6 +272,11 @@ inline QString to_python(const Py_expr& a_expr) {
      for (const auto& [x, y] : a_expr.m_points)
        points << QString("Point_2(%1, %2)").arg(to_python(x), to_python(y));
      return QString("Polygon_2([%1])").arg(points.join(", "));
+   }
+   case Py_expr::Kind::KI_CURVES: {
+     QStringList curves;
+     for (const auto& curve : a_expr.m_curves) curves << to_python(curve);
+     return QString("polygon([%1])").arg(curves.join(", "));
    }
    case Py_expr::Kind::POLYGON_SET:
     return QString("Polygon_set_2(%1)")
@@ -399,6 +446,104 @@ private:
     return value;
   }
 
+  /*! consumes a point: Point_2(x, y).
+   */
+  Kernel::Point_2 point() {
+    if (identifier() != "Point_2") error("expected Point_2(x, y)" + near());
+    expect("(");
+    Kernel::FT x = number();
+    expect(",");
+    Kernel::FT y = number();
+    expect(")");
+    return Kernel::Point_2(x, y);
+  }
+
+  /*! consumes an integer (a coefficient of a conic).
+   */
+  Conic_integer integer() {
+    bool negative = accept("-");
+    if (! negative) accept("+");
+    static const QRegularExpression digits(R"(^\d+$)");
+    if ((peek().m_kind != Tok::TO_NUMBER) || ! digits.match(peek().m_text).hasMatch())
+      error("expected an integer coefficient" + near());
+    Conic_integer value(m_tokens[m_pos++].m_text.toStdString());
+    return negative ? Conic_integer(-value) : value;
+  }
+
+  /*! consumes the six coefficients of a conic, separated by commas.
+   */
+  void coefficients(Conic_arc_record::Coefficients& r_c) {
+    for (std::size_t i = 0; i < r_c.size(); ++i) {
+      if (i > 0) expect(",");
+      r_c[i] = integer();
+    }
+  }
+
+  /*! consumes a curve of a polygon(...) expression.
+   */
+  Py_curve curve() {
+    Py_curve c;
+    QString name = identifier();
+    if (name == "ctr_curve") {
+      c.m_kind = Py_curve::Kind::KI_CONIC;
+      auto& record = c.m_conic;
+      expect("(");
+      coefficients(record.m_conic);
+      if (accept(")")) {
+        record.m_full = true;
+        return c;
+      }
+      expect(",");
+      if (identifier() != "Result") error("expected Result.COUNTERCLOCKWISE, Result.CLOCKWISE, or Result.COLLINEAR");
+      expect(".");
+      QString orientation = identifier();
+      if (orientation == "COUNTERCLOCKWISE") record.m_orientation = CGAL::COUNTERCLOCKWISE;
+      else if (orientation == "CLOCKWISE") record.m_orientation = CGAL::CLOCKWISE;
+      else if (orientation == "COLLINEAR") record.m_orientation = CGAL::COLLINEAR;
+      else error("unknown orientation Result." + orientation);
+      for (auto* end : {&record.m_source, &record.m_target}) {
+        expect(",");
+        Kernel::Point_2 p = point();
+        (*end)[0] = CGAL::to_double(p.x());
+        (*end)[1] = CGAL::to_double(p.y());
+        expect(",");
+        coefficients((end == &record.m_source) ? record.m_source_conic : record.m_target_conic);
+      }
+      expect(")");
+      return c;
+    }
+    if (name != "Curve_2") error("expected Curve_2(...) or ctr_curve(...) instead of '" + name + "'");
+    expect("(");
+    if ((peek().m_kind == Tok::TO_IDENT) && (peek().m_text == "Circle_2")) {
+      ++m_pos;
+      c.m_kind = Py_curve::Kind::KI_CIRCLE;
+      expect("(");
+      c.m_points.push_back(point());
+      expect(",");
+      if ((peek().m_kind == Tok::TO_IDENT) && (peek().m_text == "squared_distance")) {
+        ++m_pos;
+        expect("(");
+        Kernel::Point_2 p = point();
+        expect(",");
+        Kernel::Point_2 q = point();
+        expect(")");
+        c.m_points.push_back(p);
+        c.m_points.push_back(q);
+        c.m_squared_radius = CGAL::squared_distance(p, q);
+      }
+      else c.m_squared_radius = number();
+      expect(")");
+      expect(")");
+      return c;
+    }
+    c.m_points.push_back(point());
+    while (accept(",")) c.m_points.push_back(point());
+    expect(")");
+    if (c.m_points.size() == 3) c.m_kind = Py_curve::Kind::KI_ARC;
+    else if (c.m_points.size() != 2) error("Curve_2 takes two points (a segment) or three (an arc)");
+    return c;
+  }
+
   /*! parses a statement.
    */
   Py_statement statement() {
@@ -445,21 +590,32 @@ private:
       expect("(");
       expect("[");
       while (! accept("]")) {
-        if (identifier() != "Point_2") error("expected Point_2(x, y)");
-        expect("(");
-        Kernel::FT x = number();
-        expect(",");
-        Kernel::FT y = number();
-        expect(")");
-        e.m_points.emplace_back(x, y);
+        Kernel::Point_2 p = point();
+        e.m_points.emplace_back(p.x(), p.y());
         if (! accept(",")) { expect("]"); break; }
       }
       expect(")");
       return e;
     }
+    if (name == "polygon") {
+      e.m_kind = Py_expr::Kind::KI_CURVES;
+      expect("(");
+      expect("[");
+      while (! accept("]")) {
+        e.m_curves.push_back(curve());
+        if (! accept(",")) { expect("]"); break; }
+      }
+      expect(")");
+      if (e.m_curves.empty()) error("a polygon needs at least one curve");
+      for (const auto& c : e.m_curves) {
+        if (c.is_circular() != e.m_curves.front().is_circular())
+          error("the curves of a polygon are either all Curve_2(...) or all ctr_curve(...)");
+      }
+      return e;
+    }
     if ((name == "Point_2") || (peek().m_text == "("))
       error(QString("unexpected '%1'; expected a polygon set name, "
-                    "Polygon_2([...]), or Polygon_set_2(...)").arg(name));
+                    "Polygon_2([...]), polygon([...]), or Polygon_set_2(...)").arg(name));
     e.m_kind = Py_expr::Kind::KI_NAME;
     e.m_name = name;
     return e;

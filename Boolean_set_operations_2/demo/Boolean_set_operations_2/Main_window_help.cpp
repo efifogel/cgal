@@ -118,8 +118,11 @@ void Main_window::setup_help() {
   graphics_view->setWhatsThis("<b>View</b><p>Construct polygons of the selected curve family here. The mouse wheel "
                               "zooms; the Pan button lets you drag the view.</p>");
   m_console_input->setWhatsThis("<b>Console</b><p>Type Python-style statements on the buckets (e.g., "
-                                "<tt>blue.intersection(red, black)</tt>) and press Enter. Only Segments are "
-                                "supported. Numbers are exact: 1, 1.5, 1e-3, <tt>FT(\"1/3\")</tt>, or "
+                                "<tt>blue.intersection(red, black)</tt>) and press Enter. Polygons are written "
+                                "as in the log: <tt>Polygon_2([Point_2(x, y), ...])</tt> for Segments, and "
+                                "<tt>polygon([...])</tt> of <tt>Curve_2(...)</tt> for Segments and Circular Arcs "
+                                "or of <tt>ctr_curve(...)</tt> for Conic Curves; the other families are not "
+                                "supported yet. Numbers are exact: 1, 1.5, 1e-3, <tt>FT(\"1/3\")</tt>, or "
                                 "<tt>FT(1, 3)</tt>.</p>");
   m_log->setWhatsThis("<b>Log</b><p>The program: the statements that reproduce the buckets, whether executed by the "
                       "buttons or in the console. Save Program writes it as a Python script.</p>");

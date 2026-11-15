@@ -94,7 +94,8 @@ Main_window::Main_window() :
     m_console_output->setFont(fixed);
     m_console_output->appendPlainText("Type Python-style statements on the polygon sets, e.g.,\n"
       "  red.join(Polygon_2([Point_2(0, 0), Point_2(40, 0), Point_2(0, 30)]))\n" "  blue.intersection(red, black)\n"
-      "  result = Polygon_set_2(red)");
+      "  result = Polygon_set_2(red)\n"
+      "Polygons of other families are written as in the Log.");
     layout->addWidget(m_console_output);
     auto* input_row = new QHBoxLayout;
     auto* prompt = new QLabel(">>>");

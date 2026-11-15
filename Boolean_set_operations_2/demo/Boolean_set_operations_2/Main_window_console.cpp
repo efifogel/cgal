@@ -64,23 +64,111 @@ Curve_set* Main_window::polygon_set(const QString& a_name) {
   return (it == m_variables.end()) ? nullptr : &it->second;
 }
 
-Linear_polygon_with_holes Main_window::polygon(const Py_expr& a_expr) const {
-  const auto& pts = a_expr.m_points;
-  if (pts.size() < 3)
-    throw std::runtime_error("a polygon needs at least 3 vertices");
-  CGAL::Polygon_2<Kernel> check;
-  for (const auto& [x, y] : pts) check.push_back(Kernel::Point_2(x, y));
-  if (! check.is_simple())
-    throw std::runtime_error("the polygon is not simple");
-  if (check.orientation() != CGAL::COUNTERCLOCKWISE)
-    throw std::runtime_error("the polygon is not counterclockwise oriented");
-  std::vector<Linear_curve> curves;
-  for (std::size_t i = 0; i < pts.size(); ++i) {
-    const auto& p = pts[i];
-    const auto& q = pts[(i + 1) % pts.size()];
-    curves.emplace_back(Kernel::Point_2(p.first, p.second), Kernel::Point_2(q.first, q.second));
+namespace {
+
+/*! checks that a polygon is closed, simple, and counterclockwise oriented. Throws a std::runtime_error otherwise (with
+ * a given hint if the orientation is wrong).
+ */
+template <typename Traits>
+void check_polygon(const typename Traits::Polygon_2& a_polygon, const std::string& a_orientation_hint = "") {
+  Traits traits;
+  if (a_polygon.is_empty()) throw std::runtime_error("the polygon has no curves");
+  if (! CGAL::is_closed_polygon(a_polygon, traits))
+    throw std::runtime_error("the boundary of the polygon is not closed");
+  if (! CGAL::is_simple_polygon(a_polygon, traits)) throw std::runtime_error("the polygon is not simple");
+  if (! CGAL::has_valid_orientation_polygon(a_polygon, traits))
+    throw std::runtime_error("the polygon is not counterclockwise oriented" + a_orientation_hint);
+}
+
+/*! constructs a curve of segments and circular arcs. Throws a std::runtime_error if it is degenerate.
+ */
+Circular_curve circular_curve(const Py_curve& a_curve) {
+  const auto& p = a_curve.m_points;
+  switch (a_curve.m_kind) {
+   case Py_curve::Kind::KI_SEGMENT:
+    if (p[0] == p[1]) throw std::runtime_error("the two points of a segment coincide");
+    return Circular_curve(p[0], p[1]);
+   case Py_curve::Kind::KI_ARC:
+    if (CGAL::collinear(p[0], p[1], p[2])) throw std::runtime_error("the three points of an arc are collinear");
+    return Circular_curve(p[0], p[1], p[2]);
+   case Py_curve::Kind::KI_CIRCLE:
+    if (CGAL::sign(a_curve.m_squared_radius) != CGAL::POSITIVE)
+      throw std::runtime_error("the squared radius of a circle must be positive");
+    return Circular_curve(Kernel::Circle_2(p[0], a_curve.m_squared_radius));
+   default: break;
   }
-  return Linear_polygon_with_holes(Linear_polygon(curves.begin(), curves.end()));
+  throw std::runtime_error("a conic arc is not a curve of Segments and Circular Arcs");
+}
+
+/*! determines whether a conic is an ellipse with real points (the only conics that are full curves).
+ */
+bool is_real_ellipse(const Conic_arc_record::Coefficients& a_c) {
+  const Conic_integer& r = a_c[0], &s = a_c[1], &t = a_c[2], &u = a_c[3], &v = a_c[4], &w = a_c[5];
+  if (CGAL::sign(4*r*s - t*t) != CGAL::POSITIVE) return false;
+  // 4 times the determinant of [[r, t/2, u/2], [t/2, s, v/2], [u/2, v/2, w]].
+  Conic_integer det4 = 4*r*s*w - r*v*v - t*t*w + t*u*v - s*u*u;
+  return CGAL::sign(r + s) * CGAL::sign(det4) == CGAL::NEGATIVE;
+}
+
+} // namespace
+
+Curve_set Main_window::polygon(const Py_expr& a_expr) const {
+  if ((a_expr.m_kind != Py_expr::Kind::KI_POLYGON) && (a_expr.m_kind != Py_expr::Kind::KI_CURVES))
+    throw std::runtime_error(("expected a polygon set name or a polygon instead of " + to_python(a_expr))
+                             .toStdString());
+  bool circular = (a_expr.m_kind == Py_expr::Kind::KI_CURVES) && a_expr.m_curves.front().is_circular();
+  Curve_type type = (a_expr.m_kind == Py_expr::Kind::KI_POLYGON) ? Curve_type::CT_LINEAR :
+    circular ? Curve_type::CT_CIRCULAR : Curve_type::CT_CONIC;
+  if (type != m_curve_type)
+    throw std::runtime_error(QString("%1 is a polygon of %2, but the polygon sets are of %3")
+                             .arg((type == Curve_type::CT_LINEAR) ? "Polygon_2([...])" : "polygon([...])",
+                                  family(type).m_label, family(m_curve_type).m_label).toStdString());
+  Curve_set r_set(type, QPen(), QBrush());
+  switch (type) {
+   case Curve_type::CT_LINEAR: {
+     const auto& pts = a_expr.m_points;
+     if (pts.size() < 3) throw std::runtime_error("a polygon needs at least 3 vertices");
+     CGAL::Polygon_2<Kernel> check;
+     for (const auto& [x, y] : pts) check.push_back(Kernel::Point_2(x, y));
+     if (! check.is_simple()) throw std::runtime_error("the polygon is not simple");
+     if (check.orientation() != CGAL::COUNTERCLOCKWISE)
+       throw std::runtime_error("the polygon is not counterclockwise oriented");
+     std::vector<Linear_curve> curves;
+     for (std::size_t i = 0; i < pts.size(); ++i) {
+       const auto& p = pts[i];
+       const auto& q = pts[(i + 1) % pts.size()];
+       curves.emplace_back(Kernel::Point_2(p.first, p.second), Kernel::Point_2(q.first, q.second));
+     }
+     r_set.linear().join(Linear_polygon_with_holes(Linear_polygon(curves.begin(), curves.end())));
+     break;
+   }
+   case Curve_type::CT_CIRCULAR: {
+     std::vector<Circular_curve> curves;
+     for (const auto& curve : a_expr.m_curves) curves.push_back(circular_curve(curve));
+     auto xcvs = x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
+     Circular_polygon pgn(xcvs.begin(), xcvs.end());
+     check_polygon<Circular_traits>(pgn);
+     r_set.circular().join(Circular_polygon_with_holes(pgn));
+     break;
+   }
+   default: {
+     std::vector<Conic_arc_record> records;
+     for (const auto& curve : a_expr.m_curves) {
+       if (curve.m_conic.m_full && ! is_real_ellipse(curve.m_conic.m_conic))
+         throw std::runtime_error("a full conic must be an ellipse with real points");
+       records.push_back(curve.m_conic);
+     }
+     auto xcvs = conic_boundary(records);
+     if (xcvs.empty()) throw std::runtime_error("a conic arc is invalid (e.g., an endpoint is not on its conic)");
+     Conic_polygon pgn(xcvs.begin(), xcvs.end());
+     // The coefficients of a full conic determine its orientation.
+     bool full = (records.size() == 1) && records.front().m_full;
+     check_polygon<Conic_gps_traits>(pgn, full ? "; negate the coefficients of the full conic to reverse it" : "");
+     r_set.conic().join(Conic_polygon_with_holes(pgn));
+     break;
+   }
+  }
+  return r_set;
 }
 
 QString Main_window::execute(const Py_statement& a_statement) {
@@ -147,15 +235,14 @@ void Main_window::execute_assign(const Py_statement& a_statement) {
     }
     log_statements({target + " = Polygon_set_2()"}, true);
   }
+  // The polygon is checked before the new state is pushed.
+  std::optional<Curve_set> pgn;
+  if (arg && (arg->m_kind != Py_expr::Kind::KI_NAME)) pgn = polygon(*arg);
   get_new_state(State_op::SO_CONSOLE);
   Curve_set* set = polygon_set(target);
-  if (! set) set = &m_variables.emplace(target, Curve_set(Curve_type::CT_LINEAR, QPen(), QBrush())).first->second;
+  if (! set) set = &m_variables.emplace(target, Curve_set(m_curve_type, QPen(), QBrush())).first->second;
   if (! arg) set->clear();
-  else if (arg->m_kind == Py_expr::Kind::KI_POLYGON) {
-    Linear_polygon_with_holes pgn = polygon(*arg);
-    set->clear();
-    set->linear().join(pgn);
-  }
+  else if (pgn) set->assign(*pgn);
   else {
     Curve_set& other = named_set(*arg);
     if (&other != set) set->assign(other);
@@ -181,11 +268,11 @@ QString Main_window::execute_call(const Py_statement& a_statement) {
   }
   if (method == "is_plane") {
     arity(0, 0);
-    return set->linear().is_plane() ? "True" : "False";
+    return set->is_plane() ? "True" : "False";
   }
   if (method == "number_of_polygons_with_holes") {
     arity(0, 0);
-    return QString::number(set->linear().number_of_polygons_with_holes());
+    return QString::number(set->number_of_polygons_with_holes());
   }
 
   // Actions; each one is undoable, so the sets are obtained again after the new state is pushed.
@@ -217,10 +304,10 @@ QString Main_window::execute_call(const Py_statement& a_statement) {
       get_new_state(State_op::SO_CONSOLE);
       apply(*op, existing_set(target), named_set(args[0]), named_set(args[1]));
     }
-    else if (args[0].m_kind == Py_expr::Kind::KI_POLYGON) {
-      Linear_polygon_with_holes pgn = polygon(args[0]);
+    else if (args[0].m_kind != Py_expr::Kind::KI_NAME) {
+      Curve_set pgn = polygon(args[0]);
       get_new_state(State_op::SO_CONSOLE);
-      apply(*op, existing_set(target).linear(), pgn);
+      apply(*op, existing_set(target), pgn);
     }
     else {
       named_set(args[0]);      // check the name
@@ -241,8 +328,9 @@ void Main_window::run_console_line(const QString& a_line) {
     m_console_history << a_line;
   }
   m_console_history_pos = m_console_history.size();
-  if (m_curve_type != Curve_type::CT_LINEAR) {
-    console_print("Error: the console supports linear polygons only");
+  if ((m_curve_type != Curve_type::CT_LINEAR) && (m_curve_type != Curve_type::CT_CIRCULAR) &&
+      (m_curve_type != Curve_type::CT_CONIC)) {
+    console_print(QString("Error: the console does not support %1 yet").arg(family(m_curve_type).m_label));
     return;
   }
   try {

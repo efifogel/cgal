@@ -70,9 +70,10 @@ inline void apply(Bucket_op a_op, Curve_set& r_set, const Curve_set& a_other) {
   }
 }
 
-/*! applies a Boolean operation (other than the complement) to a linear set and a polygon, in place.
+/*! applies a Boolean operation (other than the complement) to a set and a polygon of its family, in place.
  */
-inline void apply(Bucket_op a_op, Linear_polygon_set& r_set, const Linear_polygon_with_holes& a_polygon) {
+template <typename Set>
+void apply(Bucket_op a_op, Set& r_set, const typename Set::Polygon_with_holes_2& a_polygon) {
   switch (a_op) {
    case Bucket_op::BO_INTERSECTION: r_set.intersection(a_polygon); break;
    case Bucket_op::BO_JOIN: r_set.join(a_polygon); break;

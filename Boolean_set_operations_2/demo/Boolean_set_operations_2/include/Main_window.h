@@ -487,10 +487,12 @@ public slots:
    */
   Curve_set* polygon_set(const QString& a_name);
 
-  /*! obtains the polygon of a Polygon_2([...]) expression. It must be simple and counterclockwise oriented (as the
-   * bindings require).
+  /*! obtains a set (of the current family) that holds the polygon of a Polygon_2([...]) expression (Segments) or a
+   * polygon([...]) expression (Segments and Circular Arcs, or Conic Curves). The polygon must be closed, simple, and
+   * counterclockwise oriented (as the bindings require). Throws a std::runtime_error with a message otherwise, or if
+   * the polygon is not of the current family.
    */
-  Linear_polygon_with_holes polygon(const Py_expr& a_expr) const;
+  Curve_set polygon(const Py_expr& a_expr) const;
 
   /*! executes a console statement; statements that change a polygon set are undoable actions, and are logged. \return
    * the text to print (for queries), or an empty string. Throws a std::runtime_error with a message on an error.

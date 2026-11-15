@@ -15,8 +15,8 @@
   would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
 3. Python programs
-- The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
-  Minkowski sum is not logged.
+- The Bezier, polyline, and algebraic families are not logged, nor supported by the console; the Minkowski sum is
+  not logged.
 
 4. Library
 - General_polygon_set_2 over traits with open sides (e.g., Arr_algebraic_segment_traits_2) uses the unbounded planar

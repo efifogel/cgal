@@ -106,6 +106,14 @@ struct Rep_base {
    */
   virtual bool is_empty() const = 0;
 
+  /*! determines whether the set is the whole plane.
+   */
+  virtual bool is_plane() const = 0;
+
+  /*! obtains the number of polygons with holes of the set.
+   */
+  virtual std::size_t number_of_polygons_with_holes() const = 0;
+
   /*! clears the set.
    */
   virtual void clear() = 0;
@@ -217,6 +225,14 @@ public:
   /*! determines whether the set is empty.
    */
   bool is_empty() const override { return m_set.is_empty(); }
+
+  /*! determines whether the set is the whole plane.
+   */
+  bool is_plane() const override { return m_set.is_plane(); }
+
+  /*! obtains the number of polygons with holes of the set.
+   */
+  std::size_t number_of_polygons_with_holes() const override { return m_set.number_of_polygons_with_holes(); }
 
   /*! clears the set.
    */
@@ -366,6 +382,14 @@ public:
   /*! determines whether the set is empty.
    */
   bool is_empty() const { return ! m_rep || m_rep->is_empty(); }
+
+  /*! determines whether the set is the whole plane.
+   */
+  bool is_plane() const { return m_rep && m_rep->is_plane(); }
+
+  /*! obtains the number of polygons with holes of the set.
+   */
+  std::size_t number_of_polygons_with_holes() const { return m_rep ? m_rep->number_of_polygons_with_holes() : 0; }
 
   /*! makes the representation of the set its own before the set changes: the states of the undo stack share the
    * representations of the sets that do not change. If the representation is shared, it is replaced with a copy, or
