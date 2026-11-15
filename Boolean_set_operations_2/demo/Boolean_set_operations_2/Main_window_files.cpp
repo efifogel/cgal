@@ -28,6 +28,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <QFileInfo>
 
@@ -59,9 +60,17 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
       std::getline(in_file, format);
     }
 
+    // Read and check all the boundaries first, so that a bad file adds nothing.
+    struct Boundary {
+      typename Set::Polygon_2 m_polygon;
+      QString m_statement;                  // logged
+    };
+    using Traits = typename Set::Traits_2;
+    Traits traits;
+    QString bucket = bucket_name(m_color_active);
     unsigned int n_regions;
     if (! (in_file >> n_regions)) throw std::runtime_error("bad file");
-    QString bucket = bucket_name(m_color_active);
+    std::vector<std::vector<Boundary>> regions(n_regions);
     for (unsigned int r = 0; r < n_regions; ++r) {
       unsigned int n_boundaries;
       in_file >> n_boundaries;
@@ -70,30 +79,37 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
         if (! in_file) throw std::runtime_error("bad file");
         if (xcvs.empty()) continue;
         typename Set::Polygon_2 pgn(xcvs.begin(), xcvs.end());
+        QString which = (b == 0) ? QString("the outer boundary of polygon %1").arg(r + 1) :
+          QString("hole %1 of polygon %2").arg(b).arg(r + 1);
+        if (! CGAL::is_closed_polygon(pgn, traits)) throw std::runtime_error((which + " is not closed").toStdString());
+        if (! CGAL::is_simple_polygon(pgn, traits))
+          throw std::runtime_error((which + " intersects itself").toStdString());
         bool reversed = (pgn.orientation() == CGAL::CLOCKWISE);
         if (reversed) pgn.reverse_orientation();
-        typename Set::Polygon_with_holes_2 pwh(pgn);
         // The first boundary is the outer one; the others are holes.
-        if (b == 0) {
-          get_new_state(State_op::SO_DRAW);
-          states_stack.back().set(m_color_active).get<Set>().join(pwh);
-        }
-        else states_stack.back().set(m_color_active).get<Set>().difference(Set(pwh));
         QString operation = (b == 0) ? "join" : "difference";
-        QString python;
+        QString statement;
         try {
-          python = a_to_python(pgn, reversed);
+          QString python = a_to_python(pgn, reversed);
+          if (python.isEmpty()) statement = QString("# %1.%2(<%3 of %4>)").arg(bucket, operation, which, name);
+          else statement = QString("%1.%2(%3)").arg(bucket, operation, python);
         }
         catch (const std::invalid_argument& e) {
-          log_statements({QString("# The %1 polygon cannot be written exactly: %2").arg(bucket, e.what())});
-          continue;
+          statement = QString("# The %1 polygon cannot be written exactly: %2").arg(bucket, e.what());
         }
-        if (python.isEmpty()) {
-          python = (b == 0) ? QString("<polygon %1 of %2>").arg(r + 1).arg(name) :
-            QString("<hole %1 of polygon %2 of %3>").arg(b).arg(r + 1).arg(name);
-        }
-        QString statement = QString("%1.%2(%3)").arg(bucket, operation, python);
-        log_statements({python.startsWith('<') ? "# " + statement : statement});
+        regions[r].push_back({pgn, statement});
+      }
+    }
+
+    for (const auto& region : regions) {
+      if (region.empty()) continue;
+      get_new_state(State_op::SO_DRAW);
+      auto& set = states_stack.back().set(m_color_active).get<Set>();
+      for (std::size_t b = 0; b < region.size(); ++b) {
+        typename Set::Polygon_with_holes_2 pwh(region[b].m_polygon);
+        if (b == 0) set.join(pwh);
+        else set.difference(Set(pwh));
+        log_statements({region[b].m_statement});
       }
       r_ok = true;
     }

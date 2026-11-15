@@ -8,21 +8,17 @@
 - Other ways to choose the region of a curve (e.g., p <= 0, which may be unbounded) could be offered.
 - Semantic errors of equations (a divisor or an exponent that is not a constant) have no column.
 
-2. Valid boundaries
-- The inputs of all the families reject curves that would make the boundary self-intersecting, and the console rejects
-  such polygons, but polygons read from files are not checked.
-
-3. Polycurves
+2. Polycurves
 - Only Segments can be the subcurve family of Polyline/Polycurve. Next: polycurves of circle segments (.pcps), conics
   (.pqps), and Bezier curves (.pbps); then nested ones (.pplps, ...). The suffix scheme is documented in Polygon_io.h.
 - Let the user choose the vertices of a polyline polygon (e.g., a modifier key while clicking); the .plps format
   would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
-4. Python programs
+3. Python programs
 - The Bezier, polyline, and algebraic families are not logged, nor supported by the console; the Minkowski sum is
   not logged.
 
-5. Library
+4. Library
 - General_polygon_set_2 over traits with open sides (e.g., Arr_algebraic_segment_traits_2) uses the unbounded planar
   topology, where union, symmetric difference, and complement come out empty, and the precondition that validates the
   polygons fails in Arr_walk_along_line_point_location (number_of_outer_ccbs() == 1). Fix it, then drop
