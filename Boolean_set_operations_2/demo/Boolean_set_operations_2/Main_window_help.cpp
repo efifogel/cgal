@@ -119,7 +119,8 @@ void Main_window::setup_help() {
                               "zooms; the Pan button lets you drag the view.</p>");
   m_console_input->setWhatsThis("<b>Console</b><p>Type Python-style statements on the buckets (e.g., "
                                 "<tt>blue.intersection(red, black)</tt>) and press Enter. Only Segments are "
-                                "supported.</p>");
+                                "supported. Numbers are exact: 1, 1.5, 1e-3, <tt>FT(\"1/3\")</tt>, or "
+                                "<tt>FT(1, 3)</tt>.</p>");
   m_log->setWhatsThis("<b>Log</b><p>The program: the statements that reproduce the buckets, whether executed by the "
                       "buttons or in the console. Save Program writes it as a Python script.</p>");
 }

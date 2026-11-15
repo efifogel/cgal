@@ -29,7 +29,6 @@
  * and Py_statement), their conversion back to Python (to_python()), and its parser (Py_parser).
  */
 
-#include <charconv>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -43,15 +42,31 @@
 #include "Typedefs.h"
 #include "Conic_arcs.h"
 #include "Circular_source.h"
+#include "Polygon_io.h"
 
-/*! obtains the shortest decimal representation that reads back as the same double, so that the program reproduces the
- * exact coordinates.
+/*! obtains an exact number as a Python expression: an integer, or FT("n/d") for a rational number that is not an
+ * integer (the program defines FT; see program_header()). An integer of 2^53 or more in magnitude is written as FT("n")
+ * too, since the bindings convert a Python integer to a double.
  */
-inline QString to_python(double a_value) {
-  char buffer[64];
-  auto res = std::to_chars(buffer, buffer + sizeof(buffer), a_value);
-  return QString::fromLatin1(buffer, int(res.ptr - buffer));
+inline QString to_python(const Kernel::FT& a_value) {
+  using Exact = Kernel::FT::Exact_type;
+  using Traits = CGAL::Fraction_traits<Exact>;
+  Traits::Numerator_type num;
+  Traits::Denominator_type den;
+  Traits::Decompose()(CGAL::exact(a_value), num, den);
+  std::ostringstream os;
+  os << num;
+  if (den != 1) {
+    os << "/" << den;
+    return QString("FT(\"%1\")").arg(QString::fromStdString(os.str()));
+  }
+  if (CGAL::abs(num) < Traits::Numerator_type(9007199254740992.0)) return QString::fromStdString(os.str());
+  return QString("FT(\"%1\")").arg(QString::fromStdString(os.str()));
 }
+
+/*! obtains a double as an exact rational number (see to_python(const Kernel::FT&)).
+ */
+inline QString to_python(double a_value) { return to_python(Kernel::FT(a_value)); }
 
 /*! obtains an exact integer as a Python expression.
  */
@@ -61,11 +76,10 @@ inline QString to_python(const Conic_integer& a_value) {
   return QString::fromStdString(os.str());
 }
 
-/*! obtains a point (of double coordinates) as a Python expression.
+/*! obtains a point as a Python expression, with exact coordinates.
  */
-inline QString to_python(const Kernel::Point_2& a_p) {
-  return QString("Point_2(%1, %2)").arg(to_python(CGAL::to_double(a_p.x())), to_python(CGAL::to_double(a_p.y())));
-}
+inline QString to_python(const Kernel::Point_2& a_p)
+{ return QString("Point_2(%1, %2)").arg(to_python(a_p.x()), to_python(a_p.y())); }
 
 /*! obtains the boundary of a polygon bounded by segments and circular arcs as a Python expression, from what it was
  * constructed from (see Circular_boundary_source). The program defines polygon() and squared_distance() (see
@@ -134,6 +148,7 @@ inline QString program_header(Curve_type a_type) {
    case Curve_type::CT_CIRCULAR:
     return header +
       "from CGALPY_kerEpec_aos2Cs_bso2 import Ker, Bso2\n\n"
+      "FT = Ker.FT\n"
       "Point_2 = Ker.Point_2\n"
       "Circle_2 = Ker.Circle_2\n"
       "Polygon_set_2 = Bso2.General_polygon_set_2\n"
@@ -146,7 +161,8 @@ inline QString program_header(Curve_type a_type) {
 
    case Curve_type::CT_CONIC:
     return header +
-      "from CGALPY_kerEpec_aos2Conic_bso2 import Bso2, Result\n\n"
+      "from CGALPY_kerEpec_aos2Conic_bso2 import Aos2, Bso2, Result\n\n"
+      "FT = Aos2.Arr_conic_traits_2.Rational\n"
       "Polygon_set_2 = Bso2.General_polygon_set_2\n"
       "Traits = Polygon_set_2.Traits_2\n"
       "Point_2 = Traits.Point_2\n"
@@ -160,6 +176,7 @@ inline QString program_header(Curve_type a_type) {
   }
   return header +
     "from CGALPY_kerEpec_aos2Seg_bso2_pol2 import Ker, Pol2, Bso2\n\n"
+    "FT = Ker.FT\n"
     "Point_2 = Ker.Point_2\n"
     "Polygon_2 = Pol2.Polygon_2\n"
     "Polygon_set_2 = Bso2.Polygon_set_2\n\n";
@@ -170,16 +187,16 @@ inline QString program_header(Curve_type a_type) {
  */
 inline QString to_python(const Linear_polygon& a_polygon) {
   QStringList points;
-  for (auto cit = a_polygon.curves_begin(); cit != a_polygon.curves_end(); ++cit)
-    points << QString("Point_2(%1, %2)")
-      .arg(to_python(CGAL::to_double(cit->source().x())), to_python(CGAL::to_double(cit->source().y())));
+  for (auto cit = a_polygon.curves_begin(); cit != a_polygon.curves_end(); ++cit) points << to_python(cit->source());
   return QString("Polygon_2([%1])").arg(points.join(", "));
 }
 
 // The console language: a small subset of Python, matching the CGALPY
-// bindings (Polygon_set_2, Polygon_2, Point_2):
+// bindings (Polygon_set_2, Polygon_2, Point_2, FT):
 //   name = Polygon_set_2()            name = Polygon_set_2(other)
 //   name = Polygon_set_2(Polygon_2([Point_2(x, y), ...]))
+// where a coordinate is a number (read exactly, by its form: 1, 1.5, 1e-3),
+// FT("n/d"), FT(n, d), or FT(n).
 //   name.op(arg)   name.op(set1, set2)  (op: join, intersection, difference,
 //                                         symmetric_difference)
 //   name.complement()   name.complement(other)   name.clear()
@@ -190,7 +207,7 @@ struct Py_expr {
   enum class Kind { KI_NAME, KI_POLYGON, POLYGON_SET };
   Kind m_kind = Kind::KI_NAME;
   QString m_name;                                   // Name
-  std::vector<std::pair<double, double>> m_points;  // Polygon
+  std::vector<std::pair<Kernel::FT, Kernel::FT>> m_points;  // Polygon
   std::shared_ptr<Py_expr> m_arg;                   // Polygon_set (optional)
 };
 
@@ -256,7 +273,7 @@ public:
   }
 
 private:
-  enum class Tok { TO_IDENT, TO_NUMBER, TO_PUNCT, TO_END };
+  enum class Tok { TO_IDENT, TO_NUMBER, TO_STRING, TO_PUNCT, TO_END };
   struct Token { Tok m_kind; QString m_text; };
   std::vector<Token> m_tokens;
   std::size_t m_pos = 0;
@@ -270,6 +287,7 @@ private:
   void tokenize(const QString& a_line) {
     static const QRegularExpression number(R"(^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)");
     static const QRegularExpression ident(R"(^[A-Za-z_]\w*)");
+    static const QRegularExpression string(R"re(^("([^"]*)"|'([^']*)'))re");
     int i = 0;
     while (i < a_line.size()) {
       QChar c = a_line[i];
@@ -279,6 +297,12 @@ private:
       auto m = ident.matchView(rest);
       if (m.hasMatch()) {
         m_tokens.push_back({Tok::TO_IDENT, m.captured(0)});
+        i += m.capturedLength(0);
+        continue;
+      }
+      m = string.matchView(rest);
+      if (m.hasMatch()) {
+        m_tokens.push_back({Tok::TO_STRING, m.captured(2) + m.captured(3)});
         i += m.capturedLength(0);
         continue;
       }
@@ -331,15 +355,47 @@ private:
     return m_tokens[m_pos++].m_text;
   }
 
-  /*! consumes a (signed) number.
+  /*! converts a text to an exact number (see read_number()).
    */
-  double number() {
+  Kernel::FT exact_number(const QString& a_text) const {
+    std::istringstream is(a_text.trimmed().toStdString());
+    try {
+      Kernel::FT value = read_number(is);
+      if ((is >> std::ws).eof()) return value;
+    }
+    catch (const std::runtime_error&) {}
+    error(QString("'%1' is not a number").arg(a_text));
+  }
+
+  /*! consumes a (signed) number literal.
+   */
+  Kernel::FT literal() {
     bool negative = false;
     if (accept("-")) negative = true;
     else accept("+");
     if (peek().m_kind != Tok::TO_NUMBER) error("expected a number" + near());
-    double value = m_tokens[m_pos++].m_text.toDouble();
+    Kernel::FT value = exact_number(m_tokens[m_pos++].m_text);
     return negative ? -value : value;
+  }
+
+  /*! consumes a coordinate: a number literal, FT("n/d") (or any form of a number in the string), FT(n, d), or FT(n).
+   */
+  Kernel::FT number() {
+    if ((peek().m_kind != Tok::TO_IDENT) || (peek().m_text != "FT")) return literal();
+    ++m_pos;
+    expect("(");
+    Kernel::FT value;
+    if (peek().m_kind == Tok::TO_STRING) value = exact_number(m_tokens[m_pos++].m_text);
+    else {
+      value = literal();
+      if (accept(",")) {
+        Kernel::FT den = literal();
+        if (CGAL::is_zero(den)) error("division by zero in FT(n, d)");
+        value /= den;
+      }
+    }
+    expect(")");
+    return value;
   }
 
   /*! parses a statement.
@@ -390,9 +446,9 @@ private:
       while (! accept("]")) {
         if (identifier() != "Point_2") error("expected Point_2(x, y)");
         expect("(");
-        double x = number();
+        Kernel::FT x = number();
         expect(",");
-        double y = number();
+        Kernel::FT y = number();
         expect(")");
         e.m_points.emplace_back(x, y);
         if (! accept(",")) { expect("]"); break; }
