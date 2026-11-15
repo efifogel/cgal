@@ -15,13 +15,8 @@
   would need to mark them, since now it holds only the vertices and the reader subdivides again.
 
 3. Python programs
-- The circle-segment and conic programs were not run, because the bindings (CGALPY_kerEpec_aos2Cs_bso2,
-  CGALPY_kerEpec_aos2Conic_bso2) are not built yet. Check:
-  - Integer is constructed from a Python int only (init_implicit<int>), so coefficients beyond 32 bits fail;
-  - squared_distance() (defined in the program) relies on the arithmetic of Ker.FT;
-  - Traits.Point_2 of the conic traits is constructed from floats (Algebraic from double);
-  - Result.COLLINEAR (for segments) exists;
-  - polygon() filters the results of make_x_monotone with isinstance(o, X_monotone_curve_2).
+- Switching to another family removes the polygons but keeps their statements in the program, and keeps the undo
+  history, although the help says it is discarded.
 - The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
   Minkowski sum is not logged.
 

@@ -135,7 +135,8 @@ inline QString to_python(const Conic_polygon& a_polygon) {
 }
 
 /*! obtains the beginning of a program of a curve family: the import of the CGALPY bindings and the definitions that the
- * statements use. The bindings of a family are named by their kernel and traits, e.g., CGALPY_kerEpec_aos2Cs_bso2.
+ * statements use. The bindings of a family are named by their kernel and traits, e.g.,
+ * CGALPY_kerEpecInt_aos2Cs_bso2.
  */
 inline QString program_header(Curve_type a_type) {
   const QString polygon_function =
@@ -147,7 +148,7 @@ inline QString program_header(Curve_type a_type) {
   switch (a_type) {
    case Curve_type::CT_CIRCULAR:
     return header +
-      "from CGALPY_kerEpec_aos2Cs_bso2 import Ker, Bso2\n\n"
+      "from CGALPY_kerEpecInt_aos2Cs_bso2 import Ker, Bso2\n\n"
       "FT = Ker.FT\n"
       "Point_2 = Ker.Point_2\n"
       "Circle_2 = Ker.Circle_2\n"
