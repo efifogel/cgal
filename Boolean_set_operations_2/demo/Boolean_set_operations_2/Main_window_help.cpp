@@ -36,6 +36,8 @@ void Main_window::setup_help() {
 
   const QString step_back = "<p>Escape (or Backspace) undoes one step: it discards the curve under construction, if "
     "there is one, and otherwise removes the last curve.</p>";
+  const QString simple = "<p>The boundary must not intersect itself: a curve that would intersect it is dashed and "
+    "cannot be added, and the polygon cannot be closed by a curve that would intersect it.</p>";
   const QString family_switch = "<p>Switching to another family discards the polygons (after a confirmation) and the "
     "undo history.</p>";
 
@@ -45,15 +47,15 @@ void Main_window::setup_help() {
                                 "curves that are not necessarily segments) you construct and open.</p>" +
                                 family_switch);
   action_insert_linear->setWhatsThis("<b>Segments</b><p>Polygons bounded by segments. Click at each vertex; "
-                                     "right-click to close the polygon. A segment that would intersect the boundary "
-                                     "is dashed and cannot be added, and a polygon whose closing segment would "
-                                     "intersect it cannot be closed.</p>" + step_back + family_switch);
+                                     "right-click to close the polygon.</p>" + simple + step_back + family_switch);
   action_insert_circular->setWhatsThis("<b>Segments and Circular Arcs</b><p>Generalized polygons bounded by "
                                        "segments and circular arcs, or circles. Choose how to construct them in the "
-                                       "tool bar underneath.</p>" + step_back + family_switch);
+                                       "tool bar underneath.</p>" + simple + step_back + family_switch);
   action_insert_conic->setWhatsThis("<b>Conic Curves</b><p>Generalized polygons bounded by segments and arcs "
                                     "of circles, ellipses, parabolas, and hyperbolas, or by full circles and "
-                                    "ellipses. Choose how to construct them in the tool bar underneath.</p>" +
+                                    "ellipses. Choose how to construct them in the tool bar underneath.</p>"
+                                    "<p>The boundary must not intersect itself: an arc that would intersect it is "
+                                    "rejected (an arc of an ellipse that would is dashed and cannot be chosen).</p>" +
                                     step_back + family_switch);
   action_insert_bezier->setWhatsThis("<b>Bezier Curves</b><p>Generalized polygons bounded by Bezier curves.</p><ul>"
                                      "<li>Click to add a corner.</li>"
@@ -61,15 +63,15 @@ void Main_window::setup_help() {
                                      "handles, which bend the curves on both sides.</li>"
                                      "<li>Right-click to close the polygon; right-press and drag to smooth the last "
                                      "vertex.</li></ul>"
-                                     "<p>A polygon of clicks only is bounded by straight curves.</p>" + step_back +
-                                     family_switch);
+                                     "<p>A polygon of clicks only is bounded by straight curves.</p>" + simple +
+                                     step_back + family_switch);
   action_insert_algebraic->setWhatsThis("<b>Algebraic Curves</b><p>Generalized polygons bounded by algebraic "
                                         "curves, entered as equations with the Equation button underneath. Available "
                                         "only if the demo is built with Lexy.</p>" + family_switch);
   action_insert_polyline->setWhatsThis("<b>Polyline/Polycurve</b><p>Generalized polygons bounded by polycurves, "
                                        "that is, curves that consist of curves of the family selected underneath "
                                        "(Segments only, for now). Click at each vertex; right-click to close the "
-                                       "polygon.</p>" + step_back + family_switch);
+                                       "polygon.</p>" + simple + step_back + family_switch);
 
   // The tools.
   action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds the bucket of the color of the plus sign (a row at the "

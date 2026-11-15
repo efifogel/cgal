@@ -62,6 +62,7 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     Polynomial_parser.cpp
     include/Algebraic_curves.h
     include/Algebraic_polygons.h
+    include/Boundary_validity.h
     include/Bucket_operations.h
     include/Buckets.h
     include/Circular_source.h

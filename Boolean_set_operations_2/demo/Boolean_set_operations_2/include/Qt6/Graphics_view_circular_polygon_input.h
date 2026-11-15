@@ -39,6 +39,8 @@
 #include <QGraphicsSceneMouseEvent>
 
 #include "Circular_source.h"
+#include "Error_handling.h"
+#include "Boundary_validity.h"
 
 #include "Qt6/Circular_polygons.h"
 
@@ -254,9 +256,17 @@ public:
 
        case State::HANDLE_ONGOING:
         hide_handle();
+        r_handled = true;
+        // A piece that would make the boundary self-intersecting is discarded.
+        if (ongoing_piece() && ! is_valid_piece(*ongoing_piece(), false)) {
+          m_h = std::optional<Point>();
+          m_p1 = l_p;
+          m_state = State::PIECE_ONGOING;
+          update_ongoing_piece();
+          break;
+        }
         commit_ongoing_piece(l_p);
         m_state = State::PIECE_ENDED;
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -265,6 +275,19 @@ public:
     else if (a_event->button() == ::Qt::RightButton) {
       switch (m_state) {
        case State::HANDLE_ONGOING:
+        r_handled = true;
+        if (! is_valid_closing()) {
+          show_warning("Segments and Circular Arcs", "The polygon cannot be closed: the closing piece would "
+                       "intersect the boundary. Add pieces, bend the closing piece (drag while closing), or press "
+                       "Escape to remove the last piece.");
+          hide_handle();
+          m_h = std::optional<Point>();
+          m_last = m_last_circular = false;
+          m_p1 = l_p;
+          m_state = State::PIECE_ONGOING;
+          update_ongoing_piece();
+          break;
+        }
         if (m_last_circular) {
           hide_handle();
           commit_ongoing_piece(l_p);
@@ -272,7 +295,6 @@ public:
         m_bound_rect = false;
         commit_curr_circular_polygon();
         restart();
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -281,9 +303,9 @@ public:
     return r_handled;
   }
 
-  /*! handles a key press. Escape, Delete, and Backspace undo one step: they discard the piece (or circle) under construction (while
-   * the mouse button is pressed) if there is one, and otherwise remove the last piece of the boundary, or its first
-   * vertex if there is none.
+  /*! handles a key press. Escape, Delete, and Backspace undo one step: they discard the piece (or circle) under
+   * construction (while the mouse button is pressed) if there is one, and otherwise remove the last piece of the
+   * boundary, or its first vertex if there is none.
    * \return true if the event is handled.
    */
   bool key_press(QKeyEvent* a_event) {
@@ -380,11 +402,40 @@ public:
     update_ongoing_piece();
   }
 
-  /*! updates the piece under construction.
+  /*! determines whether a piece that starts at the last vertex can be added to the boundary under construction
+   * without making it self-intersecting (see is_valid_extension()). If a_closing is true, the piece ends at the first
+   * vertex.
+   */
+  bool is_valid_piece(const Circular_curve& a_piece, bool a_closing) const {
+    if (a_piece.source().equals(a_piece.target())) return true;
+    Gps_traits traits;
+    auto boundary = x_monotone_pieces(traits, m_circular_polygon_pieces.begin(), m_circular_polygon_pieces.end());
+    auto piece = x_monotone_pieces(traits, &a_piece, &a_piece + 1);
+    if (! a_closing || m_circular_polygon_pieces.empty())
+      return is_valid_extension(traits, boundary, piece, a_piece.source());
+    Arc_point first = m_circular_polygon_pieces.front().source();
+    return is_valid_extension(traits, boundary, piece, a_piece.source(), &first);
+  }
+
+  /*! determines whether the polygon can be closed: by the piece under construction if it is bent into an arc that
+   * ends at the first vertex, and by the segment from the last vertex to the first otherwise.
+   */
+  bool is_valid_closing() const {
+    if (m_circular_polygon_pieces.empty()) return true;
+    if (m_last_circular && ongoing_piece()) return is_valid_piece(*ongoing_piece(), true);
+    // The vertices are rational (see generate_circular_polygon()).
+    const auto& first = m_circular_polygon_pieces.front().source();
+    return is_valid_piece(Circular_curve(m_p0, Point(first.x().alpha(), first.y().alpha())), true);
+  }
+
+  /*! updates the piece under construction. It is dashed if it cannot be added (see is_valid_piece()).
    */
   void update_ongoing_piece() {
     if (m_ongoing_piece_ctr.size() > 0) m_ongoing_piece_ctr.clear();
     m_ongoing_piece_ctr.push_back(create_piece());
+    QPen pen = m_ongoing_piece_GI->pen();
+    pen.setStyle(is_valid_piece(m_ongoing_piece_ctr[0], m_last_circular) ? ::Qt::SolidLine : ::Qt::DashLine);
+    m_ongoing_piece_GI->set_pen(pen);
     m_ongoing_piece_GI->modelChanged();
   }
 

@@ -37,6 +37,8 @@
 
 #include "Qt6/Polyline_curves.h"
 #include "Polyline_boundary.h"
+#include "Error_handling.h"
+#include "Boundary_validity.h"
 
 namespace CGAL {
 namespace Qt {
@@ -142,9 +144,11 @@ public:
         break;
 
        case State::PIECE_ONGOING:
+        // An edge that would make the boundary self-intersecting is not added.
+        r_handled = true;
+        if (! is_valid_edge(m_p0, l_p, false)) break;
         m_p1 = l_p;
         m_state = State::HANDLE_ONGOING;
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -224,16 +228,29 @@ public:
     }
     else if (a_event->button() == ::Qt::RightButton) {
       switch (m_state) {
-       case State::HANDLE_ONGOING:
-        if (m_last_polyline) {
-          hide_handle();
-          commit_ongoing_piece(l_p);
-        }
-        m_bound_rect = false;
-        commit_curr_polyline_polygon();
-        restart();
-        r_handled = true;
-        break;
+       case State::HANDLE_ONGOING: {
+         r_handled = true;
+         auto points = vertices();
+         if ((points.size() > 2) && ! is_valid_edge(points.back(), points.front(), true)) {
+           show_warning("Polyline/Polycurve", "The polygon cannot be closed: the edge from the last vertex to the "
+                        "first one would intersect the boundary. Add vertices, or press Escape to remove the last "
+                        "edge.");
+           hide_handle();
+           m_last = m_last_polyline = false;
+           m_h = std::optional<Point>();
+           m_state = State::PIECE_ONGOING;
+           update_ongoing_piece();
+           break;
+         }
+         if (m_last_polyline) {
+           hide_handle();
+           commit_ongoing_piece(l_p);
+         }
+         m_bound_rect = false;
+         commit_curr_polyline_polygon();
+         restart();
+         break;
+       }
 
        default: break; //! \todo handle default case
       }
@@ -328,11 +345,20 @@ public:
     update_ongoing_piece();
   }
 
-  /*! updates the edge under construction.
+  /*! determines whether the edge from a_source to a_target can be added to the boundary under construction without
+   * making it self-intersecting (see is_valid_segment()).
+   */
+  bool is_valid_edge(const Point& a_source, const Point& a_target, bool a_closing) const
+  { return is_valid_segment<Kernel>(vertices(), a_source, a_target, a_closing); }
+
+  /*! updates the edge under construction. It is dashed if it cannot be added (see is_valid_edge()).
    */
   void update_ongoing_piece() {
     if (m_ongoing_piece_ctr.size() > 0) m_ongoing_piece_ctr.clear();
     m_ongoing_piece_ctr.push_back(create_piece());
+    QPen pen = m_ongoing_piece_GI->pen();
+    pen.setStyle(is_valid_edge(m_p0, m_p1, m_last_polyline) ? ::Qt::SolidLine : ::Qt::DashLine);
+    m_ongoing_piece_GI->set_pen(pen);
     m_ongoing_piece_GI->modelChanged();
   }
 

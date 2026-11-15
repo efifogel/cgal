@@ -37,6 +37,8 @@
 #include <QGraphicsSceneMouseEvent>
 
 #include "Qt6/Bezier_curves.h"
+#include "Error_handling.h"
+#include "Boundary_validity.h"
 
 namespace CGAL {
 namespace Qt {
@@ -228,9 +230,19 @@ public:
 
        case State::HANDLE_ONGOING:
         update_handles(l_p);
+        update_ongoing_piece();
+        r_handled = true;
+        // A curve that would make the boundary self-intersecting is discarded.
+        if (ongoing_piece() && ! is_valid_piece(*ongoing_piece(), false)) {
+          hide_handles();
+          m_h0 = m_h1 = std::optional<Point>();
+          m_p1 = l_p;
+          m_state = State::PIECE_ONGOING;
+          update_ongoing_piece();
+          break;
+        }
         commit_ongoing_piece(l_p);
         m_state = State::PIECE_ENDED;
-        r_handled = true;
         break;
 
        default: break; //! \todo handle default case
@@ -238,8 +250,22 @@ public:
     }
     else if (a_event->button() == ::Qt::RightButton) {
       switch (m_state) {
-       case State::HANDLE_ONGOING:
+       case State::HANDLE_ONGOING: {
         m_bound_rect = false;
+        auto closing = closing_piece();
+        if (closing && ! is_valid_piece(*closing, true)) {
+          show_warning("Bezier Curves", "The polygon cannot be closed: the closing curve would intersect the "
+                       "boundary. Add curves, change the closing curve (drag while closing), or press Escape to "
+                       "remove the last curve.");
+          hide_handles();
+          m_h0 = m_h1 = std::optional<Point>();
+          m_last = m_last_bezier = false;
+          m_p1 = l_p;
+          m_state = State::PIECE_ONGOING;
+          update_ongoing_piece();
+          r_handled = true;
+          break;
+        }
         if (m_last_bezier) {
           hide_handles();
           commit_ongoing_piece(l_p);
@@ -249,6 +275,7 @@ public:
         restart();
         r_handled = true;
         break;
+       }
 
        default: break; //! \todo handle default case
       }
@@ -361,11 +388,43 @@ public:
     return Bezier_curve(l_control_points, l_control_points + 2);
   }
 
-  /*! updates the curve under construction.
+  /*! determines whether a curve that starts at the last vertex can be added to the boundary under construction
+   * without making it self-intersecting (see is_valid_extension()); a curve that loops is not valid either. If
+   * a_closing is true, the curve ends at the first vertex.
+   */
+  bool is_valid_piece(const Bezier_curve& a_piece, bool a_closing) const {
+    if (is_degenerate(a_piece)) return true;
+    using Bezier_point = typename Traits::Point_2;
+    // One traits object for all the curves, whose x-monotone curves refer to its cache.
+    Traits traits;
+    auto boundary = x_monotone_pieces(traits, m_bezier_polygon_pieces.begin(), m_bezier_polygon_pieces.end());
+    auto piece = x_monotone_pieces(traits, &a_piece, &a_piece + 1);
+    auto to_point = [](const Point& a_p) { return Bezier_point(a_p.x(), a_p.y()); };
+    Bezier_point start = to_point(a_piece.control_point(0));
+    if (! a_closing || m_bezier_polygon_pieces.empty()) return is_valid_extension(traits, boundary, piece, start);
+    Bezier_point first = to_point(m_bezier_polygon_pieces.front().control_point(0));
+    return is_valid_extension(traits, boundary, piece, start, &first);
+  }
+
+  /*! obtains the curve that closes the boundary (see close_curr_boundary()), or nothing if there is none.
+   */
+  std::optional<Bezier_curve> closing_piece() const {
+    if (m_bezier_polygon_pieces.empty() || ! ongoing_piece()) return std::nullopt;
+    if (m_last_bezier) return *ongoing_piece();
+    std::vector<Point> l_control_points(ongoing_piece()->control_points_begin(), ongoing_piece()->control_points_end());
+    l_control_points.back() = m_bezier_polygon_pieces.front().control_point(0);
+    if (l_control_points.front() == l_control_points.back()) return std::nullopt;
+    return Bezier_curve(l_control_points.begin(), l_control_points.end());
+  }
+
+  /*! updates the curve under construction. It is dashed if it cannot be added (see is_valid_piece()).
    */
   void update_ongoing_piece() {
     if (m_ongoing_piece_ctr.size() > 0) m_ongoing_piece_ctr.clear();
     m_ongoing_piece_ctr.push_back(create_piece());
+    QPen pen = m_ongoing_piece_GI->pen();
+    pen.setStyle(is_valid_piece(m_ongoing_piece_ctr[0], m_last_bezier) ? ::Qt::SolidLine : ::Qt::DashLine);
+    m_ongoing_piece_GI->set_pen(pen);
     m_ongoing_piece_GI->modelChanged();
   }
 

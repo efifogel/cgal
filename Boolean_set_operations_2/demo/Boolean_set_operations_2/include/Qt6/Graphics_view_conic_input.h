@@ -13,6 +13,7 @@
 #define CGAL_QT6_GRAPHICS_VIEW_CONIC_INPUT_H
 
 #include <cmath>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -36,6 +37,7 @@
 #include "Typedefs.h"
 #include "Qt6/Conic_curves.h"
 #include "Error_handling.h"
+#include "Boundary_validity.h"
 
 namespace CGAL {
 namespace Qt {
@@ -90,6 +92,7 @@ public:
    */
   void reset() {
     m_conics.clear();
+    m_valid_arcs.clear();
     m_vertices.clear();
     m_ccw.clear();
     m_clicks.clear();
@@ -478,6 +481,7 @@ private:
       return;
     }
     m_conics.push_back(*conic);
+    m_valid_arcs.clear();
     m_ccw.push_back(-1);
     if (m_conics.size() == 1) {
       update_preview();
@@ -504,6 +508,7 @@ private:
   void remove_last_conic() {
     if (m_conics.empty()) return;
     m_conics.pop_back();
+    m_valid_arcs.clear();
     m_ccw.pop_back();
     if (m_vertices.size() >= m_conics.size() && ! m_vertices.empty()) m_vertices.pop_back();
     // The arc of the (now) last conic is no longer determined.
@@ -516,12 +521,17 @@ private:
    */
   void choose_vertex(std::size_t a_i) {
     m_vertices.push_back(m_candidates[a_i]);
+    m_valid_arcs.clear();
     m_candidates.clear();
     m_state = State::ST_IDLE;
     // The previous conic now has both of its vertices.
     std::size_t k = m_conics.size() - 2;
     if ((k > 0) && ! check_arc(k)) {
       message("The two vertices of the conic are on different branches.");
+      remove_last_conic();
+    }
+    else if ((k > 0) && is_determined(k) && ! is_valid_arc(k)) {
+      message("The conic would make the arc of the previous conic intersect the boundary.");
       remove_last_conic();
     }
     next_arc();
@@ -593,15 +603,27 @@ private:
    */
   void close_at(std::size_t a_i) {
     m_close_vertex = m_candidates[a_i];
+    m_valid_arcs.clear();
     m_candidates.clear();
     m_closing = true;
     m_state = State::ST_IDLE;
     if (! check_arc(m_conics.size() - 1) || ! check_arc(0)) {
       message("The two vertices of the conic are on different branches.");
       m_closing = false;
+      m_valid_arcs.clear();
       m_arc_queue.clear();
       update_preview();
       return;
+    }
+    for (std::size_t i : {m_conics.size() - 1, std::size_t(0)}) {
+      if (is_determined(i) && ! is_valid_arc(i)) {
+        message("The polygon cannot be closed: the arc of the last or the first conic would intersect the boundary.");
+        m_closing = false;
+        m_valid_arcs.clear();
+        m_arc_queue.clear();
+        update_preview();
+        return;
+      }
     }
     next_arc();
     update_preview();
@@ -642,6 +664,64 @@ private:
     return (distance(*ccw, a_p) <= distance(*cw, a_p)) ? 1 : 0;
   }
 
+  /*! constructs the (exact) arc of the i-th conic. On an ellipse, a_ccw (if not negative) overrides the chosen arc.
+   * \return the arc, or nullopt if it is not determined yet.
+   */
+  std::optional<Conic_curve> exact_arc(std::size_t a_i, int a_ccw = -1) const {
+    Conic_point s, t;
+    if (! endpoints(a_i, s, t)) return std::nullopt;
+    const Conic& conic = m_conics[a_i];
+    const Rational* c = conic.m_c;
+    Conic_traits traits;
+    auto ctr = traits.construct_curve_2_object();
+    // A segment is given by the equation of its line (and not only by its endpoints), so it can be written exactly.
+    if (conic.m_shape.kind() == Conic_shape::Kind::KI_LINE)
+      return ctr(c[0], c[1], c[2], c[3], c[4], c[5], CGAL::COLLINEAR, s, t);
+    QPointF mid;
+    if (! arc(a_i, &mid, a_ccw)) return std::nullopt;
+    // The arc turns from its source, through its middle, to its target.
+    QPointF ps = to_qt(s), pt = to_qt(t);
+    double cross = (mid.x() - ps.x()) * (pt.y() - ps.y()) - (mid.y() - ps.y()) * (pt.x() - ps.x());
+    CGAL::Orientation orient = (cross > 0) ? CGAL::COUNTERCLOCKWISE : CGAL::CLOCKWISE;
+    return ctr(c[0], c[1], c[2], c[3], c[4], c[5], orient, s, t);
+  }
+
+  /*! determines whether the arc of the i-th conic is determined: its endpoints are known, and, on an ellipse, the arc
+   * is chosen.
+   */
+  bool is_determined(std::size_t a_i) const {
+    Conic_point s, t;
+    if (! endpoints(a_i, s, t)) return false;
+    return ! m_conics[a_i].m_shape.is_bounded() || (m_ccw[a_i] >= 0);
+  }
+
+  /*! determines whether the arc of the i-th conic (on an ellipse, the arc given by a_ccw if it is not negative) does
+   * not make the boundary self-intersecting: it may meet the other determined arcs only at its endpoints, where they
+   * end too (see is_valid_extension()).
+   */
+  bool is_valid_arc(std::size_t a_i, int a_ccw = -1) const {
+    auto key = std::make_pair(a_i, a_ccw);
+    auto it = m_valid_arcs.find(key);
+    if (it != m_valid_arcs.end()) return it->second;
+    bool r_valid = false;
+    auto cv = exact_arc(a_i, a_ccw);
+    if (cv && cv->is_valid()) {
+      Conic_traits traits;
+      auto piece = x_monotone_pieces(traits, &*cv, &*cv + 1);
+      std::vector<Conic_curve> others;
+      for (std::size_t j = 0; j < m_conics.size(); ++j) {
+        if ((j == a_i) || ! is_determined(j)) continue;
+        if (auto other = exact_arc(j)) others.push_back(*other);
+      }
+      auto boundary = x_monotone_pieces(traits, others.begin(), others.end());
+      Conic_point s, t;
+      endpoints(a_i, s, t);
+      r_valid = is_valid_extension(traits, boundary, piece, s, &t);
+    }
+    m_valid_arcs[key] = r_valid;
+    return r_valid;
+  }
+
   /*! constructs the arcs and emits the polygon.
    */
   void finish() {
@@ -649,30 +729,12 @@ private:
     auto ctr = traits.construct_curve_2_object();
     std::vector<Conic_X_monotone_curve> xcvs;
     for (std::size_t i = 0; i < m_conics.size(); ++i) {
-      Conic_point s, t;
-      endpoints(i, s, t);
-      const Conic& conic = m_conics[i];
-      Conic_curve cv;
-      // A segment is given by the equation of its line (and not only by its endpoints), so it can be written exactly.
-      if (conic.m_shape.kind() == Conic_shape::Kind::KI_LINE) {
-        const Rational* c = conic.m_c;
-        cv = ctr(c[0], c[1], c[2], c[3], c[4], c[5], CGAL::COLLINEAR, s, t);
+      auto cv = exact_arc(i);
+      if (! cv) {
+        message("Failed to determine a conic arc.");
+        return;
       }
-      else {
-        QPointF mid;
-        auto polyline = arc(i, &mid);
-        if (! polyline) {
-          message("Failed to determine a conic arc.");
-          return;
-        }
-        // The arc turns from its source, through its middle, to its target.
-        QPointF ps = to_qt(s), pt = to_qt(t);
-        double cross = (mid.x() - ps.x()) * (pt.y() - ps.y()) - (mid.y() - ps.y()) * (pt.x() - ps.x());
-        CGAL::Orientation orient = (cross > 0) ? CGAL::COUNTERCLOCKWISE : CGAL::CLOCKWISE;
-        const Rational* c = conic.m_c;
-        cv = ctr(c[0], c[1], c[2], c[3], c[4], c[5], orient, s, t);
-      }
-      if (! append_x_monotone(traits, cv, xcvs)) return;
+      if (! append_x_monotone(traits, *cv, xcvs)) return;
     }
     Conic_polygon pgn(xcvs.begin(), xcvs.end());
     reset();
@@ -711,7 +773,11 @@ private:
      case State::PICK_VERTEX: choose_vertex(nearest_candidate(p)); break;
      case State::PICK_CLOSING_VERTEX: close_at(nearest_candidate(p)); break;
      case State::PICK_ARC: {
-       m_ccw[m_arc_queue.front()] = nearer_arc(p);
+       // An arc that would make the boundary self-intersecting cannot be picked.
+       int ccw = nearer_arc(p);
+       if (! is_valid_arc(m_arc_queue.front(), ccw)) break;
+       m_ccw[m_arc_queue.front()] = ccw;
+       m_valid_arcs.clear();
        m_arc_queue.erase(m_arc_queue.begin());
        m_state = State::ST_IDLE;
        next_arc();
@@ -816,6 +882,7 @@ private:
     if (! m_clicks.empty()) m_clicks.clear();
     else if (m_closing || (m_state != State::ST_IDLE)) {
       m_closing = false;
+      m_valid_arcs.clear();
       m_arc_queue.clear();
       m_candidates.clear();
       if (m_state == State::PICK_VERTEX) remove_last_conic();
@@ -914,9 +981,11 @@ private:
     QPainterPath candidates;
     for (const auto& v : m_candidates) candidates.addEllipse(to_qt(v), r, r);
     QPainterPath preview = tool_preview();
+    bool valid_pick = true;
     if (m_state == State::PICK_ARC) {
       int ccw = nearer_arc(m_cursor);
       if (auto a = arc(m_arc_queue.front(), nullptr, ccw)) add(preview, *a);
+      valid_pick = is_valid_arc(m_arc_queue.front(), ccw);
     }
     QPen dashed = m_pen;
     dashed.setStyle(::Qt::DashLine);
@@ -926,7 +995,9 @@ private:
     m_curves_item->setPath(curves);
     m_arcs_item->setPen(thick);
     m_arcs_item->setPath(arcs);
-    m_preview_item->setPen((m_state == State::PICK_ARC) ? thick : m_pen);
+    QPen pick = thick;
+    if (! valid_pick) pick.setStyle(::Qt::DashLine);
+    m_preview_item->setPen((m_state == State::PICK_ARC) ? pick : m_pen);
     m_preview_item->setPath(preview);
     QPainterPath all_markers = markers;
     all_markers.addPath(candidates);
@@ -953,6 +1024,8 @@ private:
   std::vector<std::size_t> m_arc_queue;     // ellipses waiting for a choice
   bool m_closing = false;
   Conic_point m_close_vertex;               // on the last and the first conics
+  // Whether arcs are valid (see is_valid_arc()), by the index of the conic and the chosen arc; cleared on a change.
+  mutable std::map<std::pair<std::size_t, int>, bool> m_valid_arcs;
   QString m_last_coefficients[6] = {"1", "1", "0", "0", "0", "-400"};
 };
 

@@ -9,8 +9,8 @@
 - Semantic errors of equations (a divisor or an exponent that is not a constant) have no column.
 
 2. Valid boundaries
-- The Segments input rejects a segment that would make the boundary self-intersecting. Do the same for the other
-  families: Segments and Circular Arcs, Conic Curves, Bezier Curves, and Polyline/Polycurve.
+- The inputs of all the families reject curves that would make the boundary self-intersecting, and the console rejects
+  such polygons, but polygons read from files are not checked.
 
 3. Polycurves
 - Only Segments can be the subcurve family of Polyline/Polycurve. Next: polycurves of circle segments (.pcps), conics

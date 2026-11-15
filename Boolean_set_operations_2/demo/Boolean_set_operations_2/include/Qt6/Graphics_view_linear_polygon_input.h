@@ -43,6 +43,7 @@
 #include "Typedefs.h"
 #include "Qt6/Linear_polygons.h"
 #include "Error_handling.h"
+#include "Boundary_validity.h"
 
 namespace CGAL {
 namespace Qt {
@@ -316,22 +317,10 @@ public:
    * the boundary, the first segment only at a_target (the first vertex); it must not meet the other segments.
    */
   bool is_valid_edge(const Point& a_source, const Point& a_target, bool a_closing) const {
-    using Segment = typename Kernel::Segment_2;
-    if (a_source == a_target) return true;
-    Segment edge(a_source, a_target);
-    std::size_t n = m_linear_polygon_pieces.size();
-    for (std::size_t i = 0; i < n; ++i) {
-      const auto& piece = m_linear_polygon_pieces[i];
-      Segment other(piece.source(), piece.target());
-      auto res = CGAL::intersection(edge, other);
-      if (! res) continue;
-      const Point* p = std::get_if<Point>(&*res);
-      // An overlap is never allowed.
-      if (! p) return false;
-      bool shared = ((i + 1 == n) && (*p == a_source)) || (a_closing && (i == 0) && (*p == a_target));
-      if (! shared) return false;
-    }
-    return true;
+    std::vector<Point> vertices;
+    for (const auto& piece : m_linear_polygon_pieces) vertices.push_back(piece.source());
+    if (! m_linear_polygon_pieces.empty()) vertices.push_back(m_linear_polygon_pieces.back().target());
+    return is_valid_segment<Kernel>(vertices, a_source, a_target, a_closing);
   }
 
   /*! updates the edge under construction. It is dashed if it cannot be added (see is_valid_edge()).
