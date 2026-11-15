@@ -42,8 +42,8 @@ void Main_window::open_family(Curve_type a_type) {
                                     QString("%1 (*%2)").arg(label, selected.m_extension)));
 }
 
-template <typename Set, typename Read_boundary>
-bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read_boundary) {
+template <typename Set, typename Read_boundary, typename To_python>
+bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read_boundary, To_python a_to_python) {
   QString name = QFileInfo(a_file_name).fileName();
   std::ifstream in_file(qPrintable(a_file_name));
   if (! in_file) {
@@ -61,6 +61,7 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
 
     unsigned int n_regions;
     if (! (in_file >> n_regions)) throw std::runtime_error("bad file");
+    QString bucket = bucket_name(m_color_active);
     for (unsigned int r = 0; r < n_regions; ++r) {
       unsigned int n_boundaries;
       in_file >> n_boundaries;
@@ -69,7 +70,8 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
         if (! in_file) throw std::runtime_error("bad file");
         if (xcvs.empty()) continue;
         typename Set::Polygon_2 pgn(xcvs.begin(), xcvs.end());
-        if (pgn.orientation() == CGAL::CLOCKWISE) pgn.reverse_orientation();
+        bool reversed = (pgn.orientation() == CGAL::CLOCKWISE);
+        if (reversed) pgn.reverse_orientation();
         typename Set::Polygon_with_holes_2 pwh(pgn);
         // The first boundary is the outer one; the others are holes.
         if (b == 0) {
@@ -77,6 +79,21 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
           states_stack.back().set(m_color_active).get<Set>().join(pwh);
         }
         else states_stack.back().set(m_color_active).get<Set>().difference(Set(pwh));
+        QString operation = (b == 0) ? "join" : "difference";
+        QString python;
+        try {
+          python = a_to_python(pgn, reversed);
+        }
+        catch (const std::invalid_argument& e) {
+          log_statements({QString("# The %1 polygon cannot be written exactly: %2").arg(bucket, e.what())});
+          continue;
+        }
+        if (python.isEmpty()) {
+          python = (b == 0) ? QString("<polygon %1 of %2>").arg(r + 1).arg(name) :
+            QString("<hole %1 of polygon %2 of %3>").arg(b).arg(r + 1).arg(name);
+        }
+        QString statement = QString("%1.%2(%3)").arg(bucket, operation, python);
+        log_statements({python.startsWith('<') ? "# " + statement : statement});
       }
       r_ok = true;
     }
@@ -90,24 +107,35 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
   return r_ok;
 }
 
+// The polygons of the Polyline/Polycurve and Bezier families are not written to programs yet.
+template <typename Polygon>
+static QString no_python(const Polygon&, bool) { return QString(); }
+
 bool Main_window::read_linear(QString a_file_name) {
-  return read_polygons<Linear_polygon_set>(a_file_name, read_linear_boundary);
+  auto python = [](const Linear_polygon& a_pgn, bool) { return to_python(a_pgn); };
+  return read_polygons<Linear_polygon_set>(a_file_name, read_linear_boundary, python);
 }
 
 bool Main_window::read_circular(QString a_file_name) {
-  return read_polygons<Circular_polygon_set>(a_file_name, read_circular_boundary);
+  // The program constructs the boundary from the pieces read, as from those the user constructs.
+  Circular_boundary_source source;
+  auto read = [&source](std::istream& a_is) { return read_circular_boundary(a_is, &source); };
+  auto python = [&source](const Circular_polygon&, bool a_reversed)
+  { return to_python(a_reversed ? reversed(source) : source); };
+  return read_polygons<Circular_polygon_set>(a_file_name, read, python);
 }
 
 bool Main_window::read_polyline(QString a_file_name) {
-  return read_polygons<Polyline_polygon_set>(a_file_name, read_polyline_boundary);
+  return read_polygons<Polyline_polygon_set>(a_file_name, read_polyline_boundary, no_python<Polyline_polygon>);
 }
 
 bool Main_window::read_conic(QString a_file_name) {
-  return read_polygons<Conic_polygon_set>(a_file_name, read_conic_boundary);
+  auto python = [](const Conic_polygon& a_pgn, bool) { return to_python(a_pgn); };
+  return read_polygons<Conic_polygon_set>(a_file_name, read_conic_boundary, python);
 }
 
 bool Main_window::read_bezier(QString a_file_name) {
-  return read_polygons<Bezier_polygon_set>(a_file_name, read_bezier_boundary);
+  return read_polygons<Bezier_polygon_set>(a_file_name, read_bezier_boundary, no_python<Bezier_polygon>);
 }
 
 void Main_window::save_draw_bucket() {

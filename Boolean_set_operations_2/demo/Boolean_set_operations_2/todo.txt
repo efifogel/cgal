@@ -22,7 +22,6 @@
   - Traits.Point_2 of the conic traits is constructed from floats (Algebraic from double);
   - Result.COLLINEAR (for segments) exists;
   - polygon() filters the results of make_x_monotone with isinstance(o, X_monotone_curve_2).
-- Polygons read from files are not logged, in any family, so a program misses them.
 - The Bezier, polyline, and algebraic families are not logged; the console supports linear polygons only; the
   Minkowski sum is not logged.
 

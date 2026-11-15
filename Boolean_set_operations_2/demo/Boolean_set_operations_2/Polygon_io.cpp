@@ -81,19 +81,28 @@ std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is
   return polyline_boundary(read_vertices(a_is));
 }
 
-std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is) {
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is,
+                                                              Circular_boundary_source* r_source) {
   unsigned int n_curves;
   a_is >> n_curves;
   std::vector<Circular_curve> curves;
+  if (r_source) r_source->clear();
   for (unsigned int i = 0; i < n_curves; ++i) {
     unsigned int is_arc;
     if (! (a_is >> is_arc)) throw std::runtime_error("bad circular boundary");
-    auto s = read_point(a_is);
+    Circular_piece_source piece;
+    piece.m_points[0] = read_point(a_is);
     if (is_arc) {
-      auto m = read_point(a_is);
-      curves.emplace_back(s, m, read_point(a_is));
+      piece.m_kind = Circular_piece_source::Kind::ARC;
+      piece.m_points[1] = read_point(a_is);
+      piece.m_points[2] = read_point(a_is);
+      curves.emplace_back(piece.m_points[0], piece.m_points[1], piece.m_points[2]);
     }
-    else curves.emplace_back(s, read_point(a_is));
+    else {
+      piece.m_points[1] = read_point(a_is);
+      curves.emplace_back(piece.m_points[0], piece.m_points[1]);
+    }
+    if (r_source) r_source->push_back(piece);
   }
   return x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
 }

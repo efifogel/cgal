@@ -44,6 +44,7 @@
 #include <QString>
 
 #include "Typedefs.h"
+#include "Circular_source.h"
 
 /*! obtains the x-monotone curves of given curves.
  */
@@ -87,9 +88,10 @@ std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is
 
 /*! reads the boundary of a polygon bounded by segments and circular arcs: the number of its curves followed by the
  * curves, each given by a flag (1 for an arc) followed by its source, a point in its interior (for an arc), and its
- * target. \return the x-monotone curves of the boundary.
+ * target. If r_source is given, it is set to the pieces read. \return the x-monotone curves of the boundary.
  */
-std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is);
+std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is,
+                                                              Circular_boundary_source* r_source = nullptr);
 
 /*! reads a Bezier curve: the number of its control points followed by their coordinates. Repeated control points and
  * control points collinear with their neighbors are dropped.

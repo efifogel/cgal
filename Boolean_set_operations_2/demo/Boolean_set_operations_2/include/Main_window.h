@@ -677,10 +677,13 @@ private:
 
   /*! reads polygons with holes from a file into the Draw/Insert bucket. The file has the number of polygons with
    * holes, and for each one the number of its boundaries followed by the boundaries (the outer one first), each read
-   * by a given function. Shows an error if the file cannot be read. \return false if the file cannot be read.
+   * by a given function. Logs the polygons and the holes, each written by a given function (as a Python expression of
+   * a counterclockwise polygon, given the polygon and whether its boundary was reversed; an empty string if the family
+   * is not written to programs yet). Shows an error if the file cannot be read. \return false if the file cannot be
+   * read.
    */
-  template <typename Set, typename Read_boundary>
-  bool read_polygons(const QString& a_file_name, Read_boundary a_read_boundary);
+  template <typename Set, typename Read_boundary, typename To_python>
+  bool read_polygons(const QString& a_file_name, Read_boundary a_read_boundary, To_python a_to_python);
 
   /*! pushes a new state onto the undo stack before an operation is applied. The new state shares the sets of the
    * current one; a set is copied when it first changes (see Curve_set::detach()). (Starting pushes empty sets.)
