@@ -134,6 +134,10 @@ public:
     m_mode = a_mode;
   }
 
+  /*! sets whether the vertices of the boundary under construction are marked, as those of a boundary of polycurves.
+   */
+  void set_marked(bool a_marked) { m_circular_GI->set_marked(a_marked); }
+
   /*! converts a scene point to a point.
    */
   Point cvt(const QPointF& a_p) const { return Point(a_p.x(), a_p.y()); }

@@ -69,9 +69,12 @@ void Main_window::setup_help() {
                                         "curves, entered as equations with the Equation button underneath. Available "
                                         "only if the demo is built with Lexy.</p>" + family_switch);
   action_insert_polyline->setWhatsThis("<b>Polyline/Polycurve</b><p>Generalized polygons bounded by polycurves, "
-                                       "that is, curves that consist of curves of the family selected underneath "
-                                       "(Segments only, for now). Click at each vertex; right-click to close the "
-                                       "polygon.</p>" + simple + step_back + family_switch);
+                                       "that is, curves that consist of curves of the family selected underneath: "
+                                       "polylines of Segments, or polycurves of Segments and Circular Arcs (the other "
+                                       "families are disabled). Construct the boundary as with the family underneath; "
+                                       "it is divided into maximal x-monotone polycurves, whose endpoints are the "
+                                       "vertices of the polygon (filled marks), and whose other vertices are hollow "
+                                       "marks.</p>" + simple + step_back + family_switch);
 
   // The tools.
   action_add_color->setWhatsThis("<b>Add a Bucket</b><p>Adds the bucket of the color of the plus sign (a row at the "

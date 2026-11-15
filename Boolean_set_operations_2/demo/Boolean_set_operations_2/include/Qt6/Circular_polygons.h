@@ -23,13 +23,19 @@
 #ifndef CGAL_QT6_CIRCULAR_POLYGONS_H
 #define CGAL_QT6_CIRCULAR_POLYGONS_H
 
+#include <cstddef>
 #include <iostream>
+#include <utility>
+#include <vector>
 
 #include <CGAL/Arr_circle_segment_traits_2.h>
 
 #include "Typedefs.h"
+#include "Boundary_validity.h"
+#include "Circular_polycurve_boundary.h"
 #include "Qt6/Piecewise_set_graphics_item.h"
 #include "Qt6/Boundary_pieces_graphics_item.h"
+#include "Qt6/Polyline_curves.h"
 
 using namespace std;
 
@@ -215,6 +221,37 @@ public:
   /*! constructs from the circle segments.
    */
   Circular_boundary_pieces_graphics_item(Circular_boundary_pieces* a_pieces) : Base(a_pieces) {}
+
+  /*! sets whether the vertices are marked, as those of a boundary of polycurves.
+   */
+  void set_marked(bool a_marked) {
+    this->prepareGeometryChange();
+    m_marked = a_marked;
+  }
+
+protected:
+  /*! marks the vertices of the chain under construction, as those of polylines (see
+   * Polyline_boundary_pieces_graphics_item). A vertex where the chain changes direction (see
+   * circular_polycurve_boundary()) will be a vertex of the polygon; so are, for now, the first and the last vertices.
+   * Arcs are subdivided into x-monotone arcs, so a point where an arc turns is a vertex of the polygon as well.
+   */
+  void paint_marks(QPainter* a_painter) override {
+    if (! m_marked || ! this->m_boundary || this->m_boundary->empty()) return;
+    auto xcvs = x_monotone_pieces(Circular_traits(), this->m_boundary->begin(), this->m_boundary->end());
+    if (xcvs.empty()) return;
+    std::vector<std::pair<Circular_point, bool>> vertices;
+    for (std::size_t i = 0; i < xcvs.size(); ++i) {
+      bool turn = (i == 0) || (circle_segment_direction(xcvs[i - 1]) != circle_segment_direction(xcvs[i]));
+      vertices.emplace_back(xcvs[i].source(), turn);
+    }
+    vertices.emplace_back(xcvs.back().target(), true);
+    paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
+  }
+
+  double marks_extent() const override { return m_marked ? polyline_marks_extent : 0; }
+
+private:
+  bool m_marked = false;
 };
 
 /*! A graphics item that draws a set of circular polygons.

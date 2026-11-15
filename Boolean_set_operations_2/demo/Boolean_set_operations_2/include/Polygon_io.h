@@ -25,7 +25,7 @@
 #define CGAL_POLYGON_IO_H
 
 /*! \file Polygon_io.h
- * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .bps, and .qps). A file holds
+ * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .pcps, .bps, and .qps). A file holds
  * polygons with holes, each one given by its boundaries; a function of each family reads or writes a boundary.
  *
  * The suffix of a file is the code of its curves followed by "ps" (polygon set). The code of a basic family is a
@@ -93,6 +93,12 @@ std::vector<Polyline_X_monotone_curve> read_polyline_boundary(std::istream& a_is
 std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is,
                                                               Circular_boundary_source* r_source = nullptr);
 
+/*! reads the boundary of a polygon bounded by polycurves of circle segments, in the format of the boundaries of
+ * polygons bounded by circle segments (see read_circular_boundary()). The boundary is subdivided into maximal
+ * x-monotone polycurves (see circular_polycurve_boundary()). \return the polycurves.
+ */
+std::vector<Circular_polycurve_X_monotone_curve> read_circular_polycurve_boundary(std::istream& a_is);
+
 /*! reads a Bezier curve: the number of its control points followed by their coordinates. Repeated control points and
  * control points collinear with their neighbors are dropped.
  */
@@ -128,6 +134,11 @@ bool save_polygons(const QString& a_file_name, const Set& a_set, Write_boundary 
 /*! writes the boundary of a linear polygon: the number of its vertices followed by their coordinates.
  */
 void write_linear_boundary(std::ostream& a_os, const Linear_polygon& a_boundary);
+
+/*! writes the boundary of a polygon bounded by polycurves of circle segments: the circle segments of its polycurves
+ * (see write_circular_boundary()).
+ */
+void write_circular_polycurve_boundary(std::ostream& a_os, const Circular_polycurve_polygon& a_boundary);
 
 /*! writes the boundary of a polygon bounded by polylines: the number of its vertices followed by their coordinates
  * (all the vertices of the polylines, in order).

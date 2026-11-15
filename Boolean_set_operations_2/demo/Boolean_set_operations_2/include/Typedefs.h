@@ -31,6 +31,8 @@
 #include <CGAL/Arr_linear_traits_2.h>
 #include <CGAL/Arr_consolidated_curve_data_traits_2.h>
 #include <CGAL/Arr_polyline_traits_2.h>
+#include <CGAL/Arr_polycurve_traits_2.h>
+#include <CGAL/Arr_circle_segment_traits_2.h>
 #include <CGAL/Arr_algebraic_segment_traits_2.h>
 #include <CGAL/Arrangement_with_history_2.h>
 #include <CGAL/Arr_conic_traits_2.h>
@@ -105,6 +107,14 @@ using Circular_polygon = Circular_traits::Polygon_2;
 
 using Circular_polygon_with_holes = Circular_traits::General_polygon_with_holes_2;
 using Circular_polygon_set = CGAL::General_polygon_set_2<Circular_traits>;
+
+// Polycurves of circle segments (segments and circular arcs)
+using Circle_segment_traits = CGAL::Arr_circle_segment_traits_2<Kernel>;
+using Circular_polycurve_traits = CGAL::Gps_traits_2<CGAL::Arr_polycurve_traits_2<Circle_segment_traits>>;
+using Circular_polycurve_polygon = Circular_polycurve_traits::Polygon_2;
+using Circular_polycurve_polygon_with_holes = Circular_polycurve_traits::General_polygon_with_holes_2;
+using Circular_polycurve_polygon_set = CGAL::General_polygon_set_2<Circular_polycurve_traits>;
+using Circular_polycurve_X_monotone_curve = Circular_polycurve_traits::X_monotone_curve_2;
 
 // Bezier polygons
 using Bezier_nt_traits = CGAL::CORE_algebraic_number_traits;

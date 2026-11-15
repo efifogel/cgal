@@ -123,7 +123,7 @@ bool Main_window::read_polygons(const QString& a_file_name, Read_boundary a_read
   return r_ok;
 }
 
-// The polygons of the Polyline/Polycurve and Bezier families are not written to programs yet.
+// The polygons of the polycurve and Bezier families are not written to programs yet.
 template <typename Polygon>
 static QString no_python(const Polygon&, bool) { return QString(); }
 
@@ -143,6 +143,11 @@ bool Main_window::read_circular(QString a_file_name) {
 
 bool Main_window::read_polyline(QString a_file_name) {
   return read_polygons<Polyline_polygon_set>(a_file_name, read_polyline_boundary, no_python<Polyline_polygon>);
+}
+
+bool Main_window::read_circular_polycurve(QString a_file_name) {
+  return read_polygons<Circular_polycurve_polygon_set>(a_file_name, read_circular_polycurve_boundary,
+                                                       no_python<Circular_polycurve_polygon>);
 }
 
 bool Main_window::read_conic(QString a_file_name) {
@@ -167,13 +172,27 @@ void Main_window::save_draw_bucket() {
   if (file_name.isEmpty()) return;
   auto& bucket = states_stack.back().set(m_color_active);
   bool saved = false;
+  int precision = m_save_precision;
   try {
     switch (m_curve_type) {
-     case Curve_type::CT_LINEAR: saved = save_polygons(file_name, bucket.linear(), write_linear_boundary, m_save_precision); break;
-     case Curve_type::CT_CIRCULAR: saved = save_polygons(file_name, bucket.circular(), write_circular_boundary, m_save_precision); break;
-     case Curve_type::CT_BEZIER: saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary, m_save_precision); break;
-     case Curve_type::CT_POLYLINE: saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary, m_save_precision); break;
-     case Curve_type::CT_CONIC: saved = save_polygons(file_name, bucket.conic(), write_conic_boundary, m_save_precision); break;
+     case Curve_type::CT_LINEAR:
+      saved = save_polygons(file_name, bucket.linear(), write_linear_boundary, precision);
+      break;
+     case Curve_type::CT_CIRCULAR:
+      saved = save_polygons(file_name, bucket.circular(), write_circular_boundary, precision);
+      break;
+     case Curve_type::CT_BEZIER:
+      saved = save_polygons(file_name, bucket.bezier(), write_bezier_boundary, precision);
+      break;
+     case Curve_type::CT_POLYLINE:
+      saved = save_polygons(file_name, bucket.polyline(), write_polyline_boundary, precision);
+      break;
+     case Curve_type::CT_CONIC:
+      saved = save_polygons(file_name, bucket.conic(), write_conic_boundary, precision);
+      break;
+     case Curve_type::CT_CIRCULAR_POLYCURVE:
+      saved = save_polygons(file_name, bucket.circular_polycurve(), write_circular_polycurve_boundary, precision);
+      break;
      default: break;
     }
   }

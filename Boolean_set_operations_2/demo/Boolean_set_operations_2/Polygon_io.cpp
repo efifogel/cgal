@@ -35,6 +35,7 @@
 
 #include "Qt6/Bezier_curves.h"
 #include "Polyline_boundary.h"
+#include "Circular_polycurve_boundary.h"
 #include "Conic_arcs.h"
 
 namespace {
@@ -106,6 +107,9 @@ std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is
   }
   return x_monotone_curves<Circular_traits>(curves.begin(), curves.end());
 }
+
+std::vector<Circular_polycurve_X_monotone_curve> read_circular_polycurve_boundary(std::istream& a_is)
+{ return circular_polycurve_boundary(read_circular_boundary(a_is)); }
 
 Bezier_curve read_bezier_curve(std::istream& is) {
   // Read the number of control points.
@@ -202,6 +206,9 @@ void write_circular_boundary(std::ostream& a_os, const Circular_polygon& a_bound
     a_os << "    " << CGAL::to_double(cit->target().x()) << " " << CGAL::to_double(cit->target().y()) << std::endl;
   }
 }
+
+void write_circular_polycurve_boundary(std::ostream& a_os, const Circular_polycurve_polygon& a_boundary)
+{ write_circular_boundary(a_os, flattened(a_boundary)); }
 
 void write_bezier_boundary(std::ostream& out_file, const Bezier_polygon& a_bp) {
   using Bezier_rat_point_vector = std::vector<Bezier_rat_point>;

@@ -46,6 +46,7 @@
 #include "Qt6/Linear_polygons.h"
 #include "Qt6/Circular_polygons.h"
 #include "Qt6/Polyline_curves.h"
+#include "Qt6/Circular_polycurves.h"
 #include "Qt6/Bezier_curves.h"
 #include "Qt6/Conic_curves.h"
 #include "Qt6/Algebraic_arcs.h"
@@ -55,10 +56,12 @@ using Circular_GI = CGAL::Qt::Circular_set_graphics_item<Circular_polygon_set>;
 using Linear_GI = CGAL::Qt::Linear_set_graphics_item<Linear_polygon_set>;
 using Polyline_GI = CGAL::Qt::Polyline_set_graphics_item<Polyline_polygon_set>;
 using Bezier_GI = CGAL::Qt::Bezier_set_graphics_item<Bezier_polygon_set>;
+using Circular_polycurve_GI = CGAL::Qt::Circular_polycurve_set_graphics_item<Circular_polycurve_polygon_set>;
 
-// The curve families.
-enum class Curve_type { CT_LINEAR, CT_CIRCULAR, CT_BEZIER, CT_POLYLINE, CT_CONIC, CT_ALGEBRAIC };
-constexpr std::size_t number_of_curve_types = 6;
+// The curve families. The polycurve families are CT_POLYLINE (polycurves of segments) and CT_CIRCULAR_POLYCURVE
+// (polycurves of circle segments).
+enum class Curve_type { CT_LINEAR, CT_CIRCULAR, CT_BEZIER, CT_POLYLINE, CT_CONIC, CT_ALGEBRAIC, CT_CIRCULAR_POLYCURVE };
+constexpr std::size_t number_of_curve_types = 7;
 
 // The representation of a set of polygons of some curve family.
 struct Rep_base {
@@ -321,6 +324,8 @@ using Bezier_rep = Rep<Bezier_GI, Bezier_polygon_set, Curve_type::CT_BEZIER>;
 using Polyline_rep = Rep<Polyline_GI, Polyline_polygon_set, Curve_type::CT_POLYLINE>;
 using Conic_rep = Rep<CGAL::Qt::Conic_GI, Conic_polygon_set, Curve_type::CT_CONIC>;
 using Algebraic_rep = Rep<CGAL::Qt::Algebraic_GI, Algebraic_polygon_set, Curve_type::CT_ALGEBRAIC>;
+using Circular_polycurve_rep =
+  Rep<Circular_polycurve_GI, Circular_polycurve_polygon_set, Curve_type::CT_CIRCULAR_POLYCURVE>;
 
 // A set of polygons of some curve family, drawn with a given pen and brush.
 class Curve_set {
@@ -349,6 +354,7 @@ public:
      case Curve_type::CT_POLYLINE: return new Polyline_rep();
      case Curve_type::CT_CONIC: return new Conic_rep();
      case Curve_type::CT_ALGEBRAIC: return new Algebraic_rep();
+     case Curve_type::CT_CIRCULAR_POLYCURVE: return new Circular_polycurve_rep();
     }
     return nullptr;
   }
@@ -655,6 +661,26 @@ public:
    */
   Polyline_polygon_set& polyline() { return get_polyline_rep()->set(); }
 
+  /*! obtains the representation of polycurves of circle segments, or null if the set is not of this family.
+   */
+  const Circular_polycurve_rep* get_circular_polycurve_rep() const
+  { return dynamic_cast<const Circular_polycurve_rep*>(m_rep.get()); }
+
+  /*! obtains the representation of polycurves of circle segments, or null if the set is not of this family.
+   */
+  Circular_polycurve_rep* get_circular_polycurve_rep() {
+    detach();
+    return dynamic_cast<Circular_polycurve_rep*>(m_rep.get());
+  }
+
+  /*! obtains the set of polycurves of circle segments.
+   */
+  const Circular_polycurve_polygon_set& circular_polycurve() const { return get_circular_polycurve_rep()->set(); }
+
+  /*! obtains the set of polycurves of circle segments.
+   */
+  Circular_polycurve_polygon_set& circular_polycurve() { return get_circular_polycurve_rep()->set(); }
+
   /*! obtains the set of a given type, e.g., Linear_polygon_set.
    */
   template <typename Set>
@@ -672,6 +698,8 @@ template <> inline Bezier_polygon_set& Curve_set::get<Bezier_polygon_set>() { re
 template <> inline Polyline_polygon_set& Curve_set::get<Polyline_polygon_set>() { return polyline(); }
 template <> inline Conic_polygon_set& Curve_set::get<Conic_polygon_set>() { return conic(); }
 template <> inline Algebraic_polygon_set& Curve_set::get<Algebraic_polygon_set>() { return algebraic(); }
+template <> inline Circular_polycurve_polygon_set& Curve_set::get<Circular_polycurve_polygon_set>()
+{ return circular_polycurve(); }
 
 using Curve_set_container = std::vector<Curve_set>;
 using Curve_set_const_iterator = Curve_set_container::const_iterator;

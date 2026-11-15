@@ -228,6 +228,12 @@ Main_window::Main_window() :
   m_conic_input = new CGAL::Qt::Graphics_view_conic_input(this, &m_scene);
   m_algebraic_input = new CGAL::Qt::GraphicsViewInput(this);
 
+  // The polygons bounded by polycurves of circle segments are opened from files of their own.
+  auto* action_open_circular_polycurve = new QAction(QIcon(":/cgal/fileToolbar/fileOpen.png"),
+                                                     "Open Polycurves of Segments and Circular Arcs", this);
+  menu_file->insertAction(action_open_conic, action_open_circular_polycurve);
+  action_open_circular_polycurve->setEnabled(false);
+
   // The curve families. Selecting one in the tool bar starts constructing its curves.
   m_families = {{
     {Curve_type::CT_LINEAR, "linear", "Segments", action_insert_linear, m_linear_input,
@@ -241,24 +247,30 @@ Main_window::Main_window() :
     {Curve_type::CT_CONIC, "conic", "Conic Curves", action_insert_conic, m_conic_input,
      [this] { m_conic_input->reset(); }, action_open_conic, ".qps", &Main_window::read_conic},
     {Curve_type::CT_ALGEBRAIC, "algebraic", "Algebraic Curves", action_insert_algebraic, m_algebraic_input, [] {},
-     nullptr, nullptr, nullptr}}};
-  // The Polyline/Polycurve button selects the polycurve family, whose subcurve family is selected by the buttons
-  // underneath (only Segments, for now). Unchecking a family button by clicking it again keeps it checked.
+     nullptr, nullptr, nullptr},
+    {Curve_type::CT_CIRCULAR_POLYCURVE, "circular_polycurve", "Polycurves of Segments and Circular Arcs",
+     action_insert_polyline, m_circular_input, [this] { m_circular_input->reset(); }, action_open_circular_polycurve,
+     ".pcps", &Main_window::read_circular_polycurve}}};
+  // The Polyline/Polycurve button selects the polycurve family whose subcurve family is selected by the buttons
+  // underneath (Segments, or Segments and Circular Arcs). Unchecking a family button by clicking it again keeps it
+  // checked.
   for (const auto& family : m_families) {
     Curve_type type = family.m_type;
-    if (type == Curve_type::CT_POLYLINE) continue;
+    if (is_polycurve(type)) continue;
     QObject::connect(family.m_insert_action, &QAction::toggled, this, [this, type](bool checked) {
       if (m_updating_family_actions) return;
       if (! checked) {
         update_family_actions(! m_pan);
         return;
       }
-      bool polycurve = (m_curve_type == Curve_type::CT_POLYLINE);
-      start_inserting((polycurve && (type == Curve_type::CT_LINEAR)) ? Curve_type::CT_POLYLINE : type);
+      start_inserting(is_polycurve(m_curve_type) ? polycurve_of(type) : type);
     });
   }
   QObject::connect(action_insert_polyline, &QAction::toggled, this, [this](bool checked) {
-    if (! m_updating_family_actions) start_inserting(checked ? Curve_type::CT_POLYLINE : Curve_type::CT_LINEAR);
+    if (m_updating_family_actions) return;
+    Curve_type subcurve = subcurve_of(m_curve_type);
+    if (! checked) start_inserting(subcurve);
+    else start_inserting(is_polycurve(polycurve_of(subcurve)) ? polycurve_of(subcurve) : Curve_type::CT_POLYLINE);
   });
 
   // The polycurve toggle, after the curve families.
@@ -1100,22 +1112,41 @@ bool Main_window::ensure_curve_type(Curve_type a_type) {
     if (other.m_type != a_type) other.m_reset_input();
   }
   m_curve_type = a_type;
+  m_circular_input->set_marked(a_type == Curve_type::CT_CIRCULAR_POLYCURVE);
   update_family_actions(! m_pan);
   return true;
 }
 
+Curve_type Main_window::polycurve_of(Curve_type a_type) {
+  switch (a_type) {
+   case Curve_type::CT_LINEAR: return Curve_type::CT_POLYLINE;
+   case Curve_type::CT_CIRCULAR: return Curve_type::CT_CIRCULAR_POLYCURVE;
+   default: return a_type;
+  }
+}
+
+Curve_type Main_window::subcurve_of(Curve_type a_type) {
+  switch (a_type) {
+   case Curve_type::CT_POLYLINE: return Curve_type::CT_LINEAR;
+   case Curve_type::CT_CIRCULAR_POLYCURVE: return Curve_type::CT_CIRCULAR;
+   default: return a_type;
+  }
+}
+
+bool Main_window::is_polycurve(Curve_type a_type) { return subcurve_of(a_type) != a_type; }
+
 void Main_window::update_family_actions(bool a_active) {
   m_updating_family_actions = true;
-  bool polycurve = (m_curve_type == Curve_type::CT_POLYLINE);
-  Curve_type selected = polycurve ? Curve_type::CT_LINEAR : m_curve_type;
+  bool polycurve = is_polycurve(m_curve_type);
+  Curve_type selected = subcurve_of(m_curve_type);
+  action_insert_polyline->setChecked(a_active && polycurve);
   for (const auto& family : m_families) {
-    if (family.m_type == Curve_type::CT_POLYLINE) {
-      family.m_insert_action->setChecked(a_active && polycurve);
-      continue;
-    }
+    if (is_polycurve(family.m_type)) continue;
     family.m_insert_action->setChecked(a_active && (family.m_type == selected));
     bool available = (family.m_type != Curve_type::CT_ALGEBRAIC) || polynomial_parser();
-    if (family.m_type != Curve_type::CT_LINEAR) family.m_insert_action->setEnabled(! polycurve && available);
+    // The families that cannot be subcurves yet are disabled while the polycurve button is checked.
+    bool subcurve = is_polycurve(polycurve_of(family.m_type));
+    family.m_insert_action->setEnabled(available && (subcurve || ! polycurve));
   }
   m_updating_family_actions = false;
 }
@@ -1291,6 +1322,16 @@ void Main_window::process_input(CGAL::Object o) {
     else if (auto* bezier = CGAL::object_cast<std::pair<Bezier_polygon, Bezier_boundary_source>>(&o))
       add_constructed_polygon<Bezier_polygon_set>(Curve_type::CT_BEZIER, bezier->first,
                                                   m_bezier_input->is_bounding_rect());
+    else if (auto* circular = CGAL::object_cast<std::pair<Circular_polygon, Circular_boundary_source>>(&o);
+             circular && (m_curve_type == Curve_type::CT_CIRCULAR_POLYCURVE)) {
+      // The boundary is subdivided into maximal x-monotone polycurves. (Polycurves are not written to programs yet.)
+      std::vector<Circular_X_monotone_curve> xcvs(circular->first.curves_begin(), circular->first.curves_end());
+      auto polycurves = circular_polycurve_boundary(xcvs);
+      add_constructed_polygon<Circular_polycurve_polygon_set>(Curve_type::CT_CIRCULAR_POLYCURVE,
+                                                              Circular_polycurve_polygon(polycurves.begin(),
+                                                                                         polycurves.end()),
+                                                              m_circular_input->is_bounding_rect());
+    }
     else if (auto* circular = CGAL::object_cast<std::pair<Circular_polygon, Circular_boundary_source>>(&o)) {
       // The program constructs the polygon from its source, in counterclockwise order.
       bool clockwise = circular->first.orientation() == CGAL::CLOCKWISE;
