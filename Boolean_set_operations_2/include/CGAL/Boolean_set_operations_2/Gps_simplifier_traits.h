@@ -15,19 +15,26 @@
 
 #include <CGAL/license/Boolean_set_operations_2.h>
 
+#include <cstddef>
+#include <limits>
 
 #include <CGAL/Boolean_set_operations_2/Gps_traits_decorator.h>
 
 namespace CGAL {
 
+/*! The index of a polygon vertex or edge that is not associated with any;
+ * it is invalid for every polygon (see `Gps_simplifier_traits::is_valid_index()`).
+ */
+inline constexpr std::size_t gps_simplifier_no_index = (std::numeric_limits<std::size_t>::max)();
+
 class Gps_simplifier_curve_data {
 protected:
-  std::size_t m_bc;
-  std::size_t m_twin_bc;
-  std::size_t m_index;
+  std::size_t m_bc = 0;
+  std::size_t m_twin_bc = 0;
+  std::size_t m_index = gps_simplifier_no_index;
 
 public:
-  Gps_simplifier_curve_data() {}
+  Gps_simplifier_curve_data() = default;
 
   Gps_simplifier_curve_data(std::size_t bc, std::size_t twin_bc,
                             std::size_t index):
@@ -53,12 +60,12 @@ public:
   void set_index(std::size_t index) { m_index = index; }
 };
 
-struct Gps_simplifier_point_data {
+class Gps_simplifier_point_data {
 protected:
-  std::size_t m_index;
+  std::size_t m_index = gps_simplifier_no_index;
 
 public:
-  Gps_simplifier_point_data() {}
+  Gps_simplifier_point_data() = default;
 
   Gps_simplifier_point_data(std::size_t index) : m_index(index) {}
 
