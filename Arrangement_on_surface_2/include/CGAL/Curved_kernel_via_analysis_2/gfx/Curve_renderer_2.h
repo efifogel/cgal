@@ -1357,8 +1357,8 @@ private:
     // bottom(2), top(3), left(0), right(1)
     int n_sign = 0;
     int i;
-    int j;
-    int n_dir = 0;
+    std::size_t j;
+    std::size_t n_dir = 0;
     int shift;
     int n_local;
     int new_dir;
@@ -1370,7 +1370,7 @@ private:
     Gfx_OUT("----------------------------------------------\n\n");*/
 
     b_coincide = false;
-    int n_corner_dir = 0;
+    std::size_t n_corner_dir = 0;
     int corner_dir[] = {-1, -1};
     // process subsegments: left/right
     for (i = 0; i < 2; i++) {

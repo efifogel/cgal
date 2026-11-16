@@ -1042,9 +1042,7 @@ public:
       }
       // compare y-coordinates of min curve ends
       switch (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._minpoint(), true)) {
-      case CGAL::EQUAL: // this->source == cv2->source => overlap !
-        return true;
-
+      case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
       case CGAL::SMALLER: // this->source < cv2->source
         // check whether this->target > cv2->source
         return (cv1._same_arc_compare_xy(cv1._maxpoint(), cv2._minpoint(), true) == CGAL::LARGER);
@@ -1061,8 +1059,7 @@ public:
      * curve with equal arc numbers in their interior. They do overlap if
      * their x-ranges overlap. Compare only x-coordinates */
     switch (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._minpoint(), false, true)) {
-    case CGAL::EQUAL: // this->source == cv2->source => overlap !
-      return true;
+    case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
     case CGAL::SMALLER: // this->source < cv2->source
       // check whether this->target > cv2->source
       return (cv1._same_arc_compare_xy(cv1._maxpoint(), cv2._minpoint(), false, true) == CGAL::LARGER);
@@ -1588,16 +1585,12 @@ public:
 
     if (CGAL::assign(curve, obj))
       oi = (*this)(curve, oi);
-    else if (CGAL::assign(nxarc, obj))
-      std::cerr << "AU BACKE" << std::endl;
+    else if (CGAL::assign(nxarc, obj)) std::cerr << "AU BACKE" << std::endl;
     //oi = std::transform(nxarc.begin(), nxarc.end(), oi,
     //      std::ptr_fun(CGAL::make_object<Arc_2>));
-    else if (CGAL::assign(xcv, obj))
-      *oi++ = Make_x_monotone_result(xcv);
-    else if (CGAL::assign(p, obj))
-      *oi++ = Make_x_monotone_result(p);
-    else
-      CGAL_error();
+    else if (CGAL::assign(xcv, obj)) *oi++ = Make_x_monotone_result(xcv);
+    else if (CGAL::assign(p, obj)) *oi++ = Make_x_monotone_result(p);
+    else CGAL_error();
     return oi;
   }
 };
@@ -1966,10 +1959,8 @@ public:
    * \return The order of endpoints
    */
   CGAL::Comparison_result operator()(const Arc_2& xcv) const {
-    if (xcv.is_left_to_right())
-      return (CGAL::SMALLER);
-    else
-      return (CGAL::LARGER);
+    if (xcv.is_left_to_right()) return (CGAL::SMALLER);
+    else return CGAL::LARGER;
     return CGAL::EQUAL;
   }
 };

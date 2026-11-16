@@ -2516,9 +2516,9 @@ public:
           curve_kernel().construct_curve_2_object()(CGAL::differentiate(this->curve().polynomial_2(), 0)),
           std::back_inserter(pts));
 
-        int n = static_cast<int>(pts.size());
+        const std::size_t n = pts.size();
         CKvA_CERR("check candidates for y-extremal points: #" << n);
-        for (int i = 0; i < n; i++) {
+        for (std::size_t i = 0; i < n; ++i) {
           const Coordinate_2& curr_xy = pts[i].first;
 
 #if 0
