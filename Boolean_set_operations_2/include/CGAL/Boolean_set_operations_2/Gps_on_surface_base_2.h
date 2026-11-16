@@ -232,9 +232,9 @@ public:
   void simplify(const Polygon_2& pgn, Polygon_with_holes_2& res) {
     using Simplifier = Gps_polygon_simplifier<Aos_2>;
 
-    Aos_2* arr = new Aos_2();
+    Aos_2* arr = new Aos_2(m_traits);
 
-    Simplifier simp(*arr, *m_traits);
+    Simplifier simp(*arr, *(arr->traits_adaptor()));
     simp.simplify(pgn);
     _remove_redundant_edges(arr);
     Self gps(arr);

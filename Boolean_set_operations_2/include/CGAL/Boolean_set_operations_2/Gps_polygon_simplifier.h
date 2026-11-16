@@ -44,7 +44,8 @@ class Gps_polygon_simplifier {
   using Polygon_with_holes_2 = typename Gt2::Polygon_with_holes_2;
   using Construct_curves_2 = typename Gt2::Construct_curves_2;
 
-  using Mgt2 = Gps_simplifier_traits<Gt2>;
+  using Traits_adaptor_2 = typename Arr::Traits_adaptor_2;
+  using Mgt2 = Gps_simplifier_traits<Traits_adaptor_2>;
   using Curve_data = typename Mgt2::Curve_data;
   using Meta_X_monotone_curve_2 = typename Mgt2::X_monotone_curve_2;
 
@@ -90,7 +91,7 @@ protected:
 
 public:
    /*! Construct. */
-  Gps_polygon_simplifier(Arr& arr, const Gt2& tr) :
+  Gps_polygon_simplifier(Arr& arr, const Traits_adaptor_2& tr) :
     m_arr(&arr),
     m_geom_traits(&tr),
     m_traits(new Mgt2(tr)),
