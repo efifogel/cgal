@@ -40,9 +40,7 @@ public:
   typedef typename Base::Compare_y_at_x_right_2    Base_Compare_y_at_x_right_2;
   typedef typename Base::Equal_2                   Base_Equal_2;
   typedef typename Base::Split_2                   Base_Split_2;
-  typedef typename Base::Intersect_2               Base_Intersect_2;
   typedef typename Base::Compare_endpoints_xy_2    Base_Compare_endpoints_xy_2;
-  typedef typename Base::Construct_opposite_2      Base_Construct_opposite_2;
   typedef typename Base::Has_left_category         Has_left_category;
   typedef typename Base::Has_merge_category        Has_merge_category;
 
@@ -418,71 +416,6 @@ public:
   }
 
 
-  class Intersect_2
-  {
-  protected:
-
-    Base_Intersect_2             m_base;
-    Base_Compare_xy_2            m_base_cmp_xy;
-    Base_Construct_min_vertex_2  m_ctr_min_v;
-
-  public:
-    Intersect_2(Base_Intersect_2&            base,
-                Base_Compare_xy_2&           base_cmp_xy,
-                Base_Construct_min_vertex_2& base_ctr_min_v) :
-      m_base(base),
-      m_base_cmp_xy(base_cmp_xy),
-      m_ctr_min_v(base_ctr_min_v)
-    {}
-
-    template<class OutputIterator>
-    OutputIterator operator() (const X_monotone_curve_2& cv1,
-                               const X_monotone_curve_2& cv2,
-                               OutputIterator oi) const
-    {
-      const std::pair<Base_Point_2, Multiplicity>   *base_pt;
-      const Base_X_monotone_curve_2                 *overlap_cv;
-
-       OutputIterator oi_end;
-      if(m_base_cmp_xy(m_ctr_min_v(cv1.base()),
-                       m_ctr_min_v(cv2.base())) == LARGER)
-        oi_end = m_base(cv1.base(), cv2.base(), oi);
-      else
-        oi_end = m_base(cv2.base(), cv1.base(), oi);
-
-      // convert objects that are associated with Base_X_monotone_curve_2 to
-      // the extenede X_monotone_curve_2
-      for(; oi != oi_end; ++oi)
-      {
-        base_pt = object_cast<std::pair<Base_Point_2, Multiplicity> >(&(*oi));
-
-        if (base_pt != nullptr)
-        {
-          Point_2 point_plus (base_pt->first); // the extended point
-          *oi = CGAL::make_object(std::make_pair(point_plus,
-                                                 base_pt->second));
-        }
-        else
-        {
-          overlap_cv = object_cast<Base_X_monotone_curve_2> (&(*oi));
-          CGAL_assertion(overlap_cv != nullptr);
-          *oi = CGAL::make_object (X_monotone_curve_2 (*overlap_cv));
-        }
-      }
-      //return past-end iterator
-      return oi_end;
-    }
-  };
-
-  /*! Get a Intersect_2 functor object. */
-  Intersect_2 intersect_2_object() const
-  {
-    return Intersect_2(m_base_traits->intersect_2_object(),
-                       m_base_traits->compare_xy_2_object(),
-                       m_base_traits->construct_min_vertex_2_object());
-  }
-
-
   class Compare_endpoints_xy_2
   {
   protected:
@@ -496,8 +429,7 @@ public:
 
     Comparison_result operator()(const X_monotone_curve_2& cv) const
     {
-      return (m_base(cv));
-
+      return m_base(cv.base());
     }
   };
 
@@ -505,29 +437,6 @@ public:
   Compare_endpoints_xy_2 compare_endpoints_xy_2_object() const
   {
     return Compare_endpoints_xy_2(m_base_traits->compare_endpoints_xy_2_object());
-  }
-
-
-  class Construct_opposite_2
-  {
-  protected:
-
-    Base_Construct_opposite_2 m_base;
-
-  public:
-    Construct_opposite_2(Base_Construct_opposite_2& base) :m_base(base)
-    {}
-
-    X_monotone_curve_2 operator()(const X_monotone_curve_2& cv) const
-    {
-      return (X_monotone_curve_2(m_base(cv)));
-    }
-  };
-
-  /*! Get a Construct_opposite_2 functor object. */
-  Construct_opposite_2 construct_opposite_2_object() const
-  {
-    return Construct_opposite_2(m_base_traits->construct_opposite_2_object());
   }
 
   /// \name Functors required by traits with open sides
