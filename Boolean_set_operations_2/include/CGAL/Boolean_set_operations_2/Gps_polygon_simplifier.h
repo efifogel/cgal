@@ -44,7 +44,8 @@ class Gps_polygon_simplifier {
   using Polygon_with_holes_2 = typename Gt2::Polygon_with_holes_2;
   using Construct_curves_2 = typename Gt2::Construct_curves_2;
 
-  using Mgt2 = Gps_simplifier_traits<Gt2>;
+  using Traits_adaptor_2 = typename Arr::Traits_adaptor_2;
+  using Mgt2 = Gps_simplifier_traits<Traits_adaptor_2>;
   using Curve_data = typename Mgt2::Curve_data;
   using Meta_X_monotone_curve_2 = typename Mgt2::X_monotone_curve_2;
 
@@ -80,7 +81,8 @@ class Gps_polygon_simplifier {
 
 protected:
   Arr* m_arr;
-  const Mgt2* m_traits;
+  const Gt2* m_geom_traits;     // the geometry traits
+  const Mgt2* m_traits;         // the meta traits, which decorates the above
   bool m_own_traits;
   Visitor m_visitor;
   Surface_sweep_2 m_surface_sweep;
@@ -89,8 +91,9 @@ protected:
 
 public:
    /*! Construct. */
-  Gps_polygon_simplifier(Arr& arr, const Gt2& tr) :
+  Gps_polygon_simplifier(Arr& arr, const Traits_adaptor_2& tr) :
     m_arr(&arr),
+    m_geom_traits(&tr),
     m_traits(new Mgt2(tr)),
     m_own_traits(true),
     m_visitor(&arr, &m_edges_hash),
@@ -106,8 +109,7 @@ public:
   }
 
   void simplify(const Polygon_2& pgn) {
-    Construct_curves_2 ctr_curves =
-      reinterpret_cast<const Gt2*>(m_traits)->construct_curves_2_object();
+    Construct_curves_2 ctr_curves = m_geom_traits->construct_curves_2_object();
 
     std::list<Meta_X_monotone_curve_2> curves_list;
 
