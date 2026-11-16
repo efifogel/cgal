@@ -88,13 +88,6 @@ class Gps_agg_meta_traits :
   using Base_Compare_xy_2 = typename Gt2::Compare_xy_2;
   using Base_Split_2 = typename Gt2::Split_2;
 
-  using Base_Parameter_space_in_x_2 = typename Gt2::Parameter_space_in_x_2;
-  using Base_Compare_y_near_boundary_2 = typename Gt2::Compare_y_near_boundary_2;
-
-  using Base_Parameter_space_in_y_2 = typename Gt2::Parameter_space_in_y_2;
-  using Base_Compare_x_near_boundary_2 = typename Gt2::Compare_x_near_boundary_2;
-  using Base_Compare_x_on_boundary_2 = typename Gt2::Compare_x_on_boundary_2;
-
 public:
   using Multiplicity = typename Gt2::Multiplicity;
   using Curve_data = Gps_agg_curve_data<Arr>;
@@ -315,124 +308,6 @@ public:
 
   /*! obtains a Compare_xy_2 functor object. */
   Compare_xy_2 compare_xy_2_object() const { return Compare_xy_2(this->m_base_traits->compare_xy_2_object()); }
-
-  // left-right
-  class Parameter_space_in_x_2 {
-  private:
-    Base_Parameter_space_in_x_2 m_base;
-
-  public:
-    explicit Parameter_space_in_x_2(const Base_Parameter_space_in_x_2& base) : m_base(base) {}
-
-    /*! obtains the parameter space at the end of a curve-end along the x-axis.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2 & cv, const Arr_curve_end& end) const
-    { return m_base(cv.base(), end); }
-
-    /*! obtains the parameter space for a curve along the x-axis.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2 & cv) const { return m_base(cv.base()); }
-
-    /*! obtains the parameter space for a point along the x-axis.
-     */
-    Arr_parameter_space operator()(const Point_2 & pt) const { return m_base(pt.base()); }
-  };
-
-  /*! obtains a Parameter_space_in_x_2 functor object. */
-  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
-  { return Parameter_space_in_x_2(this->m_base_traits->parameter_space_in_x_2_object()); }
-
-  class Compare_y_near_boundary_2 {
-  private:
-    Base_Compare_y_near_boundary_2 m_base;
-
-  public:
-    explicit Compare_y_near_boundary_2(const Base_Compare_y_near_boundary_2& base) : m_base(base) {}
-
-    /*! compares the relative y-positions of two curve ends.
-     */
-    Comparison_result operator()(const X_monotone_curve_2 & xcv1, const X_monotone_curve_2 & xcv2,
-                                 Arr_curve_end ce) const
-    { return m_base(xcv1.base(), xcv2.base(), ce); }
-  };
-
-  /*! obtains a Compare_y_near_boundary_2 functor object. */
-  Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const
-  { return Compare_y_near_boundary_2(this->m_base_traits->compare_y_near_boundary_2_object()); }
-
-  // bottom-top
-
-  class Parameter_space_in_y_2 {
-  private:
-    Base_Parameter_space_in_y_2 m_base;
-
-  public:
-    explicit Parameter_space_in_y_2(const Base_Parameter_space_in_y_2& base) : m_base(base) {}
-
-    /*! obtains the parameter space at the end of a curve-end along the y-axis.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2 & cv, const Arr_curve_end& end) const
-    { return m_base(cv.base(), end); }
-
-    /*! obtains the parameter space for a curve along the y-axis.
-     */
-    Arr_parameter_space operator()(const X_monotone_curve_2 & cv) const { return m_base(cv.base()); }
-
-    /*! obtains the parameter space for a point along the y-axis.
-     */
-    Arr_parameter_space operator()(const Point_2 & pt) const { return m_base(pt.base()); }
-  };
-
-  /*! obtains a Parameter_space_in_y_2 functor object. */
-  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
-  { return Parameter_space_in_y_2(this->m_base_traits->parameter_space_in_y_2_object()); }
-
-  class Compare_x_near_boundary_2 {
-  private:
-    Base_Compare_x_near_boundary_2 m_base;
-
-  public:
-    explicit Compare_x_near_boundary_2(const Base_Compare_x_near_boundary_2& base) : m_base(base) {}
-
-    /*! compares the relative x-positions of two curve ends that lie near the
-     * same (bottom or top) boundary and have the same x-limit.
-     */
-    Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2, Arr_curve_end ce) const
-    { return m_base(xcv1.base(), xcv2.base(), ce); }
-  };
-
-  /*! obtains a Compare_x_near_boundary_2 functor object. */
-  Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
-  { return Compare_x_near_boundary_2(this->m_base_traits->compare_x_near_boundary_2_object()); }
-
-  class Compare_x_on_boundary_2 {
-  private:
-    Base_Compare_x_on_boundary_2 m_base;
-
-  public:
-    explicit Compare_x_on_boundary_2(const Base_Compare_x_on_boundary_2& base) : m_base(base) {}
-
-    /*! compares the x-coordinate of a point with the x-limit of a curve end
-     * on the bottom or top boundary.
-     */
-    Comparison_result operator()(const Point_2& p, const X_monotone_curve_2& xcv, Arr_curve_end ce) const
-    { return m_base(p.base(), xcv.base(), ce); }
-
-    /*! compares the x-limits of two curve ends on the bottom or top boundary.
-     */
-    Comparison_result operator()(const X_monotone_curve_2& xcv1, Arr_curve_end ce1,
-                                 const X_monotone_curve_2& xcv2, Arr_curve_end ce2) const
-    { return m_base(xcv1.base(), ce1, xcv2.base(), ce2); }
-  };
-
-  /*! obtains a Compare_x_on_boundary_2 functor object. */
-  Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const
-  { return Compare_x_on_boundary_2(this->m_base_traits->compare_x_on_boundary_2_object()); }
-
-  // Compare_y_on_boundary_2, Is_on_x_identification_2, and
-  // Is_on_y_identification_2 are not provided, as they are required only by
-  // traits with closed, contracted, or identified sides, which are excluded
-  // by the static assertions above.
 };
 
 } // namespace CGAL

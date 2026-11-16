@@ -530,6 +530,47 @@ public:
     return Construct_opposite_2(m_base_traits->construct_opposite_2_object());
   }
 
+  /// \name Functors required by traits with open sides
+  /// The base traits is expected to be an arrangement traits adaptor (e.g.,
+  /// `Arr_traits_basic_adaptor_2`), which provides these functors regardless
+  /// of the side categories. The functors of the base are re-exported as is;
+  /// the extended point and curve types are implicitly converted to the base
+  /// types when the functors are applied.
+  /// Compare_y_on_boundary_2, Is_on_x_identification_2, and
+  /// Is_on_y_identification_2 are not provided, as they are required only by
+  /// traits with closed, contracted, or identified sides, which are excluded
+  /// by the static assertions above.
+  //@{
+
+  // left-right
+  using Parameter_space_in_x_2 = typename Base::Parameter_space_in_x_2;
+  using Compare_y_near_boundary_2 = typename Base::Compare_y_near_boundary_2;
+
+  /*! obtains a Parameter_space_in_x_2 functor object. */
+  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
+  { return m_base_traits->parameter_space_in_x_2_object(); }
+
+  /*! obtains a Compare_y_near_boundary_2 functor object. */
+  Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const
+  { return m_base_traits->compare_y_near_boundary_2_object(); }
+
+  // bottom-top
+  using Parameter_space_in_y_2 = typename Base::Parameter_space_in_y_2;
+  using Compare_x_near_boundary_2 = typename Base::Compare_x_near_boundary_2;
+  using Compare_x_on_boundary_2 = typename Base::Compare_x_on_boundary_2;
+
+  /*! obtains a Parameter_space_in_y_2 functor object. */
+  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
+  { return m_base_traits->parameter_space_in_y_2_object(); }
+
+  /*! obtains a Compare_x_near_boundary_2 functor object. */
+  Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
+  { return m_base_traits->compare_x_near_boundary_2_object(); }
+
+  /*! obtains a Compare_x_on_boundary_2 functor object. */
+  Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const
+  { return m_base_traits->compare_x_on_boundary_2_object(); }
+  //@}
 };
 
 } //namespace CGAL
