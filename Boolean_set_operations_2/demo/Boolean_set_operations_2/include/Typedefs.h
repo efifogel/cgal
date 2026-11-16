@@ -157,6 +157,13 @@ using Conic_polygon = Conic_gps_traits::General_polygon_2;
 using Conic_polygon_with_holes = Conic_gps_traits::General_polygon_with_holes_2;
 using Conic_polygon_set = CGAL::General_polygon_set_2<Conic_gps_traits>;
 
+// Polycurves of conic arcs
+using Conic_polycurve_traits = CGAL::Gps_traits_2<CGAL::Arr_polycurve_traits_2<Conic_traits>>;
+using Conic_polycurve_polygon = Conic_polycurve_traits::Polygon_2;
+using Conic_polycurve_polygon_with_holes = Conic_polycurve_traits::General_polygon_with_holes_2;
+using Conic_polycurve_polygon_set = CGAL::General_polygon_set_2<Conic_polycurve_traits>;
+using Conic_polycurve_X_monotone_curve = Conic_polycurve_traits::X_monotone_curve_2;
+
 // Algebraic curves. The traits support unbounded curves, so General_polygon_set_2 would use the unbounded planar
 // topology, which it does not support (e.g., unions come out empty). The polygons are bounded, so the derived traits
 // declare the sides oblivious, and the sets use the bounded planar topology, as the sets of the other families do.

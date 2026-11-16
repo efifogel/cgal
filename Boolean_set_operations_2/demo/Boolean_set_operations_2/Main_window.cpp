@@ -228,11 +228,15 @@ Main_window::Main_window() :
   m_conic_input = new CGAL::Qt::Graphics_view_conic_input(this, &m_scene);
   m_algebraic_input = new CGAL::Qt::GraphicsViewInput(this);
 
-  // The polygons bounded by polycurves of circle segments are opened from files of their own.
+  // The polygons bounded by polycurves of circle segments or of conic arcs are opened from files of their own.
   auto* action_open_circular_polycurve = new QAction(QIcon(":/cgal/fileToolbar/fileOpen.png"),
                                                      "Open Polycurves of Segments and Circular Arcs", this);
   menu_file->insertAction(action_open_conic, action_open_circular_polycurve);
   action_open_circular_polycurve->setEnabled(false);
+  auto* action_open_conic_polycurve = new QAction(QIcon(":/cgal/fileToolbar/fileOpen.png"),
+                                                  "Open Polycurves of Conic Curves", this);
+  menu_file->insertAction(action_open_bezier, action_open_conic_polycurve);
+  action_open_conic_polycurve->setEnabled(false);
 
   // The curve families. Selecting one in the tool bar starts constructing its curves.
   m_families = {{
@@ -250,10 +254,13 @@ Main_window::Main_window() :
      nullptr, nullptr, nullptr},
     {Curve_type::CT_CIRCULAR_POLYCURVE, "circular_polycurve", "Polycurves of Segments and Circular Arcs",
      action_insert_polyline, m_circular_input, [this] { m_circular_input->reset(); }, action_open_circular_polycurve,
-     ".pcps", &Main_window::read_circular_polycurve}}};
+     ".pcps", &Main_window::read_circular_polycurve},
+    {Curve_type::CT_CONIC_POLYCURVE, "conic_polycurve", "Polycurves of Conic Curves", action_insert_polyline,
+     m_conic_input, [this] { m_conic_input->reset(); }, action_open_conic_polycurve, ".pqps",
+     &Main_window::read_conic_polycurve}}};
   // The Polyline/Polycurve button selects the polycurve family whose subcurve family is selected by the buttons
-  // underneath (Segments, or Segments and Circular Arcs). Unchecking a family button by clicking it again keeps it
-  // checked.
+  // underneath (Segments, Segments and Circular Arcs, or Conic Curves). Unchecking a family button by clicking it again
+  // keeps it checked.
   for (const auto& family : m_families) {
     Curve_type type = family.m_type;
     if (is_polycurve(type)) continue;
@@ -1113,6 +1120,7 @@ bool Main_window::ensure_curve_type(Curve_type a_type) {
   }
   m_curve_type = a_type;
   m_circular_input->set_marked(a_type == Curve_type::CT_CIRCULAR_POLYCURVE);
+  m_conic_input->set_marked(a_type == Curve_type::CT_CONIC_POLYCURVE);
   update_family_actions(! m_pan);
   return true;
 }
@@ -1121,6 +1129,7 @@ Curve_type Main_window::polycurve_of(Curve_type a_type) {
   switch (a_type) {
    case Curve_type::CT_LINEAR: return Curve_type::CT_POLYLINE;
    case Curve_type::CT_CIRCULAR: return Curve_type::CT_CIRCULAR_POLYCURVE;
+   case Curve_type::CT_CONIC: return Curve_type::CT_CONIC_POLYCURVE;
    default: return a_type;
   }
 }
@@ -1129,6 +1138,7 @@ Curve_type Main_window::subcurve_of(Curve_type a_type) {
   switch (a_type) {
    case Curve_type::CT_POLYLINE: return Curve_type::CT_LINEAR;
    case Curve_type::CT_CIRCULAR_POLYCURVE: return Curve_type::CT_CIRCULAR;
+   case Curve_type::CT_CONIC_POLYCURVE: return Curve_type::CT_CONIC;
    default: return a_type;
   }
 }
@@ -1306,7 +1316,18 @@ void Main_window::enter_equation() {
 
 void Main_window::process_input(CGAL::Object o) {
   try {
-    if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o)) {
+    if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o); pgn && (m_curve_type == Curve_type::CT_CONIC_POLYCURVE)) {
+      // The boundary is subdivided into maximal x-monotone polycurves. (Polycurves are not written to programs yet.)
+      Conic_polygon ccw = *pgn;
+      if (ccw.orientation() == CGAL::CLOCKWISE) ccw.reverse_orientation();
+      std::vector<Conic_X_monotone_curve> xcvs(ccw.curves_begin(), ccw.curves_end());
+      auto polycurves = polycurve_boundary<Conic_polycurve_traits>(xcvs);
+      add_constructed_polygon<Conic_polycurve_polygon_set>(Curve_type::CT_CONIC_POLYCURVE,
+                                                           Conic_polycurve_polygon(polycurves.begin(),
+                                                                                   polycurves.end()),
+                                                           false);
+    }
+    else if (auto* pgn = CGAL::object_cast<Conic_polygon>(&o)) {
       Conic_polygon ccw = *pgn;
       if (ccw.orientation() == CGAL::CLOCKWISE) ccw.reverse_orientation();
       if (add_constructed_polygon<Conic_polygon_set>(Curve_type::CT_CONIC, ccw, false)) {
@@ -1326,7 +1347,7 @@ void Main_window::process_input(CGAL::Object o) {
              circular && (m_curve_type == Curve_type::CT_CIRCULAR_POLYCURVE)) {
       // The boundary is subdivided into maximal x-monotone polycurves. (Polycurves are not written to programs yet.)
       std::vector<Circular_X_monotone_curve> xcvs(circular->first.curves_begin(), circular->first.curves_end());
-      auto polycurves = circular_polycurve_boundary(xcvs);
+      auto polycurves = polycurve_boundary<Circular_polycurve_traits>(xcvs);
       add_constructed_polygon<Circular_polycurve_polygon_set>(Curve_type::CT_CIRCULAR_POLYCURVE,
                                                               Circular_polycurve_polygon(polycurves.begin(),
                                                                                          polycurves.end()),

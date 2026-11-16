@@ -38,6 +38,7 @@
 #include "Qt6/Conic_curves.h"
 #include "Error_handling.h"
 #include "Boundary_validity.h"
+#include "Polycurve_boundary.h"
 
 namespace CGAL {
 namespace Qt {
@@ -64,7 +65,8 @@ public:
     m_curves_item(new QGraphicsPathItem),
     m_arcs_item(new QGraphicsPathItem),
     m_preview_item(new QGraphicsPathItem),
-    m_markers_item(new QGraphicsPathItem) {
+    m_markers_item(new QGraphicsPathItem),
+    m_hollow_markers_item(new QGraphicsPathItem) {
     for (auto* item : items()) {
       item->setZValue(10);
       m_scene->addItem(item);
@@ -77,6 +79,13 @@ public:
   void set_pen(const QPen& a_pen) {
     m_pen = a_pen;
     m_pen.setCosmetic(true);
+    update_preview();
+  }
+
+  /*! sets whether the vertices are marked as those of a boundary of polycurves (see update_preview()).
+   */
+  void set_marked(bool a_marked) {
+    m_marked = a_marked;
     update_preview();
   }
 
@@ -93,6 +102,7 @@ public:
   void reset() {
     m_conics.clear();
     m_valid_arcs.clear();
+    m_arc_pieces.clear();
     m_vertices.clear();
     m_ccw.clear();
     m_clicks.clear();
@@ -182,7 +192,8 @@ private:
 
   /*! obtains the graphics items.
    */
-  std::vector<QGraphicsPathItem*> items() const { return {m_curves_item, m_arcs_item, m_preview_item, m_markers_item}; }
+  std::vector<QGraphicsPathItem*> items() const
+  { return {m_curves_item, m_arcs_item, m_preview_item, m_markers_item, m_hollow_markers_item}; }
 
   /*! converts a coordinate (0 for x, 1 for y) of a scene point to a rational number exactly.
    */
@@ -482,6 +493,7 @@ private:
     }
     m_conics.push_back(*conic);
     m_valid_arcs.clear();
+    m_arc_pieces.clear();
     m_ccw.push_back(-1);
     if (m_conics.size() == 1) {
       update_preview();
@@ -509,6 +521,7 @@ private:
     if (m_conics.empty()) return;
     m_conics.pop_back();
     m_valid_arcs.clear();
+    m_arc_pieces.clear();
     m_ccw.pop_back();
     if (m_vertices.size() >= m_conics.size() && ! m_vertices.empty()) m_vertices.pop_back();
     // The arc of the (now) last conic is no longer determined.
@@ -522,6 +535,7 @@ private:
   void choose_vertex(std::size_t a_i) {
     m_vertices.push_back(m_candidates[a_i]);
     m_valid_arcs.clear();
+    m_arc_pieces.clear();
     m_candidates.clear();
     m_state = State::ST_IDLE;
     // The previous conic now has both of its vertices.
@@ -604,6 +618,7 @@ private:
   void close_at(std::size_t a_i) {
     m_close_vertex = m_candidates[a_i];
     m_valid_arcs.clear();
+    m_arc_pieces.clear();
     m_candidates.clear();
     m_closing = true;
     m_state = State::ST_IDLE;
@@ -611,6 +626,7 @@ private:
       message("The two vertices of the conic are on different branches.");
       m_closing = false;
       m_valid_arcs.clear();
+      m_arc_pieces.clear();
       m_arc_queue.clear();
       update_preview();
       return;
@@ -620,6 +636,7 @@ private:
         message("The polygon cannot be closed: the arc of the last or the first conic would intersect the boundary.");
         m_closing = false;
         m_valid_arcs.clear();
+        m_arc_pieces.clear();
         m_arc_queue.clear();
         update_preview();
         return;
@@ -722,6 +739,49 @@ private:
     return r_valid;
   }
 
+  /*! obtains the x-monotone arcs of the arc of the i-th conic, or nothing if the arc is not determined.
+   */
+  const std::vector<Conic_X_monotone_curve>& arc_pieces(std::size_t a_i) const {
+    auto it = m_arc_pieces.find(a_i);
+    if (it != m_arc_pieces.end()) return it->second;
+    std::vector<Conic_X_monotone_curve> pieces;
+    if (is_determined(a_i)) {
+      auto cv = exact_arc(a_i);
+      if (cv && cv->is_valid()) pieces = x_monotone_pieces(Conic_traits(), &*cv, &*cv + 1);
+    }
+    return m_arc_pieces[a_i] = pieces;
+  }
+
+  /*! adds the marks of the vertices of a boundary of polycurves under construction, as those of polylines (see
+   * Polyline_boundary_pieces_graphics_item): a vertex where the boundary changes direction (see polycurve_boundary())
+   * will be a vertex of the polygon, and so are, for now, the vertices next to arcs that are not determined yet. The
+   * points where an arc changes direction are marked as well.
+   */
+  void add_polycurve_marks(QPainterPath& r_filled, QPainterPath& r_hollow) const {
+    double r = 4 * pixel(), r_hollow_mark = 3 * pixel();
+    auto mark = [&](const Conic_point& a_p, bool a_filled) {
+      if (a_filled) r_filled.addEllipse(to_qt(a_p), r, r);
+      else r_hollow.addEllipse(to_qt(a_p), r_hollow_mark, r_hollow_mark);
+    };
+    // A vertex between the arcs of conics i and j.
+    auto mark_vertex = [&](const Conic_point& a_p, std::size_t a_i, std::size_t a_j) {
+      const auto& in = arc_pieces(a_i);
+      const auto& out = arc_pieces(a_j);
+      mark(a_p, in.empty() || out.empty() || (curve_direction(in.back()) != curve_direction(out.front())));
+    };
+    std::size_t n = m_conics.size();
+    for (std::size_t i = 0; i < n; ++i) {
+      const auto& pieces = arc_pieces(i);
+      auto starts = polycurve_starts(pieces);
+      for (std::size_t j = 1; j < pieces.size(); ++j) mark(pieces[j].source(), starts[j]);
+    }
+    for (std::size_t k = 0; k < m_vertices.size(); ++k) {
+      if (k + 1 < n) mark_vertex(m_vertices[k], k, k + 1);
+      else mark(m_vertices[k], true);
+    }
+    if (m_closing) mark_vertex(m_close_vertex, n - 1, 0);
+  }
+
   /*! constructs the arcs and emits the polygon.
    */
   void finish() {
@@ -778,6 +838,7 @@ private:
        if (! is_valid_arc(m_arc_queue.front(), ccw)) break;
        m_ccw[m_arc_queue.front()] = ccw;
        m_valid_arcs.clear();
+       m_arc_pieces.clear();
        m_arc_queue.erase(m_arc_queue.begin());
        m_state = State::ST_IDLE;
        next_arc();
@@ -883,6 +944,7 @@ private:
     else if (m_closing || (m_state != State::ST_IDLE)) {
       m_closing = false;
       m_valid_arcs.clear();
+      m_arc_pieces.clear();
       m_arc_queue.clear();
       m_candidates.clear();
       if (m_state == State::PICK_VERTEX) remove_last_conic();
@@ -976,8 +1038,12 @@ private:
       if (auto a = arc(i)) add(arcs, *a);
     }
     double r = 4 * pixel();
-    for (const auto& v : m_vertices) markers.addEllipse(to_qt(v), r, r);
-    if (m_closing) markers.addEllipse(to_qt(m_close_vertex), r, r);
+    QPainterPath hollow_markers;
+    if (m_marked) add_polycurve_marks(markers, hollow_markers);
+    else {
+      for (const auto& v : m_vertices) markers.addEllipse(to_qt(v), r, r);
+      if (m_closing) markers.addEllipse(to_qt(m_close_vertex), r, r);
+    }
     QPainterPath candidates;
     for (const auto& v : m_candidates) candidates.addEllipse(to_qt(v), r, r);
     QPainterPath preview = tool_preview();
@@ -1004,6 +1070,11 @@ private:
     m_markers_item->setPen(m_pen);
     m_markers_item->setBrush(m_pen.color());
     m_markers_item->setPath(all_markers);
+    QPen hollow_pen = m_pen;
+    hollow_pen.setWidthF(1.5);
+    m_hollow_markers_item->setPen(hollow_pen);
+    m_hollow_markers_item->setBrush(::Qt::white);
+    m_hollow_markers_item->setPath(hollow_markers);
   }
 
   QGraphicsScene* m_scene;
@@ -1011,6 +1082,7 @@ private:
   QGraphicsPathItem* m_arcs_item;     // their arcs (thick)
   QGraphicsPathItem* m_preview_item;  // the curve under construction
   QGraphicsPathItem* m_markers_item;  // the vertices and the candidates
+  QGraphicsPathItem* m_hollow_markers_item;  // the vertices of polycurves (see add_polycurve_marks())
   QPen m_pen;
 
   Mode m_mode = Mode::MO_LINE;
@@ -1026,6 +1098,9 @@ private:
   Conic_point m_close_vertex;               // on the last and the first conics
   // Whether arcs are valid (see is_valid_arc()), by the index of the conic and the chosen arc; cleared on a change.
   mutable std::map<std::pair<std::size_t, int>, bool> m_valid_arcs;
+  // The x-monotone arcs of the arcs (see arc_pieces()), by the index of the conic; cleared on a change.
+  mutable std::map<std::size_t, std::vector<Conic_X_monotone_curve>> m_arc_pieces;
+  bool m_marked = false;                    // whether the vertices are marked as those of polycurves
   QString m_last_coefficients[6] = {"1", "1", "0", "0", "0", "-400"};
 };
 

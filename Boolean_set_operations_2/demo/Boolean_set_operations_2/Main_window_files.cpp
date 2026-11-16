@@ -150,6 +150,11 @@ bool Main_window::read_circular_polycurve(QString a_file_name) {
                                                        no_python<Circular_polycurve_polygon>);
 }
 
+bool Main_window::read_conic_polycurve(QString a_file_name) {
+  return read_polygons<Conic_polycurve_polygon_set>(a_file_name, read_conic_polycurve_boundary,
+                                                    no_python<Conic_polycurve_polygon>);
+}
+
 bool Main_window::read_conic(QString a_file_name) {
   auto python = [](const Conic_polygon& a_pgn, bool) { return to_python(a_pgn); };
   return read_polygons<Conic_polygon_set>(a_file_name, read_conic_boundary, python);
@@ -192,6 +197,9 @@ void Main_window::save_draw_bucket() {
       break;
      case Curve_type::CT_CIRCULAR_POLYCURVE:
       saved = save_polygons(file_name, bucket.circular_polycurve(), write_circular_polycurve_boundary, precision);
+      break;
+     case Curve_type::CT_CONIC_POLYCURVE:
+      saved = save_polygons(file_name, bucket.conic_polycurve(), write_conic_polycurve_boundary, precision);
       break;
      default: break;
     }

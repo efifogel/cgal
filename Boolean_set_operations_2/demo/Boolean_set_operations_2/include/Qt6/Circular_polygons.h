@@ -32,7 +32,7 @@
 
 #include "Typedefs.h"
 #include "Boundary_validity.h"
-#include "Circular_polycurve_boundary.h"
+#include "Polycurve_boundary.h"
 #include "Qt6/Piecewise_set_graphics_item.h"
 #include "Qt6/Boundary_pieces_graphics_item.h"
 #include "Qt6/Polyline_curves.h"
@@ -231,19 +231,17 @@ public:
 
 protected:
   /*! marks the vertices of the chain under construction, as those of polylines (see
-   * Polyline_boundary_pieces_graphics_item). A vertex where the chain changes direction (see
-   * circular_polycurve_boundary()) will be a vertex of the polygon; so are, for now, the first and the last vertices.
+   * Polyline_boundary_pieces_graphics_item). A vertex where the chain changes direction (see polycurve_boundary())
+   * will be a vertex of the polygon; so are, for now, the first and the last vertices.
    * Arcs are subdivided into x-monotone arcs, so a point where an arc turns is a vertex of the polygon as well.
    */
   void paint_marks(QPainter* a_painter) override {
     if (! m_marked || ! this->m_boundary || this->m_boundary->empty()) return;
     auto xcvs = x_monotone_pieces(Circular_traits(), this->m_boundary->begin(), this->m_boundary->end());
     if (xcvs.empty()) return;
+    auto starts = polycurve_starts(xcvs);
     std::vector<std::pair<Circular_point, bool>> vertices;
-    for (std::size_t i = 0; i < xcvs.size(); ++i) {
-      bool turn = (i == 0) || (circle_segment_direction(xcvs[i - 1]) != circle_segment_direction(xcvs[i]));
-      vertices.emplace_back(xcvs[i].source(), turn);
-    }
+    for (std::size_t i = 0; i < xcvs.size(); ++i) vertices.emplace_back(xcvs[i].source(), starts[i]);
     vertices.emplace_back(xcvs.back().target(), true);
     paint_polyline_vertices(a_painter, vertices, this->m_pen.color());
   }

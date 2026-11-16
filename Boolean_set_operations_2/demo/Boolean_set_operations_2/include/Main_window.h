@@ -140,7 +140,7 @@
 #include "Qt6/Linear_polygons.h"
 #include "Qt6/Bezier_curves.h"
 #include "Qt6/Polyline_curves.h"
-#include "Circular_polycurve_boundary.h"
+#include "Polycurve_boundary.h"
 #include "Qt6/Graphics_view_circular_polygon_input.h"
 #include "Qt6/Graphics_view_linear_polygon_input.h"
 #include "Qt6/Graphics_view_polyline_input.h"
@@ -469,13 +469,15 @@ public slots:
    */
   static Curve_type subcurve_of(Curve_type a_type);
 
-  /*! determines whether a family is a polycurve family (polylines, or polycurves of circle segments).
+  /*! determines whether a family is a polycurve family (polylines, or polycurves of circle segments or of conic
+   * arcs).
    */
   static bool is_polycurve(Curve_type a_type);
 
   /*! checks the tool-bar button of the active curve family and unchecks the others, without acting on the changes. A
    * polycurve family is selected by its button (Polyline/Polycurve) checked together with the button of its subcurve
-   * family (Segments, or Segments and Circular Arcs), and the families that cannot be subcurves yet are disabled.
+   * family (Segments, Segments and Circular Arcs, or Conic Curves), and the families that cannot be subcurves yet are
+   * disabled.
    * \param a_active false to uncheck all the buttons (while panning).
    */
   void update_family_actions(bool a_active = true);
@@ -663,6 +665,10 @@ public slots:
   /*! reads polygons bounded by polycurves of circle segments from a file. \return false if the file cannot be read.
    */
   bool read_circular_polycurve(QString a_file_name);
+
+  /*! reads polygons bounded by polycurves of conic arcs from a file. \return false if the file cannot be read.
+   */
+  bool read_conic_polycurve(QString a_file_name);
 
   /*! reads conic polygons from a file. \return false if the file cannot be read.
    */

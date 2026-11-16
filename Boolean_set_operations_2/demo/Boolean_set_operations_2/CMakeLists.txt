@@ -65,13 +65,13 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/Boundary_validity.h
     include/Bucket_operations.h
     include/Buckets.h
-    include/Circular_polycurve_boundary.h
     include/Circular_source.h
     include/Conic_arcs.h
     include/Curve_set.h
     include/Error_handling.h
     include/Main_window.h
     include/Polygon_io.h
+    include/Polycurve_boundary.h
     include/Polyline_boundary.h
     include/Polynomial_dialog.h
     include/Polynomial_parser.h
@@ -80,7 +80,6 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/State.h
     include/Typedefs.h
     include/Qt6/Boundary_pieces_graphics_item.h
-    include/Qt6/Circular_polycurves.h
     include/Qt6/Circular_polygons.h
     include/Qt6/Graphics_view_circular_polygon_input.h
     include/Qt6/Piecewise_boundary_graphics_item.h
@@ -90,6 +89,7 @@ if (CGAL_FOUND AND CGAL_Qt6_FOUND AND Qt6_FOUND )
     include/Qt6/Graphics_view_linear_polygon_input.h
     include/Qt6/Graphics_view_polyline_input.h
     include/Qt6/Linear_polygons.h
+    include/Qt6/Polycurves.h
     include/Qt6/Polyline_curves.h
     include/Qt6/Conic_curves.h
     include/Qt6/Bezier_curves.h

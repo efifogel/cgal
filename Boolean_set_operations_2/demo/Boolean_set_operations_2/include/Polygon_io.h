@@ -25,7 +25,8 @@
 #define CGAL_POLYGON_IO_H
 
 /*! \file Polygon_io.h
- * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .pcps, .bps, and .qps). A file holds
+ * Reading and writing the polygon files of the curve families (.lps, .cps, .plps, .pcps, .bps, .qps, and
+ * .pqps). A file holds
  * polygons with holes, each one given by its boundaries; a function of each family reads or writes a boundary.
  *
  * The suffix of a file is the code of its curves followed by "ps" (polygon set). The code of a basic family is a
@@ -95,7 +96,7 @@ std::vector<Circular_X_monotone_curve> read_circular_boundary(std::istream& a_is
 
 /*! reads the boundary of a polygon bounded by polycurves of circle segments, in the format of the boundaries of
  * polygons bounded by circle segments (see read_circular_boundary()). The boundary is subdivided into maximal
- * x-monotone polycurves (see circular_polycurve_boundary()). \return the polycurves.
+ * x-monotone polycurves (see polycurve_boundary()). \return the polycurves.
  */
 std::vector<Circular_polycurve_X_monotone_curve> read_circular_polycurve_boundary(std::istream& a_is);
 
@@ -174,5 +175,17 @@ std::vector<Conic_X_monotone_curve> read_conic_boundary(std::istream& a_is);
  * \throw std::invalid_argument if the boundary cannot be written exactly (see conic_arc_records()).
  */
 void write_conic_boundary(std::ostream& a_os, const Conic_polygon& a_boundary);
+
+/*! reads the boundary of a polygon bounded by polycurves of conic arcs, in the format of the boundaries of conic
+ * polygons (see write_conic_boundary()). The boundary is subdivided into maximal x-monotone polycurves (see
+ * polycurve_boundary()). \return the polycurves.
+ */
+std::vector<Conic_polycurve_X_monotone_curve> read_conic_polycurve_boundary(std::istream& a_is);
+
+/*! writes the boundary of a polygon bounded by polycurves of conic arcs: the conic arcs of its polycurves (see
+ * write_conic_boundary()).
+ * \throw std::invalid_argument if the boundary cannot be written exactly (see conic_arc_records()).
+ */
+void write_conic_polycurve_boundary(std::ostream& a_os, const Conic_polycurve_polygon& a_boundary);
 
 #endif

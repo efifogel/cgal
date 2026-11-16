@@ -9,8 +9,8 @@
 - Semantic errors of equations (a divisor or an exponent that is not a constant) have no column.
 
 2. Polycurves
-- Segments (.plps) and Segments and Circular Arcs (.pcps) can be the subcurve families of Polyline/Polycurve. Next:
-  polycurves of conics (.pqps) and of Bezier curves (.pbps); then nested ones (.pplps, ...). The suffix scheme is
+- Segments (.plps), Segments and Circular Arcs (.pcps), and Conic Curves (.pqps) can be the subcurve families of
+  Polyline/Polycurve. Next: polycurves of Bezier curves (.pbps); then nested ones (.pplps, ...). The suffix scheme is
   documented in Polygon_io.h.
 - The polygons of the polycurve families are not written to programs.
 - Let the user choose the vertices of a polyline polygon (e.g., a modifier key while clicking); the .plps format
