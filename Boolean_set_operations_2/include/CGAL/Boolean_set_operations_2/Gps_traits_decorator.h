@@ -212,7 +212,7 @@ public:
     Base_Compare_x_2 m_base;
 
   public:
-    Compare_x_2(Base_Compare_x_2& base) : m_base(base)
+    Compare_x_2(const Base_Compare_x_2& base) : m_base(base)
     {}
 
     Comparison_result operator() (const Point_2& p1, const Point_2& p2) const
