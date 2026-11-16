@@ -139,7 +139,7 @@ public:
      * every curve end is interior.
      */
     bool is_min_end_interior(const X_monotone_curve_2& xcv) const {
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       if constexpr (! std::is_same_v<Left_side_category, Arr_oblivious_side_tag>) {
         auto ps_in_x = base_traits->parameter_space_in_x_2_object();
         if (ps_in_x(xcv.base(), ARR_MIN_END) != ARR_INTERIOR) return false;
@@ -162,7 +162,7 @@ public:
       using Intersection_base_point = std::pair<Base_point_2, Multiplicity>;
       using Intersection_base_result = std::variant<Intersection_base_point, Base_x_monotone_curve_2>;
 
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_cmp_xy = base_traits->compare_xy_2_object();
       auto base_cmp_endpoints = base_traits->compare_endpoints_xy_2_object();
       auto base_ctr_min_vertex = base_traits->construct_min_vertex_2_object();
