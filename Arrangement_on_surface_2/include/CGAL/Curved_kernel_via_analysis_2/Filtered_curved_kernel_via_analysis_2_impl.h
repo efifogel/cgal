@@ -363,7 +363,7 @@ public:
     Arc_2 trimmed_cv2;
 
     if (! cv1.is_vertical() && ! cv2.is_vertical()) {
-      if (! cv1.trim_by_arc(cv2, trimmed_cv1, trimmed_cv2)) return false;
+      if (! this->trim_by_arc(cv1, cv2, trimmed_cv1, trimmed_cv2)) return false;
     }
     else {
       trimmed_cv1 = cv1;
@@ -396,7 +396,7 @@ public:
 
     // TODO compute more than a single bbox (EB)
 
-    CGAL::Bbox_2 bbox = arc.bbox();
+    CGAL::Bbox_2 bbox = this->bbox(arc);
     CKvA_CERR("\nres: " << bbox << "\n");
     *oi++ = bbox;
     return oi;
