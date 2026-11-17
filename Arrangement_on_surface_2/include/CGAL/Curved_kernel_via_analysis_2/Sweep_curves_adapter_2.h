@@ -29,7 +29,6 @@
 #include <CGAL/enum.h>
 #include <CGAL/iterator.h>
 #include <CGAL/Arr_enums.h>
-
 #include <CGAL/Curved_kernel_via_analysis_2/Generic_point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Generic_arc_2.h>
 
@@ -96,20 +95,20 @@ public:
       end = p1.curve_end();
       loc1 = arc.location(end);
 
-      if (! p2.is_finite()) { // both points lie at infinity
+      if (! p2.is_finite()) {
+        // both points lie at infinity
         loc2 = p2.arc().location(p2.curve_end());
         if (Native_arc_2::is_on_left_right(loc1)) {
           if (loc1 != loc2) // cmp + and -oo in x
             return (loc1 == CGAL::ARR_LEFT_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-          return (m_adapter->kernel().compare_y_curve_ends_2_object()(arc, p2.arc(), end));
+          return m_adapter->kernel().compare_y_curve_ends_2_object()(arc, p2.arc(), end);
         }
         // compare curve ends at +/-oo in y
         if (Native_arc_2::is_on_bottom_top(loc2)) {
           CGAL::Comparison_result res =
-            (m_adapter->kernel().compare_x_curve_ends_2_object()(arc, end, p2.arc(), p2.curve_end()));
-          if (res == CGAL::EQUAL && end == p2.curve_end() && loc1 != loc2) {
+            m_adapter->kernel().compare_x_curve_ends_2_object()(arc, end, p2.arc(), p2.curve_end());
+          if (res == CGAL::EQUAL && end == p2.curve_end() && loc1 != loc2)
             return (loc1 == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-          }
           return res;
         }
         return (loc2 == CGAL::ARR_LEFT_BOUNDARY ? CGAL::LARGER : CGAL::SMALLER);
@@ -223,9 +222,7 @@ public:
     CGAL_precondition(in_x_range);
 
     if (! cv.arc().is_vertical()) {
-      if (eq_max && Native_arc_2::is_on_bottom_top(cv.arc().location(CGAL::ARR_MAX_END))) {
-        end2 = CGAL::ARR_MAX_END;
-      }
+      if (eq_max && Native_arc_2::is_on_bottom_top(cv.arc().location(CGAL::ARR_MAX_END))) end2 = CGAL::ARR_MAX_END;
       else if (! eq_min || ! Native_arc_2::is_on_bottom_top(cv.arc().location(CGAL::ARR_MIN_END))) {
         // compare finite point against asymptotic or vertical curve end
         return (locp == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
@@ -489,7 +486,6 @@ public:
   template <typename OutputIterator>
   OutputIterator operator()(const Arc_2& cv1, const Arc_2& cv2, OutputIterator oi) {
     SCA_CERR("Intersect_2: cv1: " << cv1 << "\n cv2: " << cv2 << std::endl);
-
     return cv1.intersect(cv2, oi);
   }
 };
@@ -523,8 +519,7 @@ public:
     for (typename Point_container::const_iterator it = tmp.begin(); it != tmp.end(); it++) {
       // assume points are sorted lexicographical
       if (m_adapter->compare_xy_2_object()(*it, ref) == CGAL::LARGER) {
-        res = *it;
-        SCA_CERR("intersection found: " << res << "\n");
+        SCA_CERR("intersection found: " << *it << "\n");
         return true;
       }
     }
@@ -654,9 +649,10 @@ public:
 
 // declares functors, for each functor defines a member function
 // returning an instance of this functor
-#define CGAL_Sweep_curves_pred(Y, Z)                                                                                   \
-  using Y = Sweep_curves_functors::Y<Self>;                                                                            \
+#define CGAL_Sweep_curves_pred(Y, Z)                       \
+  using Y = Sweep_curves_functors::Y<Self>;                \
   Y Z() const { return Y((Sweep_curves_adapter_2*)this); }
+
 #define CGAL_Sweep_curves_cons(Y, Z) CGAL_Sweep_curves_pred(Y, Z)
 
   CGAL_Sweep_curves_pred(Compare_xy_2, compare_xy_2_object)
