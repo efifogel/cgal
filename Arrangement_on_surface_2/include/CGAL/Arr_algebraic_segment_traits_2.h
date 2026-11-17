@@ -53,14 +53,7 @@ public:
   using CKvA_2 = CGAL::Curved_kernel_via_analysis_2<Algebraic_kernel_d_2>;
   using Self = CGAL::Arr_algebraic_segment_traits_2<Coefficient>;
 
-  // constructs default
-  Arr_algebraic_segment_traits_2() {}
-
-  // constructs copy
-  Arr_algebraic_segment_traits_2(const Self& /* s */) { /* No state...*/ }
-
-  // assigns
-  const Self& operator=(const Self& s) { return s; }
+  // The traits is stateless; all special member functions are implicit.
 
   // public types
   using Algebraic_real_1 = typename Algebraic_kernel_d_2::Algebraic_real_1;
