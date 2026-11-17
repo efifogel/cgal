@@ -119,6 +119,10 @@ protected:
    */
   Curved_kernel_via_analysis_2* _ckva() const { return m_curved_kernel; }
 
+  /*! obtains the curve kernel of the curved kernel
+   */
+  Curve_kernel_2& curve_kernel() const { return _ckva()->kernel(); }
+
   //!@}
 
 protected:
@@ -223,7 +227,7 @@ public:
     //CGAL_assertion(c.id() == arc.curve().id());
     //CGAL_assertion(arcno == arc.arcno(x));
 
-    Point_2 pt = Base::_ckva()->construct_point_2_object()(x, c, arcno);
+    Point_2 pt = this->_ckva()->construct_point_2_object()(x, c, arcno);
 
     // here we can modify the point wrt "data stored in arc",
     // if we want to
@@ -559,19 +563,19 @@ private:
       if (arc.is_finite(ARR_MAX_END)) {
         // We need torefine the interval because there is a chance that
         // the low of the upper point is below the high of the lower point.
-        y_coord = this->_ckva()->kernel().bound_between_y_2_object()(arc.curve_end(ARR_MIN_END).xy(),
+        y_coord = this->curve_kernel().bound_between_y_2_object()(arc.curve_end(ARR_MIN_END).xy(),
                                                                      arc.curve_end(ARR_MAX_END).xy());
       }
       else {
         std::pair<Bound, Bound> approx_pair =
-          this->_ckva()->kernel().approximate_relative_y_2_object()(arc.curve_end(ARR_MIN_END).xy(), 4);
+          this->curve_kernel().approximate_relative_y_2_object()(arc.curve_end(ARR_MIN_END).xy(), 4);
         y_coord = approx_pair.second + Bound(1);
       }
     }
     else {
       if (arc.is_finite(ARR_MAX_END)) {
         std::pair<Bound, Bound> approx_pair =
-          this->_ckva()->kernel().approximate_relative_y_2_object()(arc.curve_end(ARR_MAX_END).xy(), 4);
+          this->curve_kernel().approximate_relative_y_2_object()(arc.curve_end(ARR_MAX_END).xy(), 4);
         y_coord = approx_pair.first - Bound(1);
       }
     }
@@ -584,7 +588,7 @@ private:
     typename FT_2::Numerator_type curve_poly;
     typename FT_2::Decompose()(poly2, curve_poly, dummy);
 
-    Curve_analysis_2 curve = this->_ckva()->kernel().construct_curve_2_object()(curve_poly);
+    Curve_analysis_2 curve = this->curve_kernel().construct_curve_2_object()(curve_poly);
     Point_2 p = this->_ckva()->construct_point_on_arc_2_object()(arc.x(), curve, 0, arc);
     return p;
   }
@@ -620,7 +624,7 @@ public:
    *         CGAL::EQUAL if x(p1) = x(p2).
    */
   result_type operator()(const Point_2& p1, const Point_2& p2) const
-  { return this->_ckva()->kernel().compare_1_object()(p1.x(), p2.x()); }
+  { return this->curve_kernel().compare_1_object()(p1.x(), p2.x()); }
 };
 
 /*! functor that compares coordinates of two interior points lexicographically */
@@ -665,7 +669,7 @@ public:
       return res;
     }
 
-    result_type res = (this->_ckva()->kernel().compare_xy_2_object()(p1.xy(), p2.xy(), equal_x));
+    result_type res = (this->curve_kernel().compare_xy_2_object()(p1.xy(), p2.xy(), equal_x));
 
     CERR("result: " << res << "\n");
     return res;
@@ -718,7 +722,7 @@ public:
     CGAL_assertion_code(bool in_x_range =) cv.is_in_x_range(p.x(), &eq_min, &eq_max);
     CGAL_assertion(in_x_range);
 
-    auto cmp_xy = Base::_ckva()->compare_xy_2_object();
+    auto cmp_xy = this->_ckva()->compare_xy_2_object();
 
     if (cv.is_vertical()) {
       if (cv.is_finite(CGAL::ARR_MIN_END)) {
@@ -749,7 +753,7 @@ public:
       else res = (cv.location(CGAL::ARR_MAX_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
     else {
-      Point_2 point_on_s = Base::_ckva()->construct_point_on_arc_2_object()(p.x(), cv.curve(), cv.arcno(), cv);
+      Point_2 point_on_s = this->_ckva()->construct_point_on_arc_2_object()(p.x(), cv.curve(), cv.arcno(), cv);
       CGAL_precondition(p.is_finite());
       CGAL_precondition(point_on_s.is_finite());
       res = cmp_xy(p, point_on_s, true);
@@ -1050,7 +1054,7 @@ public:
     }
     if (cv1.is_vertical()) { // both arcs are vertical
       // check for x-coordinates equality
-      if (this->_ckva()->kernel().compare_1_object()(cv1._minpoint().x(), cv2._minpoint().x()) != CGAL::EQUAL)
+      if (this->curve_kernel().compare_1_object()(cv1._minpoint().x(), cv2._minpoint().x()) != CGAL::EQUAL)
         return false;
 
       // compare y-coordinates of min curve ends
@@ -1126,7 +1130,7 @@ public:
       return true;
     }
 
-    // process non-ov erlapping case
+    // process non-overlapping case
     std::vector<Intersection_point> intersections;
     Arc_2::_intersection_points(xcv1, xcv2, std::back_inserter(intersections));
     auto empty = intersections.empty();
@@ -1215,7 +1219,7 @@ public:
       for (const auto& item : arcs) *oi++ = item;
       return oi;
     }
-    // process non-ov erlapping case
+    // process non-overlapping case
     std::vector<Intersection_point> vec;
     Arc_2::_intersection_points(cv1, cv2, std::back_inserter(vec));
     for (const auto& item : vec) *oi++ = item;
@@ -1260,7 +1264,7 @@ public:
     CGAL_precondition(p.location() == CGAL::ARR_INTERIOR);
     CGAL_precondition(q.location() == CGAL::ARR_INTERIOR);
 
-    CGAL_precondition(! Base::_ckva()->equal_2_object()(p, q));
+    CGAL_precondition(! this->_ckva()->equal_2_object()(p, q));
     CGAL_precondition(cv.compare_y_at_x(p) == CGAL::EQUAL);
     CGAL_precondition(cv.compare_y_at_x(q) == CGAL::EQUAL);
 
@@ -1379,7 +1383,7 @@ public:
       for (int k = 0; k < cv_line.number_of_events(); k++) {
         // use a temporary object for comparison predicate
         typename Point_2::Coordinate_2 tmp(common.x(), cv1.curve(), k);
-        if (this->_ckva()->kernel().compare_xy_2_object()(common.xy(), tmp) == CGAL::EQUAL) return false;
+        if (this->curve_kernel().compare_xy_2_object()(common.xy(), tmp) == CGAL::EQUAL) return false;
       }
     }
     else if (cv1.interval_id() != cv2.interval_id()) return false; // non-vertical case
@@ -1473,7 +1477,7 @@ public:
    * \return \c true if the \c p lies on \c c, \c false otherwise
    */
   result_type operator()(const Point_2& p, const Curve_analysis_2& c) const
-  { return (this->_ckva()->kernel().sign_at_2_object()(c, p.xy()) == CGAL::ZERO); }
+  { return (this->curve_kernel().sign_at_2_object()(c, p.xy()) == CGAL::ZERO); }
 
   /*! checks whether \c p lies on \c cv
    *
@@ -1546,7 +1550,7 @@ public:
    */
   template <typename OutputIterator>
   OutputIterator operator()(const Curve_analysis_2& cv, OutputIterator oi) const {
-    CGAL::internal::Make_x_monotone_2<Curved_kernel_via_analysis_2> make_x_monotone(Base::_ckva());
+    internal::Make_x_monotone_2<Curved_kernel_via_analysis_2> make_x_monotone(this->_ckva());
 
     return make_x_monotone(cv, oi);
   }
@@ -1674,7 +1678,7 @@ public:
     else if (ps2) res = (*ps2 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     else {
       // Remark: Is filtered
-      res = Base::_ckva()->kernel().compare_1_object()(std::get<Algebraic_real_1>(asym1),
+      res = this->curve_kernel().compare_1_object()(std::get<Algebraic_real_1>(asym1),
                                                        std::get<Algebraic_real_1>(asym2));
     }
 
@@ -1785,7 +1789,7 @@ public:
     if (cv.is_singular()) // the curve end goes to contraction => x-order
       return CGAL::EQUAL; // doesn't matter
 
-    CGAL::Comparison_result res = this->_ckva()->kernel().compare_1_object()(p.x(), cv.curve_end_x(ce));
+    CGAL::Comparison_result res = this->curve_kernel().compare_1_object()(p.x(), cv.curve_end_x(ce));
     CERR("result: " << res << "\n");
     return res;
   }
@@ -1823,8 +1827,7 @@ public:
       CGAL_error_msg("SINGULARITY + INF comparison is not yet implemented");
     }
 
-    CGAL::Comparison_result res =
-      this->_ckva()->kernel().compare_1_object()(cv1.curve_end_x(ce1), cv2.curve_end_x(ce2));
+    CGAL::Comparison_result res = this->curve_kernel().compare_1_object()(cv1.curve_end_x(ce1), cv2.curve_end_x(ce2));
     CERR("result: " << res << "\n");
     return res;
   }
@@ -2013,28 +2016,28 @@ public:
   OutputIterator operator()(const Curve_analysis_2& ca, OutputIterator oi) const {
     using Status_line_1 = typename Curve_analysis_2::Status_line_1;
 
-    typename Base::Curve_kernel_2 curve_kernel = Base::_ckva()->kernel();
-    Curve_analysis_2 ca_yx = curve_kernel.swap_x_and_y_2_object()(ca);
+    auto& ck = this->curve_kernel();
+    Curve_analysis_2 ca_yx = ck.swap_x_and_y_2_object()(ca);
     std::vector<Coordinate_2> y_critical_points;
-    Base::_ckva()->x_extreme_points_2_object()(ca_yx, std::back_inserter(y_critical_points));
+    this->_ckva()->x_extreme_points_2_object()(ca_yx, std::back_inserter(y_critical_points));
     for (auto it = y_critical_points.begin(); it != y_critical_points.end(); it++) {
-      Coordinate_1 curr_x = curve_kernel.get_y_2_object()(*it);
+      Coordinate_1 curr_x = ck.get_y_2_object()(*it);
       Status_line_1 status_line = ca.status_line_at_exact_x(curr_x);
       int lifts = status_line.number_of_events();
       for (int i = 0; i < lifts; i++) {
         Coordinate_2 lift_xy = status_line.algebraic_real_2(i);
         bool y_coordinate_found;
         while (true) {
-          if (curve_kernel.upper_boundary_y_2_object()(lift_xy) < curve_kernel.lower_boundary_x_2_object()(*it)) {
+          if (ck.upper_boundary_y_2_object()(lift_xy) < ck.lower_boundary_x_2_object()(*it)) {
             y_coordinate_found = false;
             break;
           }
-          if (curve_kernel.upper_boundary_y_2_object()(lift_xy) >= curve_kernel.upper_boundary_x_2_object()(*it)) {
+          if (ck.upper_boundary_y_2_object()(lift_xy) >= ck.upper_boundary_x_2_object()(*it)) {
             y_coordinate_found = true;
             break;
           }
 
-          curve_kernel.refine_x_2_object()(*it);
+          ck.refine_x_2_object()(*it);
         }
 
         if (y_coordinate_found) {
@@ -2066,11 +2069,20 @@ public:
   //!@}
   // typedef Curved_kernel_via_analysis_2_functors<CurvedKernelViaAnalysis_2> Functor_base;
 
+private:
+  /*! obtains the curved kernel this object is a base of; the functors take a non-const pointer to their kernel,
+   * whose caches are mutable.
+   */
+  Curved_kernel_via_analysis_2* _ckva() const
+  { return const_cast<Curved_kernel_via_analysis_2*>(static_cast<const Curved_kernel_via_analysis_2*>(this)); }
+
+public:
+
   // declares curved kernel functors, for each functor defines a member function
-  // returning an instance of this functor
-#define CGAL_CKvA_2_functor_pred(Y, Z)                                                                                 \
-  using Y = CKvA_2_functors::Y<Curved_kernel_via_analysis_2>;                                                          \
-  Y Z() const { return Y(&Curved_kernel_via_analysis_2::instance()); }
+  // returning an instance of this functor bound to this kernel
+#define CGAL_CKvA_2_functor_pred(Y, Z)                        \
+  using Y = CKvA_2_functors::Y<Curved_kernel_via_analysis_2>; \
+  Y Z() const { return Y(_ckva()); }
 
 #define CGAL_CKvA_2_functor_cons(Y, Z) CGAL_CKvA_2_functor_pred(Y, Z)
 

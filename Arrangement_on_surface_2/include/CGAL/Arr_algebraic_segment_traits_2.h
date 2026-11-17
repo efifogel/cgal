@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <iterator>
 #include <list>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
@@ -53,7 +54,21 @@ public:
   using CKvA_2 = CGAL::Curved_kernel_via_analysis_2<Algebraic_kernel_d_2>;
   using Self = CGAL::Arr_algebraic_segment_traits_2<Coefficient>;
 
-  // The traits is stateless; all special member functions are implicit.
+  //! the type of a shared pointer to the curved kernel
+  using Shared_ckva = std::shared_ptr<CKvA_2>;
+
+  /*! constructs default. The functors of this traits use the curved kernel of the calling thread, that is,
+   * \c CKvA_2::instance(), which is also the kernel that points and arcs use internally.
+   */
+  Arr_algebraic_segment_traits_2() = default;
+
+  /*! constructs from a curved kernel, which all functors obtained from this traits use.
+   */
+  explicit Arr_algebraic_segment_traits_2(Shared_ckva ckva) : m_ckva(std::move(ckva)) {}
+
+  /*! obtains the curved kernel that the functors of this traits use.
+   */
+  CKvA_2* curved_kernel() const { return m_ckva ? m_ckva.get() : &CKvA_2::instance(); }
 
   // public types
   using Algebraic_real_1 = typename Algebraic_kernel_d_2::Algebraic_real_1;
@@ -76,86 +91,86 @@ public:
   using Multiplicity = typename CKvA_2::Multiplicity;
 
   using Compare_x_2 = typename CKvA_2::Compare_x_2;
-  Compare_x_2 compare_x_2_object() const { return CKvA_2::instance().compare_x_2_object(); }
+  Compare_x_2 compare_x_2_object() const { return curved_kernel()->compare_x_2_object(); }
 
   using Compare_xy_2 = typename CKvA_2::Compare_xy_2;
-  Compare_xy_2 compare_xy_2_object() const { return CKvA_2::instance().compare_xy_2_object(); }
+  Compare_xy_2 compare_xy_2_object() const { return curved_kernel()->compare_xy_2_object(); }
 
   using Compare_endpoints_xy_2 = typename CKvA_2::Compare_endpoints_xy_2;
   Compare_endpoints_xy_2 compare_endpoints_xy_2_object() const
-  { return CKvA_2::instance().compare_endpoints_xy_2_object(); }
+  { return curved_kernel()->compare_endpoints_xy_2_object(); }
 
   using Equal_2 = typename CKvA_2::Equal_2;
-  Equal_2 equal_2_object() const { return CKvA_2::instance().equal_2_object(); }
+  Equal_2 equal_2_object() const { return curved_kernel()->equal_2_object(); }
 
   using Parameter_space_in_y_2 = typename CKvA_2::Parameter_space_in_y_2;
   Parameter_space_in_y_2 parameter_space_in_y_2_object() const
-  { return CKvA_2::instance().parameter_space_in_y_2_object(); }
+  { return curved_kernel()->parameter_space_in_y_2_object(); }
 
   using Compare_y_near_boundary_2 = typename CKvA_2::Compare_y_near_boundary_2;
   Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const
-  { return CKvA_2::instance().compare_y_near_boundary_2_object(); }
+  { return curved_kernel()->compare_y_near_boundary_2_object(); }
 
   using Parameter_space_in_x_2 = typename CKvA_2::Parameter_space_in_x_2;
   Parameter_space_in_x_2 parameter_space_in_x_2_object() const
-  { return CKvA_2::instance().parameter_space_in_x_2_object(); }
+  { return curved_kernel()->parameter_space_in_x_2_object(); }
 
   using Compare_x_on_boundary_2 = typename CKvA_2::Compare_x_on_boundary_2;
   Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const
-  { return CKvA_2::instance().compare_x_on_boundary_2_object(); }
+  { return curved_kernel()->compare_x_on_boundary_2_object(); }
 
   using Compare_x_near_boundary_2 = typename CKvA_2::Compare_x_near_boundary_2;
   Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
-  { return CKvA_2::instance().compare_x_near_boundary_2_object(); }
+  { return curved_kernel()->compare_x_near_boundary_2_object(); }
 
   using Construct_min_vertex_2 = typename CKvA_2::Construct_min_vertex_2;
   Construct_min_vertex_2 construct_min_vertex_2_object() const
-  { return CKvA_2::instance().construct_min_vertex_2_object(); }
+  { return curved_kernel()->construct_min_vertex_2_object(); }
 
   using Construct_max_vertex_2 = typename CKvA_2::Construct_max_vertex_2;
   Construct_max_vertex_2 construct_max_vertex_2_object() const
-  { return CKvA_2::instance().construct_max_vertex_2_object(); }
+  { return curved_kernel()->construct_max_vertex_2_object(); }
 
   using Construct_opposite_2 = typename CKvA_2::Construct_opposite_2;
-  Construct_opposite_2 construct_opposite_2_object() const { return CKvA_2::instance().construct_opposite_2_object(); }
+  Construct_opposite_2 construct_opposite_2_object() const { return curved_kernel()->construct_opposite_2_object(); }
 
   using Is_vertical_2 = typename CKvA_2::Is_vertical_2;
-  Is_vertical_2 is_vertical_2_object() const { return CKvA_2::instance().is_vertical_2_object(); }
+  Is_vertical_2 is_vertical_2_object() const { return curved_kernel()->is_vertical_2_object(); }
 
   using Compare_y_at_x_2 = typename CKvA_2::Compare_y_at_x_2;
-  Compare_y_at_x_2 compare_y_at_x_2_object() const { return CKvA_2::instance().compare_y_at_x_2_object(); }
+  Compare_y_at_x_2 compare_y_at_x_2_object() const { return curved_kernel()->compare_y_at_x_2_object(); }
 
   using Compare_y_at_x_left_2 = typename CKvA_2::Compare_y_at_x_left_2;
   Compare_y_at_x_left_2 compare_y_at_x_left_2_object() const
-  { return CKvA_2::instance().compare_y_at_x_left_2_object(); }
+  { return curved_kernel()->compare_y_at_x_left_2_object(); }
 
   using Compare_y_at_x_right_2 = typename CKvA_2::Compare_y_at_x_right_2;
   Compare_y_at_x_right_2 compare_y_at_x_right_2_object() const
-  { return CKvA_2::instance().compare_y_at_x_right_2_object(); }
+  { return curved_kernel()->compare_y_at_x_right_2_object(); }
 
   using Intersect_2 = typename CKvA_2::Intersect_2;
-  Intersect_2 intersect_2_object() const { return CKvA_2::instance().intersect_2_object(); }
+  Intersect_2 intersect_2_object() const { return curved_kernel()->intersect_2_object(); }
 
   using Do_intersect_2 = typename CKvA_2::Do_intersect_2;
-  Do_intersect_2 do_intersect_2_object() const { return CKvA_2::instance().do_intersect_2_object(); }
+  Do_intersect_2 do_intersect_2_object() const { return curved_kernel()->do_intersect_2_object(); }
 
   using Split_2 = typename CKvA_2::Split_2;
-  Split_2 split_2_object() const { return CKvA_2::instance().split_2_object(); }
+  Split_2 split_2_object() const { return curved_kernel()->split_2_object(); }
 
   using Are_mergeable_2 = typename CKvA_2::Are_mergeable_2;
-  Are_mergeable_2 are_mergeable_2_object() const { return CKvA_2::instance().are_mergeable_2_object(); }
+  Are_mergeable_2 are_mergeable_2_object() const { return curved_kernel()->are_mergeable_2_object(); }
 
   using Merge_2 = typename CKvA_2::Merge_2;
-  Merge_2 merge_2_object() const { return CKvA_2::instance().merge_2_object(); }
+  Merge_2 merge_2_object() const { return curved_kernel()->merge_2_object(); }
 
   using Make_x_monotone_2 = typename CKvA_2::Make_x_monotone_2;
-  Make_x_monotone_2 make_x_monotone_2_object() const { return Make_x_monotone_2(&CKvA_2::instance()); }
+  Make_x_monotone_2 make_x_monotone_2_object() const { return Make_x_monotone_2(curved_kernel()); }
 
   using Is_on_2 = typename CKvA_2::Is_on_2;
-  Is_on_2 is_on_2_object() const { return Is_on_2(&CKvA_2::instance()); }
+  Is_on_2 is_on_2_object() const { return Is_on_2(curved_kernel()); }
 
   using Construct_point_2 = typename CKvA_2::Construct_point_2;
-  Construct_point_2 construct_point_2_object() const { return Construct_point_2(&CKvA_2::instance()); }
+  Construct_point_2 construct_point_2_object() const { return Construct_point_2(curved_kernel()); }
 
   class Construct_x_monotone_segment_2 :
     public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
@@ -401,7 +416,7 @@ public:
   };
 
   Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const
-  { return Construct_x_monotone_segment_2(&CKvA_2::instance()); }
+  { return Construct_x_monotone_segment_2(curved_kernel()); }
 
   /* class Construct_vertical_segment_2 :
    *   public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
@@ -433,7 +448,7 @@ public:
    * };
    *
    * Construct_vertical_segment_2 construct_vertical_segment_2_object() const
-   * { return Construct_vertical_segment_2(&CKvA_2::instance()); }
+   * { return Construct_vertical_segment_2(curved_kernel()); }
    */
 
   class Construct_curve_2 :
@@ -446,7 +461,7 @@ public:
     Curve_2 operator()(const Polynomial_2& p) const { return this->_ckva()->kernel().construct_curve_2_object()(p); }
   };
 
-  Construct_curve_2 construct_curve_2_object() const { return Construct_curve_2(&CKvA_2::instance()); }
+  Construct_curve_2 construct_curve_2_object() const { return Construct_curve_2(curved_kernel()); }
 
   // // additional functionality (for not introducing a "general" arc)
   //
@@ -463,6 +478,10 @@ public:
   //     return oi;
   //   }
   // };
+
+private:
+  //! the curved kernel used by the functors; if empty, \c CKvA_2::instance() of the calling thread is used
+  Shared_ckva m_ckva;
 };
 
 } // namespace CGAL

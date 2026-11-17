@@ -161,7 +161,7 @@ public:
     else if (ps1) filter_res = (*ps1 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::LARGER : CGAL::SMALLER;
     else if (ps2) filter_res = (*ps2 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     else {
-      filter_res = Base::_ckva()->kernel().compare_1_object()(std::get<Coordinate_1>(asym1),
+      filter_res = this->curve_kernel().compare_1_object()(std::get<Coordinate_1>(asym1),
                                                               std::get<Coordinate_1>(asym2));
     }
 
@@ -519,7 +519,7 @@ struct Filtered_functor_base : public BaseCKvA::template rebind<FCKvA>::Functor_
 // returning an instance of this functor
 #define CGAL_FILTERED_CKvA_2_functor_pred(Y, Z)                                              \
   using Y = internal::Filtered_curved_kernel_via_analysis_2_Functors::Y<Self, Functor_base>; \
-  Y Z() const { return Y(&Self::instance()); }
+  Y Z() const { return Y(const_cast<Self*>(static_cast<const Self*>(this))); }
 
 #define CGAL_FILTERED_CKvA_2_functor_cons(Y, Z) CGAL_FILTERED_CKvA_2_functor_pred(Y, Z)
 
