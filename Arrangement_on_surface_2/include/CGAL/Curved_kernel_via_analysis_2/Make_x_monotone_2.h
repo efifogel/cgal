@@ -92,9 +92,8 @@ struct Make_x_monotone_2 {
    *
    * \param kernel The kernel instance to use
    */
-  Make_x_monotone_2(Curved_kernel_via_analysis_2* kernel) : m_curved_kernel(kernel) {
-    CGAL_assertion(kernel != nullptr);
-  }
+  Make_x_monotone_2(Curved_kernel_via_analysis_2* kernel) : m_curved_kernel(kernel)
+  { CGAL_assertion(kernel != nullptr); }
 
   //!@}
 
@@ -117,7 +116,7 @@ struct Make_x_monotone_2 {
     auto construct_arc_2 = m_curved_kernel->construct_arc_2_object();
     // use CGAL::Total_degree ?
     using Polynomial_2 = typename Curve_analysis_2::Polynomial_2;
-    if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(curve.polynomial_2()) < 1) { return oi; }
+    if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(curve.polynomial_2()) < 1) return oi;
 
     Status_line_1 evt_line1;
     Status_line_1 evt_line2;

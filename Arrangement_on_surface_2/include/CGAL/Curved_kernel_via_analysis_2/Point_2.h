@@ -521,18 +521,9 @@ public:
 
       // write y value
       switch (this->location()) {
-       case CGAL::ARR_INTERIOR: {
-         os << "y=" << this->xy().to_double().second << "; ";
-         break;
-        }
-       case CGAL::ARR_TOP_BOUNDARY: {
-         os << "y=+oo; ";
-         break;
-        }
-       case CGAL::ARR_BOTTOM_BOUNDARY: {
-         os << "y=-oo; ";
-         break;
-        }
+       case CGAL::ARR_INTERIOR: os << "y=" << this->xy().to_double().second << "; "; break;
+       case CGAL::ARR_TOP_BOUNDARY: os << "y=+oo; "; break;
+       case CGAL::ARR_BOTTOM_BOUNDARY: os << "y=-oo; "; break;
        case CGAL::ARR_LEFT_BOUNDARY:
        case CGAL::ARR_RIGHT_BOUNDARY: {
          auto asym = asymptotic_value(this->curve(), this->location(), this->arcno());
@@ -540,21 +531,12 @@ public:
            os << ((*ps == CGAL::ARR_BOTTOM_BOUNDARY) ? "y=-oo(asym)" : "y=+oo(asym)") << "; ";
          else os << "y=" << CGAL::to_double(std::get<Coordinate_1>(asym)) << "(asym)" << "; ";
          break;
-         os << "y=??; ";
-         break;
         }
-       default: {
-         // bogus location
-         CGAL_assertion(false);
-       }
+       default: CGAL_assertion(false);
       }
       os << std::flush;
-      if (this->ptr()->m_xy || this->ptr()->m_arcno) {
-        os << "ARCNO=" << this->arcno();
-      }
-      else {
-        os << "ARCNO=n/a";
-      }
+      if (this->ptr()->m_xy || this->ptr()->m_arcno) os << "ARCNO=" << this->arcno();
+      else os << "ARCNO=n/a";
       os << ")";
       os << std::flush;
       break;
