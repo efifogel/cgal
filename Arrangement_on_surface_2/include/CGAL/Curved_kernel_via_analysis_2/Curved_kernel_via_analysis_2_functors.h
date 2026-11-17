@@ -1820,9 +1820,9 @@ public:
     CGAL_precondition_code(CGAL::Arr_parameter_space loc1 = cv1.location(ce1));
     CGAL_precondition_code(CGAL::Arr_parameter_space loc2 = cv2.location(ce2));
     CGAL_precondition(cv1.is_on_bottom_top(loc1));
-    CGAL_precondition(cv1.is_on_bottom_top(loc2));
+    CGAL_precondition(cv2.is_on_bottom_top(loc2));
 
-    if (cv1.is_singular() != cv1.is_singular()) {
+    if (cv1.is_singular() != cv2.is_singular()) {
       // only one curve end lies at singularity (another at +/-oo)
       CGAL_error_msg("SINGULARITY + INF comparison is not yet implemented");
     }
@@ -1873,7 +1873,7 @@ public:
     CGAL::Arr_parameter_space loc1 = cv1.location(ce);
     CGAL_precondition_code(CGAL::Arr_parameter_space loc2 = cv2.location(ce));
     CGAL_precondition(cv1.is_on_bottom_top(loc1));
-    CGAL_precondition(cv1.is_on_bottom_top(loc2));
+    CGAL_precondition(cv2.is_on_bottom_top(loc2));
     CGAL_precondition(cv1.compare_x_on_boundary(ce, cv2, ce) == CGAL::EQUAL);
 
     CGAL_precondition(loc1 == loc2);
