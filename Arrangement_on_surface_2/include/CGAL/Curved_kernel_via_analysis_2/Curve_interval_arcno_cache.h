@@ -133,8 +133,7 @@ struct Curve_interval_arcno_cache {
     std::pair<int, int> ipair;
     n_mininf = cv_line.number_of_branches_approaching_minus_infinity();
     n_maxinf = cv_line.number_of_branches_approaching_plus_infinity();
-    // we must also account for the number of asymptotic arcs approaching
-    // this status line
+    // we must also account for the number of asymptotic arcs approaching this status line
     Arcno_vector_pair vpair;
     vpair.first.resize(n_left);   //+ n_mininf.first + n_maxinf.first);
     vpair.second.resize(n_right); //+ n_mininf.second + n_maxinf.second);

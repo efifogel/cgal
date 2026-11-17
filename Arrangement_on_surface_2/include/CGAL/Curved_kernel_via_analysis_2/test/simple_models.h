@@ -72,9 +72,8 @@ struct Curve_2_model : public ::CGAL::Handle_with_policy<Curve_2_model_rep> {
   }
 
   template <typename OutputIterator>
-  static bool decompose(Curve_2_model f, Curve_2_model g, OutputIterator parts_of_f, OutputIterator parts_of_g) {
-    return true;
-  }
+  static bool decompose(Curve_2_model f, Curve_2_model g, OutputIterator parts_of_f, OutputIterator parts_of_g)
+  { return true; }
 
   bool operator==(const Curve_2_model& c) { return id() == c.id(); }
 };
@@ -295,8 +294,6 @@ class Status_line_CA_1_rep {
   // an instance of a size type
   using size_type = typename Curve_analysis_2::size_type;
 
-  // constructors
-
 public:
   // default constructor ()
   Status_line_CA_1_rep() {}
@@ -344,6 +341,7 @@ public:
   using Base = ::CGAL::Handle_with_policy<Rep>;
 
   //!@}
+
 public:
   //!\name constructors
   //!@{
@@ -623,7 +621,6 @@ public:
   // type of 1-curve analysis
   using Curve_analysis_2 = typename Algebraic_curve_kernel_2::Curve_analysis_2;
 
-  // constructors
 public:
   // default constructor ()
   Curve_pair_analysis_2_rep() {}
@@ -671,7 +668,6 @@ public:
 
   //!@}
 
-public:
   //!\name Constructors
   //!@{
 
@@ -732,7 +728,6 @@ public:
 
   //!@}
 
-public:
   //! \name types and functors for \c ACK_2< >
   //!@{
 
@@ -762,7 +757,6 @@ public:
 
   //!@}
 
-public:
   //! \name types and functors for \c GPA_2< both >
   //!@{
 
@@ -792,8 +786,8 @@ public:
   CGAL_Algebraic_Kernel_cons(Construct_curve_2, construct_curve_2_object);
 
   /*! constructs \c Curve_pair_analysis_2 from pair of 1-curve analysis,
-     * caching is used when appropriate
-     */
+   * caching is used when appropriate
+   */
   struct Construct_curve_pair_2 :
     public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, Curve_pair_analysis_2> {
     Curve_pair_analysis_2 operator()(const Curve_analysis_2& ca1, const Curve_analysis_2& ca2) const {
