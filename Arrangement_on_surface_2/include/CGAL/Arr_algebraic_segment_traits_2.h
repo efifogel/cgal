@@ -331,8 +331,8 @@ public:
 
     //
     template <typename OutputIterator>
-    OutputIterator operator()(const Curve_2& cv, const Point_2& end_left, const Point_2& end_right,
-                              OutputIterator out) const {
+    OutputIterator
+    operator()(const Curve_2& cv, const Point_2& end_left, const Point_2& end_right, OutputIterator out) const {
       CGAL_assertion((branch_numbers_and_vertical(cv, end_left).first.second == 1 &&
                       ! branch_numbers_and_vertical(cv, end_left).second) ||
                      (branch_numbers_and_vertical(cv, end_right).first.first == 1 &&
