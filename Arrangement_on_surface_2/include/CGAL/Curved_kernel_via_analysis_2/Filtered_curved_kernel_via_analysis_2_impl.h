@@ -333,15 +333,14 @@ public:
 
 template <typename CurvedKernelViaAnalysis_2, typename FunctorBase>
 class May_have_intersection_2
-  : public Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2> {
+  : public CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2> {
 public:
   //! this instance template parameter
   using Curved_kernel_via_analysis_2 = CurvedKernelViaAnalysis_2;
 
   CGAL_FILTERED_CKvA_2_GRAB_BASE_FUNCTOR_TYPES;
 
-  using Base =
-    Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2>;
+  using Base = CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2>;
 
 #if DOXYGEN_RUNNING
   //! type of curve

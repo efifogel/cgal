@@ -17,6 +17,8 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
+#include <algorithm>
+#include <iterator>
 #include <list>
 #include <optional>
 #include <utility>
@@ -163,16 +165,15 @@ public:
   Construct_point_2 construct_point_2_object() const { return Construct_point_2(&CKvA_2::instance()); }
 
   class Construct_x_monotone_segment_2 :
-    public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+    public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
-    using Base =
-      CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
+    using Base = internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
+    using Optional_point_2 = std::optional<Point_2>;
 
     Construct_x_monotone_segment_2(CKvA_2* kernel) : Base(kernel) {}
 
   private:
-    // helper function, returning the number of incident branches
-    // of a point wrt to a curve
+    // helper function, returning the number of incident branches of a point wrt to a curve
     std::pair<std::pair<int, int>, bool> branch_numbers_and_vertical(Curve_2 cv, Point_2 p) const {
       auto equal = this->_ckva()->equal_2_object();
 
@@ -197,11 +198,11 @@ public:
     }
 
     template <typename OutputIterator>
-    OutputIterator x_monotone_segment(Curve_2 cv, Point_2 p, std::optional<Point_2> start, std::optional<Point_2> end,
+    OutputIterator x_monotone_segment(Curve_2 cv, Point_2 p, Optional_point_2 start, Optional_point_2 end,
                                       OutputIterator out) const {
       using Make_x_monotone_result = std::variant<Point_2, X_monotone_curve_2>;
 
-      //CGAL_assertion(is_one_one(cv,p));
+      // CGAL_assertion(is_one_one(cv,p));
 
       std::list<X_monotone_curve_2> segs;
 
@@ -212,26 +213,28 @@ public:
 
       std::vector<Make_x_monotone_result> arcs;
       this->_ckva()->make_x_monotone_2_object()(cv, std::back_inserter(arcs));
-      auto it = arcs.begin();
-      auto helper = it;
-      const auto* it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-      while (it != arcs.end()) {
-        if (on_arc(p, *it_seg_p)) break;
-        ++it;
-        it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-      }
+
+      // obtains a predicate that holds for x-monotone arcs (not isolated points) that contain q
+      auto contains = [&](const Point_2& q) {
+        return [&, q](const Make_x_monotone_result& obj) {
+          const auto* xcv = std::get_if<X_monotone_curve_2>(&obj);
+          return xcv && on_arc(q, *xcv);
+        };
+      };
+
+      auto it = std::find_if(arcs.begin(), arcs.end(), contains(p));
+      CGAL_precondition(it != arcs.end()); // p must lie on cv
+      if (it == arcs.end()) return out;
+      const auto* it_seg_p = &std::get<X_monotone_curve_2>(*it);
 
       bool left_on_arc = start && on_arc(start.value(), *it_seg_p);
       bool right_on_arc = end && on_arc(end.value(), *it_seg_p);
 
-      if (left_on_arc && right_on_arc) {
-        segs.push_back(it_seg_p->trim(start.value(), end.value()));
-      }
+      if (left_on_arc && right_on_arc) segs.push_back(it_seg_p->trim(start.value(), end.value()));
       if (left_on_arc && (! right_on_arc)) {
         if (! it_seg_p->is_finite(CGAL::ARR_MAX_END) || ! equal(start.value(), right(*it_seg_p))) {
-          if (it_seg_p->is_finite(CGAL::ARR_MIN_END) && equal(start.value(), left(*it_seg_p))) {
+          if (it_seg_p->is_finite(CGAL::ARR_MIN_END) && equal(start.value(), left(*it_seg_p)))
             segs.push_back(*it_seg_p);
-          }
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
@@ -242,9 +245,8 @@ public:
       }
       if ((! left_on_arc) && right_on_arc) {
         if (! it_seg_p->is_finite(CGAL::ARR_MIN_END) || ! equal(left(*it_seg_p), end.value())) {
-          if (it_seg_p->is_finite(CGAL::ARR_MAX_END) && equal(end.value(), right(*it_seg_p))) {
+          if (it_seg_p->is_finite(CGAL::ARR_MAX_END) && equal(end.value(), right(*it_seg_p)))
             segs.push_back(*it_seg_p);
-          }
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
@@ -254,62 +256,46 @@ public:
         }
       }
       if ((! left_on_arc) && (! right_on_arc)) segs.push_back(*it_seg_p);
-      helper = it; // for later usage
 
+      // Extend the segment to the left, arc by arc, through one-one points, until start is reached.
       if (! left_on_arc) {
-        Point_2 point_it;
+        auto cur = std::make_reverse_iterator(std::next(it)); // *cur is the arc that contains p
+        const X_monotone_curve_2* xcv = it_seg_p;
         while (true) {
-          if (it_seg_p->is_finite(CGAL::ARR_MIN_END) && is_one_one(cv, left(*it_seg_p))) {
-            point_it = left(*it_seg_p);
-          }
-          else {
-            CGAL_assertion(! start);
+          if (! xcv->is_finite(CGAL::ARR_MIN_END) || ! is_one_one(cv, left(*xcv))) {
+            CGAL_assertion(! start); // the branch cannot be continued, so start must not be given
             break;
           }
-          CGAL_assertion(it != arcs.begin());
-          it--;
-          it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-          while (! on_arc(point_it, *it_seg_p)) {
-            CGAL_assertion(it != arcs.begin());
-            it--;
-            it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-          }
-          if (start && on_arc(start.value(), *it_seg_p)) {
-            segs.push_front(it_seg_p->trim(start.value(), right(*it_seg_p)));
+          cur = std::find_if(std::next(cur), arcs.rend(), contains(left(*xcv)));
+          CGAL_assertion(cur != arcs.rend());
+          if (cur == arcs.rend()) break;
+          xcv = &std::get<X_monotone_curve_2>(*cur);
+          if (start && on_arc(start.value(), *xcv)) {
+            segs.push_front(xcv->trim(start.value(), right(*xcv)));
             break;
           }
-          else {
-            segs.push_front(*it_seg_p);
-          }
+          segs.push_front(*xcv);
         }
       }
+
+      // Extend the segment to the right, arc by arc, through one-one points, until end is reached.
       if (! right_on_arc) {
-        it = helper; // reset
-        it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-        Point_2 point_it;
+        auto cur = it; // *cur is the arc that contains p
+        const X_monotone_curve_2* xcv = it_seg_p;
         while (true) {
-          if (it_seg_p->is_finite(CGAL::ARR_MAX_END) && is_one_one(cv, right(*it_seg_p))) {
-            point_it = right(*it_seg_p);
-          }
-          else {
-            CGAL_assertion(! end);
+          if (! xcv->is_finite(CGAL::ARR_MAX_END) || ! is_one_one(cv, right(*xcv))) {
+            CGAL_assertion(! end); // the branch cannot be continued, so end must not be given
             break;
           }
-          it++;
-          CGAL_assertion(it != arcs.end());
-          it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-          while (! on_arc(point_it, *it_seg_p)) {
-            it++;
-            CGAL_assertion(it != arcs.end());
-            it_seg_p = std::get_if<X_monotone_curve_2>(&(*it));
-          }
-          if (end && on_arc(end.value(), *it_seg_p)) {
-            segs.push_back(it_seg_p->trim(left(*it_seg_p), end.value()));
+          cur = std::find_if(std::next(cur), arcs.end(), contains(right(*xcv)));
+          CGAL_assertion(cur != arcs.end());
+          if (cur == arcs.end()) break;
+          xcv = &std::get<X_monotone_curve_2>(*cur);
+          if (end && on_arc(end.value(), *xcv)) {
+            segs.push_back(xcv->trim(left(*xcv), end.value()));
             break;
           }
-          else {
-            segs.push_back(*it_seg_p);
-          }
+          segs.push_back(*xcv);
         }
       }
 
@@ -322,10 +308,9 @@ public:
     template <typename OutputIterator>
     OutputIterator operator()(Curve_2 cv, Point_2 p, Site_of_point site_of_p, OutputIterator out) const {
       if (site_of_p == POINT_IN_INTERIOR) return x_monotone_segment(cv, p, std::nullopt, std::nullopt, out);
-      else if (site_of_p == MIN_ENDPOINT)
-        return x_monotone_segment(cv, p, std::optional<Point_2>(p), std::nullopt, out);
+      else if (site_of_p == MIN_ENDPOINT) return x_monotone_segment(cv, p, Optional_point_2(p), std::nullopt, out);
       CGAL_assertion(site_of_p == MAX_ENDPOINT);
-      return x_monotone_segment(cv, p, std::nullopt, std::optional<Point_2>(p), out);
+      return x_monotone_segment(cv, p, std::nullopt, Optional_point_2(p), out);
     }
 
     //
@@ -345,19 +330,16 @@ public:
                                branch_numbers_and_vertical(cv, end_right).second)) {
         auto equal_x = this->_ckva()->compare_x_2_object(); )
                           CGAL_assertion(equal_x(end_left,end_right) == CGAL::EQUAL);
-                          CGAL_assertion_code(
-      });
+                          CGAL_assertion_code(});
 
       if ((branch_numbers_and_vertical(cv, end_left).first.second == 0 &&
            branch_numbers_and_vertical(cv, end_left).second) ||
           (branch_numbers_and_vertical(cv, end_left).first.second == 1 &&
            ! branch_numbers_and_vertical(cv, end_left).second)) {
-        return x_monotone_segment(cv, end_left, std::optional<Point_2>(end_left), std::optional<Point_2>(end_right),
-                                  out);
+        return x_monotone_segment(cv, end_left, Optional_point_2(end_left), Optional_point_2(end_right), out);
       }
       else {
-        return
-          x_monotone_segment(cv, end_right, std::optional<Point_2>(end_left), std::optional<Point_2>(end_right), out);
+        return x_monotone_segment(cv, end_right, Optional_point_2(end_left), Optional_point_2(end_right), out);
       }
     }
 
@@ -428,11 +410,10 @@ public:
   { return Construct_x_monotone_segment_2(&CKvA_2::instance()); }
 
   /* class Construct_vertical_segment_2 :
-   *   public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+   *   public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
    *
    * public:
-   *   using Base =
-   *     CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
+   *   using Base = internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
    *
    *   Construct_vertical_segment_2(CKvA_2* kernel) : Base(kernel) {}
    *
@@ -450,8 +431,8 @@ public:
    *     Polynomial_2 f = Polynomial_2(x.polynomial());
    *     Curve_2 cv = this->_ckva().kernel().construct_curve_2_object() (f);
    *
-   *     if (site_of_p==POINT_IN_INTERIOR) return typename CKvA_2::Arc_2(x, cv);
-   *     else if (site_of_p==MIN_ENDPOINT) return typename CKvA_2::Arc_2(p, ARR_MIN_END, cv);
+   *     if (site_of_p == POINT_IN_INTERIOR) return typename CKvA_2::Arc_2(x, cv);
+   *     else if (site_of_p == MIN_ENDPOINT) return typename CKvA_2::Arc_2(p, ARR_MIN_END, cv);
    *     CGAL_assertion(site_of_p == MAX_ENDPOINT);
    *     return typename CKvA_2::Arc_2(p, ARR_MAX_END, cv);
    *   }
@@ -462,10 +443,9 @@ public:
    */
 
   class Construct_curve_2 :
-    public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+    public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
-    using Base =
-      CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
+    using Base = internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
 
     Construct_curve_2(CKvA_2* kernel) : Base(kernel) {}
 
