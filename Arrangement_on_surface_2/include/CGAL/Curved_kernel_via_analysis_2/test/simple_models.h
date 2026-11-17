@@ -20,8 +20,16 @@
  * concept requirenments
  */
 
-#include <CGAL/config.h>
+#include <istream>
+#include <ostream>
+#include <utility>
+#include <vector>
+
 #include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/enum.h>
+#include <CGAL/functional.h>
+#include <CGAL/Handle_with_policy.h>
+#include <CGAL/Object.h>
 #include <CGAL/Polynomial.h>
 #include <CGAL/Algebraic_kernel_d_1.h>
 #include <CGAL/Arr_enums.h>

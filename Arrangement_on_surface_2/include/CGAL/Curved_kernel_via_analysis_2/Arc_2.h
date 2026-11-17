@@ -20,26 +20,32 @@
  * can be analyzed.
  */
 
-#include <CGAL/config.h>
 #include <CGAL/Handle_with_policy.h>
 
+#include <cstddef>
 #include <iostream>
+#include <limits>
 #include <type_traits>
 #include <optional>
-#include <boost/none.hpp>
+#include <utility>
+#include <vector>
 
 #include <CGAL/Bbox_2.h>
 #include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
+#include <CGAL/IO/io.h>
+#include <CGAL/Object.h>
+#include <CGAL/Polynomial_traits_d.h>
 
 #ifndef CGAL_CKvA_USE_CACHES
 #define CGAL_CKvA_USE_CACHES 1
 #endif
 
+#include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Generic_arc_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
-
 #include <CGAL/Curved_kernel_via_analysis_2/Sweep_curves_adapter_2.h>
-
-#include <CGAL/kernel_assertions.h>
 
 namespace CGAL {
 namespace internal {
@@ -1241,12 +1247,10 @@ public:
     if (curve_kernel().decompose_2_object()(cv.curve(), p.curve(), std::back_inserter(parts_of_f),
                                             std::back_inserter(parts_of_g), std::back_inserter(common))) {
       CGAL_assertion((parts_of_f.size() == 1 || parts_of_g.size() == 1) && common.size() == 1);
-      if (parts_of_f.size() == 1) {
+      if (parts_of_f.size() == 1)
         cv._simplify_by(curve_kernel().construct_curve_pair_2_object()(parts_of_f[0], common[0]));
-      }
-      if (parts_of_g.size() == 1) {
+      if (parts_of_g.size() == 1)
         p.simplify_by(curve_kernel().construct_curve_pair_2_object()(parts_of_g[0], common[0]));
-      }
       return true;
     }
     return false;
@@ -1341,7 +1345,8 @@ public:
 
     CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(construct_point_on_arc_2)
 
-    Point_2 left1, left2;
+    Point_2 left1;
+    Point_2 left2;
 
     if (common_left.location() != CGAL::ARR_LEFT_BOUNDARY) {
       if ((cv1.location(CGAL::ARR_MIN_END) != CGAL::ARR_LEFT_BOUNDARY) &&
@@ -1443,9 +1448,12 @@ protected:
         }
         std::vector<Curve_analysis_2> dummy[3];
         // ensure that curves are not decomposable
-        CGAL_precondition(! curve_kernel().decompose_2_object()(
-          c, pt.curve(), std::back_inserter(dummy[0]), std::back_inserter(dummy[1]), std::back_inserter(dummy[2])));
-      } else if (arcno_on_c != -1) { CGAL_precondition(pt.arcno() == arcno_on_c); });
+        CGAL_precondition(! curve_kernel().decompose_2_object()(c, pt.curve(),
+                                                                std::back_inserter(dummy[0]),
+                                                                std::back_inserter(dummy[1]),
+                                                                std::back_inserter(dummy[2])));
+      }
+      else if (arcno_on_c != -1) { CGAL_precondition(pt.arcno() == arcno_on_c); });
   }
 
   /*! establishes preconditions to ensure that there are no event
@@ -1456,8 +1464,8 @@ protected:
    * using \c _fix_curve_ends_order()
    */
   void _check_arc_interior() const {
-#if ! (defined(CGAL_KERNEL_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS))
 
+#if ! (defined(CGAL_KERNEL_NO_PRECONDITIONS) || defined(CGAL_NO_PRECONDITIONS))
     if (is_vertical()) {
       Coordinate_1 x0 = _minpoint().x();
       typename Curve_analysis_2::Status_line_1 cv_line;
@@ -1845,8 +1853,7 @@ protected:
       // vertical line at this x0 (must be exactly 1 curve)
       x0 = _minpoint().x();
       Curve_analysis_2 ca_2(cpa_2.curve_analysis(0));
-      if (ca_2.status_line_for_x(x0).covers_line())
-        this->ptr()->m_support = ca_2;
+      if (ca_2.status_line_for_x(x0).covers_line()) this->ptr()->m_support = ca_2;
       else {
         ca_2 = cpa_2.curve_analysis(1);
         CGAL_assertion(ca_2.status_line_for_x(x0).covers_line());
@@ -1897,7 +1904,6 @@ protected:
       ipair = cpv_line.curves_at_event(this->ptr()->m_arcno_min);
       if (ipair.first != -1 && ipair.second != -1)
         // choose simpler supporting curve
-
         this->ptr()->m_arcno_min = ((curve_idx) ? ipair.second : ipair.first);
       else {
         CGAL_assertion(ipair.first != -1 || ipair.second != -1);
@@ -1953,9 +1959,7 @@ protected:
     CKvA_CERR("\n_trim_if_overlapped: this: " << *dynamic_cast<const Kernel_arc_2*>(this) << "; and " << cv2 << "\n");
     // one arc is vertical and the other one is not, or x-ranges are not
     // overlapping => quit
-    if (is_vertical() != cv2.is_vertical()) {
-      return false;
-    }
+    if (is_vertical() != cv2.is_vertical()) return false;
 
     if (is_vertical()) { // here process vertical case
       // check for x-coordinates equality
@@ -2233,7 +2237,7 @@ protected:
                : pt2;
     }
     if (! low.is_on_left_right() && ! high.is_on_left_right() &&
-        ckva().compare_x_2_object()(low, high) != CGAL::SMALLER) { // disjoint x-ranges
+        ckva().compare_x_2_object()(low, high) != CGAL::SMALLER) {  // disjoint x-ranges
       return false;
     }
     pt_low = low;
@@ -2352,12 +2356,8 @@ protected:
       }
 
       int pos = tmp.event_of_curve(arcno1, f);
-      if (pos != tmp.event_of_curve(arcno2, g)) {
-        continue;
-      }
-      if (mult == -1) {
-        mult = tmp.multiplicity_of_intersection(pos);
-      }
+      if (pos != tmp.event_of_curve(arcno2, g)) continue;
+      if (mult == -1) mult = tmp.multiplicity_of_intersection(pos);
 
       // pick up the curve with lower degree
       auto construct_point_on_arc = ckva().construct_point_on_arc_2_object();
@@ -2412,12 +2412,13 @@ private:
        }
        break;
       }
+
      case (CGAL::ARR_INTERIOR): {
        y_approx = curve_kernel().approximate_absolute_y_2_object()(arc.curve_end(end).xy(), prec);
        break;
       }
-     default:
-      CGAL_error();
+
+     default: CGAL_error();
     } // switch
 
     return std::make_pair(CGAL::to_double(y_approx.first), CGAL::to_double(y_approx.second));
@@ -2519,8 +2520,7 @@ public:
             if (this->is_in_x_range_interior(curr_xy.x())) {
               CKvA_CERR("update y coordinates");
 
-              std::pair<Bound, Bound> xy_approx =
-                curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
+              std::pair<Bound, Bound> xy_approx = curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
 
               // adapt y-interval
               ymin = (CGAL::min)(ymin, CGAL::to_double(xy_approx.first));
@@ -2709,36 +2709,37 @@ public:
 private:
   // type of CurveSweepTraits model
   using SCA_2 = CGAL::Sweep_curves_adapter_2<Curved_kernel_via_analysis_2>;
+
   // befriend segment for Self::_intersection_points
   friend class internal::Generic_arc_2<SCA_2>;
 
   /*
   // befriend all functors
 #define CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Z) \
-friend class CGAL::Sweep_curves_functors::Z< SCA_2 >;   \
+  friend class CGAL::Sweep_curves_functors::Z< SCA_2 >;   \
 
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_xy_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Less_xy_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_at_x_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Equal_y_at_x_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Multiplicity_of_intersection_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_right_of_point_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Source_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Target_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Construct_segment_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Is_degenerate_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Do_overlap_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_opposite_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_right_of_point_2)
-CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Make_x_monotone_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_xy_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Less_xy_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_at_x_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Equal_y_at_x_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Multiplicity_of_intersection_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_right_of_point_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Source_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Target_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Construct_segment_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Is_degenerate_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Do_overlap_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_opposite_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_right_of_point_2)
+  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Make_x_monotone_2)
 
 #undef CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR */
 
 }; // class Arc_2
 
-/*!\relates Arc_2
+/*! \relates Arc_2
  * writes the arc to an output stream
  *
  * writes \c arc to \c os

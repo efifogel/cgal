@@ -21,7 +21,14 @@
  * adds support for isolated points to native CKvA_2 object
  */
 
-#include <CGAL/config.h>
+#include <iostream>
+#include <optional>
+#include <utility>
+#include <vector>
+
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
 #include <CGAL/Handle_with_policy.h>
 
 namespace CGAL {
@@ -58,14 +65,13 @@ public:
 
   // standard constructor : normal arc
   Generic_arc_2_rep(const Arc_2& c) {
-    if (c.location(CGAL::ARR_MIN_END) != CGAL::ARR_INTERIOR)
-      m_min = Generic_point_2(c, CGAL::ARR_MIN_END);
+    if (c.location(CGAL::ARR_MIN_END) != CGAL::ARR_INTERIOR) m_min = Generic_point_2(c, CGAL::ARR_MIN_END);
     else {
       m_min = Generic_point_2(c.curve_end(CGAL::ARR_MIN_END));
       m_arc = c;
     }
-    m_max = (c.location(CGAL::ARR_MAX_END) != CGAL::ARR_INTERIOR ? Generic_point_2(c, CGAL::ARR_MAX_END)
-                                                                 : Generic_point_2(c.curve_end(CGAL::ARR_MAX_END)));
+    m_max = (c.location(CGAL::ARR_MAX_END) != CGAL::ARR_INTERIOR ?
+             Generic_point_2(c, CGAL::ARR_MAX_END) : Generic_point_2(c.curve_end(CGAL::ARR_MAX_END)));
   }
 
   // standard constructor : degenerate arc
@@ -80,7 +86,7 @@ public:
   mutable std::optional<Arc_2> m_arc;
 
   // whether an arc is degenerate
-  //bool m_is_degenerate;
+  // bool m_is_degenerate;
 
   // befriending the handle
   friend class Generic_arc_2<Sweep_curves_adaptor_2, Self>;

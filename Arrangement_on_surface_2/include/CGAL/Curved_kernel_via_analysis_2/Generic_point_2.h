@@ -21,7 +21,11 @@
  * adds support for points at infinity to native CKvA_2 object
  */
 
-#include <CGAL/config.h>
+#include <iostream>
+#include <optional>
+
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
 #include <CGAL/Handle_with_policy.h>
 
 namespace CGAL {

@@ -22,9 +22,8 @@
  * Defines points and arcs supported by curves that can be analyzed.
  */
 
-#include <CGAL/config.h>
+#include <CGAL/tags.h>
 #include <CGAL/tss.h>
-#include <CGAL/Arr_enums.h>
 #include <CGAL/Arr_tags.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>

@@ -20,9 +20,23 @@
  * defines Curved_kernel_via_analysis_2 function objects + class
  */
 
-#include <CGAL/config.h>
-#include <CGAL/Curved_kernel_via_analysis_2/Make_x_monotone_2.h>
+#include <cstddef>
+#include <iostream>
+#include <iterator>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
+#include <CGAL/Fraction_traits.h>
 #include <CGAL/iterator.h>
+#include <CGAL/Object.h>
+#include <CGAL/Polynomial.h>
+#include <CGAL/Polynomial_traits_d.h>
+
+#include <CGAL/Curved_kernel_via_analysis_2/Make_x_monotone_2.h>
 
 namespace CGAL {
 

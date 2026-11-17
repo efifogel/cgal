@@ -17,14 +17,21 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
+#include <list>
 #include <optional>
-#include <boost/none.hpp>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include <CGAL/disable_warnings.h>
-#include <CGAL/config.h>
-#include <CGAL/Algebraic_kernel_d/flags.h>
 #include <CGAL/Algebraic_kernel_d_1.h>
 #include <CGAL/Algebraic_kernel_d/Algebraic_curve_kernel_2.h>
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
+#include <CGAL/Fraction_traits.h>
+#include <CGAL/Polynomial_traits_d.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_impl.h>
 
 namespace CGAL {

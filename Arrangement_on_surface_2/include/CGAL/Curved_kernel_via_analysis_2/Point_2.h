@@ -21,14 +21,18 @@
  * be analyzed.
  */
 
+#include <iostream>
 #include <type_traits>
 #include <optional>
+#include <utility>
 
-#include <boost/optional/optional_io.hpp>
 
-#include <CGAL/config.h>
+#include <CGAL/assertions.h>
+#include <CGAL/enum.h>
 #include <CGAL/Handle_with_policy.h>
 #include <CGAL/Arr_enums.h>
+#include <CGAL/IO/io.h>
+#include <CGAL/Object.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 
 namespace CGAL {
@@ -490,74 +494,74 @@ public:
   /*! writes point to \c os */
   void write(std::ostream& os) const {
     switch (::CGAL::IO::get_mode(os)) {
-    case ::CGAL::IO::PRETTY:
+     case ::CGAL::IO::PRETTY:
       os << "point@" << this->id() << "(";
       os << "sup@" << this->curve().id() << "; ";
       os << "loc=" << this->location() << "; ";
       os << std::flush;
       // write x value
       switch (this->location()) {
-      case CGAL::ARR_TOP_BOUNDARY:
-      case CGAL::ARR_BOTTOM_BOUNDARY:
-      case CGAL::ARR_INTERIOR: {
-        os << "x=" << this->x().to_double() << "; ";
-        break;
-      }
-      case CGAL::ARR_LEFT_BOUNDARY: {
-        os << "x=-oo; ";
-        break;
-      }
-      case CGAL::ARR_RIGHT_BOUNDARY: {
-        os << "x=+oo; ";
-        break;
-      }
-      default: {
-        // bogus location
-        CGAL_assertion(false);
-      }
+       case CGAL::ARR_TOP_BOUNDARY:
+       case CGAL::ARR_BOTTOM_BOUNDARY:
+       case CGAL::ARR_INTERIOR: {
+         os << "x=" << this->x().to_double() << "; ";
+         break;
+        }
+       case CGAL::ARR_LEFT_BOUNDARY: {
+         os << "x=-oo; ";
+         break;
+        }
+       case CGAL::ARR_RIGHT_BOUNDARY: {
+         os << "x=+oo; ";
+         break;
+        }
+       default: {
+         // bogus location
+         CGAL_assertion(false);
+       }
       }
       os << std::flush;
 
       // write y value
       switch (this->location()) {
-      case CGAL::ARR_INTERIOR: {
-        os << "y=" << this->xy().to_double().second << "; ";
-        break;
-      }
-      case CGAL::ARR_TOP_BOUNDARY: {
-        os << "y=+oo; ";
-        break;
-      }
-      case CGAL::ARR_BOTTOM_BOUNDARY: {
-        os << "y=-oo; ";
-        break;
-      }
-      case CGAL::ARR_LEFT_BOUNDARY:
-      case CGAL::ARR_RIGHT_BOUNDARY: {
-        CGAL::Object obj = this->curve().asymptotic_value_of_arc(this->location(), this->arcno());
-        CGAL::Arr_parameter_space ps;
-        if (CGAL::assign(ps, obj)) {
-          if (ps == CGAL::ARR_BOTTOM_BOUNDARY) {
-            os << "y=-oo(asym)" << "; ";
-          }
-          else {
-            os << "y=+oo(asym)" << "; ";
-          }
+       case CGAL::ARR_INTERIOR: {
+         os << "y=" << this->xy().to_double().second << "; ";
+         break;
         }
-        else {
-          Coordinate_1 y;
-          CGAL_assertion_code(bool check =) CGAL::assign(y, obj);
-          CGAL_assertion(check);
-          os << "y=" << CGAL::to_double(y) << "(asym)" << "; ";
+       case CGAL::ARR_TOP_BOUNDARY: {
+         os << "y=+oo; ";
+         break;
         }
-        break;
-        os << "y=??; ";
-        break;
-      }
-      default: {
-        // bogus location
-        CGAL_assertion(false);
-      }
+       case CGAL::ARR_BOTTOM_BOUNDARY: {
+         os << "y=-oo; ";
+         break;
+        }
+       case CGAL::ARR_LEFT_BOUNDARY:
+       case CGAL::ARR_RIGHT_BOUNDARY: {
+         CGAL::Object obj = this->curve().asymptotic_value_of_arc(this->location(), this->arcno());
+         CGAL::Arr_parameter_space ps;
+         if (CGAL::assign(ps, obj)) {
+           if (ps == CGAL::ARR_BOTTOM_BOUNDARY) {
+             os << "y=-oo(asym)" << "; ";
+           }
+           else {
+             os << "y=+oo(asym)" << "; ";
+           }
+         }
+         else {
+           Coordinate_1 y;
+           CGAL_assertion_code(bool check =) CGAL::assign(y, obj);
+           CGAL_assertion(check);
+           os << "y=" << CGAL::to_double(y) << "(asym)" << "; ";
+         }
+         break;
+         os << "y=??; ";
+         break;
+        }
+       default: {
+         // bogus location
+         CGAL_assertion(false);
+       }
       }
       os << std::flush;
       if (this->ptr()->m_xy || this->ptr()->m_arcno) {
@@ -569,10 +573,10 @@ public:
       os << ")";
       os << std::flush;
       break;
-    case ::CGAL::IO::BINARY:
+     case ::CGAL::IO::BINARY:
       std::cerr << "BINARY format not yet implemented" << std::endl;
       break;
-    default:
+     default:
       // ASCII
       os << "Point_2(";
       os << ::CGAL::IO::oformat(this->ptr()->m_xy);

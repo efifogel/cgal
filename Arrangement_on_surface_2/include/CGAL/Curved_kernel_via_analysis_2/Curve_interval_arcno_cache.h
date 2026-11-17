@@ -19,8 +19,12 @@
  * defines \c Curve_interval_arcno_cache functor
  */
 
-#include <CGAL/config.h>
-#include <CGAL/Handle_with_policy.h>
+#include <map>
+#include <utility>
+#include <vector>
+
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
 
 namespace CGAL {
 namespace internal {
@@ -51,8 +55,7 @@ struct Curve_interval_arcno_cache {
   //! type of status line
   using Status_line_1 = typename Curve_analysis_2::Status_line_1;
 
-  //! event arc number descriptor: stores an arc number along with curve's
-  //! end type (+/-oo or \c ARR_INTERIOR )
+  //! event arc number descriptor: stores an arc number along with curve's end type (+/-oo or \c ARR_INTERIOR )
   using Arcno_desc = std::pair<int, CGAL::Arr_parameter_space>;
 
   //! type of first argument
@@ -171,6 +174,7 @@ struct Curve_interval_arcno_cache {
   }
 
   //!@}
+
 private:
   //!\name Private members
   //!@{

@@ -21,9 +21,11 @@
  * non x-monotone arc of a generic curve
  */
 
-#include <CGAL/config.h>
+#include <ostream>
+#include <vector>
+
+#include <CGAL/assertions.h>
 #include <CGAL/Handle_with_policy.h>
-#include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
 
 namespace CGAL {
 namespace internal {

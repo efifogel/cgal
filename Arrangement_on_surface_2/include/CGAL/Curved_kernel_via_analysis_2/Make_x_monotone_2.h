@@ -27,10 +27,10 @@
 #include <variant>
 #include <vector>
 
-#include <CGAL/config.h>
-#include <CGAL/Handle_with_policy.h>
+#include <CGAL/Arr_enums.h>
 
 // TODO remove polynomial_traits
+#include <CGAL/assertions.h>
 #include <CGAL/Polynomial_traits_d.h>
 
 namespace CGAL {
@@ -116,10 +116,8 @@ struct Make_x_monotone_2 {
 
     auto construct_arc_2 = m_curved_kernel->construct_arc_2_object();
     // use CGAL::Total_degree ?
-    if (typename CGAL::Polynomial_traits_d<typename Curve_analysis_2::Polynomial_2>::Total_degree()(
-          curve.polynomial_2()) < 1) {
-      return oi;
-    }
+    using Polynomial_2 = typename Curve_analysis_2::Polynomial_2;
+    if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(curve.polynomial_2()) < 1) { return oi; }
 
     Status_line_1 evt_line1;
     Status_line_1 evt_line2;
@@ -189,9 +187,9 @@ struct Make_x_monotone_2 {
 
         if (info1.second != CGAL::ARR_INTERIOR) {
           inf1_end = (info1.second == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::ARR_MIN_END : CGAL::ARR_MAX_END);
-          arc = (info2.second != CGAL::ARR_INTERIOR)
-                  ? construct_arc_2(min_x, inf1_end, max_x, inf2_end, curve, k)
-                  : construct_arc_2(max_pts[info2.first], min_x, inf1_end, curve, k, info2.first);
+          arc = (info2.second != CGAL::ARR_INTERIOR) ?
+            construct_arc_2(min_x, inf1_end, max_x, inf2_end, curve, k) :
+            construct_arc_2(max_pts[info2.first], min_x, inf1_end, curve, k, info2.first);
         }
         else if (info2.second != CGAL::ARR_INTERIOR) {
           arc = construct_arc_2(min_pts[info1.first], max_x, inf2_end, curve, k, info1.first);

@@ -22,6 +22,11 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
+#include <iostream>
+#include <optional>
+#include <type_traits>
+#include <vector>
+
 // do not compile curve renderer code (for fast debugging)
 //#define CGAL_CKVA_DUMMY_RENDERER
 
@@ -34,34 +39,18 @@
 // (not recommended for multi-threaded applications)
 //#define CGAL_CKVA_USE_STATIC_RENDERER
 
-// prints out detailed info of the rendering process
-// (only for internal debugging)
-#ifndef Gfx_DETAILED_OUT
-//#define Gfx_USE_DETAILED_OUT
-#ifdef Gfx_USE_DETAILED_OUT
-#define Gfx_DETAILED_OUT(x) std::cerr << x
-#else
-#define Gfx_DETAILED_OUT(x) static_cast<void>(0)
-#endif
-#endif
-
-// prints out only high-level debug messages
-#ifndef Gfx_OUT
-// #define Gfx_USE_OUT
-#ifdef Gfx_USE_OUT
-#define Gfx_OUT(x) std::cerr << x
-#else
-#define Gfx_OUT(x) static_cast<void>(0)
-#endif
-#endif
-
 // I still breathe !!!
 #define STILL_ALIVE std::cout << __LINE__ << "\n";
 
+#include <CGAL/Algebraic_structure_traits.h>
+#include <CGAL/Bigfloat_interval_traits.h>
+#include <CGAL/Interval_nt.h>
+#include <CGAL/tags.h>
 #include <CGAL/tss.h>
 #include <CGAL/Bbox_2.h>
 #include <CGAL/Arithmetic_kernel.h>
 #include <CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_2.h>
+#include <CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_traits.h>
 
 namespace CGAL {
 
@@ -91,8 +80,8 @@ public:
     int _w;
     int _h;
     CGAL::Bbox_2 tmp;
-    //         CORE::CORE_init(2);
-    //     CORE::setDefaultPrecision(70, CORE::extLong::getPosInfty());
+    // CORE::CORE_init(2);
+    // CORE::setDefaultPrecision(70, CORE::extLong::getPosInfty());
     instance().get_setup_parameters(&tmp, _w, _h);
     if (bbox != tmp || res_w != _w || res_h != _h) instance().setup(bbox, res_w, res_h);
   }

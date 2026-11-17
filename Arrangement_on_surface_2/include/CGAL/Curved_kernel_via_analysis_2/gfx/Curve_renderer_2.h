@@ -25,16 +25,24 @@
 #define CGAL_AK_ENABLE_DEPRECATED_INTERFACE 1
 #endif
 
+#include <cstddef>
+#include <iostream>
+#include <optional>
+#include <utility>
 #include <vector>
 #include <stack>
 #include <cmath>
 
-#include <CGAL/Polynomial.h>
-#include <CGAL/Interval_nt.h>
-#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Arr_enums.h>
 #include <CGAL/Algebraic_kernel_d/Bitstream_descartes.h>
 #include <CGAL/Algebraic_kernel_d/Bitstream_descartes_rndl_tree_traits.h>
 #include <CGAL/Algebraic_kernel_d/Bitstream_coefficient_kernel.h>
+#include <CGAL/assertions.h>
+#include <CGAL/config.h>
+#include <CGAL/enum.h>
+#include <CGAL/Fraction_traits.h>
+#include <CGAL/Polynomial_traits_d.h>
+#include <CGAL/Real_embeddable_traits.h>
 #include <CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_internals.h>
 #include <CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_traits.h>
 

@@ -24,10 +24,19 @@
  * and where some operations are filtered.
  */
 
-#include <CGAL/config.h>
+#include <iterator>
+#include <list>
+#include <vector>
+
+#include <CGAL/Arr_enums.h>
+#include <CGAL/assertions.h>
+#include <CGAL/Bbox_2.h>
+#include <CGAL/enum.h>
+#include <CGAL/Object.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_impl.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
-#include <CGAL/Bbox_2.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 
 namespace CGAL {
 

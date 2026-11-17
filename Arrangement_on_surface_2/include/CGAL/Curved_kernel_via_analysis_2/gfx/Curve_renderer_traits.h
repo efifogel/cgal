@@ -16,8 +16,26 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-#include <CGAL/basic.h>
-#include <CGAL/function_objects.h>
+#include <cstddef>
+#include <functional>
+
+#include <CGAL/Coercion_traits.h>
+#include <CGAL/Interval_nt.h>
+#include <CGAL/number_utils.h>
+#include <CGAL/Polynomial.h>
+#include <CGAL/Sqrt_extension.h>
+
+#ifdef CGAL_USE_CORE
+#include <CGAL/CORE_BigFloat.h>
+#include <CGAL/CORE_BigInt.h>
+#include <CGAL/CORE_BigRat.h>
+#endif
+
+#ifdef CGAL_USE_LEDA
+#include <CGAL/leda_bigfloat.h>
+#include <CGAL/leda_integer.h>
+#include <CGAL/leda_rational.h>
+#endif
 
 /*! \file CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_traits.h
  * defines class Curve_renderer_traits.

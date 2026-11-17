@@ -19,7 +19,16 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
+#include <algorithm>
+#include <list>
+#include <optional>
+#include <utility>
+#include <vector>
+
+#include <CGAL/Bbox_2.h>
 #include <CGAL/IO/Fig_stream.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curve_renderer_facade.h>
 
 namespace CGAL {

@@ -25,18 +25,44 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <utility>
 #include <vector>
-#include <stack>
 // #include <boost/multi_index_container.hpp>
 // #include <boost/multi_index/member.hpp>
 // #include <boost/multi_index/hashed_index.hpp>
 // #include <boost/multi_index/sequenced_index.hpp>
-#include <boost/functional.hpp>
 
-#include <CGAL/Interval_nt.h>
-#include <CGAL/Polynomial/Real_embeddable_traits.h>
+#include <CGAL/Arithmetic_kernel.h>
+#include <CGAL/Bbox_2.h>
+#include <CGAL/Coercion_traits.h>
+#include <CGAL/Polynomial.h>
+#include <CGAL/Polynomial_traits_d.h>
 
 #include <CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_traits.h>
+
+// prints out detailed info of the rendering process
+// (only for internal debugging)
+#ifndef Gfx_DETAILED_OUT
+//#define Gfx_USE_DETAILED_OUT
+#ifdef Gfx_USE_DETAILED_OUT
+#define Gfx_DETAILED_OUT(x) std::cerr << x
+#else
+#define Gfx_DETAILED_OUT(x) static_cast<void>(0)
+#endif
+#endif
+
+// prints out only high-level debug messages
+#ifndef Gfx_OUT
+// #define Gfx_USE_OUT
+#ifdef Gfx_USE_OUT
+#define Gfx_OUT(x) std::cerr << x
+#else
+#define Gfx_OUT(x) static_cast<void>(0)
+#endif
+#endif
 
 // using boost::multi_index::multi_index_container;
 // using boost::multi_index::get;

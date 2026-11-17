@@ -22,14 +22,14 @@
  * \c Curved_kernel_via_analysis_2 with \c SoX::sweep_curves
  */
 
-#include <optional>
+#include <iterator>
+#include <variant>
+#include <vector>
 
-#include <boost/none.hpp>
-
-#include <CGAL/config.h>
+#include <CGAL/enum.h>
 #include <CGAL/iterator.h>
-#include <CGAL/Handle_with_policy.h>
 #include <CGAL/Arr_enums.h>
+
 #include <CGAL/Curved_kernel_via_analysis_2/Generic_point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Generic_arc_2.h>
 
@@ -238,8 +238,7 @@ public:
       return CGAL::EQUAL; // two vertical arcs => coincide
     }
 
-    CGAL_precondition_msg(end == end2, "Point is not within the arc's "
-                                       "x-range");
+    CGAL_precondition_msg(end == end2, "Point is not within the arc's x-range");
 
     if (locp != cv.arc().location(end2)) return (locp == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
     // compare either two asymptotic ends or one vertical arc + asymptote
@@ -388,8 +387,7 @@ public:
 
   /*! constructs a degenerate segment from a given point */
   result_type operator()(const Point_2& p) const {
-    //         SCA_CERR("Construct_segment_2: arc@" << aa.id() <<
-    //             "; point@" << p.id() << std::endl);
+    // SCA_CERR("Construct_segment_2: arc@" << aa.id() << "; point@" << p.id() << std::endl);
     return Arc_2(p);
   }
 };
