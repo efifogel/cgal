@@ -174,7 +174,7 @@ public:
 
   private:
     // helper function, returning the number of incident branches of a point wrt to a curve
-    std::pair<std::pair<int, int>, bool> branch_numbers_and_vertical(Curve_2 cv, Point_2 p) const {
+    std::pair<std::pair<int, int>, bool> branch_numbers_and_vertical(const Curve_2& cv, const Point_2& p) const {
       auto equal = this->_ckva()->equal_2_object();
 
       Algebraic_real_1 x = p.x();
@@ -192,14 +192,14 @@ public:
     }
 
     // abbreviation for convenience
-    bool is_one_one(Curve_2 cv, Point_2 p) const {
+    bool is_one_one(const Curve_2& cv, const Point_2& p) const {
       std::pair<std::pair<int, int>, bool> branches = branch_numbers_and_vertical(cv, p);
       return branches.first.first == 1 && branches.first.second == 1 && ! branches.second;
     }
 
     template <typename OutputIterator>
-    OutputIterator x_monotone_segment(Curve_2 cv, Point_2 p, Optional_point_2 start, Optional_point_2 end,
-                                      OutputIterator out) const {
+    OutputIterator x_monotone_segment(const Curve_2& cv, const Point_2& p, const Optional_point_2& start,
+                                      const Optional_point_2& end, OutputIterator out) const {
       using Make_x_monotone_result = std::variant<Point_2, X_monotone_curve_2>;
 
       // CGAL_assertion(is_one_one(cv,p));
@@ -306,7 +306,7 @@ public:
   public:
     //
     template <typename OutputIterator>
-    OutputIterator operator()(Curve_2 cv, Point_2 p, Site_of_point site_of_p, OutputIterator out) const {
+    OutputIterator operator()(const Curve_2& cv, const Point_2& p, Site_of_point site_of_p, OutputIterator out) const {
       if (site_of_p == POINT_IN_INTERIOR) return x_monotone_segment(cv, p, std::nullopt, std::nullopt, out);
       else if (site_of_p == MIN_ENDPOINT) return x_monotone_segment(cv, p, Optional_point_2(p), std::nullopt, out);
       CGAL_assertion(site_of_p == MAX_ENDPOINT);
@@ -315,7 +315,8 @@ public:
 
     //
     template <typename OutputIterator>
-    OutputIterator operator()(Curve_2 cv, Point_2 end_left, Point_2 end_right, OutputIterator out) const {
+    OutputIterator operator()(const Curve_2& cv, const Point_2& end_left, const Point_2& end_right,
+                              OutputIterator out) const {
       CGAL_assertion((branch_numbers_and_vertical(cv, end_left).first.second == 1 &&
                       ! branch_numbers_and_vertical(cv, end_left).second) ||
                      (branch_numbers_and_vertical(cv, end_right).first.first == 1 &&
@@ -344,7 +345,7 @@ public:
     }
 
     template <typename OutputIterator>
-    OutputIterator operator()(Point_2 p, Point_2 q, OutputIterator out) {
+    OutputIterator operator()(const Point_2& p, const Point_2& q, OutputIterator out) const {
       bool same_x = (this->_ckva()->compare_x_2_object()(p, q) == CGAL::EQUAL);
       if (same_x) {
         Algebraic_real_1 x = p.x();
@@ -418,7 +419,7 @@ public:
    *   Construct_vertical_segment_2(CKvA_2* kernel) : Base(kernel) {}
    *
    * public:
-   *   X_monotone_curve_2 operator() (Point_2 p, Point_2 q) {
+   *   X_monotone_curve_2 operator() (const Point_2& p, const Point_2& q) {
    *     Algebraic_real_1 x = p.x();
    *     Polynomial_2 f = Polynomial_2(x.polynomial());
    *     Curve_2 cv = this->_ckva()->kernel().construct_curve_2_object() (f);
@@ -426,7 +427,7 @@ public:
    *   }
    *
    *   template <typename OutputIterator> OutputIterator
-   *   operator()(Point_2 p, Site_of_point site_of_p) const {
+   *   operator()(const Point_2& p, Site_of_point site_of_p) const {
    *     Algebraic_real_1 x = p.x();
    *     Polynomial_2 f = Polynomial_2(x.polynomial());
    *     Curve_2 cv = this->_ckva().kernel().construct_curve_2_object() (f);
@@ -449,7 +450,7 @@ public:
 
     Construct_curve_2(CKvA_2* kernel) : Base(kernel) {}
 
-    Curve_2 operator()(Polynomial_2 p) const { return this->_ckva()->kernel().construct_curve_2_object()(p); }
+    Curve_2 operator()(const Polynomial_2& p) const { return this->_ckva()->kernel().construct_curve_2_object()(p); }
   };
 
   Construct_curve_2 construct_curve_2_object() const { return Construct_curve_2(&CKvA_2::instance()); }
