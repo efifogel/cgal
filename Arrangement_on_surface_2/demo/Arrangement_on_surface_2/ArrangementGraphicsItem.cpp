@@ -967,7 +967,8 @@ findOtherInterestingPoints<demo_types::DemoTypes::Alg_seg_arr>
     for (auto& arc : getXyCurves(arr->traits()))
     {
       if (arc.is_vertical() != it->curve().is_vertical())
-        it->curve().intersections(arc, CGAL::dispatch_or_drop_output<Pt_m>(std::back_inserter(intersections)));
+        arr->traits()->intersect_2_object()(it->curve(), arc,
+                                            CGAL::dispatch_or_drop_output<Pt_m>(std::back_inserter(intersections)));
       }
   }
   for (auto point_multiplicity :intersections) {

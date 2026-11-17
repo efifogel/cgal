@@ -391,84 +391,39 @@ public:
 
   //!@}
 
-  //!\name Predicates
-  //!@{
-
-#define CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_POINT(Y) auto Y = ckva().Y##_object();
-
-  /*! compares x-coordinates of this point with \c q
-   *
-   * \param q The other point
-   * \return CGAL::LARGER if x(*this) > x(q);
-   *         CGAL::SMALLER if x(*this) \< x(q);
-   *         CGAL::EQUAL if x(*this) = x(q).
-   * \pre compared points are in the interior of parameter space
-   */
-  inline CGAL::Comparison_result compare_x(const Kernel_point_2& q) const {
-    CGAL_precondition(this->ptr()->m_xy);
-    CGAL_precondition(q.ptr()->m_xy);
-
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_POINT(compare_x_2)
-    CGAL_precondition(s_kernel_point_2_equals_point_2 || dynamic_cast<const Kernel_point_2*>(this) != nullptr);
-    return compare_x_2(*dynamic_cast<const Kernel_point_2*>(this), q);
-  }
-
-  /*! compares this point with \c q lexicographically
-   *
-   * \param q The other point
-   * \return CGAL::LARGER if x(*this) > x(q),
-   *                      or if x(*this) = x(q) and y(*this) > y(q);
-   *         CGAL::SMALLER if x(*this) \< x(q),
-   *                       or if x(*this) = x(q) and y(*this) \< y(q);
-   *         CGAL::EQUAL if the two points are equal.
-   * \pre Compared points are in the interior of parameter space
-   */
-  inline CGAL::Comparison_result compare_xy(const Kernel_point_2& q, bool equal_x = false) const {
-    CGAL_precondition(bool(this->ptr()->m_xy));
-    CGAL_precondition(bool(q.ptr()->m_xy));
-
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_POINT(compare_xy_2)
-    CGAL_precondition(s_kernel_point_2_equals_point_2 || dynamic_cast<const Kernel_point_2*>(this) != nullptr);
-    return compare_xy_2(*dynamic_cast<const Kernel_point_2*>(this), q, equal_x);
-  }
-
-  /*! checks if a point lies on a curve
-   *
-   * \param curve The curve to check
-   * \return \c true, if *this lies on \c curve, \c false otherwise
-   */
-  inline bool is_on(const typename Curved_kernel_via_analysis_2::Curve_2& curve) const {
-    CGAL_precondition(bool(this->ptr()->m_xy));
-
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_POINT(is_on_2)
-    CGAL_precondition(s_kernel_point_2_equals_point_2 || dynamic_cast<const Kernel_point_2*>(this) != nullptr);
-    return is_on_2(*dynamic_cast<const Kernel_point_2*>(this), curve);
-  }
-
-#undef CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_POINT
-
-  //!@}
-
   //!\name Comparison operators for points in the interior of parameter space
   //!@{
 
+private:
+  /*! compares this point with \c q lexicographically, using the curve kernel of the coordinates of the points
+   * \pre both points lie in the interior of the parameter space
+   */
+  CGAL::Comparison_result _compare_xy(const Kernel_point_2& q) const {
+    CGAL_precondition(bool(this->ptr()->m_xy));
+    CGAL_precondition(bool(q.ptr()->m_xy));
+    if (this->id() == q.id()) return CGAL::EQUAL;
+    return this->xy().kernel()->compare_xy_2_object()(this->xy(), q.xy());
+  }
+
+public:
+
   //! checks for equality
-  inline bool operator==(const Kernel_point_2& q) const { return this->compare_xy(q) == CGAL::EQUAL; }
+  inline bool operator==(const Kernel_point_2& q) const { return this->_compare_xy(q) == CGAL::EQUAL; }
 
   //! checks for inequality
-  inline bool operator!=(const Kernel_point_2& q) const { return this->compare_xy(q) != CGAL::EQUAL; }
+  inline bool operator!=(const Kernel_point_2& q) const { return this->_compare_xy(q) != CGAL::EQUAL; }
 
   //! checks for less-than in (x,y) lexicographic order
-  inline bool operator<(const Kernel_point_2& q) const { return this->compare_xy(q) == CGAL::SMALLER; }
+  inline bool operator<(const Kernel_point_2& q) const { return this->_compare_xy(q) == CGAL::SMALLER; }
 
   //! checks for less-equal in (x,y) lexicographic order
-  inline bool operator<=(const Kernel_point_2& q) const { return this->compare_xy(q) != CGAL::LARGER; }
+  inline bool operator<=(const Kernel_point_2& q) const { return this->_compare_xy(q) != CGAL::LARGER; }
 
   //! checks for greater-than in (x,y) lexicographic order
-  inline bool operator>(const Kernel_point_2& q) const { return this->compare_xy(q) == CGAL::LARGER; }
+  inline bool operator>(const Kernel_point_2& q) const { return this->_compare_xy(q) == CGAL::LARGER; }
 
   //! checks for greater-equal in (x,y) lexicographic order
-  inline bool operator>=(const Kernel_point_2& q) const { return this->compare_xy(q) != CGAL::SMALLER; }
+  inline bool operator>=(const Kernel_point_2& q) const { return this->_compare_xy(q) != CGAL::SMALLER; }
 
   //!@}
 

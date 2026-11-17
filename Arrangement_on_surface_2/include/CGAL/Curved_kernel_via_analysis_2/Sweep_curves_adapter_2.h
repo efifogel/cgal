@@ -329,7 +329,8 @@ public:
     CGAL_precondition(! cv1.is_degenerate());
     CGAL_precondition(! cv2.is_degenerate());
     CGAL_precondition(p.is_finite());
-    return (cv1.arc().compare_y_at_x_right(cv2.arc(), p.point()));
+    return SweepCurvesAdapter_2::Curved_kernel_via_analysis_2::instance().compare_y_at_x_right_2_object()(
+      cv1.arc(), cv2.arc(), p.point());
   }
 };
 
@@ -416,7 +417,7 @@ public:
    */
   result_type operator()(const Arc_2& cv1, const Arc_2& cv2) const {
     if (cv1.is_degenerate() || cv2.is_degenerate()) return false;
-    return cv1.arc().do_overlap(cv2.arc());
+    return SweepCurvesAdapter_2::Curved_kernel_via_analysis_2::instance().do_overlap_2_object()(cv1.arc(), cv2.arc());
   }
 };
 

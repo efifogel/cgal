@@ -219,7 +219,9 @@ public:
       if (source().point() == cv2.source().point()) *oi++ = source();
       return oi;
     }
-    if (a.is_in_x_range(pt.x()) && a.compare_y_at_x(pt) == CGAL::EQUAL) *oi++ = Generic_point_2(pt);
+    if (a.is_in_x_range(pt.x()) &&
+        Sweep_curves_adaptor_2::Curved_kernel_via_analysis_2::instance().compare_y_at_x_2_object()(pt, a) == CGAL::EQUAL)
+      *oi++ = Generic_point_2(pt);
     return oi;
   }
 

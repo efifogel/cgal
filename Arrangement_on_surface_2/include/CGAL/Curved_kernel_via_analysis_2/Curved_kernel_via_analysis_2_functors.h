@@ -805,8 +805,8 @@ public:
     CERR("\ncompare_y_at_x_left(cv2); cv1: " << cv1 << "; cv2: " << cv2 << "; p: " << p << "\n");
 
     // ensure that p lies on both arcs
-    CGAL_precondition(cv1.compare_y_at_x(p) == CGAL::EQUAL);
-    CGAL_precondition(cv2.compare_y_at_x(p) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv1) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv2) == CGAL::EQUAL);
 
     // check whether both arcs indeed lie to the left of p
     CGAL_precondition((cv1.is_vertical() && cv1.location(CGAL::ARR_MIN_END) == CGAL::ARR_BOTTOM_BOUNDARY) ||
@@ -885,8 +885,8 @@ public:
 
     // ensure that p lies on both arcs and doesn't lie on the positive
     // boundary
-    CGAL_precondition(cv1.compare_y_at_x(p) == CGAL::EQUAL);
-    CGAL_precondition(cv2.compare_y_at_x(p) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv1) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv2) == CGAL::EQUAL);
 
     // check whether both arcs indeed lie to the left of p
     CGAL_precondition((cv1.is_vertical() && cv1.location(CGAL::ARR_MAX_END) == CGAL::ARR_TOP_BOUNDARY) ||
@@ -1265,8 +1265,8 @@ public:
     CGAL_precondition(q.location() == CGAL::ARR_INTERIOR);
 
     CGAL_precondition(! this->_ckva()->equal_2_object()(p, q));
-    CGAL_precondition(cv.compare_y_at_x(p) == CGAL::EQUAL);
-    CGAL_precondition(cv.compare_y_at_x(q) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(q, cv) == CGAL::EQUAL);
 
     return cv._trim(p, q);
   }
@@ -1303,7 +1303,7 @@ public:
    * \pre p lies on cv but is not one of its end-points.
    */
   void operator()(const Arc_2& cv, const Point_2& p, Arc_2& c1, Arc_2& c2) const {
-    CGAL_precondition(cv.compare_y_at_x(p) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv) == CGAL::EQUAL);
     // check that p is not an end-point of the arc
     CGAL_precondition(cv._same_arc_compare_xy(cv._minpoint(), p) != CGAL::EQUAL);
     CGAL_precondition(cv._same_arc_compare_xy(cv._maxpoint(), p) != CGAL::EQUAL);
@@ -1346,7 +1346,7 @@ public:
     CERR("\nare_mergeable\n");
 
     // if arcs overlap they are not mergeable this also call simplify
-    if (cv1.do_overlap(cv2)) return false;
+    if (this->_ckva()->do_overlap_2_object()(cv1, cv2)) return false;
 
     // touch in at most one point now and supporting curves are simplified
     // both arcs must be either vertical or not
@@ -1424,7 +1424,7 @@ public:
    */
   void operator()(const Arc_2& cv1, const Arc_2& cv2, Arc_2& c) const {
     CERR("merge\n");
-    CGAL_precondition(cv1.are_mergeable(cv2));
+    CGAL_precondition(this->_ckva()->are_mergeable_2_object()(cv1, cv2));
     Arc_2::simplify(cv1, cv2);
 
     Point_2 src;
@@ -1487,7 +1487,7 @@ public:
    */
   result_type operator()(const Point_2& p, const Arc_2& cv) const {
     // fix by Michael Hemmer:
-    if (cv.is_in_x_range(p.x())) return cv.compare_y_at_x(p) == CGAL::EQUAL;
+    if (cv.is_in_x_range(p.x())) return this->_ckva()->compare_y_at_x_2_object()(p, cv) == CGAL::EQUAL;
     return false;
 
     // This is the old code that seems to interpret the arc as open
@@ -1498,7 +1498,7 @@ public:
     //         (cv.is_in_x_range(p.x(),&is_left,&is_right)) &&
     //         !(is_left) &&
     //         !(is_right) &&
-    //         (cv.compare_y_at_x(p) == CGAL::EQUAL);
+    //         (this->_ckva()->compare_y_at_x_2_object()(p, cv) == CGAL::EQUAL);
     //       return res;
   }
 };
@@ -1873,7 +1873,7 @@ public:
     CGAL_precondition_code(CGAL::Arr_parameter_space loc2 = cv2.location(ce));
     CGAL_precondition(cv1.is_on_bottom_top(loc1));
     CGAL_precondition(cv2.is_on_bottom_top(loc2));
-    CGAL_precondition(cv1.compare_x_on_boundary(ce, cv2, ce) == CGAL::EQUAL);
+    CGAL_precondition(this->_ckva()->compare_x_on_boundary_2_object()(cv1, ce, cv2, ce) == CGAL::EQUAL);
 
     CGAL_precondition(loc1 == loc2);
 

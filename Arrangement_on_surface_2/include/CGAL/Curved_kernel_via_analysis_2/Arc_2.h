@@ -793,159 +793,6 @@ public:
   //! \name Predicates
   //!@{
 
-  /*!
-   * compares the relative x-limits of a vertical line at an interior point
-   * and the arc's end on a bottom or top boundary
-   *
-   * \param p A reference point; we refer to a vertical line incident to p.
-   * \param ce ARR_MIN_END if we refer to the arc's minimal end,
-   *            ARR_MAX_END if we refer to its maximal end.
-   * \return CGAL::SMALLER if p lies to the left of the arc;
-   *         CGAL::LARGER  if p lies to the right of the arc;
-   *         CGAL::EQUAL   in case of an overlap.
-   *
-   * \pre the arc's relevant end is on bottom or top boundary
-   */
-  CGAL::Comparison_result compare_x_on_boundary(CGAL::Arr_curve_end ce, const Point_2& p) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_x_on_boundary_2)
-    // compare with NULL, in order to avoid a performance warning with VC++
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_x_on_boundary_2(p, *dynamic_cast<const Kernel_arc_2*>(this), ce);
-  }
-
-  /*! compares the relative x-limits of the curve end of \c *this
-   * and \c cv2
-   * \param ce1 ARR_MIN_END if we refer to this' minimal end,
-   *             ARR_MAX_END if we refer to this' maximal end.
-   * \param cv2 The second curve.
-   * \param ce2 ARR_MIN_END if we refer to its minimal end,
-   *             ARR_MAX_END if we refer to its maximal end.
-   * \return CGAL::SMALLER if \c this lies to the left of cv2;
-   *         CGAL::LARGER  if \c this lies to the right of cv2;
-   *         CGAL::EQUAL   in case of an overlap.
-   *
-   * \pre the curve ends lie on the bottom or top boundary
-   */
-  CGAL::Comparison_result compare_x_on_boundary(CGAL::Arr_curve_end ce1, const Kernel_arc_2& cv2,
-                                                CGAL::Arr_curve_end ce2) const {
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_x_on_boundary_2)
-    return compare_x_on_boundary_2(*dynamic_cast<const Kernel_arc_2*>(this), ce1, cv2, ce2);
-  }
-
-  /*! compares the relative x-positions of an interior point
-   * and the arc's end on a bottom or top boundary
-   *
-   * \param p A reference point; we refer to a vertical line incident to p.
-   * \param ce ARR_MIN_END if we refer to the arc's minimal end,
-   *            ARR_MAX_END if we refer to its maximal end.
-   * \return CGAL::SMALLER if p lies to the left of the arc;
-   *         CGAL::LARGER  if p lies to the right of the arc;
-   *         CGAL::EQUAL   in case of an overlap.
-   *
-   * \pre the arc's relevant end is on bottom or top boundary
-   */
-  CGAL::Comparison_result compare_x_near_boundary(CGAL::Arr_curve_end ce, const Point_2& p) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_x_near_boundary_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_x_near_boundary_2(p, *dynamic_cast<const Kernel_arc_2*>(this), ce);
-  }
-
-  /*! compares the relative x-positions of the curve end of \c *this
-   * and \c cv2
-   * \param ce1 ARR_MIN_END if we refer to this' minimal end,
-   *             ARR_MAX_END if we refer to this' maximal end.
-   * \param cv2 The second curve.
-   * \param ce2 ARR_MIN_END if we refer to its minimal end,
-   *             ARR_MAX_END if we refer to its maximal end.
-   * \return CGAL::SMALLER if \c this lies to the left of cv2;
-   *         CGAL::LARGER  if \c this lies to the right of cv2;
-   *         CGAL::EQUAL   in case of an overlap.
-   *
-   * \pre the curve ends lie on the bottom or top boundary
-   */
-  CGAL::Comparison_result compare_x_near_boundary(const Kernel_arc_2& cv2, CGAL::Arr_curve_end ce) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_x_near_boundary_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_x_near_boundary_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, ce);
-  }
-
-  /*! compares the relative y-positions of two arcs whose ends approach
-   * the left or right boundary from the same side
-   *
-   * \param cv2 The second arc
-   * \param ce ARR_MIN_END if we compare near left boundary
-   *            ARR_MAX_END if we compare near right boundary
-   * \return CGAL::SMALLER if this arc lies below cv2;
-   *         CGAL::LARGER if this arc lies above cv2;
-   *         CGAL::EQUAL in case of an overlap.
-   *
-   * \pre The ends are defined on left or right boundary
-   */
-  CGAL::Comparison_result compare_y_near_boundary(const Kernel_arc_2& cv2, CGAL::Arr_curve_end ce) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_y_near_boundary_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_y_near_boundary_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, ce);
-  }
-
-  /*! compares the relative vertical alignment of a point with this arc
-   *
-   * \param p The point.
-   * \return
-   * CGAL::SMALLER if y(p) \< arc(x(p)), i.e. the point is below the arc;
-   * CGAL::LARGER if y(p) > arc(x(p)), i.e. the point is above the arc;
-   * CGAL::EQUAL if p lies on the arc.
-   *
-   * \pre p is in the x-range of the arc.
-   */
-  CGAL::Comparison_result compare_y_at_x(const Point_2& p) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_y_at_x_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_y_at_x_2(p, *dynamic_cast<const Kernel_arc_2*>(this));
-  }
-
-  /*! compares the relative vertical alignment of this arc with a second
-   * immediately to the left of one of their intersection points.
-   *
-   * If one of the curves is vertical (emanating downward from p),
-   * it is always considered to be below the other curve.
-   *
-   * \param cv2 The second arc
-   * \param p The intersection point
-   *
-   * \return The relative vertical alignment this arc with respect to cv2
-   *         immediately to the left of p: SMALLER, LARGER or EQUAL.
-   *
-   * \pre The point p lies on both curves, and both of them must be also be
-   *      defined (lexicographical) to their left.
-   */
-  CGAL::Comparison_result compare_y_at_x_left(const Kernel_arc_2& cv2, const Point_2& p) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_y_at_x_left_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_y_at_x_left_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, p);
-  }
-
-  /*! compares the relative vertical alignment of this arc with a second
-   * immediately to the right of one of their intersection points.
-   *
-   * If one of the curves is vertical (emanating downward from p),
-   * it is always considered to be below the other curve.
-   *
-   * \param cv2 The second arc
-   * \param p The intersection point
-   *
-   * \return The relative vertical alignment this arc with respect to cv2
-   *         immediately to the right of p: SMALLER, LARGER or EQUAL.
-   *
-   * \pre The point p lies on both curves, and both of them must be also be
-   *      defined (lexicographical) to their right.
-   */
-  CGAL::Comparison_result compare_y_at_x_right(const Kernel_arc_2& cv2, const Point_2& p) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(compare_y_at_x_right_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return compare_y_at_x_right_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, p);
-  }
-
   /*! checks if the given x-value is in the x-range of the arc inclusive.
    *
    * \param x The x-value.
@@ -1011,29 +858,6 @@ public:
     return true;
   }
 
-  /*! checks whether a given arc is equal to this one
-   *
-   * \param cv2 The query arc
-   * \return \c true iff this arc is equal to \c cv, \c false otherwise
-   */
-  bool is_equal(const Kernel_arc_2& cv2) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(equal_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return equal_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2);
-  }
-
-  /*! checks whether this arcs overlaps with another
-   *
-   * \param cv2 The query arc
-   * \return \c true, if both arcs have infinitely many intersection points,
-   *         \c false otherwise
-   */
-  bool do_overlap(const Kernel_arc_2& cv2) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(do_overlap_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return do_overlap_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2);
-  }
-
   /*! computes the multiplicity of intersection
    *
    * The intersection multiplicity of \c *this and \c cv2 at point \c p is
@@ -1056,7 +880,8 @@ public:
 
     // there must be an intersection at this point (in_x_range is checked
     // internally by compare_y_at_x() ?
-    CGAL_expensive_precondition(compare_y_at_x(p) == CGAL::EQUAL && cv2.compare_y_at_x(p) == CGAL::EQUAL);
+    CGAL_expensive_precondition(ckva().compare_y_at_x_2_object()(p, static_cast<const Kernel_arc_2&>(*this)) == CGAL::EQUAL &&
+                                ckva().compare_y_at_x_2_object()(p, cv2) == CGAL::EQUAL);
 
     Kernel_arc_2::simplify(*dynamic_cast<const Kernel_arc_2*>(this), cv2);
     CGAL_precondition(! curve().is_identical(cv2.curve()));
@@ -1082,25 +907,6 @@ public:
   //!\name Constructing functions
   //!@{
 
-  /*! finds all intersections of this arc with another one and
-   * insert them to the output iterator.
-   *
-   * The value type of the output iterator is a \c std::variant of an \c Arc_2
-   * object (overlap) and a <tt>std::pair\<Point_2, Multiplicity></tt>
-   * (intersection point + multiplicity). A past-the-end iterator is returned.
-   *
-   * \param cv2 The second arc
-   * \param oi The outputiterator
-   * \return A past-the-end iterator of \c oi
-   */
-  template <typename OutputIterator>
-  OutputIterator intersections(const Kernel_arc_2& cv2, OutputIterator oi) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(intersect_2)
-
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return intersect_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, oi);
-  }
-
   /*! computes the next intersection of \c *this and \c cv2 right of \c p
    * in lexicographical order and returns it through \c intersection
    * argument
@@ -1118,7 +924,7 @@ public:
    * \pre The arcs are not allowed to overlap
    */
   bool intersect_right_of_point(const Kernel_arc_2& cv2, const Point_2& p, Point_2& intersection) const {
-    CGAL_precondition(! this->do_overlap(cv2));
+    CGAL_precondition(! ckva().do_overlap_2_object()(static_cast<const Kernel_arc_2&>(*this), cv2));
 
     // TODO rewrite intersect_right_of_point (Pavel)
     // use static member for Intersect, Left & Right
@@ -1152,7 +958,7 @@ public:
    * \pre The arcs are not allowed to overlap
    */
   bool intersect_left_of_point(const Kernel_arc_2& cv2, const Point_2& p, Point_2& intersection) const {
-    CGAL_precondition(! this->do_overlap(cv2));
+    CGAL_precondition(! ckva().do_overlap_2_object()(static_cast<const Kernel_arc_2&>(*this), cv2));
 
     // TODO rewrite intersect_left_of_point (Pavel)
     // use static member for Intersect, Left & Right
@@ -1178,54 +984,6 @@ public:
    * \pre p != q
    * \pre both points must be interior and must lie on \c cv
    */
-  // do we need this method separately ??
-  Kernel_arc_2 trim(const Point_2& p, const Point_2& q) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(trim_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return trim_2(*dynamic_cast<const Kernel_arc_2*>(this), p, q);
-  }
-
-  /*! splits an arc at a given point into two sub-arcs
-   *
-   * \param p The split point
-   * \param s1 Output: The left resulting sub-arc (p is its right endpoint)
-   * \param s2 Output: The right resulting sub-arc (p is its left endpoint)
-   *
-   * \pre p lies on cv but is not one of its end-points.
-   */
-  void split(const Point_2& p, Kernel_arc_2& s1, Kernel_arc_2& s2) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(split_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    split_2(*dynamic_cast<const Kernel_arc_2*>(this), p, s1, s2);
-  }
-
-  /*! checks whether this arc can be merged with a second
-   *
-   * \param cv2 The second arc
-   * \return \c true if the two arcs are mergeable, i.e., they are supported
-   * by the same curve and share a common endpoint; \c false otherwise.
-   */
-  bool are_mergeable(const Kernel_arc_2& cv2) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(are_mergeable_2)
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    return are_mergeable_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2);
-  }
-
-  /*! merges this arc with a second
-   *
-   * \param cv2 The second arc
-   * \return The resulting arc
-   *
-   * \pre The two arcs are mergeable, that is they are supported by the
-   *      same curve and share a common endpoint.
-   */
-  Kernel_arc_2 merge(const Kernel_arc_2& cv2) const {
-    CGAL_CKvA_2_GRAB_CK_FUNCTOR_FOR_ARC(merge_2)
-    Kernel_arc_2 tmp;
-    CGAL_precondition(s_kernel_arc_2_equals_arc_2 || dynamic_cast<const Kernel_arc_2*>(this) != nullptr);
-    merge_2(*dynamic_cast<const Kernel_arc_2*>(this), cv2, tmp);
-    return tmp;
-  }
 
   //!@}
   //!\name Simplification
@@ -2129,7 +1887,7 @@ protected:
   static OutputIterator _intersect_at_endpoints(const Kernel_arc_2& cv1, const Kernel_arc_2& cv2, OutputIterator oi) {
     CKvA_CERR("\n_intersect_at_endpoints\n");
 
-    CGAL_precondition(! cv1.do_overlap(cv2));
+    CGAL_precondition(! ckva().do_overlap_2_object()(cv1, cv2));
     /* Since *this and cv2 do not overlap and cannot contain singularities
      * in the interior, the only remaining candidates for intersections are
      * their finite endpoints (if any), for vertical arcs as well.
@@ -2290,7 +2048,7 @@ protected:
       auto construct_point_on_arc = ckva().construct_point_on_arc_2_object();
 
       Point_2 xy = construct_point_on_arc(x, nonvert.curve(), nonvert.arcno(x), nonvert);
-      if (vert.compare_y_at_x(xy) == CGAL::EQUAL) *oi++ = std::make_pair(xy, 1);
+      if (ckva().compare_y_at_x_2_object()(xy, vert) == CGAL::EQUAL) *oi++ = std::make_pair(xy, 1);
       return oi;
     }
 
@@ -2530,7 +2288,7 @@ public:
           if (this->is_in_x_range_interior(curr_xy.x())) {
             // TODO replace with is_on
             Point_2 curr_pt = ckva().construct_point_2_object()(curr_xy.x(), curr_xy.curve(), curr_xy.arcno());
-            if (this->compare_y_at_x(curr_pt) == CGAL::EQUAL) {
+            if (ckva().compare_y_at_x_2_object()(curr_pt, static_cast<const Kernel_arc_2&>(*this)) == CGAL::EQUAL) {
               CKvA_CERR("update y coordinates");
 
               std::pair<Bound, Bound> xy_approx = curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
@@ -2645,9 +2403,6 @@ public:
   }
 
   //!@}
-
-  //! checks for equality
-  inline bool operator==(const Kernel_arc_2& arc2) const { return is_equal(arc2); }
 
 #if defined(_MSC_VER)
   // befriending the kernel point

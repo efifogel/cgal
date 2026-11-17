@@ -215,6 +215,8 @@ public:
       std::list<X_monotone_curve_2> segs;
 
       auto on_arc = this->_ckva()->is_on_2_object();
+      auto trim = this->_ckva()->trim_2_object();
+      auto split = this->_ckva()->split_2_object();
       auto left = this->_ckva()->construct_min_vertex_2_object();
       auto right = this->_ckva()->construct_max_vertex_2_object();
       auto equal = this->_ckva()->equal_2_object();
@@ -238,7 +240,7 @@ public:
       bool left_on_arc = start && on_arc(start.value(), *it_seg_p);
       bool right_on_arc = end && on_arc(end.value(), *it_seg_p);
 
-      if (left_on_arc && right_on_arc) segs.push_back(it_seg_p->trim(start.value(), end.value()));
+      if (left_on_arc && right_on_arc) segs.push_back(trim(*it_seg_p, start.value(), end.value()));
       if (left_on_arc && (! right_on_arc)) {
         if (! it_seg_p->is_finite(CGAL::ARR_MAX_END) || ! equal(start.value(), right(*it_seg_p))) {
           if (it_seg_p->is_finite(CGAL::ARR_MIN_END) && equal(start.value(), left(*it_seg_p)))
@@ -246,7 +248,7 @@ public:
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
-            it_seg_p->split(start.value(), split1, split2);
+            split(*it_seg_p, start.value(), split1, split2);
             segs.push_back(split2);
           }
         }
@@ -258,7 +260,7 @@ public:
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
-            it_seg_p->split(end.value(), split1, split2);
+            split(*it_seg_p, end.value(), split1, split2);
             segs.push_back(split1);
           }
         }
@@ -279,7 +281,7 @@ public:
           if (cur == arcs.rend()) break;
           xcv = &std::get<X_monotone_curve_2>(*cur);
           if (start && on_arc(start.value(), *xcv)) {
-            segs.push_front(xcv->trim(start.value(), right(*xcv)));
+            segs.push_front(trim(*xcv, start.value(), right(*xcv)));
             break;
           }
           segs.push_front(*xcv);
@@ -300,7 +302,7 @@ public:
           if (cur == arcs.end()) break;
           xcv = &std::get<X_monotone_curve_2>(*cur);
           if (end && on_arc(end.value(), *xcv)) {
-            segs.push_back(xcv->trim(left(*xcv), end.value()));
+            segs.push_back(trim(*xcv, left(*xcv), end.value()));
             break;
           }
           segs.push_back(*xcv);
