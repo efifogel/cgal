@@ -959,19 +959,13 @@ public:
   int evaluate_generic(int var, const NT& c, const NT& key, const Poly_1& poly) {
     NT c1;
 
-    if (var == CGAL_X_RANGE)
-      c1 = m_x_min + c * m_pixel_w;
-    else
-      c1 = m_y_min + c * m_pixel_h;
+    c1 = (var == CGAL_X_RANGE) ? m_x_min + c * m_pixel_w : m_y_min + c * m_pixel_h;
 
     bool error_bounds_;
     int sign;
     NT res = evaluate(poly, c1, &error_bounds_);
 
-    if (error_bounds_)
-      sign = evaluate_rational(var, c, key);
-    else
-      sign = CGAL_SGN(res);
+    sign = (error_bounds_) ? evaluate_rational(var, c, key) : CGAL_SGN(res);
 
     return sign;
   }

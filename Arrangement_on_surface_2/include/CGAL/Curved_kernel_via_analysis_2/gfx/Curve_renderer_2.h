@@ -1768,10 +1768,7 @@ private:
 
     val_2 = m_engine.evaluate_generic(var, mid, key, poly);
     // select the half with even number of intersections
-    if ((val_1 ^ val_2) == 0)
-      key_1 = beg;
-    else
-      key_1 = end;
+    key_1 = ((val_1 ^ val_2) == 0) ? beg : end;
     if (get_range_1(var, key_1, mid, key, poly)) return false; // at least three intersections over the interval: done
     key_2 = beg + end - key_1;
 

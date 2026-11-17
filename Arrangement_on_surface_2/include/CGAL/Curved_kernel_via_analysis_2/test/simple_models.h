@@ -15,19 +15,15 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-/*!\file include/CGAL/Curved_kernel_via_analysis_2/test/simple_models.h
+/*! \file include/CGAL/Curved_kernel_via_analysis_2/test/simple_models.h
  * defines dummy implementations satisfying Curve_kernel_2
  * concept requirenments
  */
 
 #include <CGAL/config.h>
-
 #include <CGAL/Arithmetic_kernel.h>
-
 #include <CGAL/Polynomial.h>
-
 #include <CGAL/Algebraic_kernel_d_1.h>
-
 #include <CGAL/Arr_enums.h>
 
 namespace CGAL {
@@ -51,17 +47,11 @@ struct Curve_2_model_rep {
 struct Curve_2_model : public ::CGAL::Handle_with_policy<Curve_2_model_rep> {
   using Rep = Curve_2_model_rep;
   using Base = ::CGAL::Handle_with_policy<Rep>;
-
   using AK_1 = CGAL::Algebraic_kernel_d_1<CGAL::Arithmetic_kernel::Integer>;
-
   using Algebraic_real_1 = AK_1::Algebraic_real_1;
-
   using Bound = double;
-
   using Coefficient = int;
-
   using Poly_d = CGAL::Polynomial<CGAL::Polynomial<int>>;
-
   using Less_than = CGAL::Handle_id_less_than<Curve_2_model>;
 
   // for total_degree (find smaller curve if two are available)
@@ -89,13 +79,9 @@ struct Curve_2_model : public ::CGAL::Handle_with_policy<Curve_2_model_rep> {
   bool operator==(const Curve_2_model& c) { return id() == c.id(); }
 };
 
-std::ostream& operator<<(std::ostream& os, Curve_2_model c) {
-  return os;
-}
+std::ostream& operator<<(std::ostream& os, Curve_2_model c) { return os; }
 
-std::istream& operator>>(std::istream& is, Curve_2_model& c) {
-  return is;
-}
+std::istream& operator>>(std::istream& is, Curve_2_model& c) { return is; }
 
 ///////////////////////////////////////////////////////////////////////////////// Curve_pair_2
 
@@ -105,7 +91,6 @@ struct Curve_pair_2_model;
 template <typename Curve_>
 struct Curve_pair_2_model_rep {
   using Curve = Curve_;
-
   using Algebraic_curve_2 = Curve;
 
   //typedef SoX::Event2_slice< Curve_pair_2< Curve > > Event2_slice;
@@ -124,9 +109,7 @@ struct Curve_pair_2_model_rep {
 template <typename Curve_>
 struct Curve_pair_2_model : public ::CGAL::Handle_with_policy<Curve_pair_2_model_rep<Curve_>> {
   using Curve = Curve_;
-
   using Algebraic_curve_2 = Curve;
-
   using Rep = Curve_pair_2_model_rep<Curve>;
   using Base = ::CGAL::Handle_with_policy<Rep>;
 
@@ -219,6 +202,7 @@ public:
   using Bound_interval = std::pair<Bound, Bound>;
 
   //!@}
+
 public:
   //!\name Constructors
   //!@{
@@ -241,6 +225,7 @@ public:
   int arcno() const { return -1; }
 
   //!@}
+
 public:
   //!\name comparison predicates
   //!@{
@@ -289,9 +274,7 @@ public:
 }; // class Xy_coordinate_2
 
 template <typename AlgebraicCurveKernel_2>
-std::ostream& operator<<(std::ostream& os, const Xy_coordinate_2<AlgebraicCurveKernel_2>& pt) {
-  return os;
-}
+std::ostream& operator<<(std::ostream& os, const Xy_coordinate_2<AlgebraicCurveKernel_2>& pt) { return os; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -313,6 +296,7 @@ class Status_line_CA_1_rep {
   using size_type = typename Curve_analysis_2::size_type;
 
   // constructors
+
 public:
   // default constructor ()
   Status_line_CA_1_rep() {}
@@ -337,8 +321,7 @@ public:
   //!@{
   //!\name typedefs
 
-  //! this instance's first template parameter
-  //! model of AlgebraicKernel_d_2::CurveAnalysis_2
+  //! this instance's first template parameter model of AlgebraicKernel_d_2::CurveAnalysis_2
   using Curve_analysis_2 = CurveAnalysis_2;
 
   //! this instance's second template parameter
@@ -403,9 +386,7 @@ public:
 }; // class Status_line_CA_1
 
 template <typename CurveAnalysis_2>
-std::ostream& operator<<(std::ostream& os, const Status_line_CA_1<CurveAnalysis_2>& cp_line) {
-  return os;
-}
+std::ostream& operator<<(std::ostream& os, const Status_line_CA_1<CurveAnalysis_2>& cp_line) { return os; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -424,6 +405,7 @@ public:
   using Polynomial_2 = typename Algebraic_curve_kernel_2::Polynomial_2;
 
   // constructors
+
 public:
   // default constructor ()
   Curve_analysis_2_rep() {}
@@ -471,7 +453,7 @@ public:
   using Base = ::CGAL::Handle_with_policy<Rep>;
 
   //!@}
-public:
+
   //!\name Constructors
   //!@{
 
@@ -490,7 +472,7 @@ public:
   Curve_analysis_2(Rep rep) : Base(rep) {}
 
   //!@}
-public:
+
   //!\name Access functions
   //!@{
 
@@ -588,7 +570,7 @@ public:
   using Base = ::CGAL::Handle_with_policy<Rep>;
 
   //!@}
-public:
+
   //!\name constructors
   //!@{
 
@@ -688,6 +670,7 @@ public:
   using Base = ::CGAL::Handle_with_policy<Rep>;
 
   //!@}
+
 public:
   //!\name Constructors
   //!@{
@@ -726,13 +709,11 @@ public:
 class Simple_algebraic_kernel_2 {
 // for each predicate functor defines a member function returning an instance
 // of this predicate
-#define CGAL_Algebraic_Kernel_pred(Y, Z)                                                                               \
-  Y Z() const { return Y(); }
+#define CGAL_Algebraic_Kernel_pred(Y, Z) Y Z() const { return Y(); }
 
 // the same for construction functors
 #define CGAL_Algebraic_Kernel_cons(Y, Z) CGAL_Algebraic_Kernel_pred(Y, Z)
 
-private:
 public:
   //! \name wrapping types
   //!@{
@@ -750,6 +731,7 @@ public:
   using Internal_coefficient = Internal_curve_2::Coefficient;
 
   //!@}
+
 public:
   //! \name types and functors for \c ACK_2< >
   //!@{
@@ -806,18 +788,20 @@ public:
 
     Curve_analysis_2 operator()(const Polynomial_2& f) const { return Curve_analysis_2(); }
   };
+
   CGAL_Algebraic_Kernel_cons(Construct_curve_2, construct_curve_2_object);
 
   /*! constructs \c Curve_pair_analysis_2 from pair of 1-curve analysis,
      * caching is used when appropriate
      */
-  struct Construct_curve_pair_2
-    : public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, Curve_pair_analysis_2> {
+  struct Construct_curve_pair_2 :
+    public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, Curve_pair_analysis_2> {
     Curve_pair_analysis_2 operator()(const Curve_analysis_2& ca1, const Curve_analysis_2& ca2) const {
       Curve_pair_analysis_2 cpa_2(ca1, ca2);
       return cpa_2;
     }
   };
+
   CGAL_Algebraic_Kernel_cons(Construct_curve_pair_2, construct_curve_pair_2_object);
 
   //! type of a curve point
@@ -827,12 +811,14 @@ public:
   struct Get_x_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, Algebraic_real_1> {
     Algebraic_real_1 operator()(const Xy_coordinate_2& xy) const { return xy.x(); }
   };
+
   CGAL_Algebraic_Kernel_cons(Get_x_2, Get_x_2_object);
 
   //! returns the second coordinate of \c Xy_coordinate_2
   struct Get_y_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, Algebraic_real_1> {
     Algebraic_real_1 operator()(const Xy_coordinate_2& xy) const { return xy.y(); }
   };
+
   CGAL_Algebraic_Kernel_cons(Get_y_2, Get_y_2_object);
 
   struct Refine_x_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, void> {
@@ -840,6 +826,7 @@ public:
 
     void operator()(Xy_coordinate_2& r, int rel_prec) const {}
   };
+
   CGAL_Algebraic_Kernel_pred(Refine_x_2, refine_x_2_object);
 
   struct Refine_y_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, void> {
@@ -847,6 +834,7 @@ public:
 
     void operator()(Xy_coordinate_2& r, int rel_prec) const {}
   };
+
   CGAL_Algebraic_Kernel_pred(Refine_y_2, refine_y_2_object);
 
   //! computes the current lower boundary of the first coordinate of \c r
@@ -856,6 +844,7 @@ public:
 
     result_type operator()(const Xy_coordinate_2& r) { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Lower_boundary_x_2, lower_boundary_x_2_object);
 
   //! computes the current upper boundary of the first coordinate of \c r
@@ -865,6 +854,7 @@ public:
 
     result_type operator()(const Xy_coordinate_2& r) { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Upper_boundary_x_2, upper_boundary_x_2_object);
 
   //! computes the current lower boundary of the second coordinate of \c r
@@ -874,6 +864,7 @@ public:
 
     result_type operator()(const Xy_coordinate_2& r) { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Lower_boundary_y_2, lower_boundary_y_2_object);
 
   //! computes the current lower boundary of the second coordinate of \c r
@@ -883,6 +874,7 @@ public:
 
     result_type operator()(const Xy_coordinate_2& r) { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Upper_boundary_y_2, upper_boundary_y_2_object);
 
   //! returns the number of boundary type in-between x-coordinates of two
@@ -892,10 +884,10 @@ public:
     using second_agrument_type = Xy_coordinate_2;
     using result_type = Bound;
 
-    result_type operator()(const Xy_coordinate_2& r1, const Xy_coordinate_2& r2) const {
-      return static_cast<result_type>(0);
-    }
+    result_type operator()(const Xy_coordinate_2& r1, const Xy_coordinate_2& r2) const
+    { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Bound_between_x_2, boundary_between_x_2_object);
 
   //! returns the number of boundary type in-between y-coordinates of two
@@ -905,10 +897,10 @@ public:
     using second_agrument_type = Xy_coordinate_2;
     using result_type = Bound;
 
-    result_type operator()(const Xy_coordinate_2& r1, const Xy_coordinate_2& r2) const {
-      return static_cast<result_type>(0);
-    }
+    result_type operator()(const Xy_coordinate_2& r1, const Xy_coordinate_2& r2) const
+    { return static_cast<result_type>(0); }
   };
+
   CGAL_Algebraic_Kernel_cons(Bound_between_y_2, boundary_between_y_2_object);
 
   //! comparison of x-coordinates
@@ -916,21 +908,22 @@ public:
     Comparison_result operator()(const Algebraic_real_1& x1, const Algebraic_real_1& x2) const { return CGAL::EQUAL; }
     Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2) const { return CGAL::EQUAL; }
   };
+
   CGAL_Algebraic_Kernel_pred(Compare_x_2, compare_x_2_object);
 
   //! comparison of y-coordinates of two points
   struct Compare_y_2 : public CGAL::cpp98::binary_function<Xy_coordinate_2, Xy_coordinate_2, Comparison_result> {
     Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2) const { return CGAL::EQUAL; }
   };
+
   CGAL_Algebraic_Kernel_pred(Compare_y_2, compare_y_2_object);
 
   //! lexicographical comparison of two objects of type \c Xy_coordinate_2
   //!
   //! \c equal_x specifies that only y-coordinates need to be compared
   struct Compare_xy_2 : public CGAL::cpp98::binary_function<Xy_coordinate_2, Xy_coordinate_2, Comparison_result> {
-    Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2, bool equal_x = false) const {
-      return CGAL::EQUAL;
-    }
+    Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2, bool equal_x = false) const
+    { return CGAL::EQUAL; }
   };
   CGAL_Algebraic_Kernel_pred(Compare_xy_2, compare_xy_2_object);
 
@@ -940,10 +933,9 @@ public:
   //! for algebraic curves this means that supporting polynomial is
   //! square-free
   struct Has_finite_number_of_self_intersections_2 : public CGAL::cpp98::unary_function<Polynomial_2, bool> {
-    bool operator()(const Polynomial_2& p) const {
-      return true; //is_square_free(p);
-    }
+    bool operator()(const Polynomial_2& p) const { return true; }
   };
+
   CGAL_Algebraic_Kernel_pred(Has_finite_number_of_self_intersections_2,
                              has_finite_number_of_self_intersections_2_object);
 
@@ -952,10 +944,11 @@ public:
   //!
   //! in case of algebraic curves: checks whether supporting polynomials are
   //! coprime
-  struct Has_finite_number_of_intersections_2
-    : public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, bool> {
+  struct Has_finite_number_of_intersections_2 :
+    public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, bool> {
     bool operator()(const Curve_analysis_2& c1, const Curve_analysis_2& c2) const { return true; }
   };
+
   CGAL_Algebraic_Kernel_pred(Has_finite_number_of_intersections_2, has_finite_number_of_intersections_2_object);
 
   //! set of various curve and curve pair decomposition functions
@@ -966,23 +959,22 @@ public:
     Polynomial_2 operator()(const Polynomial_2& p) { return p; }
 
     template <typename OutputIterator1, typename OutputIterator2>
-    int operator()(const Curve_analysis_2& c, OutputIterator1 fit, OutputIterator2 mit) const {
-      return 0;
-    }
+    int operator()(const Curve_analysis_2& c, OutputIterator1 fit, OutputIterator2 mit) const { return 0; }
 
     template <typename OutputIterator>
-    bool operator()(const Curve_analysis_2& c1, const Curve_analysis_2& c2, OutputIterator oi1, OutputIterator oi2,
-                    OutputIterator oib) {
-      return false;
-    }
+    bool operator()(const Curve_analysis_2& c1, const Curve_analysis_2& c2,
+                    OutputIterator oi1, OutputIterator oi2, OutputIterator oib)
+    { return false; }
 
   private:
     //! pointer to Algebraic_curve_kernel_2 (for caching issues)
     /*Self *m_pkernel_2; */
   };
+
   CGAL_Algebraic_Kernel_cons(Decompose_2, decompose_2_object);
 
   //!@}
+
 public:
   //! \name types and functors for \c GPA_2<Algebraic_kernel_d_2>
   //!@{
@@ -1000,36 +992,36 @@ public:
   struct Derivative_x_2 : public CGAL::cpp98::unary_function<Polynomial_2, Polynomial_2> {
     Polynomial_2 operator()(const Polynomial_2& p) const { return p; }
   };
+
   CGAL_Algebraic_Kernel_cons(Derivative_x_2, derivative_x_2_object);
 
   //! computes the derivative w.r.t. the first (outermost) variable
   struct Derivative_y_2 : public CGAL::cpp98::unary_function<Polynomial_2, Polynomial_2> {
     Polynomial_2 operator()(const Polynomial_2& p) const { return p; }
   };
+
   CGAL_Algebraic_Kernel_cons(Derivative_y_2, derivative_y_2_object);
 
   struct X_critical_points_2 {
     template <typename OutputIterator>
-    OutputIterator operator()(const Polynomial_2& p, OutputIterator oi) const {
-      return oi;
-    }
+    OutputIterator operator()(const Polynomial_2& p, OutputIterator oi) const { return oi; }
 
     //! computes the ith x-critical point of polynomial \c p
     Xy_coordinate_2 operator()(const Polynomial_2& p, int i) const { return Xy_coordinate_2(); }
   };
+
   CGAL_Algebraic_Kernel_cons(X_critical_points_2, x_critical_points_2_object);
 
   struct Y_critical_points_2 {
     //! copies in the output iterator the y-critical points of
     //! polynomial \c p as objects of type \c Xy_coordinate_2
     template <typename OutputIterator>
-    OutputIterator operator()(const Polynomial_2& p, OutputIterator oi) const {
-      return oi;
-    }
+    OutputIterator operator()(const Polynomial_2& p, OutputIterator oi) const { return oi; }
 
     //! computes the ith y-critical point of polynomial \c p
     Xy_coordinate_2 operator()(const Polynomial_2& p, int i) const { return Xy_coordinate_2(); }
   };
+
   CGAL_Algebraic_Kernel_cons(Y_critical_points_2, y_critical_points_2_object);
 
   /*! computes the sign of a bivariate polynomial \c p evaluated at the root
@@ -1040,6 +1032,7 @@ public:
   struct Sign_at_2 : public CGAL::cpp98::binary_function<Polynomial_2, Xy_coordinate_2, Sign> {
     Sign operator()(const Polynomial_2& p, const Xy_coordinate_2& r) const { return CGAL::ZERO; }
   };
+
   CGAL_Algebraic_Kernel_pred(Sign_at_2, sign_at_2_object);
 
   struct Solve_2 {

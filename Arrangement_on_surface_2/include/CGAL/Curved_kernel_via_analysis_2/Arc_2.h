@@ -1592,9 +1592,7 @@ protected:
     CKvA_CERR("\n_compare_coprime; this: " << *dynamic_cast<const Kernel_arc_2*>(this)
                                            << "; g: " << cv2.curve().polynomial_2() << "; arcno_on_g: " << cv2.arcno()
                                            << "; where: " << where);
-    if (where == CGAL::ARR_INTERIOR) {
-      CKvA_CERR("; x = " << CGAL::to_double(x0));
-    }
+    if (where == CGAL::ARR_INTERIOR) CKvA_CERR("; x = " << CGAL::to_double(x0));
     CKvA_CERR("\n");
 #endif
 
@@ -1726,9 +1724,7 @@ protected:
     bool min_has_x =
       (is_finite(CGAL::ARR_MIN_END) || min_loc == CGAL::ARR_BOTTOM_BOUNDARY || min_loc == CGAL::ARR_TOP_BOUNDARY);
 
-    if (! min_has_x) {
-      return 0;
-    }
+    if (! min_has_x) return 0;
     // else
     typename Curve_analysis_2::Status_line_1 cv_line = curve().status_line_for_x(_minpoint().x(), CGAL::POSITIVE);
     return cv_line.index();
@@ -1745,7 +1741,6 @@ protected:
     Bound res(0);
 
     typename Curve_kernel_2::Approximate_relative_1 approx_x;
-
     typename Curve_kernel_2::Bound_between_1 bound_between_x;
 
     CGAL::Arr_parameter_space min_loc = location(CGAL::ARR_MIN_END);
@@ -1881,7 +1876,8 @@ protected:
         (inf1_x ? orig_curve.status_line_of_interval(0) : orig_curve.status_line_for_x(x0, CGAL::POSITIVE)););
     CGAL_precondition(cpv_line.number_of_events() == cv_line.number_of_events());
 
-    { // search for new supporting curve and new arcno
+    {
+      // search for new supporting curve and new arcno
       // since supporting curve was decomposed in two parts, arcno
       // represents y-position here
       ipair = cpv_line.curves_at_event(arcno());
@@ -2109,9 +2105,7 @@ protected:
 
     CKvA_CERR("\nintersection_points\n");
     Kernel_arc_2::simplify(cv1, cv2);
-    if (cv1.curve().is_identical(cv2.curve())) {
-      return _intersect_at_endpoints(cv1, cv2, oi);
-    }
+    if (cv1.curve().is_identical(cv2.curve())) return _intersect_at_endpoints(cv1, cv2, oi);
 
     // else general case: distinct supporting curves
     return _intersect_coprime_support(cv1, cv2, oi);
@@ -2195,9 +2189,7 @@ protected:
               // selection is exclusive since arcs cannot intersect twice
               // at the same finite end-point
               } else*/
-      if ((f2_min && pt == cv2._minpoint()) || (f2_max && pt == cv2._maxpoint())) {
-        *oi++ = std::make_pair(pt, 0);
-      }
+      if ((f2_min && pt == cv2._minpoint()) || (f2_max && pt == cv2._maxpoint())) *oi++ = std::make_pair(pt, 0);
 
     Lendloop:
       if (end == CGAL::ARR_MAX_END) break;
@@ -2230,21 +2222,15 @@ protected:
     Point_2 high;
     // find intersection x-range: larger source & smaller target
     if (pt1.location() != CGAL::ARR_LEFT_BOUNDARY) {
-      if (pt2.location() != CGAL::ARR_LEFT_BOUNDARY) {
-        low = (ckva().compare_x_2_object()(pt1, pt2) == CGAL::LARGER ? pt1 : pt2);
-      }
-      else {
-        low = pt1;
-      }
+      low = ((pt2.location() == CGAL::ARR_LEFT_BOUNDARY) || (ckva().compare_x_2_object()(pt1, pt2) == CGAL::LARGER))
+              ? pt1
+              : pt2;
     }
     pt1 = _maxpoint(), pt2 = cv2._maxpoint(), high = pt2;
     if (pt1.location() != CGAL::ARR_RIGHT_BOUNDARY) {
-      if (pt2.location() != CGAL::ARR_RIGHT_BOUNDARY) {
-        high = (ckva().compare_x_2_object()(pt1, pt2) == CGAL::SMALLER ? pt1 : pt2);
-      }
-      else {
-        high = pt1;
-      }
+      high = ((pt2.location() == CGAL::ARR_RIGHT_BOUNDARY) || (ckva().compare_x_2_object()(pt1, pt2) == CGAL::SMALLER))
+               ? pt1
+               : pt2;
     }
     if (! low.is_on_left_right() && ! high.is_on_left_right() &&
         ckva().compare_x_2_object()(low, high) != CGAL::SMALLER) { // disjoint x-ranges

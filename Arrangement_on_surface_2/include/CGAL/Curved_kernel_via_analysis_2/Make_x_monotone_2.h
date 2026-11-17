@@ -189,12 +189,9 @@ struct Make_x_monotone_2 {
 
         if (info1.second != CGAL::ARR_INTERIOR) {
           inf1_end = (info1.second == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::ARR_MIN_END : CGAL::ARR_MAX_END);
-          if (info2.second != CGAL::ARR_INTERIOR) {
-            arc = construct_arc_2(min_x, inf1_end, max_x, inf2_end, curve, k);
-          }
-          else {
-            arc = construct_arc_2(max_pts[info2.first], min_x, inf1_end, curve, k, info2.first);
-          }
+          arc = (info2.second != CGAL::ARR_INTERIOR)
+                  ? construct_arc_2(min_x, inf1_end, max_x, inf2_end, curve, k)
+                  : construct_arc_2(max_pts[info2.first], min_x, inf1_end, curve, k, info2.first);
         }
         else if (info2.second != CGAL::ARR_INTERIOR) {
           arc = construct_arc_2(min_pts[info1.first], max_x, inf2_end, curve, k, info1.first);

@@ -1959,8 +1959,7 @@ public:
    * \return The order of endpoints
    */
   CGAL::Comparison_result operator()(const Arc_2& xcv) const {
-    if (xcv.is_left_to_right()) return (CGAL::SMALLER);
-    else return CGAL::LARGER;
+    return (xcv.is_left_to_right()) ? CGAL::SMALLER : CGAL::LARGER;
     return CGAL::EQUAL;
   }
 };

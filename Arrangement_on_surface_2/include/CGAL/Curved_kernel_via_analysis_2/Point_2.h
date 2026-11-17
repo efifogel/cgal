@@ -210,8 +210,7 @@ public:
       rep.m_x = pt.ptr()->m_x;
       rep.m_curve = pt.ptr()->m_curve;
       rep.m_arcno = pt.ptr()->m_arcno;
-      if (pt.is_finite()) rep.m_location = CGAL::ARR_INTERIOR;
-      else rep.m_location = pt.ptr()->m_location;
+      rep.m_location = (pt.is_finite()) ? CGAL::ARR_INTERIOR : pt.ptr()->m_location;
       return Self(rep);
     }
   };
