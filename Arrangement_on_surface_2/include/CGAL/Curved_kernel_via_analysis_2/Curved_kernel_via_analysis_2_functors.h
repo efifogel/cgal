@@ -719,20 +719,19 @@ public:
     CGAL_assertion_code(bool in_x_range =) cv.is_in_x_range(p.x(), &eq_min, &eq_max);
     CGAL_assertion(in_x_range);
 
-    // TODO replace with this->compare_xy_2_object()?
-    auto cmp_xy = Base::_ckva()->kernel().compare_xy_2_object();
+    auto cmp_xy = Base::_ckva()->compare_xy_2_object();
 
     if (cv.is_vertical()) {
       if (cv.is_finite(CGAL::ARR_MIN_END)) {
         // for vertical arcs we can ask for .xy() member
-        if (cmp_xy(p.xy(), cv._minpoint().xy(), true) == CGAL::SMALLER) {
+        if (cmp_xy(p, cv._minpoint(), true) == CGAL::SMALLER) {
           CERR("cmp result: " << CGAL::SMALLER << "\n");
           return CGAL::SMALLER;
         }
       }
 
       if (cv.is_finite(CGAL::ARR_MAX_END)) {
-        if (cmp_xy(p.xy(), cv._maxpoint().xy(), true) == CGAL::LARGER) {
+        if (cmp_xy(p, cv._maxpoint(), true) == CGAL::LARGER) {
           CERR("cmp result: " << CGAL::LARGER << "\n");
           return CGAL::LARGER;
         }
@@ -742,19 +741,19 @@ public:
     }
     CGAL::Comparison_result res;
     if (eq_min) {
-      if (cv._minpoint().is_finite()) res = cmp_xy(p.xy(), cv._minpoint().xy(), true);
+      if (cv._minpoint().is_finite()) res = cmp_xy(p, cv._minpoint(), true);
       else res = (cv.location(CGAL::ARR_MIN_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
     else if (eq_max) {
       CGAL_precondition(p.is_finite());
-      if (cv._maxpoint().is_finite()) res = cmp_xy(p.xy(), cv._maxpoint().xy(), true);
+      if (cv._maxpoint().is_finite()) res = cmp_xy(p, cv._maxpoint(), true);
       else res = (cv.location(CGAL::ARR_MAX_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
     else {
       Point_2 point_on_s = Base::_ckva()->construct_point_on_arc_2_object()(p.x(), cv.curve(), cv.arcno(), cv);
       CGAL_precondition(p.is_finite());
       CGAL_precondition(point_on_s.is_finite());
-      res = cmp_xy(p.xy(), point_on_s.xy(), true);
+      res = cmp_xy(p, point_on_s, true);
     }
     CERR("cmp result: " << res << "\n");
     return res;
@@ -980,7 +979,6 @@ public:
    * \return \c true if the two point are the same; \c false otherwise.
    */
   result_type operator()(const Point_2& p1, const Point_2& p2) const {
-    // TODO replace with this->compare_xy_2_object()?
     return (this->_ckva()->compare_xy_2_object()(p1, p2) == CGAL::EQUAL);
   }
 
@@ -1149,44 +1147,25 @@ public:
       return true;
     }
 
-    // TODO replace with this->compare_xy_2_object()?
     auto cmp_xy = this->_ckva()->compare_xy_2_object();
-    const Intersection_point& p_first = intersections.front();
 
-    // If the first intersection point of the closed curves is not an endpoint of the first curve, return true
-    const auto& min_p1 = xcv1.curve_end(CGAL::ARR_MIN_END);
-    const auto& max_p1 = xcv1.curve_end(CGAL::ARR_MAX_END);
-    if ((cmp_xy(min_p1, p_first.first) != EQUAL) && (cmp_xy(max_p1, p_first.first) != EQUAL)) {
-      intersections.clear();
-      return true;
-    }
+    // checks whether a point is an endpoint of an arc; an arc end at infinity has no point to compare with
+    auto is_endpoint = [&](const Arc_2& xcv, const Point_2& q) {
+      for (auto ce : {CGAL::ARR_MIN_END, CGAL::ARR_MAX_END})
+        if (xcv.is_finite(ce) && (cmp_xy(xcv.curve_end(ce), q) == CGAL::EQUAL)) return true;
+      return false;
+    };
 
-    // If the first intersection point of the closed curves is not an endpoint of the second curve, return true
-    const auto& min_p2 = xcv2.curve_end(CGAL::ARR_MIN_END);
-    const auto& max_p2 = xcv2.curve_end(CGAL::ARR_MAX_END);
-    if ((cmp_xy(min_p2, p_first.first) != EQUAL) && (cmp_xy(max_p2, p_first.first) != EQUAL)) {
-      intersections.clear();
-      return true;
-    }
+    // If the first intersection point of the closed curves is not an endpoint of both curves, return true
+    const Point_2& p_first = intersections.front().first;
+    if (! is_endpoint(xcv1, p_first) || ! is_endpoint(xcv2, p_first)) return true;
 
     // If there is only one intersection, it is an endpoint; return false
-    if (intersections.size() == 1) {
-      intersections.clear();
-      return false;
-    }
+    if (intersections.size() == 1) return false;
 
     // repeat the above for the last point
-    const Intersection_point& p_last = intersections.back();
-    if ((cmp_xy(min_p1, p_last.first) != EQUAL) && (cmp_xy(max_p1, p_last.first) != EQUAL)) {
-      intersections.clear();
-      return true;
-    }
-    if ((cmp_xy(min_p2, p_last.first) != EQUAL) && (cmp_xy(max_p2, p_last.first) != EQUAL)) {
-      intersections.clear();
-      return true;
-    }
-
-    return false;
+    const Point_2& p_last = intersections.back().first;
+    return ! is_endpoint(xcv1, p_last) || ! is_endpoint(xcv2, p_last);
   }
 };
 
