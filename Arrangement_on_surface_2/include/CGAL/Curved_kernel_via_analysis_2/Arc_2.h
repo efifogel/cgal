@@ -28,6 +28,7 @@
 #include <type_traits>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <CGAL/Bbox_2.h>
@@ -35,7 +36,6 @@
 #include <CGAL/assertions.h>
 #include <CGAL/enum.h>
 #include <CGAL/IO/io.h>
-#include <CGAL/Object.h>
 #include <CGAL/Polynomial_traits_d.h>
 
 #ifndef CGAL_CKvA_USE_CACHES
@@ -1085,10 +1085,9 @@ public:
   /*! finds all intersections of this arc with another one and
    * insert them to the output iterator.
    *
-   * Type of output iterator is \c CGAL::Object. It either contains
-   * an \c Arc_2 object (overlap) or a
-   * <tt>std::pair\<Point_2, unsigned int></tt> (intersection point +
-   * multiplicity). A past-the-end iterator is returned.
+   * The value type of the output iterator is a \c std::variant of an \c Arc_2
+   * object (overlap) and a <tt>std::pair\<Point_2, Multiplicity></tt>
+   * (intersection point + multiplicity). A past-the-end iterator is returned.
    *
    * \param cv2 The second arc
    * \param oi The outputiterator
@@ -2392,24 +2391,13 @@ private:
      case CGAL::ARR_BOTTOM_BOUNDARY: return std::make_pair(MINF, MINF); // early exit
      case CGAL::ARR_LEFT_BOUNDARY:
      case CGAL::ARR_RIGHT_BOUNDARY: {
-       CGAL::Object obj = this->curve().asymptotic_value_of_arc(this->location(end), this->arcno());
-
-       CGAL::Arr_parameter_space ps;
-       Coordinate_1 asym_info;
-
-       if (CGAL::assign(ps, obj)) {
-         if (ps == CGAL::ARR_BOTTOM_BOUNDARY) return std::make_pair(MINF, MINF); // early exit
-         else {
-           CGAL_assertion(ps == CGAL::ARR_TOP_BOUNDARY);
-           return std::make_pair(PINF, PINF); // early exit
-         }
+       auto asym = asymptotic_value(this->curve(), this->location(end), this->arcno());
+       if (const auto* ps = std::get_if<CGAL::Arr_parameter_space>(&asym)) {
+         if (*ps == CGAL::ARR_BOTTOM_BOUNDARY) return std::make_pair(MINF, MINF); // early exit
+         CGAL_assertion(*ps == CGAL::ARR_TOP_BOUNDARY);
+         return std::make_pair(PINF, PINF); // early exit
        }
-       else {
-         CGAL_assertion_code(bool check =) CGAL::assign(asym_info, obj);
-         CGAL_assertion(check);
-
-         y_approx = curve_kernel().approximate_absolute_1_object()(asym_info, prec);
-       }
+       y_approx = curve_kernel().approximate_absolute_1_object()(std::get<Coordinate_1>(asym), prec);
        break;
       }
 

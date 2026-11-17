@@ -16,7 +16,7 @@
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-/*!\file include/CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h
+/*! \file include/CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h
  * defines Curved_kernel_via_analysis_2 function objects + class
  */
 
@@ -35,7 +35,6 @@
 #include <CGAL/Object.h>
 #include <CGAL/Polynomial.h>
 #include <CGAL/Polynomial_traits_d.h>
-
 #include <CGAL/Curved_kernel_via_analysis_2/Make_x_monotone_2.h>
 
 namespace CGAL {
@@ -50,6 +49,22 @@ namespace internal {
 #define CERR(x) static_cast<void>(0)
 #endif
 #endif
+
+/*! obtains the asymptotic value of the arc with the given arc number of a curve near the left or right boundary:
+ * either the y-coordinate of the horizontal asymptote of the arc, or \c ARR_BOTTOM_BOUNDARY or \c ARR_TOP_BOUNDARY if
+ * the arc goes to minus or plus infinity in y. The curve analysis wraps this value in a \c CGAL::Object; this is the
+ * only place where it is unwrapped.
+ */
+template <typename CurveAnalysis_2>
+std::variant<CGAL::Arr_parameter_space, typename CurveAnalysis_2::Algebraic_real_1>
+asymptotic_value(const CurveAnalysis_2& curve, CGAL::Arr_parameter_space loc,
+                 typename CurveAnalysis_2::size_type arcno) {
+  auto obj = curve.asymptotic_value_of_arc(loc, arcno);
+  if (const auto* ps = CGAL::object_cast<CGAL::Arr_parameter_space>(&obj)) return *ps;
+  const auto* y = CGAL::object_cast<typename CurveAnalysis_2::Algebraic_real_1>(&obj);
+  CGAL_assertion(y != nullptr);
+  return *y;
+}
 
 /*! collects main functors for Curved_kernel_via_analysis_2 */
 namespace Curved_kernel_via_analysis_2_Functors {
@@ -536,7 +551,6 @@ private:
       Bound x_coord = arc.boundary_in_x_range_interior();
       int arcno = arc.arcno();
       const Curve_analysis_2& ca = arc.curve();
-
       Point_2 p = this->_ckva()->construct_point_on_arc_2_object()(Coordinate_1(x_coord), ca, arcno, arc);
       return p;
     }
@@ -655,7 +669,6 @@ public:
     result_type res = (this->_ckva()->kernel().compare_xy_2_object()(p1.xy(), p2.xy(), equal_x));
 
     CERR("result: " << res << "\n");
-
     return res;
   }
 };
@@ -729,25 +742,16 @@ public:
     }
     CGAL::Comparison_result res;
     if (eq_min) {
-      if (cv._minpoint().is_finite()) {
-        res = cmp_xy(p.xy(), cv._minpoint().xy(), true);
-      }
-      else {
-        res = (cv.location(CGAL::ARR_MIN_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
-      }
+      if (cv._minpoint().is_finite()) res = cmp_xy(p.xy(), cv._minpoint().xy(), true);
+      else res = (cv.location(CGAL::ARR_MIN_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
     else if (eq_max) {
       CGAL_precondition(p.is_finite());
-      if (cv._maxpoint().is_finite()) {
-        res = cmp_xy(p.xy(), cv._maxpoint().xy(), true);
-      }
-      else {
-        res = (cv.location(CGAL::ARR_MAX_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
-      }
+      if (cv._maxpoint().is_finite()) res = cmp_xy(p.xy(), cv._maxpoint().xy(), true);
+      else res = (cv.location(CGAL::ARR_MAX_END) == ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
     else {
       Point_2 point_on_s = Base::_ckva()->construct_point_on_arc_2_object()(p.x(), cv.curve(), cv.arcno(), cv);
-
       CGAL_precondition(p.is_finite());
       CGAL_precondition(point_on_s.is_finite());
       res = cmp_xy(p.xy(), point_on_s.xy(), true);
@@ -818,19 +822,17 @@ public:
     // due to the order, we have to return the opposite
     if (cv2.is_vertical()) return CGAL::LARGER;
 
-    if (cv1.is_singular()) {
-      // singularity in y
-      CGAL_error_msg("Handling singularity in y is not yet implemented");
-    }
+    // Check singularity in y
+    if (cv1.is_singular()) CGAL_error_msg("Handling singularity in y is not yet implemented");
 
     // vertical line immediately to the left of p: if p lies on boundary
     // get the vertical line over the last interval; otherwise
     // obtain the interval w.r.t. point's x-coordinate (this also valid
     // for discontinuity in y)
-    /*if(bndp_x == CGAL::BEFORE_SINGULARITY ||
-      bndp_x == CGAL::BEFORE_DISCONTINUITY)
-      return _compare_arc_numbers(cv2, bndp_x);
-      else*/
+    /* if(bndp_x == CGAL::BEFORE_SINGULARITY || bndp_x == CGAL::BEFORE_DISCONTINUITY)
+     *   return _compare_arc_numbers(cv2, bndp_x);
+     * else
+     */
 
     CGAL::Comparison_result res = cv1._compare_arc_numbers(cv2, CGAL::ARR_INTERIOR, p.x(), CGAL::NEGATIVE);
     CERR("result: " << res << "\n");
@@ -1051,17 +1053,17 @@ public:
     }
     if (cv1.is_vertical()) { // both arcs are vertical
       // check for x-coordinates equality
-      if (this->_ckva()->kernel().compare_1_object()(cv1._minpoint().x(), cv2._minpoint().x()) != CGAL::EQUAL) {
+      if (this->_ckva()->kernel().compare_1_object()(cv1._minpoint().x(), cv2._minpoint().x()) != CGAL::EQUAL)
         return false;
-      }
+
       // compare y-coordinates of min curve ends
       switch (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._minpoint(), true)) {
-      case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
-      case CGAL::SMALLER: // this->source < cv2->source
+       case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
+       case CGAL::SMALLER: // this->source < cv2->source
         // check whether this->target > cv2->source
         return (cv1._same_arc_compare_xy(cv1._maxpoint(), cv2._minpoint(), true) == CGAL::LARGER);
 
-      case CGAL::LARGER: // this->source> cv2->source
+       case CGAL::LARGER: // this->source> cv2->source
         // check whether this->source < cv2->target
         return (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._maxpoint(), true) == CGAL::SMALLER);
       }
@@ -1073,11 +1075,11 @@ public:
      * curve with equal arc numbers in their interior. They do overlap if
      * their x-ranges overlap. Compare only x-coordinates */
     switch (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._minpoint(), false, true)) {
-    case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
-    case CGAL::SMALLER: // this->source < cv2->source
+     case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
+     case CGAL::SMALLER: // this->source < cv2->source
       // check whether this->target > cv2->source
       return (cv1._same_arc_compare_xy(cv1._maxpoint(), cv2._minpoint(), false, true) == CGAL::LARGER);
-    case CGAL::LARGER: // this->source > cv2->source
+     case CGAL::LARGER: // this->source > cv2->source
       // check whether this->source < cv2->target
       return (cv1._same_arc_compare_xy(cv1._minpoint(), cv2._maxpoint(), false, true) == CGAL::SMALLER);
     }
@@ -1218,10 +1220,9 @@ public:
   /*! finds all intersections of the two given arcs and insert them to the
    * output iterator.
    *
-   * Type of output iterator is \c CGAL::Object
-   * containing either an \c Arc_2 object (overlap) or a \c
-   * std::pair< Point_2, unsigned int >, where the unsigned int denotes
-   * the multiplicity of the zero-dimensional intersection (0 if unknown)
+   * The value type of the output iterator is \c Intersection_result, a \c std::variant
+   * of an \c Arc_2 object (overlap) and a <tt>std::pair\<Point_2, Multiplicity></tt>,
+   * where the multiplicity is that of the zero-dimensional intersection (0 if unknown)
    *
    * \param cv1 The first arc
    * \param cv2 The second arc
@@ -1496,10 +1497,8 @@ public:
    * \param c The curve
    * \return \c true if the \c p lies on \c c, \c false otherwise
    */
-  result_type operator()(const Point_2& p, const Curve_analysis_2& c) const {
-    result_type res = (this->_ckva()->kernel().sign_at_2_object()(c, p.xy()) == CGAL::ZERO);
-    return res;
-  }
+  result_type operator()(const Point_2& p, const Curve_analysis_2& c) const
+  { return (this->_ckva()->kernel().sign_at_2_object()(c, p.xy()) == CGAL::ZERO); }
 
   /*! checks whether \c p lies on \c cv
    *
@@ -1549,8 +1548,8 @@ public:
    * output iterator directly.
    *
    * \param cv The arc
-   * \param oi The output iterator, whose value-type is Object
-   * The returned objects are all wrappers Arc_2 objects
+   * \param oi The output iterator, whose value type is \c std::variant<Point_2, Arc_2>
+   * The returned objects all hold \c Arc_2 objects
    * \return The past-the-end iterator
    */
   template <typename OutputIterator>
@@ -1566,8 +1565,8 @@ public:
    * (subcurves) and isolated points and insert them to the output iterator.
    *
    * \param cv The curve
-   * \param oi The output iterator, whose value-type is Object.
-   * The returned objects either wrapper Arc_2 or Point_2 objects
+   * \param oi The output iterator, whose value type is \c std::variant<Point_2, Arc_2>.
+   * The returned objects hold either \c Arc_2 or \c Point_2 objects
    * \return The past-the-end iterator
    */
   template <typename OutputIterator>
@@ -1577,34 +1576,17 @@ public:
     return make_x_monotone(cv, oi);
   }
 
-  /*! splits an input object \c obj into x-monotone arcs and isolated points
+  /*! passes an isolated point to the output iterator as is. This enables the insertion of a range of isolated points
+   * into an arrangement, as if they were curves.
    *
-   * \param obj the polymorph input object: can represent \c Point_2,
-   * \c Arc_2, \c Non_x_monotone_arc_2 or \c Curve_analysis_2
-   * \param oi Output iterator that stores CGAL::Object, which either
-   *           encapsulates \c Point_2 or \c Arc_2
-   * \return Past-the-end iterator of \c oi
+   * \param p The point
+   * \param oi The output iterator, whose value type is \c std::variant<Point_2, Arc_2>
+   * \return The past-the-end iterator
    */
   template <typename OutputIterator>
-  OutputIterator operator()(CGAL::Object obj, OutputIterator oi) {
-    using Point_2 = typename Curved_kernel_via_analysis_2::Point_2;
-    using Arc_2 = typename Curved_kernel_via_analysis_2::Arc_2;
-    using Non_x_monotone_arc_2 = typename Curved_kernel_via_analysis_2::Non_x_monotone_arc_2;
+  OutputIterator operator()(const Point_2& p, OutputIterator oi) const {
     using Make_x_monotone_result = std::variant<Point_2, Arc_2>;
-
-    Curve_analysis_2 curve;
-    Point_2 p;
-    Arc_2 xcv;
-    Non_x_monotone_arc_2 nxarc;
-
-    if (CGAL::assign(curve, obj))
-      oi = (*this)(curve, oi);
-    else if (CGAL::assign(nxarc, obj)) std::cerr << "AU BACKE" << std::endl;
-    //oi = std::transform(nxarc.begin(), nxarc.end(), oi,
-    //      std::ptr_fun(CGAL::make_object<Arc_2>));
-    else if (CGAL::assign(xcv, obj)) *oi++ = Make_x_monotone_result(xcv);
-    else if (CGAL::assign(p, obj)) *oi++ = Make_x_monotone_result(p);
-    else CGAL_error();
+    *oi++ = Make_x_monotone_result(p);
     return oi;
   }
 };
@@ -1706,36 +1688,19 @@ public:
 
     // both points lie on the left-right-identification, i.e., equalx
     // TODO this interface is NOT official
-    CGAL::Object obj1 = cv1.curve().asymptotic_value_of_arc(loc1, cv1.arcno());
-    CGAL::Object obj2 = cv2.curve().asymptotic_value_of_arc(loc1, cv2.arcno());
+    using Algebraic_real_1 = typename Curve_analysis_2::Algebraic_real_1;
+    auto asym1 = asymptotic_value(cv1.curve(), loc1, cv1.arcno());
+    auto asym2 = asymptotic_value(cv2.curve(), loc1, cv2.arcno());
+    const auto* ps1 = std::get_if<CGAL::Arr_parameter_space>(&asym1);
+    const auto* ps2 = std::get_if<CGAL::Arr_parameter_space>(&asym2);
 
-    typename Point_2::Curved_kernel_via_analysis_2::Curve_kernel_2::Algebraic_real_1 y1;
-    typename Point_2::Curved_kernel_via_analysis_2::Curve_kernel_2::Algebraic_real_1 y2;
-    CGAL::Arr_parameter_space ps1;
-    CGAL::Arr_parameter_space ps2;
-
-    if (CGAL::assign(ps1, obj1)) {
-      if (CGAL::assign(ps2, obj2)) {
-        res = CGAL::EQUAL;
-      }
-      else {
-        CGAL_assertion(CGAL::assign(y2, obj2));
-        res = (ps1 == CGAL::ARR_BOTTOM_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-      }
-    }
+    if (ps1 && ps2) res = CGAL::EQUAL; // both go to infinity; decided by the arc numbers below
+    else if (ps1) res = (*ps1 == CGAL::ARR_BOTTOM_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
+    else if (ps2) res = (*ps2 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     else {
-      CGAL_assertion_code(bool check =) CGAL::assign(y1, obj1);
-      CGAL_assertion(check);
-      if (CGAL::assign(ps2, obj2)) {
-        res = (ps2 == CGAL::ARR_TOP_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-      }
-      else {
-        CGAL_assertion_code(bool check =) CGAL::assign(y2, obj2);
-        CGAL_assertion(check);
-
-        // Remark: Is filtered
-        res = Base::_ckva()->kernel().compare_1_object()(y1, y2);
-      }
+      // Remark: Is filtered
+      res = Base::_ckva()->kernel().compare_1_object()(std::get<Algebraic_real_1>(asym1),
+                                                       std::get<Algebraic_real_1>(asym2));
     }
 
     if (res != EQUAL) {
@@ -2037,15 +2002,12 @@ public:
     using Status_line_1 = typename Curve_analysis_2::Status_line_1;
 
     int events = ca.number_of_status_lines_with_event();
-
     for (int i = 0; i < events; i++) {
       Status_line_1 status_line = ca.status_line_at_event(i);
-
       int lifts = status_line.number_of_events();
 
       for (int j = 0; j < lifts; j++) {
         std::pair<int, int> arcs = status_line.number_of_incident_branches(j);
-
         if (arcs.first == 0 || arcs.second == 0) *oi++ = status_line.algebraic_real_2(j);
       }
     }
@@ -2083,25 +2045,16 @@ public:
     using Status_line_1 = typename Curve_analysis_2::Status_line_1;
 
     typename Base::Curve_kernel_2 curve_kernel = Base::_ckva()->kernel();
-
     Curve_analysis_2 ca_yx = curve_kernel.swap_x_and_y_2_object()(ca);
-
     std::vector<Coordinate_2> y_critical_points;
-
     Base::_ckva()->x_extreme_points_2_object()(ca_yx, std::back_inserter(y_critical_points));
-
     for (auto it = y_critical_points.begin(); it != y_critical_points.end(); it++) {
       Coordinate_1 curr_x = curve_kernel.get_y_2_object()(*it);
-
       Status_line_1 status_line = ca.status_line_at_exact_x(curr_x);
-
       int lifts = status_line.number_of_events();
-
       for (int i = 0; i < lifts; i++) {
         Coordinate_2 lift_xy = status_line.algebraic_real_2(i);
-
         bool y_coordinate_found;
-
         while (true) {
           if (curve_kernel.upper_boundary_y_2_object()(lift_xy) < curve_kernel.lower_boundary_x_2_object()(*it)) {
             y_coordinate_found = false;

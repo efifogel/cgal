@@ -25,14 +25,13 @@
 #include <type_traits>
 #include <optional>
 #include <utility>
-
+#include <variant>
 
 #include <CGAL/assertions.h>
 #include <CGAL/enum.h>
 #include <CGAL/Handle_with_policy.h>
 #include <CGAL/Arr_enums.h>
 #include <CGAL/IO/io.h>
-#include <CGAL/Object.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 
 namespace CGAL {
@@ -82,14 +81,12 @@ public:
   Point_2_rep(const Coordinate_2& xy) : m_xy(xy), m_location(CGAL::ARR_INTERIOR) {}
 
   //! constructs a point at +/-oo in x
-  Point_2_rep(CGAL::Arr_curve_end inf_end, const Curve_analysis_2& c, int arcno) : m_curve(c), m_arcno(arcno) {
-    m_location = (inf_end == CGAL::ARR_MIN_END ? CGAL::ARR_LEFT_BOUNDARY : CGAL::ARR_RIGHT_BOUNDARY);
-  }
+  Point_2_rep(CGAL::Arr_curve_end inf_end, const Curve_analysis_2& c, int arcno) : m_curve(c), m_arcno(arcno)
+  { m_location = (inf_end == CGAL::ARR_MIN_END ? CGAL::ARR_LEFT_BOUNDARY : CGAL::ARR_RIGHT_BOUNDARY); }
 
   //! constructs a point on curve with y-coordinate at infinity
-  Point_2_rep(const Coordinate_1& x, const Curve_analysis_2& c, CGAL::Arr_curve_end inf_end) : m_x(x), m_curve(c) {
-    m_location = (inf_end == CGAL::ARR_MIN_END ? CGAL::ARR_BOTTOM_BOUNDARY : CGAL::ARR_TOP_BOUNDARY);
-  }
+  Point_2_rep(const Coordinate_1& x, const Curve_analysis_2& c, CGAL::Arr_curve_end inf_end) : m_x(x), m_curve(c)
+  { m_location = (inf_end == CGAL::ARR_MIN_END ? CGAL::ARR_BOTTOM_BOUNDARY : CGAL::ARR_TOP_BOUNDARY); }
 
   //! curve point finite coordinates. They are valid only if boundary in y
   //! is not set (CGAL::NO_BOUNDARY), otherwise only x-coordinate is
@@ -538,22 +535,10 @@ public:
         }
        case CGAL::ARR_LEFT_BOUNDARY:
        case CGAL::ARR_RIGHT_BOUNDARY: {
-         CGAL::Object obj = this->curve().asymptotic_value_of_arc(this->location(), this->arcno());
-         CGAL::Arr_parameter_space ps;
-         if (CGAL::assign(ps, obj)) {
-           if (ps == CGAL::ARR_BOTTOM_BOUNDARY) {
-             os << "y=-oo(asym)" << "; ";
-           }
-           else {
-             os << "y=+oo(asym)" << "; ";
-           }
-         }
-         else {
-           Coordinate_1 y;
-           CGAL_assertion_code(bool check =) CGAL::assign(y, obj);
-           CGAL_assertion(check);
-           os << "y=" << CGAL::to_double(y) << "(asym)" << "; ";
-         }
+         auto asym = asymptotic_value(this->curve(), this->location(), this->arcno());
+         if (const auto* ps = std::get_if<CGAL::Arr_parameter_space>(&asym))
+           os << ((*ps == CGAL::ARR_BOTTOM_BOUNDARY) ? "y=-oo(asym)" : "y=+oo(asym)") << "; ";
+         else os << "y=" << CGAL::to_double(std::get<Coordinate_1>(asym)) << "(asym)" << "; ";
          break;
          os << "y=??; ";
          break;

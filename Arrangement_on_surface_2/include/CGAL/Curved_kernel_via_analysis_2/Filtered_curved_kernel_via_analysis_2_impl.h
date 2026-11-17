@@ -26,13 +26,13 @@
 
 #include <iterator>
 #include <list>
+#include <variant>
 #include <vector>
 
 #include <CGAL/Arr_enums.h>
 #include <CGAL/assertions.h>
 #include <CGAL/Bbox_2.h>
 #include <CGAL/enum.h>
-#include <CGAL/Object.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_impl.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
@@ -50,12 +50,11 @@ namespace CGAL {
 #endif
 
 namespace internal {
-
 namespace Filtered_curved_kernel_via_analysis_2_Functors {
 
-#define CGAL_FILTERED_CKvA_2_GRAB_BASE_FUNCTOR_TYPES                                                                   \
-  using Curve_2 = typename Curved_kernel_via_analysis_2::Curve_2;                                                      \
-  using Point_2 = typename Curved_kernel_via_analysis_2::Point_2;                                                      \
+#define CGAL_FILTERED_CKvA_2_GRAB_BASE_FUNCTOR_TYPES              \
+  using Curve_2 = typename Curved_kernel_via_analysis_2::Curve_2; \
+  using Point_2 = typename Curved_kernel_via_analysis_2::Point_2; \
   using Arc_2 = typename Curved_kernel_via_analysis_2::Arc_2;
 
 template <typename CurvedKernelViaAnalysis_2, typename FunctorBase>
@@ -150,41 +149,20 @@ public:
 
     using Coordinate_1 = typename Curve_kernel_2::Coordinate_1;
 
-    CGAL::Object obj1;
-    CGAL::Object obj2;
-    Coordinate_1 asym_info1;
-    Coordinate_1 asym_info2;
-    CGAL::Arr_parameter_space ps1;
-    CGAL::Arr_parameter_space ps2;
-
-    obj1 = cv1.curve().asymptotic_value_of_arc(cv1.location(ce), cv1.arcno());
-    obj2 = cv2.curve().asymptotic_value_of_arc(cv2.location(ce), cv2.arcno());
+    auto asym1 = asymptotic_value(cv1.curve(), cv1.location(ce), cv1.arcno());
+    auto asym2 = asymptotic_value(cv2.curve(), cv2.location(ce), cv2.arcno());
+    const auto* ps1 = std::get_if<CGAL::Arr_parameter_space>(&asym1);
+    const auto* ps2 = std::get_if<CGAL::Arr_parameter_space>(&asym2);
 
     CGAL::Comparison_result filter_res = CGAL::EQUAL;
-
-    if (CGAL::assign(ps1, obj1)) {
-      if (CGAL::assign(ps2, obj2)) {
-        if (ps1 == ps2)
-          filter_res = CGAL::EQUAL;
-        else
-          filter_res = (ps2 == CGAL::ARR_TOP_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-      }
-      else {
-        CGAL_assertion(CGAL::assign(asym_info2, obj2));
-        filter_res = (ps1 == CGAL::ARR_TOP_BOUNDARY ? CGAL::LARGER : CGAL::SMALLER);
-      }
+    if (ps1 && ps2) {
+      if (*ps1 != *ps2) filter_res = (*ps2 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     }
+    else if (ps1) filter_res = (*ps1 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::LARGER : CGAL::SMALLER;
+    else if (ps2) filter_res = (*ps2 == CGAL::ARR_TOP_BOUNDARY) ? CGAL::SMALLER : CGAL::LARGER;
     else {
-      CGAL_assertion_code(bool check =) CGAL::assign(asym_info1, obj1);
-      CGAL_assertion(check);
-      if (CGAL::assign(ps2, obj2)) {
-        filter_res = (ps2 == CGAL::ARR_TOP_BOUNDARY ? CGAL::SMALLER : CGAL::LARGER);
-      }
-      else {
-        CGAL_assertion_code(bool check =) CGAL::assign(asym_info2, obj2);
-        CGAL_assertion(check);
-        filter_res = Base::_ckva()->kernel().compare_1_object()(asym_info1, asym_info2);
-      }
+      filter_res = Base::_ckva()->kernel().compare_1_object()(std::get<Coordinate_1>(asym1),
+                                                              std::get<Coordinate_1>(asym2));
     }
 
     if (filter_res != CGAL::EQUAL) {
@@ -326,7 +304,6 @@ public:
    */
   result_type operator()(const Arc_2& cv1, const Arc_2& cv2, const Point_2& p) const {
     CKvA_CERR("\ncompare_y_at_x_right(cv2); cv1: " << cv1 << "; cv2: " << cv2 << "; p: " << p << "\n");
-
     return Base::operator()(cv1, cv2, p);
   }
 };
@@ -397,7 +374,6 @@ public:
     std::list<CGAL::Bbox_2> boxes2;
 
     construct_covering_approximation(trimmed_cv1, std::back_inserter(boxes1));
-
     construct_covering_approximation(trimmed_cv2, std::back_inserter(boxes2));
 
     if (! boxes1.empty() && ! boxes2.empty()) {
@@ -421,9 +397,7 @@ public:
     // TODO compute more than a single bbox (EB)
 
     CGAL::Bbox_2 bbox = arc.bbox();
-
     CKvA_CERR("\nres: " << bbox << "\n");
-
     *oi++ = bbox;
     return oi;
   }
@@ -457,9 +431,9 @@ public:
 
   /*! finds all intersections of the two given curves and insert them to the
    * output iterator. If two arcs intersect only once, only a single will be
-   * placed to the iterator. Type of output iterator is \c CGAL::Object
-   * containing either an \c Arc_2 object (overlap) or a \c Point_2 object
-   * with multiplicity (point-wise intersections)
+   * placed to the iterator. The value type of the output iterator is a \c std::variant
+   * of an \c Arc_2 object (overlap) and a \c Point_2 object with multiplicity
+   * (point-wise intersections)
    * \param cv1 The first curve.
    * \param cv2 The second curve.
    * \param oi The output iterator.
@@ -474,7 +448,7 @@ public:
       CKvA_CERR("\nfilter: successful\n");
 
       CGAL_assertion_code({
-        std::vector<CGAL::Object> tmp;
+        std::vector<typename Base::Intersection_result> tmp;
         Base::operator()(cv1, cv2, std::back_inserter(tmp));
         CGAL_assertion(tmp.empty());
       });
@@ -523,7 +497,6 @@ public:
    */
   result_type operator()(const Point_2& p, const Curve_2& c) const {
     CKvA_CERR("\nfiltered_is_on; p: " << p << ";\n c:" << c << "");
-
     return Base::operator()(p, c);
   }
 
@@ -544,8 +517,8 @@ struct Filtered_functor_base : public BaseCKvA::template rebind<FCKvA>::Functor_
 
 // declares curved kernel functors, for each functor defines a member function
 // returning an instance of this functor
-#define CGAL_FILTERED_CKvA_2_functor_pred(Y, Z)                                                                        \
-  using Y = internal::Filtered_curved_kernel_via_analysis_2_Functors::Y<Self, Functor_base>;                           \
+#define CGAL_FILTERED_CKvA_2_functor_pred(Y, Z)                                              \
+  using Y = internal::Filtered_curved_kernel_via_analysis_2_Functors::Y<Self, Functor_base>; \
   Y Z() const { return Y(&Self::instance()); }
 
 #define CGAL_FILTERED_CKvA_2_functor_cons(Y, Z) CGAL_FILTERED_CKvA_2_functor_pred(Y, Z)
@@ -575,8 +548,8 @@ struct Filtered_functor_base : public BaseCKvA::template rebind<FCKvA>::Functor_
  * the exact intersection predicate is called.
  */
 template <typename BaseCKvA_2>
-class Filtered_curved_kernel_via_analysis_2
-  : public internal::Curved_kernel_via_analysis_2_base<Filtered_curved_kernel_via_analysis_2<BaseCKvA_2>, BaseCKvA_2,
+class Filtered_curved_kernel_via_analysis_2 :
+    public internal::Curved_kernel_via_analysis_2_base<Filtered_curved_kernel_via_analysis_2<BaseCKvA_2>, BaseCKvA_2,
                                                        typename BaseCKvA_2::Curve_kernel_2,
                                                        internal::Filtered_functor_base> {
 public:
