@@ -87,47 +87,39 @@ public:
   Compare_xy_2 compare_xy_2_object() const { return CKvA_2::instance().compare_xy_2_object(); }
 
   using Compare_endpoints_xy_2 = typename CKvA_2::Compare_endpoints_xy_2;
-  Compare_endpoints_xy_2 compare_endpoints_xy_2_object() const {
-    return CKvA_2::instance().compare_endpoints_xy_2_object();
-  }
+  Compare_endpoints_xy_2 compare_endpoints_xy_2_object() const
+  { return CKvA_2::instance().compare_endpoints_xy_2_object(); }
 
   using Equal_2 = typename CKvA_2::Equal_2;
   Equal_2 equal_2_object() const { return CKvA_2::instance().equal_2_object(); }
 
   using Parameter_space_in_y_2 = typename CKvA_2::Parameter_space_in_y_2;
-  Parameter_space_in_y_2 parameter_space_in_y_2_object() const {
-    return CKvA_2::instance().parameter_space_in_y_2_object();
-  }
+  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
+  { return CKvA_2::instance().parameter_space_in_y_2_object(); }
 
   using Compare_y_near_boundary_2 = typename CKvA_2::Compare_y_near_boundary_2;
-  Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const {
-    return CKvA_2::instance().compare_y_near_boundary_2_object();
-  }
+  Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const
+  { return CKvA_2::instance().compare_y_near_boundary_2_object(); }
 
   using Parameter_space_in_x_2 = typename CKvA_2::Parameter_space_in_x_2;
-  Parameter_space_in_x_2 parameter_space_in_x_2_object() const {
-    return CKvA_2::instance().parameter_space_in_x_2_object();
-  }
+  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
+  { return CKvA_2::instance().parameter_space_in_x_2_object(); }
 
   using Compare_x_on_boundary_2 = typename CKvA_2::Compare_x_on_boundary_2;
-  Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const {
-    return CKvA_2::instance().compare_x_on_boundary_2_object();
-  }
+  Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const
+  { return CKvA_2::instance().compare_x_on_boundary_2_object(); }
 
   using Compare_x_near_boundary_2 = typename CKvA_2::Compare_x_near_boundary_2;
-  Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const {
-    return CKvA_2::instance().compare_x_near_boundary_2_object();
-  }
+  Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
+  { return CKvA_2::instance().compare_x_near_boundary_2_object(); }
 
   using Construct_min_vertex_2 = typename CKvA_2::Construct_min_vertex_2;
-  Construct_min_vertex_2 construct_min_vertex_2_object() const {
-    return CKvA_2::instance().construct_min_vertex_2_object();
-  }
+  Construct_min_vertex_2 construct_min_vertex_2_object() const
+  { return CKvA_2::instance().construct_min_vertex_2_object(); }
 
   using Construct_max_vertex_2 = typename CKvA_2::Construct_max_vertex_2;
-  Construct_max_vertex_2 construct_max_vertex_2_object() const {
-    return CKvA_2::instance().construct_max_vertex_2_object();
-  }
+  Construct_max_vertex_2 construct_max_vertex_2_object() const
+  { return CKvA_2::instance().construct_max_vertex_2_object(); }
 
   using Construct_opposite_2 = typename CKvA_2::Construct_opposite_2;
   Construct_opposite_2 construct_opposite_2_object() const { return CKvA_2::instance().construct_opposite_2_object(); }
@@ -139,14 +131,12 @@ public:
   Compare_y_at_x_2 compare_y_at_x_2_object() const { return CKvA_2::instance().compare_y_at_x_2_object(); }
 
   using Compare_y_at_x_left_2 = typename CKvA_2::Compare_y_at_x_left_2;
-  Compare_y_at_x_left_2 compare_y_at_x_left_2_object() const {
-    return CKvA_2::instance().compare_y_at_x_left_2_object();
-  }
+  Compare_y_at_x_left_2 compare_y_at_x_left_2_object() const
+  { return CKvA_2::instance().compare_y_at_x_left_2_object(); }
 
   using Compare_y_at_x_right_2 = typename CKvA_2::Compare_y_at_x_right_2;
-  Compare_y_at_x_right_2 compare_y_at_x_right_2_object() const {
-    return CKvA_2::instance().compare_y_at_x_right_2_object();
-  }
+  Compare_y_at_x_right_2 compare_y_at_x_right_2_object() const
+  { return CKvA_2::instance().compare_y_at_x_right_2_object(); }
 
   using Intersect_2 = typename CKvA_2::Intersect_2;
   Intersect_2 intersect_2_object() const { return CKvA_2::instance().intersect_2_object(); }
@@ -172,8 +162,8 @@ public:
   using Construct_point_2 = typename CKvA_2::Construct_point_2;
   Construct_point_2 construct_point_2_object() const { return Construct_point_2(&CKvA_2::instance()); }
 
-  class Construct_x_monotone_segment_2
-    : public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+  class Construct_x_monotone_segment_2 :
+    public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
     using Base =
       CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
@@ -190,16 +180,12 @@ public:
       int no;
       bool is_event;
       cv.x_to_index(x, no, is_event);
-      if (! is_event) {
-        return std::make_pair(std::make_pair(1, 1), false);
-      }
+      if (! is_event) return std::make_pair(std::make_pair(1, 1), false);
       typename Curve_2::Status_line_1 status_line = cv.status_line_at_event(no);
       bool vertical = status_line.covers_line();
       for (int i = 0; i < status_line.number_of_events(); i++) {
         Point_2 curr_point(x, cv, i);
-        if (equal(p, curr_point)) {
-          return std::make_pair(status_line.number_of_incident_branches(i), vertical);
-        }
+        if (equal(p, curr_point)) return std::make_pair(status_line.number_of_incident_branches(i), vertical);
       }
       return std::make_pair(std::make_pair(0, 0), vertical);
     }
@@ -267,9 +253,7 @@ public:
           }
         }
       }
-      if ((! left_on_arc) && (! right_on_arc)) {
-        segs.push_back(*it_seg_p);
-      }
+      if ((! left_on_arc) && (! right_on_arc)) segs.push_back(*it_seg_p);
       helper = it; // for later usage
 
       if (! left_on_arc) {
@@ -337,8 +321,7 @@ public:
     //
     template <typename OutputIterator>
     OutputIterator operator()(Curve_2 cv, Point_2 p, Site_of_point site_of_p, OutputIterator out) const {
-      if (site_of_p == POINT_IN_INTERIOR)
-        return x_monotone_segment(cv, p, std::nullopt, std::nullopt, out);
+      if (site_of_p == POINT_IN_INTERIOR) return x_monotone_segment(cv, p, std::nullopt, std::nullopt, out);
       else if (site_of_p == MIN_ENDPOINT)
         return x_monotone_segment(cv, p, std::optional<Point_2>(p), std::nullopt, out);
       CGAL_assertion(site_of_p == MAX_ENDPOINT);
@@ -373,8 +356,8 @@ public:
                                   out);
       }
       else {
-        return x_monotone_segment(cv, end_right, std::optional<Point_2>(end_left), std::optional<Point_2>(end_right),
-                                  out);
+        return
+          x_monotone_segment(cv, end_right, std::optional<Point_2>(end_left), std::optional<Point_2>(end_right), out);
       }
     }
 
@@ -441,14 +424,11 @@ public:
     }
   };
 
-  Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const {
-    return Construct_x_monotone_segment_2(&CKvA_2::instance());
-  }
+  Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const
+  { return Construct_x_monotone_segment_2(&CKvA_2::instance()); }
 
-  /*
-   * class Construct_vertical_segment_2 : public
-   *   CGAL::internal::Curved_kernel_via_analysis_2_Functors::
-   *   Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+  /* class Construct_vertical_segment_2 :
+   *   public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
    *
    * public:
    *   using Base =
@@ -464,16 +444,16 @@ public:
    *     return typename CKvA_2::Arc_2(p,q,cv);
    *   }
    *
-   *   template<typename OutputIterator> OutputIterator
+   *   template <typename OutputIterator> OutputIterator
    *   operator()(Point_2 p, Site_of_point site_of_p) const {
    *     Algebraic_real_1 x = p.x();
    *     Polynomial_2 f = Polynomial_2(x.polynomial());
    *     Curve_2 cv = this->_ckva().kernel().construct_curve_2_object() (f);
    *
-   *     if (site_of_p==POINT_IN_INTERIOR) return typename CKvA_2::Arc_2(x,cv);
-   *     else if (site_of_p==MIN_ENDPOINT) return typename CKvA_2::Arc_2(p,ARR_MIN_END,cv);
-   *     CGAL_assertion(site_of_p==MAX_ENDPOINT);
-   *     return typename CKvA_2::Arc_2(p,ARR_MAX_END,cv);
+   *     if (site_of_p==POINT_IN_INTERIOR) return typename CKvA_2::Arc_2(x, cv);
+   *     else if (site_of_p==MIN_ENDPOINT) return typename CKvA_2::Arc_2(p, ARR_MIN_END, cv);
+   *     CGAL_assertion(site_of_p == MAX_ENDPOINT);
+   *     return typename CKvA_2::Arc_2(p, ARR_MAX_END, cv);
    *   }
    * };
    *
@@ -481,8 +461,8 @@ public:
    * { return Construct_vertical_segment_2(&CKvA_2::instance()); }
    */
 
-  class Construct_curve_2
-    : public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+  class Construct_curve_2 :
+    public CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
     using Base =
       CGAL::internal::Curved_kernel_via_analysis_2_Functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
@@ -494,28 +474,21 @@ public:
 
   Construct_curve_2 construct_curve_2_object() const { return Construct_curve_2(&CKvA_2::instance()); }
 
-  /*
-  // additional functionality (for not introducing a "general" arc)
-
-  class Connect_points_2 {
-    template< class OutputIterator >
-    OutputIterator operator()(Curve_2, Point_2, Point_2, ..., OutputIterator) {
-      while (false || true) {
-        *oi++ = X_monotone_curve_2(...);
-      }
-      return oi;
-    }
-
-    template< class OutputIterator >
-    OutputIterator operator()(Curve_2, Point_2, Point_2, int, ..., OutputIterator) {
-      while (false || true) {
-        *oi++ = X_monotone_curve_2(...);
-      }
-
-      return oi;
-    }
-  };
-  */
+  // // additional functionality (for not introducing a "general" arc)
+  //
+  // class Connect_points_2 {
+  //   template <typename OutputIterator>
+  //   OutputIterator operator()(Curve_2, Point_2, Point_2, ..., OutputIterator) {
+  //     while (false || true) *oi++ = X_monotone_curve_2(...);
+  //     return oi;
+  //   }
+  //
+  //   template< class OutputIterator >
+  //   OutputIterator operator()(Curve_2, Point_2, Point_2, int, ..., OutputIterator) {
+  //     while (false || true) *oi++ = X_monotone_curve_2(...);
+  //     return oi;
+  //   }
+  // };
 };
 
 } // namespace CGAL
