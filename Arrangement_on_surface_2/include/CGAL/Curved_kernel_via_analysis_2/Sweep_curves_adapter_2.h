@@ -146,9 +146,8 @@ public:
   Less_xy_2(SweepCurvesAdapter_2* adapter) : m_adapter(adapter) { CGAL_assertion(adapter != nullptr); }
 
   /*! returns \c true if p1 \< p2 lexicographical */
-  result_type operator()(const Point_2& p1, const Point_2& p2) const {
-    return (m_adapter->compare_xy_2_object()(p1, p2) == CGAL::SMALLER);
-  }
+  result_type operator()(const Point_2& p1, const Point_2& p2) const
+  { return (m_adapter->compare_xy_2_object()(p1, p2) == CGAL::SMALLER); }
 
 private:
   SweepCurvesAdapter_2* m_adapter;
@@ -268,9 +267,8 @@ public:
   Equal_y_at_x_2(SweepCurvesAdapter_2* adapter) : m_adapter(adapter) { CGAL_assertion(adapter != nullptr); }
 
   /*! returns true if \c p lies on curve \c cv */
-  result_type operator()(const Arc_2& cv, const Point_2& p) const {
-    return (m_adapter->compare_y_at_x_2_object()(cv, p) == CGAL::EQUAL);
-  }
+  result_type operator()(const Arc_2& cv, const Point_2& p) const
+  { return (m_adapter->compare_y_at_x_2_object()(cv, p) == CGAL::EQUAL); }
 
 private:
   SweepCurvesAdapter_2* m_adapter;
