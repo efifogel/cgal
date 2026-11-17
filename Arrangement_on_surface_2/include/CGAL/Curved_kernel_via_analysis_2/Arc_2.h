@@ -2134,11 +2134,13 @@ protected:
      * in the interior, the only remaining candidates for intersections are
      * their finite endpoints (if any), for vertical arcs as well.
      */
-    /*CGAL::Bound_type bnd_x, bnd_y,
-      bnd1_x = cv2.boundary_in_x(CGAL::ARR_MIN_END),
-      bnd1_y = cv2.boundary_in_y(CGAL::ARR_MIN_END),
-      bnd2_x = cv2.boundary_in_x(CGAL::ARR_MAX_END),
-      bnd2_y = cv2.boundary_in_y(CGAL::ARR_MAX_END);*/
+
+    /* CGAL::Bound_type bnd_x, bnd_y;
+     * CGAL::Bound_type bnd1_x = cv2.boundary_in_x(CGAL::ARR_MIN_END);
+     * CGAL::Bound_type bnd1_y = cv2.boundary_in_y(CGAL::ARR_MIN_END);
+     * CGAL::Bound_type bnd2_x = cv2.boundary_in_x(CGAL::ARR_MAX_END);
+     * CGAL::Bound_type bnd2_y = cv2.boundary_in_y(CGAL::ARR_MAX_END);
+     */
 
     // TODO do we mean location of is_finite?
     bool f2_min = (cv2._minpoint().location() == CGAL::ARR_INTERIOR);
@@ -2156,12 +2158,12 @@ protected:
       pt = cv1.curve_end(end);
       // easy case: intersection at singularity doesn't require to
       // compare x/y-coordinates
-      /* if(is_singular(bnd_x)) {
-           if(bnd1_x == bnd_x || bnd2_x == bnd_x) *oi++ = std::make_pair(pt, 0);
-         }
-         else if(is_singular(bnd_y)) {
-           if(bnd1_y == bnd_y || bnd2_y == bnd_y) *oi++ = std::make_pair(pt, 0);
-         } else if(is_on_disc(bnd_x)) {
+      /* if (is_singular(bnd_x)) {
+       *   if (bnd1_x == bnd_x || bnd2_x == bnd_x) *oi++ = std::make_pair(pt, 0);
+       * }
+       * else if(is_singular(bnd_y)) {
+       *   if (bnd1_y == bnd_y || bnd2_y == bnd_y) *oi++ = std::make_pair(pt, 0);
+       * } else if(is_on_disc(bnd_x)) {
 
     // CONFUSION: if bndx != bnd1_x should we compare ys at -oo
     // or at +oo ? or is this true for discontinuity:
@@ -2191,7 +2193,9 @@ protected:
               // ordinar normal case:
               // selection is exclusive since arcs cannot intersect twice
               // at the same finite end-point
-              } else*/
+              }
+              else
+      */
       if ((f2_min && pt == cv2._minpoint()) || (f2_max && pt == cv2._maxpoint())) *oi++ = std::make_pair(pt, 0);
 
     Lendloop:
@@ -2226,14 +2230,12 @@ protected:
     // find intersection x-range: larger source & smaller target
     if (pt1.location() != CGAL::ARR_LEFT_BOUNDARY) {
       low = ((pt2.location() == CGAL::ARR_LEFT_BOUNDARY) || (ckva().compare_x_2_object()(pt1, pt2) == CGAL::LARGER))
-              ? pt1
-              : pt2;
+        ? pt1 : pt2;
     }
     pt1 = _maxpoint(), pt2 = cv2._maxpoint(), high = pt2;
     if (pt1.location() != CGAL::ARR_RIGHT_BOUNDARY) {
       high = ((pt2.location() == CGAL::ARR_RIGHT_BOUNDARY) || (ckva().compare_x_2_object()(pt1, pt2) == CGAL::SMALLER))
-               ? pt1
-               : pt2;
+        ? pt1 : pt2;
     }
     if (! low.is_on_left_right() && ! high.is_on_left_right() &&
         ckva().compare_x_2_object()(low, high) != CGAL::SMALLER) {  // disjoint x-ranges
@@ -2258,8 +2260,8 @@ protected:
    *        iterator
    */
   template <typename OutputIterator>
-  static OutputIterator _intersect_coprime_support(const Kernel_arc_2& cv1, const Kernel_arc_2& cv2,
-                                                   OutputIterator oi) {
+  static OutputIterator
+  _intersect_coprime_support(const Kernel_arc_2& cv1, const Kernel_arc_2& cv2, OutputIterator oi) {
     // vertical arcs: the interesting case is when only one of the arcs is
     // vertical - otherwise there is no intersection (different x-coords),
     // or they overlap (not allowed), or they touch at the end-points
@@ -2651,6 +2653,7 @@ public:
   friend typename Curved_kernel_via_analysis_2::Z;                                                                     \
   friend typename CKvA_2_functors::Z<Curved_kernel_via_analysis_2>
 #else
+
   // defined(_MSC_VER) || defined(__clang__) || defined(__INTEL_COMPILER)
   // befriending the kernel point
   //friend class Curved_kernel_via_analysis_2::Point_2;
@@ -2659,9 +2662,10 @@ public:
   //friend class Curved_kernel_via_analysis_2::Arc_2;
 
   // befriending the functors
-#define CGAL_BEFRIEND_CKvA_2_FUNCTOR(Z)                                                                                \
+#define CGAL_BEFRIEND_CKvA_2_FUNCTOR(Z)                         \
   friend class CKvA_2_functors::Z<Curved_kernel_via_analysis_2>
 #endif
+
   // defined(_MSC_VER) || defined(__clang__) || defined(__INTEL_COMPILER)
 
   //Curved_kernel_via_analysis_2_functors<Curved_kernel_via_analysis_2> >;
@@ -2702,28 +2706,28 @@ private:
   friend class internal::Generic_arc_2<SCA_2>;
 
   /*
-  // befriend all functors
-#define CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Z) \
-  friend class CGAL::Sweep_curves_functors::Z< SCA_2 >;   \
-
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_xy_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Less_xy_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_at_x_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Equal_y_at_x_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Multiplicity_of_intersection_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_right_of_point_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Source_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Target_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Construct_segment_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Is_degenerate_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Do_overlap_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_opposite_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_right_of_point_2)
-  CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Make_x_monotone_2)
-
-#undef CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR */
+   * // befriend all functors
+   * #define CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Z) friend class CGAL::Sweep_curves_functors::Z< SCA_2 >;
+   *
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_xy_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Less_xy_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_at_x_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Equal_y_at_x_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Multiplicity_of_intersection_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Compare_y_right_of_point_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Source_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Target_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Construct_segment_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Is_degenerate_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Do_overlap_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(New_endpoints_opposite_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Intersect_right_of_point_2)
+   *   CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR(Make_x_monotone_2)
+   *
+   * #undef CGAL_BEFRIEND_SWEEP_CURVES_ADAPTER_2_FUNCTOR
+   */
 
 }; // class Arc_2
 
@@ -2742,10 +2746,6 @@ inline std::ostream& operator<<(std::ostream& os, const Arc_2<CurvedKernelViaAna
 template <typename CurvedKernelViaAnalysis_2, typename Rep_>
 std::istream& operator>>(std::istream& is, Arc_2<CurvedKernelViaAnalysis_2, Rep_>& arc) {
   CGAL_precondition(CGAL::IO::is_ascii(is));
-
-  //typedef CurvedKernelViaAnalysis_2 Curved_kernel_via_analysis_2;
-  //typedef Rep_ Rep;
-
   arc.read(is);
   return is;
 }
