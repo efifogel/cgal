@@ -1,6 +1,11 @@
+#include <iostream>
 
 #include "test_configuration.h"
-#include <iostream>
+
+// IMPORTANT: Do not move the inclusion of CGAL/config.h below the #if/#elif chain that follows!
+// CGAL/config.h defines CGAL_USE_CORE, CGAL_USE_GMP, CGAL_USE_LEDA, etc. If it is not included before the chain,
+// these macros are undefined (evaluated as 0), and the test silently compiles a "not installed, skipping" stub.
+#include <CGAL/config.h>
 
 #if ((TEST_GEOM_TRAITS == CORE_CONIC_GEOM_TRAITS) || \
      (TEST_GEOM_TRAITS == BEZIER_GEOM_TRAITS) || \
