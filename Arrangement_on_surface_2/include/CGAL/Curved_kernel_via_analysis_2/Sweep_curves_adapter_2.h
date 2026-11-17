@@ -537,8 +537,6 @@ class Make_x_monotone_2 {
   using Generic_arc_2 = typename SweepCurvesAdapter_2::Generic_arc_2;
 
 public:
-  using result_type = CGAL::cpp98::iterator<std::output_iterator_tag, Generic_arc_2>;
-
   //! constructs
   Make_x_monotone_2(SweepCurvesAdapter_2* adapter) : m_adapter(adapter) { CGAL_assertion(adapter != nullptr); }
 

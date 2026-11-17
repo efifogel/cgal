@@ -31,7 +31,6 @@
 #include <CGAL/assertions.h>
 #include <CGAL/enum.h>
 #include <CGAL/Fraction_traits.h>
-#include <CGAL/iterator.h>
 #include <CGAL/Object.h>
 #include <CGAL/Polynomial.h>
 #include <CGAL/Polynomial_traits_d.h>
@@ -1185,9 +1184,6 @@ public:
   using Intersection_point = std::pair<Point_2, Multiplicity>;
   using Intersection_result = std::variant<Intersection_point, Arc_2>;
 
-  //! the result type
-  using result_type = CGAL::cpp98::iterator<std::output_iterator_tag, Intersection_result>;
-
   /*! constructs
    *
    * \param kernel The kernel
@@ -1965,9 +1961,6 @@ public:
 
   using Coordinate_2 = typename Curve_analysis_2::Coordinate_2;
 
-  //! the result type
-  using result_type = CGAL::cpp98::iterator<std::output_iterator_tag, Coordinate_2>;
-
   /*! constructs
    *
    * \param kernel The kernel
@@ -2007,9 +2000,6 @@ public:
   CGAL_CKvA_2_GRAB_BASE_FUNCTOR_TYPES
 
   using Coordinate_2 = typename Curve_analysis_2::Coordinate_2;
-
-  //! the result type
-  using result_type = CGAL::cpp98::iterator<std::output_iterator_tag, Coordinate_2>;
 
   /*! constructs
    *

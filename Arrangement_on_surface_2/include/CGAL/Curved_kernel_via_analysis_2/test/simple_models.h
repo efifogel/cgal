@@ -27,7 +27,6 @@
 
 #include <CGAL/Arithmetic_kernel.h>
 #include <CGAL/enum.h>
-#include <CGAL/functional.h>
 #include <CGAL/Handle_with_policy.h>
 #include <CGAL/Object.h>
 #include <CGAL/Polynomial.h>
@@ -783,7 +782,7 @@ public:
   Simple_algebraic_kernel_2() {}
 
   //! constructs \c Curve_analysis_2 object, uses caching if appropriate
-  struct Construct_curve_2 : public CGAL::cpp98::unary_function<Polynomial_2, Curve_analysis_2> {
+  struct Construct_curve_2 {
     //! constructs an object from \c Algebraic_curve_kernel_2 type
     //! no default constructor provided
     Construct_curve_2(/*Self *pkernel_2*/) {}
@@ -796,8 +795,7 @@ public:
   /*! constructs \c Curve_pair_analysis_2 from pair of 1-curve analysis,
    * caching is used when appropriate
    */
-  struct Construct_curve_pair_2 :
-    public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, Curve_pair_analysis_2> {
+  struct Construct_curve_pair_2 {
     Curve_pair_analysis_2 operator()(const Curve_analysis_2& ca1, const Curve_analysis_2& ca2) const {
       Curve_pair_analysis_2 cpa_2(ca1, ca2);
       return cpa_2;
@@ -810,20 +808,20 @@ public:
   using Xy_coordinate_2 = internal::Xy_coordinate_2<Self>;
 
   //! returns the first coordinate of \c Xy_coordinate_2
-  struct Get_x_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, Algebraic_real_1> {
+  struct Get_x_2 {
     Algebraic_real_1 operator()(const Xy_coordinate_2& xy) const { return xy.x(); }
   };
 
   CGAL_Algebraic_Kernel_cons(Get_x_2, Get_x_2_object);
 
   //! returns the second coordinate of \c Xy_coordinate_2
-  struct Get_y_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, Algebraic_real_1> {
+  struct Get_y_2 {
     Algebraic_real_1 operator()(const Xy_coordinate_2& xy) const { return xy.y(); }
   };
 
   CGAL_Algebraic_Kernel_cons(Get_y_2, Get_y_2_object);
 
-  struct Refine_x_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, void> {
+  struct Refine_x_2 {
     void operator()(const Xy_coordinate_2& r) const {}
 
     void operator()(Xy_coordinate_2& r, int rel_prec) const {}
@@ -831,7 +829,7 @@ public:
 
   CGAL_Algebraic_Kernel_pred(Refine_x_2, refine_x_2_object);
 
-  struct Refine_y_2 : public CGAL::cpp98::unary_function<Xy_coordinate_2, void> {
+  struct Refine_y_2 {
     void operator()(const Xy_coordinate_2& r) const {}
 
     void operator()(Xy_coordinate_2& r, int rel_prec) const {}
@@ -906,7 +904,7 @@ public:
   CGAL_Algebraic_Kernel_cons(Bound_between_y_2, boundary_between_y_2_object);
 
   //! comparison of x-coordinates
-  struct Compare_x_2 : public CGAL::cpp98::binary_function<Algebraic_real_1, Algebraic_real_1, Comparison_result> {
+  struct Compare_x_2 {
     Comparison_result operator()(const Algebraic_real_1& x1, const Algebraic_real_1& x2) const { return CGAL::EQUAL; }
     Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2) const { return CGAL::EQUAL; }
   };
@@ -914,7 +912,7 @@ public:
   CGAL_Algebraic_Kernel_pred(Compare_x_2, compare_x_2_object);
 
   //! comparison of y-coordinates of two points
-  struct Compare_y_2 : public CGAL::cpp98::binary_function<Xy_coordinate_2, Xy_coordinate_2, Comparison_result> {
+  struct Compare_y_2 {
     Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2) const { return CGAL::EQUAL; }
   };
 
@@ -923,7 +921,7 @@ public:
   //! lexicographical comparison of two objects of type \c Xy_coordinate_2
   //!
   //! \c equal_x specifies that only y-coordinates need to be compared
-  struct Compare_xy_2 : public CGAL::cpp98::binary_function<Xy_coordinate_2, Xy_coordinate_2, Comparison_result> {
+  struct Compare_xy_2 {
     Comparison_result operator()(const Xy_coordinate_2& xy1, const Xy_coordinate_2& xy2, bool equal_x = false) const
     { return CGAL::EQUAL; }
   };
@@ -934,7 +932,7 @@ public:
   //!
   //! for algebraic curves this means that supporting polynomial is
   //! square-free
-  struct Has_finite_number_of_self_intersections_2 : public CGAL::cpp98::unary_function<Polynomial_2, bool> {
+  struct Has_finite_number_of_self_intersections_2 {
     bool operator()(const Polynomial_2& p) const { return true; }
   };
 
@@ -946,8 +944,7 @@ public:
   //!
   //! in case of algebraic curves: checks whether supporting polynomials are
   //! coprime
-  struct Has_finite_number_of_intersections_2 :
-    public CGAL::cpp98::binary_function<Curve_analysis_2, Curve_analysis_2, bool> {
+  struct Has_finite_number_of_intersections_2 {
     bool operator()(const Curve_analysis_2& c1, const Curve_analysis_2& c2) const { return true; }
   };
 
@@ -991,14 +988,14 @@ public:
   using Make_coprime_2 = Decompose_2;
 
   //! computes the derivative w.r.t. the first (innermost) variable
-  struct Derivative_x_2 : public CGAL::cpp98::unary_function<Polynomial_2, Polynomial_2> {
+  struct Derivative_x_2 {
     Polynomial_2 operator()(const Polynomial_2& p) const { return p; }
   };
 
   CGAL_Algebraic_Kernel_cons(Derivative_x_2, derivative_x_2_object);
 
   //! computes the derivative w.r.t. the first (outermost) variable
-  struct Derivative_y_2 : public CGAL::cpp98::unary_function<Polynomial_2, Polynomial_2> {
+  struct Derivative_y_2 {
     Polynomial_2 operator()(const Polynomial_2& p) const { return p; }
   };
 
@@ -1031,7 +1028,7 @@ public:
    *
    * returns a value convertible to \c CGAL::Sign
    */
-  struct Sign_at_2 : public CGAL::cpp98::binary_function<Polynomial_2, Xy_coordinate_2, Sign> {
+  struct Sign_at_2 {
     Sign operator()(const Polynomial_2& p, const Xy_coordinate_2& r) const { return CGAL::ZERO; }
   };
 
