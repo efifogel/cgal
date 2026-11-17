@@ -18,9 +18,7 @@
 // CSV files with compare_benchmarks.py.
 //
 // Every benchmark returns a checksum derived from the result of the timed
-// work (e.g., the numbers of vertices, edges and faces). Two builds that
-// perform identical work produce identical checksums, which guards against
-// comparing timings of different computations.
+// work (e.g., the numbers of vertices, edges and faces); see bench_harness.hpp.
 
 #include <algorithm>
 #include <chrono>
@@ -51,6 +49,8 @@
 #include <CGAL/Arr_walk_along_line_point_location.h>
 #include <CGAL/Arr_landmarks_point_location.h>
 #include <CGAL/Arr_trapezoid_ric_point_location.h>
+
+#include "bench_harness.hpp"
 
 using Kernel     = CGAL::Exact_predicates_exact_constructions_kernel;
 using Traits     = CGAL::Arr_segment_traits_2<Kernel>;
@@ -164,90 +164,6 @@ static std::vector<Point> random_points(std::size_t n, CGAL::Random& rnd) {
   std::copy_n(gen, n, std::back_inserter(pts));
   return pts;
 }
-
-//-----------------------------------------------------------------------------
-// Timing infrastructure
-//-----------------------------------------------------------------------------
-// A benchmark brackets the work it wants measured with start()/stop(), so
-// that per-repetition setup (e.g., copying an input arrangement) is excluded.
-class Stopwatch {
-  using Clock = std::chrono::steady_clock;
-  Clock::time_point m_start;
-  double m_elapsed = 0.0;   // milliseconds
-public:
-  void start() { m_start = Clock::now(); }
-  void stop() {
-    m_elapsed +=
-      std::chrono::duration<double, std::milli>(Clock::now() - m_start).count();
-  }
-  double elapsed() const { return m_elapsed; }
-};
-
-using Bench_fn = std::function<std::uint64_t(Stopwatch&)>;
-
-struct Benchmark {
-  std::string name;
-  std::string description;
-  Bench_fn    fn;
-};
-
-struct Result {
-  std::string         name;
-  std::vector<double> times;   // milliseconds
-  std::uint64_t       checksum = 0;
-  bool                consistent = true;  // same checksum in every run
-};
-
-static double median(std::vector<double> v) {
-  std::sort(v.begin(), v.end());
-  const std::size_t n = v.size();
-  return (n % 2) ? v[n / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
-}
-
-static double mean(const std::vector<double>& v)
-{ return std::accumulate(v.begin(), v.end(), 0.0) / v.size(); }
-
-static double stddev(const std::vector<double>& v) {
-  if (v.size() < 2) return 0.0;
-  const double m = mean(v);
-  double s = 0.0;
-  for (double x : v) s += (x - m) * (x - m);
-  return std::sqrt(s / (v.size() - 1));
-}
-
-static Result run(const Benchmark& b, const Options& opt) {
-  Result r;
-  r.name = b.name;
-  for (std::size_t i = 0; i < opt.warmup + opt.repetitions; ++i) {
-    Stopwatch sw;
-    const std::uint64_t cs = b.fn(sw);
-    if (i == 0) r.checksum = cs;
-    else if (cs != r.checksum) r.consistent = false;
-    if (i >= opt.warmup) r.times.push_back(sw.elapsed());
-  }
-  return r;
-}
-
-//-----------------------------------------------------------------------------
-// Helpers
-//-----------------------------------------------------------------------------
-// Combine counts into a checksum (order-dependent, FNV-1a style).
-static std::uint64_t mix(std::uint64_t h, std::uint64_t v) {
-  h ^= v + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-  return h;
-}
-
-template <typename A>
-static std::uint64_t size_checksum(const A& arr) {
-  std::uint64_t h = 0;
-  h = mix(h, arr.number_of_vertices());
-  h = mix(h, arr.number_of_edges());
-  h = mix(h, arr.number_of_faces());
-  return h;
-}
-
-// Prevent the optimizer from discarding results.
-static volatile std::uint64_t g_sink = 0;
 
 //-----------------------------------------------------------------------------
 // Benchmarks
@@ -590,9 +506,7 @@ int main(int argc, char* argv[]) {
   std::vector<Benchmark> benches = make_benchmarks(in, opt);
 
   if (opt.list) {
-    for (const auto& bm : benches)
-      std::cout << std::left << std::setw(30) << bm.name << bm.description
-                << "\n";
+    list_benchmarks(benches);
     return EXIT_SUCCESS;
   }
 
@@ -607,58 +521,11 @@ int main(int argc, char* argv[]) {
             << in.arr.number_of_edges() << " edges, "
             << in.arr.number_of_faces() << " faces\n\n";
 
-  std::cout << std::left << std::setw(30) << "benchmark" << std::right
-            << std::setw(12) << "min ms" << std::setw(12) << "median ms"
-            << std::setw(12) << "mean ms" << std::setw(10) << "cv %"
-            << "  checksum\n";
-
-  std::ofstream csv;
-  if (!opt.csv.empty()) {
-    csv.open(opt.csv);
-    if (!csv) {
-      std::cerr << "Cannot open " << opt.csv << "\n";
-      return EXIT_FAILURE;
-    }
-    csv << "# cgal=" << CGAL_VERSION_STR
-        << " shared_api=" << (has_shared_ctor<Aos> ? 1 : 0)
-        << " seed=" << opt.seed << " repetitions=" << opt.repetitions
-        << " segments=" << opt.segments << " length=" << opt.length
-        << " queries=" << opt.queries << " small=" << opt.small << "\n"
-        << "name,repetitions,min_ms,median_ms,mean_ms,stddev_ms,checksum,"
-           "times_ms\n";
-  }
-
-  bool all_consistent = true;
-  for (const auto& bm : benches) {
-    if (!opt.filter.empty() && bm.name.find(opt.filter) == std::string::npos)
-      continue;
-    const Result r = run(bm, opt);
-    all_consistent = all_consistent && r.consistent;
-    const double mn = *std::min_element(r.times.begin(), r.times.end());
-    const double md = median(r.times);
-    const double me = mean(r.times);
-    const double sd = stddev(r.times);
-    std::cout << std::left << std::setw(30) << r.name << std::right
-              << std::fixed << std::setprecision(3)
-              << std::setw(12) << mn << std::setw(12) << md
-              << std::setw(12) << me << std::setprecision(1)
-              << std::setw(10) << (me > 0 ? 100.0 * sd / me : 0.0)
-              << "  " << std::hex << r.checksum << std::dec
-              << (r.consistent ? "" : "  (INCONSISTENT)") << "\n";
-    if (csv) {
-      csv << r.name << ',' << r.times.size() << ',' << std::setprecision(6)
-          << mn << ',' << md << ',' << me << ',' << sd << ','
-          << std::hex << r.checksum << std::dec << ',';
-      for (std::size_t k = 0; k < r.times.size(); ++k)
-        csv << (k ? ";" : "") << r.times[k];
-      csv << "\n";
-    }
-  }
-
-  if (!all_consistent) {
-    std::cerr << "\nWarning: some benchmarks produced different checksums "
-                 "across repetitions.\n";
-    return EXIT_FAILURE;
-  }
-  return EXIT_SUCCESS;
+  std::ostringstream comment;
+  comment << "# cgal=" << CGAL_VERSION_STR
+          << " shared_api=" << (has_shared_ctor<Aos> ? 1 : 0)
+          << " seed=" << opt.seed << " repetitions=" << opt.repetitions
+          << " segments=" << opt.segments << " length=" << opt.length
+          << " queries=" << opt.queries << " small=" << opt.small;
+  return run_benchmarks(benches, opt.filter, opt.warmup, opt.repetitions, opt.csv, comment.str());
 }

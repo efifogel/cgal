@@ -21,3 +21,8 @@ target_link_libraries(bench_arr_polylines_rational PRIVATE CGAL::CGAL Boost::pro
 # traits; used, e.g., to compare builds before and after a change.
 add_executable(arr_traits_benchmark arr_traits_benchmark.cpp)
 target_link_libraries(arr_traits_benchmark PRIVATE CGAL::CGAL)
+
+# Performance of the algebraic segment traits and its curved kernel; used,
+# e.g., to compare builds before and after a change of the traits internals.
+add_executable(arr_algebraic_benchmark arr_algebraic_benchmark.cpp)
+target_link_libraries(arr_algebraic_benchmark PRIVATE CGAL::CGAL)
