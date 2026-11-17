@@ -11,7 +11,6 @@
 
 #include "ArrangementPainterOstream.h"
 #include "ArrangementTypes.h"
-#include <CGAL/Curved_kernel_via_analysis_2/Curve_renderer_facade.h>
 
 #include <QGraphicsView>
 
@@ -286,71 +285,29 @@ operator<<(const X_monotone_curve_2& curve) {
 }
 
 // Specialization of `ArrangementPainterOstream` for the algebraic traits.
-template <typename Traits>
-static bool lies_on_border(const ArrangementPainterOstream<Traits>* apo,
-                           const QPointF& point) {
-  QGraphicsView* view = apo->getScene()->views().first();
-  qreal width = view->width();
-  qreal height = view->height();
-  const float tol = 2;
-  return std::abs(point.x() - width) < tol || point.x() < tol ||
-         std::abs(point.y() - height) < tol || point.y() < tol;
-}
-
-//
-template <typename Coefficient_>
-void
-ArrangementPainterOstream<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
-remapFacadePainter()
-{ this->qp->setTransform(this->getPointsListMapping()); }
-
-//
-template <typename Coefficient_>
-QTransform
-ArrangementPainterOstream<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
-getPointsListMapping() {
-  auto worldTransform = this->qp->transform();
-  return this->getPointsListMapping(worldTransform);
-}
-
-//
-template <typename Coefficient_>
-QTransform
-ArrangementPainterOstream<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
-getPointsListMapping(const QTransform& worldTransform) {
-  auto view = this->getView();
-  QRectF viewport = this->viewportRect();
-
-  // (0, 0) ==> map(topLeft)
-  QPointF dxdy = worldTransform.map(viewport.topLeft());
-  // (view.width(), 0) ==> map(bottomRight)
-  QPointF p1 = worldTransform.map(viewport.topRight());
-  // (0, view.height()) ==> map(0, 0)
-  QPointF p2 = worldTransform.map(viewport.bottomLeft());
-
-  // x' = m11*x + m21*y + dx
-  // y' = m22*y + m12*x + dy
-  float dx = dxdy.x();
-  float dy = dxdy.y();
-  float m11 = (p1.x() - dx) / view->width();
-  float m21 = (p2.x() - dx) / view->height();
-  float m22 = (p2.y() - dy) / view->height();
-  float m12 = (p1.y() - dy) / view->width();
-
-  return QTransform{m11, m12, m21, m22, dx, dy};
-}
-
-//
 template <typename Coefficient_>
 auto ArrangementPainterOstream
 <CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
 getPointsList(const X_monotone_curve_2& curve) -> std::vector<Coord_vec_2> {
-  typedef Curve_renderer_facade<CKvA_2> Facade;
-  typedef std::pair<double, double> Coord_2;
-  typedef std::vector<Coord_2> Coord_vec_2;
-
   std::vector<Coord_vec_2> points;
-  Facade::instance().draw(curve, points);
+  QGraphicsView* view = this->getView();
+  if (view == nullptr || view->width() <= 0) return points;
+
+  // approximate within the viewport, extended by a margin, so that the parts
+  // of the polyline that run along the sides of the box are not visible
+  QRectF viewport = this->viewportRect();
+  const double pixel = viewport.width() / view->width();
+  const double margin = 8 * pixel;
+  viewport.adjust(-margin, -margin, margin, margin);
+  const CGAL::Bbox_2 bbox = this->convert(viewport).bbox();
+
+  using Approximate_point_2 = typename Traits::Approximate_2::Approximate_point_2;
+  std::vector<Approximate_point_2> pts;
+  this->traits.approximate_2_object()(curve, pixel, std::back_inserter(pts), bbox, true);
+  if (pts.empty()) return points;
+  points.emplace_back();
+  points.back().reserve(pts.size());
+  for (const auto& p : pts) points.back().emplace_back(p.x(), p.y());
   return points;
 }
 
@@ -359,10 +316,7 @@ template <typename Coefficient_>
 ArrangementPainterOstream<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>&
 ArrangementPainterOstream<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
 operator<<(const X_monotone_curve_2& curve) {
-  this->qp->save();
-  this->remapFacadePainter();
   this->paintCurve(curve);
-  this->qp->restore();
   return *this;
 }
 
@@ -371,34 +325,13 @@ template <typename Coefficient_>
 void ArrangementPainterOstream
 <CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::
 paintCurve(const X_monotone_curve_2& curve) {
-  std::vector<Coord_vec_2> points = this->getPointsList(curve);
-  for (auto& vec : points) {
-    auto vit = vec.begin();
+  for (const auto& vec : this->getPointsList(curve)) {
+    if (vec.empty()) continue;
     QPainterPath path;
-    QPointF qpt(vit->first, vit->second);
-    path.moveTo(qpt);
-
-    for (auto& vit : vec) {
-      QPointF qpt_new = QPointF(vit.first, vit.second);
-      if (lies_on_border(this, qpt) && lies_on_border(this, qpt_new))
-        path.moveTo(qpt_new);
-      else
-        path.lineTo(qpt_new);
-      qpt = qpt_new;
-    }
+    path.moveTo(vec.front().first, vec.front().second);
+    for (const auto& pt : vec) path.lineTo(pt.first, pt.second);
     this->qp->drawPath(path);
   }
-}
-
-//
-template <typename Coefficient_>
-void ArrangementPainterOstream
-<CGAL::Arr_algebraic_segment_traits_2<Coefficient_>>::setupFacade() {
-  typedef Curve_renderer_facade<CKvA_2> Facade;
-  QGraphicsView* view = this->getView();
-  QRectF viewport = this->viewportRect();
-  CGAL::Bbox_2 bbox = this->convert(viewport).bbox();
-  Facade::setup(bbox, view->width(), view->height());
 }
 
 // Specialization of `ArrangementPainterOstream` for Arr_rational_function_traits_2

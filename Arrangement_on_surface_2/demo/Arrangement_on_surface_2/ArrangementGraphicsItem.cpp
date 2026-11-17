@@ -469,7 +469,6 @@ paintFace(Face_handle f, QPainter* painter,
   painterOstream.setScene(this->getScene());
 
   painter->save();
-  painter->setTransform(painterOstream.getPointsListMapping());
 
   QVector<QPointF> pts;
   /* running with around the outer of the face and generate from it

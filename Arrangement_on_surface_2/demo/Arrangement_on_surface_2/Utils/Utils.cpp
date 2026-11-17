@@ -22,6 +22,7 @@
 
 #include <CGAL/Arr_default_overlay_traits.h>
 #include <CGAL/Arr_overlay_2.h>
+#include <algorithm>
 #include <type_traits>
 
 //
@@ -197,19 +198,23 @@ operator()(const Point_2& p, const X_monotone_curve_2& curve) const {
     -view->horizontalScrollBar()->value(), -view->verticalScrollBar()->value());
   worldTransform = view->transform() * worldTransform;
 
-  QTransform facadeToViewport =
-    painterOstream.getPointsListMapping(worldTransform);
-
   auto points = painterOstream.getPointsList(curve);
 
   QPoint p_viewport =
     view->mapFromScene(QPointF{CGAL::to_double(p.x()), CGAL::to_double(p.y())});
 
+  // the distance (in pixels) from the point to the polyline that approximates the curve
+  const QPointF q(p_viewport);
   double min_dist = (std::numeric_limits<double>::max)();
   for (auto& vec : points) {
-    for (auto vit = vec.begin(); vit != vec.end(); ++vit) {
-      QPoint coord(vit->first, vit->second);
-      float cur_dist = QLineF{facadeToViewport.map(coord), p_viewport}.length();
+    for (std::size_t i = 0; i < vec.size(); ++i) {
+      const QPointF a = worldTransform.map(QPointF(vec[i].first, vec[i].second));
+      const QPointF b = (i + 1 < vec.size()) ? worldTransform.map(QPointF(vec[i + 1].first, vec[i + 1].second)) : a;
+      const QPointF ab = b - a;
+      const double len2 = QPointF::dotProduct(ab, ab);
+      double t = (len2 > 0) ? QPointF::dotProduct(q - a, ab) / len2 : 0;
+      t = (std::min)((std::max)(t, 0.0), 1.0);
+      const double cur_dist = QLineF{a + t * ab, q}.length();
       min_dist = cur_dist < min_dist ? cur_dist : min_dist;
     }
   }
