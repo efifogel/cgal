@@ -12,8 +12,7 @@
 // ============================================================================
 
 /*!\file CGAL/Curved_kernel_via_analysis_2/gfx/Curve_renderer_internals.h
- * contains various low-level routines used by \c Curve_renderer_2 and
- * \c Subdivision_1
+ * contains various low-level routines used by \c Curve_renderer_2
  *
  * provide caching for polynomials and polynomial evaluations; 1D range
  * analysis using First Quadratic Affine Form (QF) and Modified Affine
