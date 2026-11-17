@@ -666,11 +666,6 @@ public:
 
   //!@}
 
-  //!\name Intervals
-  //!@{
-
-  //!@}
-
 public:
   //! \name Shortcuts for code readability
   //!@{
@@ -697,58 +692,6 @@ public:
 
   //!@}
 
-public:
-  //! \name Predicates
-  //!@{
-
-  /*! checks whether an x-coordinate lies in the interiors of this arc's
-   * x-range
-   *
-   * \param x The query coordinate
-   * \return \c true, if \c x lies in the interior of this arc's x-range,
-   * \c false otherwise
-   */
-
-  //!@}
-
-  //!\name Constructing functions
-  //!@{
-
-  /*! returns a trimmed version of an arc
-   *
-   * \param p the new first endpoint
-   * \param q the new second endpoint
-   * \return The trimmed arc
-   *
-   * \pre p != q
-   * \pre both points must be interior and must lie on \c cv
-   */
-
-  //!@}
-  //!\name Simplification
-  //!@{
-
-  //!@}
-
-protected:
-  //!\name Trimming
-  //!@{
-
-  /*! returns a trimmed version of an arc (internal version that does not use
-   * functor)
-   *
-   * \param p the new first endpoint
-   * \param q the new second endpoint
-   * \return The trimmed arc
-   *
-   * \pre p != q
-   * \pre both points must be interior and must lie on \c cv
-   */
-
-public:
-
-  //!@}
-
 protected:
   //!\name Protected helper methods
   //!@{
@@ -764,27 +707,6 @@ protected:
    * \return max endpoint of arc (may lie on a boundary!)
    */
   inline const Point_2& _maxpoint() const { return this->ptr()->m_max; }
-
-  //!@}
-
-protected:
-  //!\name Protected intersection methods
-  //!@{
-
-  //!@}
-
-  //!\name Approximation
-  //!@{
-
-private:
-
-public:
-  /*! computes the bounding box of the arc */
-  /*! computes a bounding box of the arc (using the curved kernel of the calling thread)
-   */
-  CGAL::Bbox_2 bbox() const {
-    return Curved_kernel_via_analysis_2::instance().construct_bbox_2_object()(static_cast<const Kernel_arc_2&>(*this));
-  }
 
   //!@}
 

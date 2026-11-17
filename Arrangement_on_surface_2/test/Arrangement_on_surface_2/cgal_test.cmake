@@ -1378,7 +1378,7 @@ function(test_algebraic_traits_gmp)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_gmp)
 
   execute_commands_new_structure(algebraic algebraic_traits_gmp
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1402,7 +1402,7 @@ function(test_algebraic_traits_leda)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_leda)
 
   execute_commands_new_structure(algebraic algebraic_traits_leda
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1425,7 +1425,7 @@ function(test_algebraic_traits_core)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_core)
 
   execute_commands_new_structure(algebraic algebraic_traits_core
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE

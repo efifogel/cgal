@@ -58,7 +58,7 @@ public:
   using Shared_ckva = std::shared_ptr<CKvA_2>;
 
   /*! constructs default. The functors of this traits use the curved kernel of the calling thread, that is,
-   * \c CKvA_2::instance(), which is also the kernel that points and arcs use internally.
+   * \c CKvA_2::instance().
    */
   Arr_algebraic_segment_traits_2() = default;
 
@@ -168,6 +168,12 @@ public:
 
   using Is_on_2 = typename CKvA_2::Is_on_2;
   Is_on_2 is_on_2_object() const { return Is_on_2(curved_kernel()); }
+
+  using Approximate_2 = typename CKvA_2::Approximate_2;
+  Approximate_2 approximate_2_object() const { return Approximate_2(curved_kernel()); }
+
+  using Construct_bbox_2 = typename CKvA_2::Construct_bbox_2;
+  Construct_bbox_2 construct_bbox_2_object() const { return Construct_bbox_2(curved_kernel()); }
 
   using Construct_point_2 = typename CKvA_2::Construct_point_2;
   Construct_point_2 construct_point_2_object() const { return Construct_point_2(curved_kernel()); }

@@ -154,18 +154,6 @@ public:
   static const bool s_kernel_point_2_equals_point_2 = std::is_same<Point_2, Kernel_point_2>::value;
 #endif
 
-protected:
-  //!\name Access to the kernels
-  //!@{
-
-  /*! obtains the curved-kernel-via-analysis instance. */
-  static Curved_kernel_via_analysis_2& ckva() { return Curved_kernel_via_analysis_2::instance(); }
-
-  /*! obtains the underlying curve kernel. */
-  static Curve_kernel_2& curve_kernel() { return ckva().kernel(); }
-
-  //!@}
-
 public:
   //!\name Rebind
   //!@{
@@ -244,10 +232,12 @@ public:
    */
   Point_2(const Coordinate_1& x, const Curve_analysis_2& c, int arcno) : Base(Rep(Coordinate_2(x, c, arcno))) {}
 
-  template <typename T>
-  Point_2(const T& x, const T& y) :
-    // TODO use default kernel
-    Base(Rep(curve_kernel().construct_algebraic_real_2_object()(x, y))) {}
+  /*! constructs an interior point from its coordinates; use \c Construct_point_2 to construct a point from
+   * numbers.
+   *
+   * \param xy The coordinates
+   */
+  explicit Point_2(const Coordinate_2& xy) : Base(Rep(xy)) {}
 
   // FUTURE TODO allow to construct without curve,
   // i.e, isolated points on toric identifications -> do it also for arcs

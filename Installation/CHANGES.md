@@ -28,6 +28,7 @@ Release date: December 2026
 - **Breaking change**: Enhanced the metadata traits-class decorators `Arr_counting_traits_2` and `Arr_tracing_traits_2`. Each is (still) parameterized with another traits class being decorated, but it does not inherit from it. In addition one can get and set a smart pointer to the class being decorated.
 - Speed up the polyline and polycurve traits (`Arr_polyline_traits_2`, `Arr_polycurve_traits_2`) and the surface sweep on long polylines, reducing construction time by up to 38%.
 - Fixed the surface sweep, which could produce invalid arrangements or crash on overlapping polylines, and the landmarks point location, which could fail to terminate on curves that cross the walk segment more than once or on antennas.
+- The algebraic segment traits `Arr_algebraic_segment_traits_2` now models the concepts `AosApproximatePointTraits_2`, `AosApproximateTraits_2`, and `AosApproximateUnboundedTraits_2`; that is, it approximates points and curves (unbounded curves within a bounding box), which enables drawing arrangements of algebraic curves. It also provides `Construct_bbox_2`, and it can hold its own curved kernel (passed to its constructor as a shared pointer).
 
 ### [2D and 3D Linear Geometry Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernel23)
 

@@ -199,7 +199,13 @@ class Construct_gt_point_2 {
   using Gt_point = typename Gt::Point_2;
 
 public:
-  Gt_point operator()(const Approx_point& pt) const { return Gt_point(pt.x(), pt.y()); }
+  Gt_point operator()(const Approx_point& pt) const {
+    // some traits (e.g., the algebraic segment traits) construct their points through a functor only
+    if constexpr (std::is_constructible_v<Gt_point, decltype(pt.x()), decltype(pt.y())>)
+      return Gt_point(pt.x(), pt.y());
+    else
+      return Gt().construct_point_2_object()(pt.x(), pt.y());
+  }
 };
 
 // Specialization for Arr_geodesic_arc_on_sphere_traits_2

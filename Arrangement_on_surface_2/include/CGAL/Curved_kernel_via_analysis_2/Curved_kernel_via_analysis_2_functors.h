@@ -20,6 +20,8 @@
  * defines Curved_kernel_via_analysis_2 function objects + class
  */
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <iostream>
 #include <iterator>
@@ -37,6 +39,7 @@
 #include <CGAL/Object.h>
 #include <CGAL/Polynomial.h>
 #include <CGAL/Polynomial_traits_d.h>
+#include <CGAL/Simple_cartesian.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Make_x_monotone_2.h>
 
 namespace CGAL {
@@ -1700,7 +1703,7 @@ public:
 
   template <typename T>
   Point_2 operator()(const T& x, const T& y) {
-    Point_2 pt(x, y);
+    Point_2 pt(this->curve_kernel().construct_algebraic_real_2_object()(x, y));
     return pt;
   }
 };
@@ -2735,6 +2738,214 @@ public:
   result_type operator()(const Arc_2& cv) const { return this->bbox(cv); }
 };
 
+/*! functor that approximates points and arcs by points with double coordinates and polylines
+ *
+ * Arcs are approximated by adaptive subdivision: the polyline is refined at rational x-coordinates, where the
+ * points on the arc are computed exactly and then rounded, until every computed point lies within the error bound
+ * of the chord that it replaces, with a margin (or until a maximal subdivision depth is reached, e.g., near vertical
+ * tangents). The error bound is thus not guaranteed, but met in practice.
+ */
+template <typename CurvedKernelViaAnalysis_2>
+class Approximate_2 : public Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2> {
+public:
+  //! this instance' first template parameter
+  using Curved_kernel_via_analysis_2 = CurvedKernelViaAnalysis_2;
+
+  //! the base type
+  using Base = Curved_kernel_via_analysis_2_functor_base<Curved_kernel_via_analysis_2>;
+
+  CGAL_CKvA_2_GRAB_BASE_FUNCTOR_TYPES
+
+  //! the type of rational values
+  using Bound = typename Base::Bound;
+
+  //! the number type of the approximations
+  using Approximate_number_type = double;
+
+  //! the kernel of the approximations
+  using Approximate_kernel = CGAL::Simple_cartesian<Approximate_number_type>;
+
+  //! the type of approximate points
+  using Approximate_point_2 = typename Approximate_kernel::Point_2;
+
+  //! constructs
+  Approximate_2(Curved_kernel_via_analysis_2* kernel) : Base(kernel) {}
+
+  /*! obtains an approximation of the x-coordinate (if `i` is 0) or the y-coordinate (if `i` is 1) of a point
+   * \pre `p` lies in the interior of the parameter space
+   */
+  Approximate_number_type operator()(const Point_2& p, int i) const {
+    CGAL_precondition((i == 0) || (i == 1));
+    const auto approx = p.to_double();
+    return (i == 0) ? approx.first : approx.second;
+  }
+
+  /*! obtains an approximation of a point
+   * \pre `p` lies in the interior of the parameter space
+   */
+  Approximate_point_2 operator()(const Point_2& p) const {
+    const auto approx = p.to_double();
+    return Approximate_point_2(approx.first, approx.second);
+  }
+
+  /*! approximates a bounded arc by a polyline, the first and last points of which approximate the endpoints of the
+   * arc. Nothing is output for an arc that has an end on the boundary of the parameter space; such arcs can be
+   * approximated within a bounding box.
+   * \param cv the arc
+   * \param error the bound on the distance between the arc and the polyline
+   * \param oi the output iterator; its value type is `Approximate_point_2`
+   * \param l2r whether the points are output from left to right
+   * \return the past-the-end iterator of the output
+   */
+  template <typename OutputIterator>
+  OutputIterator operator()(const Arc_2& cv, double error, OutputIterator oi, bool l2r = true) const {
+    if (! cv.is_finite(CGAL::ARR_MIN_END) || ! cv.is_finite(CGAL::ARR_MAX_END)) return oi;
+    std::vector<Approximate_point_2> pts;
+    approximate(cv, error, nullptr, pts);
+    return output(pts, oi, l2r);
+  }
+
+  /*! approximates the part of an arc within a bounding box by a polyline. Where the arc leaves the box through its
+   * bottom or top side, the polyline runs along that side, so that the polyline is connected.
+   * \param cv the arc
+   * \param error the bound on the distance between the arc and the polyline
+   * \param oi the output iterator; its value type is `Approximate_point_2`
+   * \param bbox the bounding box
+   * \param l2r whether the points are output from left to right
+   * \return the past-the-end iterator of the output
+   */
+  template <typename OutputIterator>
+  OutputIterator operator()(const Arc_2& cv, double error, OutputIterator oi, const CGAL::Bbox_2& bbox,
+                            bool l2r = true) const {
+    std::vector<Approximate_point_2> pts;
+    approximate(cv, error, &bbox, pts);
+    return output(pts, oi, l2r);
+  }
+
+private:
+  //! the minimal and maximal subdivision depth
+  static constexpr int s_min_depth = 3;
+  static constexpr int s_max_depth = 16;
+
+  //! outputs the points in the requested direction
+  template <typename OutputIterator>
+  static OutputIterator output(const std::vector<Approximate_point_2>& pts, OutputIterator oi, bool l2r) {
+    if (l2r) return std::copy(pts.begin(), pts.end(), oi);
+    return std::copy(pts.rbegin(), pts.rend(), oi);
+  }
+
+  //! clamps a y-coordinate into the bounding box, if any
+  static double clamp_y(double y, const CGAL::Bbox_2* bbox)
+  { return (bbox == nullptr) ? y : (std::min)((std::max)(y, bbox->ymin()), bbox->ymax()); }
+
+  //! obtains the approximate y-coordinate of the arc at a rational x-coordinate in the interior of its x-range
+  std::optional<double> y_at(const Arc_2& cv, double x) const {
+    if (! std::isfinite(x)) return std::nullopt;
+    const Coordinate_1 xr{Bound(x)};
+    if (! this->is_in_x_range_interior(cv, xr)) return std::nullopt;
+    const Point_2 p = this->_ckva()->construct_point_2_object()(xr, cv);
+    return p.to_double().second;
+  }
+
+  //! obtains the distance between a point and a segment
+  static double distance(const Approximate_point_2& p, const Approximate_point_2& a, const Approximate_point_2& b) {
+    const double dx = b.x() - a.x();
+    const double dy = b.y() - a.y();
+    const double len2 = dx * dx + dy * dy;
+    double t = (len2 > 0) ? ((p.x() - a.x()) * dx + (p.y() - a.y()) * dy) / len2 : 0;
+    t = (std::min)((std::max)(t, 0.0), 1.0);
+    const double ex = a.x() + t * dx - p.x();
+    const double ey = a.y() + t * dy - p.y();
+    return std::sqrt(ex * ex + ey * ey);
+  }
+
+  //! refines the polyline between two points of the arc and appends it, excluding the first point
+  void refine(const Arc_2& cv, double error, const CGAL::Bbox_2* bbox, const Approximate_point_2& pl,
+              const Approximate_point_2& pr, int depth, std::vector<Approximate_point_2>& pts) const {
+    const double xm = 0.5 * (pl.x() + pr.x());
+    std::optional<double> ym;
+    if (depth < s_max_depth && pl.x() < xm && xm < pr.x()) ym = y_at(cv, xm);
+    if (! ym) {
+      pts.push_back(pr);
+      return;
+    }
+    const Approximate_point_2 pm(xm, clamp_y(*ym, bbox));
+    // the arc between two samples may deviate from the chord more than at its middle; hence the margin
+    if (depth >= s_min_depth && distance(pm, pl, pr) <= 0.5 * error) {
+      pts.push_back(pr);
+      return;
+    }
+    refine(cv, error, bbox, pl, pm, depth + 1, pts);
+    refine(cv, error, bbox, pm, pr, depth + 1, pts);
+  }
+
+  /*! obtains the first (if `ce` is the min end) or last point of the polyline, or nothing if the arc does not
+   * reach into the bounding box. `x` is the (clipped) x-coordinate of the end of the polyline, and `inner` is the
+   * x-coordinate of the other end.
+   */
+  std::optional<Approximate_point_2> end_point(const Arc_2& cv, CGAL::Arr_curve_end ce, double x, double inner,
+                                               const CGAL::Bbox_2* bbox) const {
+    const bool clipped = (bbox != nullptr) && ((ce == CGAL::ARR_MIN_END) ? (x == bbox->xmin()) : (x == bbox->xmax()));
+    if (cv.is_finite(ce) && ! clipped) {
+      const auto approx = cv.curve_end(ce).to_double();
+      return Approximate_point_2(approx.first, clamp_y(approx.second, bbox));
+    }
+    const CGAL::Arr_parameter_space loc = cv.location(ce);
+    if (! clipped && (loc == CGAL::ARR_BOTTOM_BOUNDARY || loc == CGAL::ARR_TOP_BOUNDARY)) {
+      // approach the vertical asymptote until the arc leaves the bounding box
+      std::optional<Approximate_point_2> last;
+      for (int k = 1; k < 53; ++k) {
+        const double xk = x + (inner - x) * std::ldexp(1.0, -k);
+        if (xk == x) break;
+        const auto yk = y_at(cv, xk);
+        if (! yk) continue;
+        last = Approximate_point_2(xk, clamp_y(*yk, bbox));
+        if ((loc == CGAL::ARR_BOTTOM_BOUNDARY && *yk <= bbox->ymin()) ||
+            (loc == CGAL::ARR_TOP_BOUNDARY && *yk >= bbox->ymax()))
+          break;
+      }
+      return last;
+    }
+    const auto y = y_at(cv, x);
+    if (! y) return std::nullopt;
+    return Approximate_point_2(x, clamp_y(*y, bbox));
+  }
+
+  //! approximates an arc, possibly within a bounding box
+  void approximate(const Arc_2& cv, double error, const CGAL::Bbox_2* bbox,
+                   std::vector<Approximate_point_2>& pts) const {
+    constexpr double inf = std::numeric_limits<double>::infinity();
+    if (cv.is_vertical()) {
+      const double x = CGAL::to_double(cv.x());
+      if (bbox != nullptr && (x < bbox->xmin() || x > bbox->xmax())) return;
+      for (auto ce : {CGAL::ARR_MIN_END, CGAL::ARR_MAX_END}) {
+        double y;
+        if (cv.is_finite(ce)) y = cv.curve_end(ce).to_double().second;
+        else y = (cv.location(ce) == CGAL::ARR_BOTTOM_BOUNDARY) ? -inf : inf;
+        pts.emplace_back(x, clamp_y(y, bbox));
+      }
+      return;
+    }
+
+    // the x-range of the arc, clipped to the bounding box
+    double xmin = (cv.location(CGAL::ARR_MIN_END) == CGAL::ARR_LEFT_BOUNDARY)
+      ? -inf : CGAL::to_double(cv.curve_end_x(CGAL::ARR_MIN_END));
+    double xmax = (cv.location(CGAL::ARR_MAX_END) == CGAL::ARR_RIGHT_BOUNDARY)
+      ? inf : CGAL::to_double(cv.curve_end_x(CGAL::ARR_MAX_END));
+    if (bbox != nullptr) {
+      xmin = (std::max)(xmin, bbox->xmin());
+      xmax = (std::min)(xmax, bbox->xmax());
+    }
+    if (! (xmin < xmax)) return;
+
+    const auto first = end_point(cv, CGAL::ARR_MIN_END, xmin, xmax, bbox);
+    const auto last = end_point(cv, CGAL::ARR_MAX_END, xmax, xmin, bbox);
+    if (! first || ! last) return;
+    pts.push_back(*first);
+    refine(cv, error, bbox, *first, *last, 0, pts);
+  }
+};
+
 /*! functor that computes the intersections of two arcs */
 template <typename CurvedKernelViaAnalysis_2>
 class Intersect_2 : public Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2> {
@@ -3691,6 +3902,7 @@ public:
 
   CGAL_CKvA_2_functor_cons(Construct_arc_2, construct_arc_2_object);
   CGAL_CKvA_2_functor_cons(Construct_bbox_2, construct_bbox_2_object);
+  CGAL_CKvA_2_functor_cons(Approximate_2, approximate_2_object);
 
   CGAL_CKvA_2_functor_pred(Compare_endpoints_xy_2, compare_endpoints_xy_2_object);
 

@@ -18,7 +18,14 @@ namespace CGAL {
  * supported as well as any instance of `CGAL::Sqrt_extension` that is
  * instantiated with one of the integral types above.
  *
- * \cgalModels{AosTraits_2}
+ * The traits class approximates points and \f$x\f$-monotone curves: a curve is
+ * approximated by a polyline that is refined adaptively at rational
+ * \f$x\f$-coordinates, where the points on the curve are computed exactly and
+ * then rounded to double precision. Curves with an end on the boundary of the
+ * parameter space (that is, unbounded curves and curves with vertical
+ * asymptotes) are approximated within a given bounding box only.
+ *
+ * \cgalModels{AosTraits_2,AosApproximatePointTraits_2,AosApproximateTraits_2,AosApproximateUnboundedTraits_2}
  */
 
 template <typename Coefficient>
@@ -53,6 +60,17 @@ public:
   /// Typedef from `Algebraic_kernel_1::Bound`
   typedef unspecified_type Bound;
 
+  /*! a functor that approximates points and \f$x\f$-monotone curves; a model of
+   * the concept `AosTraits::ApproximateUnbounded_2`. Its approximate number
+   * type is `double`.
+   */
+  typedef unspecified_type Approximate_2;
+
+  /*! a functor that computes a bounding box of an \f$x\f$-monotone curve; its
+   * function operator takes an `X_monotone_curve_2` and returns a `Bbox_2`.
+   */
+  typedef unspecified_type Construct_bbox_2;
+
   /// @}
 
   /// \name Accessing functor objects
@@ -69,6 +87,14 @@ public:
   /*!
    */
   Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const;
+
+  /*!
+   */
+  Approximate_2 approximate_2_object() const;
+
+  /*!
+   */
+  Construct_bbox_2 construct_bbox_2_object() const;
 
   /// @}
 

@@ -32,8 +32,7 @@
 // benchmarks use, in every run, a traits that holds a fresh curved kernel,
 // constructed from a new curve kernel with empty curve and curve-pair caches,
 // and construct the curves inside the timed region; this requires a traits
-// that can hold its own kernel and is ignored otherwise. (Points and arcs
-// still use the static kernel in their member functions.)
+// that can hold its own kernel and is ignored otherwise.
 
 #include <cmath>
 #include <cstdint>
@@ -89,6 +88,13 @@ constexpr CGAL::Arr_curve_end MAX_END = CGAL::ARR_MAX_END;
 // Whether the traits can hold its own curved kernel.
 template <typename Tr>
 constexpr bool has_own_kernel = std::is_constructible_v<Tr, std::shared_ptr<typename Tr::CKvA_2>>;
+
+// Whether the traits approximates points and curves.
+template <typename Tr, typename = void>
+constexpr bool has_approximate = false;
+
+template <typename Tr>
+constexpr bool has_approximate<Tr, std::void_t<decltype(std::declval<const Tr&>().approximate_2_object())>> = true;
 
 /*! constructs a traits; with `cold`, if supported, one that holds a fresh curved kernel with empty caches.
  *
@@ -547,6 +553,23 @@ static void add_point_location(std::vector<Benchmark>& b, const std::string& nam
     }});
 }
 
+/*! adds the approximation benchmark (if the traits supports approximation). The checksum records which arcs have
+ * a nonempty approximation only, as the numbers of points depend on floating-point comparisons.
+ */
+template <typename Tr>
+static void add_approximate(std::vector<Benchmark>& b, Input& in, const Options& opt) {
+  if constexpr (has_approximate<Tr>) {
+    const double r = opt.range;
+    add_loop(b, "approximate", "Approximate_2 on all arcs within [-range,range]^2 (error range/1000)", in.xcvs,
+             opt.loops, [f = static_cast<const Tr&>(*in.traits).approximate_2_object(), r](const Xcv& xcv) {
+               using Approximate_point_2 = typename Tr::Approximate_2::Approximate_point_2;
+               std::vector<Approximate_point_2> pts;
+               f(xcv, r / 1000, std::back_inserter(pts), CGAL::Bbox_2(-r, -r, r, r));
+               return pts.empty() ? 0 : 1;
+             });
+  }
+}
+
 static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
   std::vector<Benchmark> b;
   const Traits& tr = *in.traits;
@@ -712,6 +735,8 @@ static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
              f(ap.xcv.curve(), ap.p, Traits::POINT_IN_INTERIOR, std::back_inserter(segs));
              return segs.size();
            });
+
+  add_approximate<Traits>(b, in, opt);
 
   return b;
 }
