@@ -2269,16 +2269,24 @@ protected:
 
     CKvA_CERR("\n_intersect_coprime_support: " << cv1 << " and " << cv2 << "\n");
 
+    // due to coprimality condition, supporting curves are different =>
+    // they have no common vertical line therefore there is no
+    // intersection
+    if (cv1.is_vertical() && cv2.is_vertical()) return oi;
+
     if (cv1.is_vertical() || cv2.is_vertical()) {
-      CGAL_assertion(cv1.is_vertical() != cv2.is_vertical());
-      // due to coprimality condition, supporting curves are different =>
-      // they have no common vertical line therefore there is no
-      // intersection
-      const Kernel_arc_2 &vert = (cv1.is_vertical() ? cv1 : cv2), nonvert = (cv1.is_vertical() ? cv2 : cv1);
+      const Kernel_arc_2& vert = (cv1.is_vertical() ? cv1 : cv2);
+      const Kernel_arc_2& nonvert = (cv1.is_vertical() ? cv2 : cv1);
       Coordinate_1 x = vert._minpoint().x();
       // vertical arc does not lie within another arc's x-range => no
       // intersections
-      if (! nonvert.is_in_x_range(x)) return oi;
+      bool eq_min = false;
+      bool eq_max = false;
+      if (! nonvert.is_in_x_range(x, &eq_min, &eq_max)) return oi;
+      // the non-vertical arc only approaches the vertical line asymptotically, i.e., its end over x lies at
+      // infinity => no intersections
+      if ((eq_min && ! nonvert.is_finite(CGAL::ARR_MIN_END)) || (eq_max && ! nonvert.is_finite(CGAL::ARR_MAX_END)))
+        return oi;
       auto construct_point_on_arc = ckva().construct_point_on_arc_2_object();
 
       Point_2 xy = construct_point_on_arc(x, nonvert.curve(), nonvert.arcno(x), nonvert);

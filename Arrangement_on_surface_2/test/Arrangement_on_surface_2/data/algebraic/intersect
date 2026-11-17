@@ -3,3 +3,11 @@ intersect 1 12 2 0 9 0 0 0 0
 intersect 1 15 3 0 13 1 0 9 1 0 0 1
 intersect 12 14 1 1 12
 intersect 12 13 1 0 0 0
+# two vertical lines (x = 0 and x = -1) do not intersect
+intersect 16 17 0
+intersect 17 16 0
+# a vertical line does not intersect an arc that only approaches it asymptotically
+intersect 16 18 0
+intersect 19 16 0
+# a vertical line intersects an arc of x*y = 1 at (-1,-1)
+intersect 17 19 1 0 13 1
