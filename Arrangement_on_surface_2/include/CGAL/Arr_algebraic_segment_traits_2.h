@@ -408,39 +408,35 @@ public:
 
       if (p_rat && q_rat) {
         using Rational = typename Algebraic_real_1::Rational;
-
-        Rational pxr = px.rational();
-        Rational pyr = py.rational();
-        Rational qxr = qx.rational();
-        Rational qyr = qy.rational();
-
         using FT = CGAL::Fraction_traits<Rational>;
-
-        typename FT::Decompose decompose;
-
         using Numerator = typename FT::Numerator_type;
         using Denominator = typename FT::Denominator_type;
-
-        Rational term_at_y = qxr - pxr;
-        Rational term_at_x = -qyr + pyr;
-        Rational term_at_1 = pxr * qyr - pyr * qxr;
-        Denominator denom_curr;
-        Numerator term_at_y_int;
-        Numerator term_at_x_int;
-        Numerator term_at_1_int;
-        decompose(term_at_y, term_at_y_int, denom_curr);
-        term_at_x = term_at_x * denom_curr;
-        term_at_1 = term_at_1 * denom_curr;
-        decompose(term_at_x, term_at_x_int, denom_curr);
-        term_at_y_int = term_at_y_int * denom_curr;
-        term_at_1 = term_at_1 * denom_curr;
-        decompose(term_at_1, term_at_1_int, denom_curr);
-        term_at_y_int = term_at_y_int * denom_curr;
-        term_at_x_int = term_at_x_int * denom_curr;
-
         using Polynomial_1 = typename CGAL::Polynomial_traits_d<Polynomial_2>::Coefficient_type;
 
-        Polynomial_2 pol(Polynomial_1(term_at_1_int, term_at_x_int), Polynomial_1(term_at_y_int));
+        // the line a x + b y + c = 0 through p and q
+        const Rational pxr = px.rational();
+        const Rational pyr = py.rational();
+        const Rational qxr = qx.rational();
+        const Rational qyr = qy.rational();
+        typename FT::Decompose decompose;
+        Numerator a;
+        Numerator b;
+        Numerator c;
+        Denominator a_den;
+        Denominator b_den;
+        Denominator c_den;
+        decompose(pyr - qyr, a, a_den);
+        decompose(qxr - pxr, b, b_den);
+        decompose(pxr * qyr - pyr * qxr, c, c_den);
+        // the coefficients are brought to a common denominator and divided by their content (b is not 0)
+        Numerator a_int = a * b_den * c_den;
+        Numerator b_int = b * a_den * c_den;
+        Numerator c_int = c * a_den * b_den;
+        const Numerator content = CGAL::gcd(CGAL::gcd(a_int, b_int), c_int);
+        a_int = CGAL::integral_division(a_int, content);
+        b_int = CGAL::integral_division(b_int, content);
+        c_int = CGAL::integral_division(c_int, content);
+        Polynomial_2 pol(Polynomial_1(c_int, a_int), Polynomial_1(b_int));
         Curve_2 curve = this->_ckva()->kernel().construct_curve_2_object()(pol);
 
         CGAL_assertion(this->_ckva()->is_on_2_object()(p, curve));
