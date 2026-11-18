@@ -205,18 +205,14 @@ public:
       return std::make_pair(std::make_pair(0, 0), vertical);
     }
 
-    // abbreviation for convenience
-    bool is_one_one(const Curve_2& cv, const Point_2& p) const {
-      std::pair<std::pair<int, int>, bool> branches = branch_numbers_and_vertical(cv, p);
-      return branches.first.first == 1 && branches.first.second == 1 && ! branches.second;
-    }
-
+    // Constructs the x-monotone segment of cv that contains p; it is extended to the left up to start (if given)
+    // and to the right up to end (if given) through points that have one branch on each side. Only the arcs of the
+    // decomposition of cv into x-monotone arcs that the segment passes through are constructed.
     template <typename OutputIterator>
     OutputIterator x_monotone_segment(const Curve_2& cv, const Point_2& p, const Optional_point_2& start,
                                       const Optional_point_2& end, OutputIterator out) const {
       using Make_x_monotone_result = std::variant<Point_2, X_monotone_curve_2>;
-
-      // CGAL_assertion(is_one_one(cv,p));
+      using Status_line_1 = typename Curve_2::Status_line_1;
 
       std::list<X_monotone_curve_2> segs;
 
@@ -226,92 +222,140 @@ public:
       auto left = this->_ckva()->construct_min_vertex_2_object();
       auto right = this->_ckva()->construct_max_vertex_2_object();
       auto equal = this->_ckva()->equal_2_object();
+      auto construct_point = this->_ckva()->construct_point_2_object();
+      const auto& map_interval_arcno = this->_ckva()->interval_arcno_cache();
+      const internal::Make_x_monotone_2<CKvA_2> make_x_monotone(this->_ckva());
+      auto new_point = [&](const Algebraic_real_1& x, int j) { return construct_point(x, cv, j); };
 
-      std::vector<Make_x_monotone_result> arcs;
-      this->_ckva()->make_x_monotone_2_object()(cv, std::back_inserter(arcs));
+      CGAL_precondition(typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(cv.polynomial_2()) > 0);
+      if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(cv.polynomial_2()) < 1) return out;
+      const int total_events = cv.number_of_status_lines_with_event();
 
-      // obtains a predicate that holds for x-monotone arcs (not isolated points) that contain q
-      auto contains = [&](const Point_2& q) {
-        return [&, q](const Make_x_monotone_result& obj) {
-          const auto* xcv = std::get_if<X_monotone_curve_2>(&obj);
-          return xcv && on_arc(q, *xcv);
-        };
+      // Find the arc that contains p, testing the candidates in the order of the decomposition. The arc is the
+      // k-th arc over the i-th interval, or a vertical arc (i = -1).
+      std::optional<X_monotone_curve_2> seg_p;
+      int interval = -1;
+      int arcno = 0;
+      auto find_over_interval = [&](int i) {
+        const int n = make_x_monotone.number_of_arcs_of_interval(cv, i);
+        for (int k = 0; k < n; ++k) {
+          auto xcv = make_x_monotone.arc_of_interval(cv, i, k, new_point, new_point);
+          if (! on_arc(p, xcv)) continue;
+          seg_p = xcv;
+          interval = i;
+          arcno = k;
+          return;
+        }
       };
+      int index;
+      bool is_event;
+      cv.x_to_index(p.x(), index, is_event);
+      find_over_interval(index);
+      if (! seg_p && is_event) {
+        std::vector<Make_x_monotone_result> objs;
+        make_x_monotone.vertical_arcs_and_isolated_points(cv, index, std::back_inserter(objs));
+        for (const auto& obj : objs) {
+          const auto* xcv = std::get_if<X_monotone_curve_2>(&obj);
+          if (! xcv || ! on_arc(p, *xcv)) continue;
+          seg_p = *xcv;
+          break;
+        }
+        if (! seg_p) find_over_interval(index + 1);
+      }
+      CGAL_precondition(seg_p.has_value()); // p must lie on cv
+      if (! seg_p) return out;
+      const X_monotone_curve_2& seg = *seg_p;
 
-      auto it = std::find_if(arcs.begin(), arcs.end(), contains(p));
-      CGAL_precondition(it != arcs.end()); // p must lie on cv
-      if (it == arcs.end()) return out;
-      const auto* it_seg_p = &std::get<X_monotone_curve_2>(*it);
+      bool left_on_arc = start && on_arc(start.value(), seg);
+      bool right_on_arc = end && on_arc(end.value(), seg);
 
-      bool left_on_arc = start && on_arc(start.value(), *it_seg_p);
-      bool right_on_arc = end && on_arc(end.value(), *it_seg_p);
-
-      if (left_on_arc && right_on_arc) segs.push_back(trim(*it_seg_p, start.value(), end.value()));
+      if (left_on_arc && right_on_arc) segs.push_back(trim(seg, start.value(), end.value()));
       if (left_on_arc && (! right_on_arc)) {
-        if (! it_seg_p->is_finite(CGAL::ARR_MAX_END) || ! equal(start.value(), right(*it_seg_p))) {
-          if (it_seg_p->is_finite(CGAL::ARR_MIN_END) && equal(start.value(), left(*it_seg_p)))
-            segs.push_back(*it_seg_p);
+        if (! seg.is_finite(CGAL::ARR_MAX_END) || ! equal(start.value(), right(seg))) {
+          if (seg.is_finite(CGAL::ARR_MIN_END) && equal(start.value(), left(seg))) segs.push_back(seg);
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
-            split(*it_seg_p, start.value(), split1, split2);
+            split(seg, start.value(), split1, split2);
             segs.push_back(split2);
           }
         }
       }
       if ((! left_on_arc) && right_on_arc) {
-        if (! it_seg_p->is_finite(CGAL::ARR_MIN_END) || ! equal(left(*it_seg_p), end.value())) {
-          if (it_seg_p->is_finite(CGAL::ARR_MAX_END) && equal(end.value(), right(*it_seg_p)))
-            segs.push_back(*it_seg_p);
+        if (! seg.is_finite(CGAL::ARR_MIN_END) || ! equal(left(seg), end.value())) {
+          if (seg.is_finite(CGAL::ARR_MAX_END) && equal(end.value(), right(seg))) segs.push_back(seg);
           else {
             X_monotone_curve_2 split1;
             X_monotone_curve_2 split2;
-            split(*it_seg_p, end.value(), split1, split2);
+            split(seg, end.value(), split1, split2);
             segs.push_back(split1);
           }
         }
       }
-      if ((! left_on_arc) && (! right_on_arc)) segs.push_back(*it_seg_p);
+      if ((! left_on_arc) && (! right_on_arc)) segs.push_back(seg);
+
+      // obtains the index of the point at the event to the left (if at_left holds) or to the right of the i-th
+      // interval that the k-th arc over the interval ends at, if the point has one branch on each side and the event
+      // line is not covered by cv; otherwise, -1
+      auto one_one_end = [&](int i, int k, bool at_left) {
+        if (i < 0) return -1; // a vertical arc
+        const int e = at_left ? i - 1 : i;
+        if ((e < 0) || (e == total_events)) return -1; // the arc is unbounded in x
+        const Status_line_1& evt_line = cv.status_line_at_event(e);
+        if (evt_line.covers_line()) return -1;
+        // the interval is to the right (side 0) of the event to its left
+        const auto info = map_interval_arcno(evt_line, ! at_left, k);
+        if (info.second != CGAL::ARR_INTERIOR) return -1; // the arc approaches an asymptote
+        if (evt_line.number_of_incident_branches(info.first) != std::make_pair(1, 1)) return -1;
+        return info.first;
+      };
 
       // Extend the segment to the left, arc by arc, through one-one points, until start is reached.
       if (! left_on_arc) {
-        auto cur = std::make_reverse_iterator(std::next(it)); // *cur is the arc that contains p
-        const X_monotone_curve_2* xcv = it_seg_p;
+        X_monotone_curve_2 xcv = seg;
+        int i = interval;
+        int k = arcno;
         while (true) {
-          if (! xcv->is_finite(CGAL::ARR_MIN_END) || ! is_one_one(cv, left(*xcv))) {
+          const int j = one_one_end(i, k, true);
+          if (j < 0) {
             CGAL_assertion(! start); // the branch cannot be continued, so start must not be given
             break;
           }
-          cur = std::find_if(std::next(cur), arcs.rend(), contains(left(*xcv)));
-          CGAL_assertion(cur != arcs.rend());
-          if (cur == arcs.rend()) break;
-          xcv = &std::get<X_monotone_curve_2>(*cur);
-          if (start && on_arc(start.value(), *xcv)) {
-            segs.push_front(trim(*xcv, start.value(), right(*xcv)));
+          --i;
+          k = make_x_monotone.interval_arcno(cv.status_line_at_event(i), j, true);
+          const Point_2 q = left(xcv);
+          xcv = make_x_monotone.arc_of_interval(cv, i, k, new_point,
+                                                [&q](const Algebraic_real_1&, int) -> const Point_2& { return q; });
+          if (start && on_arc(start.value(), xcv)) {
+            segs.push_front(trim(xcv, start.value(), right(xcv)));
             break;
           }
-          segs.push_front(*xcv);
+          segs.push_front(xcv);
         }
       }
 
       // Extend the segment to the right, arc by arc, through one-one points, until end is reached.
       if (! right_on_arc) {
-        auto cur = it; // *cur is the arc that contains p
-        const X_monotone_curve_2* xcv = it_seg_p;
+        X_monotone_curve_2 xcv = seg;
+        int i = interval;
+        int k = arcno;
         while (true) {
-          if (! xcv->is_finite(CGAL::ARR_MAX_END) || ! is_one_one(cv, right(*xcv))) {
+          const int j = one_one_end(i, k, false);
+          if (j < 0) {
             CGAL_assertion(! end); // the branch cannot be continued, so end must not be given
             break;
           }
-          cur = std::find_if(std::next(cur), arcs.end(), contains(right(*xcv)));
-          CGAL_assertion(cur != arcs.end());
-          if (cur == arcs.end()) break;
-          xcv = &std::get<X_monotone_curve_2>(*cur);
-          if (end && on_arc(end.value(), *xcv)) {
-            segs.push_back(trim(*xcv, left(*xcv), end.value()));
+          k = make_x_monotone.interval_arcno(cv.status_line_at_event(i), j, false);
+          ++i;
+          const Point_2 q = right(xcv);
+          xcv = make_x_monotone.arc_of_interval(cv, i, k,
+                                                [&q](const Algebraic_real_1&, int) -> const Point_2& { return q; },
+                                                new_point);
+          if (end && on_arc(end.value(), xcv)) {
+            segs.push_back(trim(xcv, left(xcv), end.value()));
             break;
           }
-          segs.push_back(*xcv);
+          segs.push_back(xcv);
         }
       }
 
