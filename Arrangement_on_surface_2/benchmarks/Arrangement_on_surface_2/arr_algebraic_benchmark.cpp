@@ -321,6 +321,12 @@ struct Arc_end_pair {
   CGAL::Arr_curve_end ce2;
 };
 
+struct Segment_ends {
+  Curve cv;
+  Point left;
+  Point right;
+};
+
 struct Input {
   std::shared_ptr<Traits> traits = std::make_shared<Traits>();
   std::vector<Polynomial> polynomials;
@@ -333,6 +339,7 @@ struct Input {
   std::vector<Point> queries;            // rational query points
   std::vector<Arc_point> arc_points;     // arcs with interior points (split, ...)
   std::vector<std::pair<Xcv, Xcv>> halves;  // the two parts of a split arc (merge)
+  std::vector<Segment_ends> segment_ends;  // an arc vertex and an interior point of the arc
   std::vector<std::pair<Point, Point>> point_pairs;
   std::vector<std::pair<Point, Xcv>> point_arc_pairs;  // the point is in the x-range of the arc
   std::vector<std::pair<Point, Curve>> point_curve_pairs;
@@ -422,6 +429,23 @@ static void prepare(Input& in, const Options& opt) {
       Xcv xcv2;
       split(ap.xcv, ap.p, xcv1, xcv2);
       in.halves.emplace_back(xcv1, xcv2);
+    }, in.dropped);
+
+  // the ends of segments of curves: an arc vertex and an interior point of the arc, in both orders
+  auto min_vertex = tr.construct_min_vertex_2_object();
+  auto max_vertex = tr.construct_max_vertex_2_object();
+  auto ctr_seg = tr.construct_x_monotone_segment_2_object();
+  auto ps_in_x = tr.parameter_space_in_x_2_object();
+  for (const auto& ap : in.arc_points) {
+    // the arc may approach a horizontal asymptote, in which case its end has no vertex
+    if (ps_in_x(ap.xcv, MIN_END) == CGAL::ARR_INTERIOR)
+      in.segment_ends.push_back({ap.xcv.curve(), min_vertex(ap.xcv), ap.p});
+    if (ps_in_x(ap.xcv, MAX_END) == CGAL::ARR_INTERIOR)
+      in.segment_ends.push_back({ap.xcv.curve(), ap.p, max_vertex(ap.xcv)});
+  }
+  keep_valid(in.segment_ends, [&](const Segment_ends& se) {
+      std::vector<Xcv> segs;
+      ctr_seg(se.cv, se.left, se.right, std::back_inserter(segs));
     }, in.dropped);
 
   // point pairs
@@ -735,6 +759,13 @@ static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
              f(ap.xcv.curve(), ap.p, Traits::POINT_IN_INTERIOR, std::back_inserter(segs));
              return segs.size();
            });
+  add_loop(b, "construct_x_monotone_segment_ends",
+           "Construct_x_monotone_segment_2 between an arc vertex and an interior point", in.segment_ends, opt.loops,
+           [f = tr.construct_x_monotone_segment_2_object()](const Segment_ends& se) {
+             std::vector<Xcv> segs;
+             f(se.cv, se.left, se.right, std::back_inserter(segs));
+             return segs.size();
+           });
 
   add_approximate<Traits>(b, in, opt);
 
@@ -770,8 +801,8 @@ int main(int argc, char* argv[]) {
             << in.arr->number_of_edges() << " edges, " << in.arr->number_of_faces() << " faces\n"
             << "functor inputs: " << in.point_pairs.size() << " point pairs, " << in.point_arc_pairs.size()
             << " point/arc pairs, " << in.arc_pairs.size() << " arc pairs, " << in.arc_points.size()
-            << " arcs with interior points, " << in.right_pairs.size() << "/" << in.left_pairs.size()
-            << " right/left pairs, " << in.left_right_pairs.size() << "/" << in.bottom_top_pairs.size()
+            << " arcs with interior points, " << in.segment_ends.size() << " segment ends, "
+            << in.right_pairs.size() << "/" << in.left_pairs.size() << " right/left pairs, " << in.left_right_pairs.size() << "/" << in.bottom_top_pairs.size()
             << " left-right/bottom-top boundary pairs; " << in.dropped << " dropped\n\n";
 
   std::ostringstream comment;

@@ -333,31 +333,16 @@ public:
     template <typename OutputIterator>
     OutputIterator
     operator()(const Curve_2& cv, const Point_2& end_left, const Point_2& end_right, OutputIterator out) const {
-      CGAL_assertion((branch_numbers_and_vertical(cv, end_left).first.second == 1 &&
-                      ! branch_numbers_and_vertical(cv, end_left).second) ||
-                     (branch_numbers_and_vertical(cv, end_right).first.first == 1 &&
-                      ! branch_numbers_and_vertical(cv, end_right).second) ||
-                     (branch_numbers_and_vertical(cv, end_left).first.second == 0 &&
-                      branch_numbers_and_vertical(cv, end_left).second) ||
-                     (branch_numbers_and_vertical(cv, end_right).first.first == 0 &&
-                      branch_numbers_and_vertical(cv, end_right).second));
-      CGAL_assertion_code(if ((branch_numbers_and_vertical(cv, end_left).first.second == 0 &&
-                               branch_numbers_and_vertical(cv, end_left).second) ||
-                              (branch_numbers_and_vertical(cv, end_right).first.first == 0 &&
-                               branch_numbers_and_vertical(cv, end_right).second)) {
-        auto equal_x = this->_ckva()->compare_x_2_object(); )
-                          CGAL_assertion(equal_x(end_left,end_right) == CGAL::EQUAL);
-                          CGAL_assertion_code(});
-
-      if ((branch_numbers_and_vertical(cv, end_left).first.second == 0 &&
-           branch_numbers_and_vertical(cv, end_left).second) ||
-          (branch_numbers_and_vertical(cv, end_left).first.second == 1 &&
-           ! branch_numbers_and_vertical(cv, end_left).second)) {
-        return x_monotone_segment(cv, end_left, Optional_point_2(end_left), Optional_point_2(end_right), out);
-      }
-      else {
-        return x_monotone_segment(cv, end_right, Optional_point_2(end_left), Optional_point_2(end_right), out);
-      }
+      // the segment is traced from an end that has a single non-vertical branch towards the other end, or from the
+      // lower end of a vertical segment
+      const auto bl = branch_numbers_and_vertical(cv, end_left);
+      const bool from_left = (bl.first.second == 0 && bl.second) || (bl.first.second == 1 && ! bl.second);
+      CGAL_assertion_code(const auto br = branch_numbers_and_vertical(cv, end_right);)
+      CGAL_assertion(from_left || (br.first.first == 1 && ! br.second) || (br.first.first == 0 && br.second));
+      CGAL_assertion(! ((bl.first.second == 0 && bl.second) || (br.first.first == 0 && br.second)) ||
+                     (this->_ckva()->compare_x_2_object()(end_left, end_right) == CGAL::EQUAL));
+      const Point_2& p = from_left ? end_left : end_right;
+      return x_monotone_segment(cv, p, Optional_point_2(end_left), Optional_point_2(end_right), out);
     }
 
     template <typename OutputIterator>
