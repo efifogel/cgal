@@ -78,7 +78,22 @@ struct Curve_interval_arcno_cache {
   //!@{
 
   /*! constructs default. */
-  Curve_interval_arcno_cache() : m_last_curve_id(-1) {}
+  Curve_interval_arcno_cache() : m_last_curve_id(0), m_last_interval_map(nullptr) {}
+
+  /*! constructs a copy; the copy refers to its own maps. */
+  Curve_interval_arcno_cache(const Curve_interval_arcno_cache& other) :
+    m_curve_arcno_map(other.m_curve_arcno_map),
+    m_last_curve_id(0),
+    m_last_interval_map(nullptr) {}
+
+  /*! assigns; the target refers to its own maps. */
+  Curve_interval_arcno_cache& operator=(const Curve_interval_arcno_cache& other) {
+    if (this == &other) return *this;
+    m_curve_arcno_map = other.m_curve_arcno_map;
+    m_last_curve_id = 0;
+    m_last_interval_map = nullptr;
+    return *this;
+  }
 
   //!@}
 
@@ -101,27 +116,18 @@ struct Curve_interval_arcno_cache {
 
     Curve_analysis_2 ca_2 = cv_line.curve_analysis_2();
     ///////////////////////////////// polynomial or curve id ?
-    int curve_id = static_cast<int>(ca_2.polynomial_2().id());
+    Curve_id curve_id = ca_2.polynomial_2().id();
     /////////////////////////////////
-    if (m_last_curve_id != curve_id) {
-      typename Curve_to_interval_arcno_map::iterator it;
-      if (m_last_curve_id != -1) {
-        // commit the last changes to the global curve arcno map
-        it = m_curve_arcno_map.find(m_last_curve_id);
-        CGAL_precondition(it != m_curve_arcno_map.end());
-        it->second = m_last_interval_map;
-      }
-      // modify m_last_interval_map to be pointing to the
-      // Interval_arcno_map  corresponding to the given curve_id
-      it = m_curve_arcno_map.insert(std::make_pair(curve_id, Interval_arcno_map())).first;
-      m_last_interval_map = it->second;
+    if (! m_last_interval_map || (m_last_curve_id != curve_id)) {
+      // point to the map of the given curve (the nodes of std::map are stable)
+      m_last_interval_map = &m_curve_arcno_map[curve_id];
       m_last_curve_id = curve_id;
     }
     // cache status lines by id(); shall we use x-coordinate instead of
     // id to ensure uniqueness ?
     // TODO: shall we use cv_line.index() ?
-    typename Interval_arcno_map::const_iterator it = m_last_interval_map.find(cv_line.x().id());
-    if (it != m_last_interval_map.end()) {
+    typename Interval_arcno_map::const_iterator it = m_last_interval_map->find(cv_line.x().id());
+    if (it != m_last_interval_map->end()) {
       const Arcno_vector_pair& tmp = it->second;
       // note: side index must be reversed
       CGAL_precondition(interval_arcno < static_cast<int>(side == 1 ? tmp.first.size() : tmp.second.size()));
@@ -168,7 +174,7 @@ struct Curve_interval_arcno_cache {
 
     CGAL_precondition(left_i == static_cast<int>(vpair.first.size()));
     CGAL_precondition(right_i == static_cast<int>(vpair.second.size()));
-    m_last_interval_map.insert(std::make_pair(cv_line.x().id(), vpair));
+    m_last_interval_map->insert(std::make_pair(cv_line.x().id(), vpair));
     CGAL_precondition(interval_arcno < static_cast<int>(side == 1 ? vpair.first.size() : vpair.second.size()));
     return (side == 1 ? vpair.first[interval_arcno] : vpair.second[interval_arcno]);
   }
@@ -188,17 +194,20 @@ private:
   using Id_type = typename Status_line_1::Algebraic_real_1::Id_type;
   using Interval_arcno_map = std::map<Id_type, Arcno_vector_pair>;
 
+  //! the type of the id of a curve (the id of its defining polynomial)
+  using Curve_id = typename Curve_analysis_2::Polynomial_2::Id_type;
+
   //! maps from \c Curve_2 id to \c Interval_arcno_map
-  using Curve_to_interval_arcno_map = std::map<int, Interval_arcno_map>;
+  using Curve_to_interval_arcno_map = std::map<Curve_id, Interval_arcno_map>;
 
   //! arcno mapping container instance
   mutable Curve_to_interval_arcno_map m_curve_arcno_map;
 
   //! an id of the last queried \c Curve_2 object
-  mutable int m_last_curve_id;
+  mutable Curve_id m_last_curve_id;
 
-  //! stores an address of the last accessed map
-  mutable Interval_arcno_map m_last_interval_map;
+  //! the map of the last queried curve (an element of \c m_curve_arcno_map)
+  mutable Interval_arcno_map* m_last_interval_map;
 
   //!@}
 
