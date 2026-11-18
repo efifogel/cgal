@@ -337,6 +337,7 @@ struct Input {
   std::vector<Point> isolated_points;
   std::vector<Point> points;             // the finite vertices of the arrangement
   std::vector<Point> queries;            // rational query points
+  std::vector<std::pair<Point, Point>> query_pairs;  // consecutive query points with distinct x-coordinates
   std::vector<Arc_point> arc_points;     // arcs with interior points (split, ...)
   std::vector<std::pair<Xcv, Xcv>> halves;  // the two parts of a split arc (merge)
   std::vector<Segment_ends> segment_ends;  // an arc vertex and an interior point of the arc
@@ -410,6 +411,10 @@ static void prepare(Input& in, const Options& opt) {
     const Bound y = Bound(query_rnd.get_int(-r, r + 1)) / Bound(1000);
     in.queries.push_back(ctr_pt(x, y));
   }
+  auto cmp_x = tr.compare_x_2_object();
+  for (std::size_t i = 0; i + 1 < in.queries.size(); ++i)
+    if (cmp_x(in.queries[i], in.queries[i + 1]) != CGAL::EQUAL)
+      in.query_pairs.push_back({in.queries[i], in.queries[i + 1]});
 
   // arcs with interior points
   auto ps_y = tr.parameter_space_in_y_2_object();
@@ -475,10 +480,11 @@ static void prepare(Input& in, const Options& opt) {
       if (i != j) in.arc_pairs.push_back({in.xcvs[i], in.xcvs[j]});
   subsample(in.arc_pairs, opt.pairs, pair_rnd);
   auto intersect = tr.intersect_2_object();
-  keep_valid(in.arc_pairs, [&](const Arc_pair& ap) {
-      std::vector<Intersection_result> res;
-      intersect(ap.xcv1, ap.xcv2, std::back_inserter(res));
-    }, in.dropped);
+  keep_valid(in.arc_pairs,
+             [&](const Arc_pair& ap) {
+               std::vector<Intersection_result> res;
+               intersect(ap.xcv1, ap.xcv2, std::back_inserter(res));
+             }, in.dropped);
 
   // pairs of arcs incident to a common arrangement vertex, on its right or on its left
   for (auto vit = in.arr->vertices_begin(); vit != in.arr->vertices_end(); ++vit) {
@@ -766,6 +772,13 @@ static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
              f(se.cv, se.left, se.right, std::back_inserter(segs));
              return segs.size();
            });
+  add_loop(b, "construct_x_monotone_segment_line",
+           "Construct_x_monotone_segment_2 on the line through two rational points", in.query_pairs, opt.loops,
+           [f = tr.construct_x_monotone_segment_2_object()](const std::pair<Point, Point>& pq) {
+             std::vector<Xcv> segs;
+             f(pq.first, pq.second, std::back_inserter(segs));
+             return segs.size();
+           });
 
   add_approximate<Traits>(b, in, opt);
 
@@ -801,8 +814,10 @@ int main(int argc, char* argv[]) {
             << in.arr->number_of_edges() << " edges, " << in.arr->number_of_faces() << " faces\n"
             << "functor inputs: " << in.point_pairs.size() << " point pairs, " << in.point_arc_pairs.size()
             << " point/arc pairs, " << in.arc_pairs.size() << " arc pairs, " << in.arc_points.size()
-            << " arcs with interior points, " << in.segment_ends.size() << " segment ends, "
-            << in.right_pairs.size() << "/" << in.left_pairs.size() << " right/left pairs, " << in.left_right_pairs.size() << "/" << in.bottom_top_pairs.size()
+            << " arcs with interior points, " << in.segment_ends.size() << " segment ends, " << in.query_pairs.size()
+            << " rational point pairs, "
+            << in.right_pairs.size() << "/" << in.left_pairs.size() << " right/left pairs, "
+            << in.left_right_pairs.size() << "/" << in.bottom_top_pairs.size()
             << " left-right/bottom-top boundary pairs; " << in.dropped << " dropped\n\n";
 
   std::ostringstream comment;
