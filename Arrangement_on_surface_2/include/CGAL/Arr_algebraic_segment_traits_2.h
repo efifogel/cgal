@@ -426,39 +426,6 @@ public:
   Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const
   { return Construct_x_monotone_segment_2(curved_kernel()); }
 
-  /* class Construct_vertical_segment_2 :
-   *   public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
-   *
-   * public:
-   *   using Base = internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
-   *
-   *   Construct_vertical_segment_2(CKvA_2* kernel) : Base(kernel) {}
-   *
-   * public:
-   *   X_monotone_curve_2 operator() (const Point_2& p, const Point_2& q) {
-   *     Algebraic_real_1 x = p.x();
-   *     Polynomial_2 f = Polynomial_2(x.polynomial());
-   *     Curve_2 cv = this->_ckva()->kernel().construct_curve_2_object() (f);
-   *     return typename CKvA_2::Arc_2(p,q,cv);
-   *   }
-   *
-   *   template <typename OutputIterator> OutputIterator
-   *   operator()(const Point_2& p, Site_of_point site_of_p) const {
-   *     Algebraic_real_1 x = p.x();
-   *     Polynomial_2 f = Polynomial_2(x.polynomial());
-   *     Curve_2 cv = this->_ckva().kernel().construct_curve_2_object() (f);
-   *
-   *     if (site_of_p == POINT_IN_INTERIOR) return typename CKvA_2::Arc_2(x, cv);
-   *     else if (site_of_p == MIN_ENDPOINT) return typename CKvA_2::Arc_2(p, ARR_MIN_END, cv);
-   *     CGAL_assertion(site_of_p == MAX_ENDPOINT);
-   *     return typename CKvA_2::Arc_2(p, ARR_MAX_END, cv);
-   *   }
-   * };
-   *
-   * Construct_vertical_segment_2 construct_vertical_segment_2_object() const
-   * { return Construct_vertical_segment_2(curved_kernel()); }
-   */
-
   class Construct_curve_2 :
     public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
@@ -470,22 +437,6 @@ public:
   };
 
   Construct_curve_2 construct_curve_2_object() const { return Construct_curve_2(curved_kernel()); }
-
-  // // additional functionality (for not introducing a "general" arc)
-  //
-  // class Connect_points_2 {
-  //   template <typename OutputIterator>
-  //   OutputIterator operator()(Curve_2, Point_2, Point_2, ..., OutputIterator) {
-  //     while (false || true) *oi++ = X_monotone_curve_2(...);
-  //     return oi;
-  //   }
-  //
-  //   template< class OutputIterator >
-  //   OutputIterator operator()(Curve_2, Point_2, Point_2, int, ..., OutputIterator) {
-  //     while (false || true) *oi++ = X_monotone_curve_2(...);
-  //     return oi;
-  //   }
-  // };
 
 private:
   //! the curved kernel used by the functors; if empty, \c CKvA_2::instance() of the calling thread is used
