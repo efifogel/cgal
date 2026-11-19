@@ -190,7 +190,9 @@ private:
 
   //! maps from \c Status_line_1 id to a container of interval ->
   //! event arcnos
-  // TODO: use hash instead ?? cache status lines by x-coordinate ? (Pavel)
+  // TODO: the maps are keyed by addresses (the ids of the polynomial and of the x-coordinate), which may be reused
+  // once a curve is destroyed. Store the arcno vectors per event line in the curve analysis instead, indexed by the
+  // event (cv_line.index()); this also replaces both lookups by a vector index. (A hash map does not pay off.)
   using Id_type = typename Status_line_1::Algebraic_real_1::Id_type;
   using Interval_arcno_map = std::map<Id_type, Arcno_vector_pair>;
 
