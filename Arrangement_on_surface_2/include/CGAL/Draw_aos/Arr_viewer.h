@@ -88,12 +88,22 @@ protected:
     for (const auto& vh : m_arr.vertex_handles())
       bbox += traits.approximate_2_object()(vh->point()).bbox();
 
-    double approx_error = approximation_error(bbox, 100);
-    // Computes a more precise bounding box from the halfedges.
-    auto approx = traits.approximate_2_object();
-    for (const auto& he : m_arr.halfedge_handles()) {
-      approx(he->curve(), approx_error,
-             boost::make_function_output_iterator([&bbox](Approx_point pt) { bbox += pt.bbox(); }));
+    // Computes a more precise bounding box from the bounded curves (a halfedge and its twin share the curve).
+    if constexpr (has_construct_bbox_2_v<Geom_traits>) {
+      // Constructing the bounding box of a curve is cheaper than approximating it.
+      auto construct_bbox = traits.construct_bbox_2_object();
+      for (const auto& e : m_arr.edge_handles()) {
+        if (e->source()->is_at_open_boundary() || e->target()->is_at_open_boundary()) continue;
+        bbox += construct_bbox(e->curve());
+      }
+    }
+    else {
+      double approx_error = approximation_error(bbox, 100);
+      auto approx = traits.approximate_2_object();
+      for (const auto& e : m_arr.edge_handles()) {
+        approx(e->curve(), approx_error,
+               boost::make_function_output_iterator([&bbox](Approx_point pt) { bbox += pt.bbox(); }));
+      }
     }
     // Place margin around the bbox.
     double dx = bbox.x_span() * 0.1;
