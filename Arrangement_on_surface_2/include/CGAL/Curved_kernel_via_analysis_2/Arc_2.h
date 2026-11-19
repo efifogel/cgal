@@ -544,17 +544,6 @@ public:
     return _maxpoint().location();
   }
 
-  /*! sets boundary type for an end of an arc
-   *
-   * It is supposed that the user thoroughly understands malicious
-   * consequences that may result from the misuse of the location
-   *
-   * \param ce The intended end
-   * \param loc The location to store
-   */
-  void set_location(CGAL::Arr_curve_end ce, CGAL::Arr_parameter_space loc) const
-  { (ce == CGAL::ARR_MIN_END ? _minpoint().set_location(loc) : _maxpoint().set_location(loc)); }
-
   //!@}
 
   //!\name Access functions

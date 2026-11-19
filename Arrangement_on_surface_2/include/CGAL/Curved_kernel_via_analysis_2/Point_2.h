@@ -346,13 +346,6 @@ public:
   //!\name Methods for location
   //!@{
 
-  /*! sets location of a point in parameter space to \c loc
-   *
-   * It is supposed that the user thoroughly understands malicious
-   * consequences that may result from the misuse of the location
-   */
-  inline void set_location(CGAL::Arr_parameter_space loc) const { this->ptr()->m_location = loc; }
-
   /*! obtains the location of the point in parameter space
    *
    * \return location in parameter space
@@ -445,22 +438,10 @@ public:
       switch (this->location()) {
        case CGAL::ARR_TOP_BOUNDARY:
        case CGAL::ARR_BOTTOM_BOUNDARY:
-       case CGAL::ARR_INTERIOR: {
-         os << "x=" << this->x().to_double() << "; ";
-         break;
-        }
-       case CGAL::ARR_LEFT_BOUNDARY: {
-         os << "x=-oo; ";
-         break;
-        }
-       case CGAL::ARR_RIGHT_BOUNDARY: {
-         os << "x=+oo; ";
-         break;
-        }
-       default: {
-         // bogus location
-         CGAL_assertion(false);
-       }
+       case CGAL::ARR_INTERIOR: os << "x=" << this->x().to_double() << "; "; break;
+       case CGAL::ARR_LEFT_BOUNDARY: os << "x=-oo; "; break;
+       case CGAL::ARR_RIGHT_BOUNDARY: os << "x=+oo; "; break;
+       default: CGAL_assertion(false);
       }
       os << std::flush;
 
@@ -499,7 +480,6 @@ public:
       os << ::CGAL::IO::oformat(this->ptr()->m_arcno);
       os << ",";
       os << this->ptr()->m_location;
-
       os << ")";
     }
   }
