@@ -1464,6 +1464,7 @@ test_rational_arc_traits()
 test_algebraic_traits_core()
 test_algebraic_traits_gmp()
 test_algebraic_traits_leda()
+compile_and_run(test_algebraic_bbox)
 
 compile_and_run(test_data_traits)
 

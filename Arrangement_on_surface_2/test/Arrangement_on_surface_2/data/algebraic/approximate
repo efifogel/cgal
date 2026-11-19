@@ -1,0 +1,7 @@
+# a quarter of the unit circle, left to right and right to left
+approximate 0 0.01 1 13
+approximate 0 0.01 0 13
+# an arc of y^2 = x^3 from its cusp (vertical tangent) at (0,0) to (1,1)
+approximate 12 0.01 1 10
+# an unbounded line is not approximated without a bounding box
+approximate 1 0.01 1 0
