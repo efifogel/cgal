@@ -48,6 +48,8 @@
 #include <variant>
 #include <vector>
 
+#include <boost/iterator/function_output_iterator.hpp>
+
 #include <CGAL/config.h>
 
 #if ! CGAL_USE_CORE
@@ -552,6 +554,20 @@ static std::vector<Curve> construct_curves(const Traits& tr, const std::vector<P
   return curves;
 }
 
+/*! constructs the curves of the input with a given traits, and decomposes them into new x-monotone arcs.
+ */
+static std::vector<Xcv> fresh_arcs(const Traits& tr, const std::vector<Polynomial>& polynomials) {
+  auto make_x_monotone = tr.make_x_monotone_2_object();
+  std::vector<Xcv> xcvs;
+  for (const auto& cv : construct_curves(tr, polynomials)) {
+    std::vector<Make_x_monotone_result> objs;
+    make_x_monotone(cv, std::back_inserter(objs));
+    for (const auto& obj : objs)
+      if (const auto* xcv = std::get_if<Xcv>(&obj)) xcvs.push_back(*xcv);
+  }
+  return xcvs;
+}
+
 /*! adds a benchmark that applies `f` to every element of `v`, in `loops` passes, and accumulates the results
  * into a checksum.
  */
@@ -597,6 +613,79 @@ static void add_approximate(std::vector<Benchmark>& b, Input& in, const Options&
                f(xcv, r / 1000, std::back_inserter(pts), CGAL::Bbox_2(-r, -r, r, r));
                return pts.empty() ? 0 : 1;
              });
+
+    // a zoomed-in view, as in the drawing code: many arcs pass through the x-range of the view above or below it
+    const double z = r / 10;
+    add_loop(b, "approximate_zoomed", "Approximate_2 on all arcs within [-range/10,range/10]^2 (error range/10000)",
+             in.xcvs, opt.loops,
+             [f = static_cast<const Tr&>(*in.traits).approximate_2_object(), z](const Xcv& xcv) {
+               using Approximate_point_2 = typename Tr::Approximate_2::Approximate_point_2;
+               std::vector<Approximate_point_2> pts;
+               f(xcv, z / 1000, std::back_inserter(pts), CGAL::Bbox_2(-z, -z, z, z));
+               return pts.empty() ? 0 : 1;
+             });
+
+    // the first drawing of the arcs: arcs that have not been approximated before, with cold caches
+    b.push_back({"approximate_zoomed_fresh", "approximate_zoomed on new arcs of new curves (cold caches)",
+      [&in, z](Stopwatch& sw) -> std::uint64_t {
+        auto trp = make_traits<Tr>(true);
+        const auto xcvs = fresh_arcs(*trp, in.polynomials);
+        auto f = trp->approximate_2_object();
+        using Approximate_point_2 = typename Tr::Approximate_2::Approximate_point_2;
+        std::uint64_t h = xcvs.size();
+        sw.start();
+        for (const auto& xcv : xcvs) {
+          std::vector<Approximate_point_2> pts;
+          f(xcv, z / 1000, std::back_inserter(pts), CGAL::Bbox_2(-z, -z, z, z));
+          h = mix(h, pts.empty() ? 0 : 1);
+        }
+        sw.stop();
+        return h;
+      }});
+
+    // the bounding box of the bounded arcs, as computed by the drawing code to fit the initial view: by
+    // approximating the arcs (error range/50), or by constructing their bounding boxes
+    b.push_back({"scene_bbox_approximate", "the bounding box of the bounded new arcs by Approximate_2",
+      [&in, r](Stopwatch& sw) -> std::uint64_t {
+        auto trp = make_traits<Tr>(true);
+        const auto xcvs = fresh_arcs(*trp, in.polynomials);
+        auto f = trp->approximate_2_object();
+        using Approximate_point_2 = typename Tr::Approximate_2::Approximate_point_2;
+        CGAL::Bbox_2 bbox;
+        std::uint64_t n = 0;
+        sw.start();
+        for (const auto& xcv : xcvs) {
+          bool any = false;
+          f(xcv, r / 50, boost::make_function_output_iterator([&](const Approximate_point_2& p) {
+            bbox += p.bbox();
+            any = true;
+          }));
+          if (any) ++n;
+        }
+        sw.stop();
+        return n;
+      }});
+    b.push_back({"scene_bbox_construct", "the bounding box of the bounded new arcs by Construct_bbox_2",
+      [&in](Stopwatch& sw) -> std::uint64_t {
+        auto trp = make_traits<Tr>(true);
+        const auto xcvs = fresh_arcs(*trp, in.polynomials);
+        auto f = trp->construct_bbox_2_object();
+        auto ps_x = trp->parameter_space_in_x_2_object();
+        auto ps_y = trp->parameter_space_in_y_2_object();
+        CGAL::Bbox_2 bbox;
+        std::uint64_t n = 0;
+        sw.start();
+        for (const auto& xcv : xcvs) {
+          bool bounded = true;
+          for (auto ce : {MIN_END, MAX_END})
+            if (ps_x(xcv, ce) != CGAL::ARR_INTERIOR || ps_y(xcv, ce) != CGAL::ARR_INTERIOR) bounded = false;
+          if (! bounded) continue;
+          bbox += f(xcv);
+          ++n;
+        }
+        sw.stop();
+        return n;
+      }});
   }
 }
 
