@@ -78,9 +78,6 @@ struct Make_x_monotone_2 {
   //! type of curve arc
   using Arc_2 = typename Curved_kernel_via_analysis_2::Arc_2;
 
-  //! type of not necessarily x-monotone curve arc
-  using Non_x_monotone_arc_2 = typename Curved_kernel_via_analysis_2::Non_x_monotone_arc_2;
-
   //!@}
 
   //!\name Constructors
@@ -280,7 +277,6 @@ private:
     for (j = 0; j < n; j++) {
       ipair = cv_line.number_of_incident_branches(j);
       if (ipair.first == 0 && ipair.second == 0) {
-        //std::cout << "isolated point found\n";
         auto construct_point = m_curved_kernel->construct_point_2_object();
         *oi++ = Make_x_monotone_result(construct_point(x, curve, j));
       }

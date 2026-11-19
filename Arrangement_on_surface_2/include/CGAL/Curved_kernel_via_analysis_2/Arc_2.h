@@ -668,15 +668,6 @@ public:
   //! \name Shortcuts for code readability
   //!@{
 
-  //! tests whether this boundary type represents +/-oo
-  inline static bool is_infinite(/*CGAL::Arr_boundary_type bnd*/) { return false; }
-
-  //! tests whether this boundary type represents a singularity
-  inline static bool is_singular(/*CGAL::Arr_boundary_type bnd*/) { return false; }
-
-  //! tests whether this boundary type represents lying on discontinuity
-  inline static bool is_on_disc(/*CGAL::Arr_boundary_type bnd*/) { return false; }
-
   //! returns true if a parameter encodes an entity in the interior
   inline static bool is_interior(CGAL::Arr_parameter_space loc) { return (loc == CGAL::ARR_INTERIOR); }
 

@@ -27,7 +27,6 @@
 #include <CGAL/Arr_tags.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
-#include <CGAL/Curved_kernel_via_analysis_2/Non_x_monotone_arc_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curve_interval_arcno_cache.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 
@@ -55,9 +54,6 @@ public:
 
   //! type of curve that can be analyzed
   using Curve_2 = typename Curve_kernel_2::Curve_analysis_2;
-
-  //! type of non x-monotone arc on a curve that can be analyzed
-  using Non_x_monotone_arc_2 = internal::Non_x_monotone_arc_2<NewCKvA>;
 
   //! the multiplicity type
   using Multiplicity = unsigned int;

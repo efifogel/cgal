@@ -1163,13 +1163,6 @@ protected:
      * their finite endpoints (if any), for vertical arcs as well.
      */
 
-    /* CGAL::Bound_type bnd_x, bnd_y;
-     * CGAL::Bound_type bnd1_x = cv2.boundary_in_x(CGAL::ARR_MIN_END);
-     * CGAL::Bound_type bnd1_y = cv2.boundary_in_y(CGAL::ARR_MIN_END);
-     * CGAL::Bound_type bnd2_x = cv2.boundary_in_x(CGAL::ARR_MAX_END);
-     * CGAL::Bound_type bnd2_y = cv2.boundary_in_y(CGAL::ARR_MAX_END);
-     */
-
     // TODO do we mean location of is_finite?
     bool f2_min = (cv2._minpoint().location() == CGAL::ARR_INTERIOR);
     bool f2_max = (cv2._maxpoint().location() == CGAL::ARR_INTERIOR);
@@ -1181,49 +1174,8 @@ protected:
 
     while (1) {
       CGAL::Arr_parameter_space loc = cv1.location(end);
-      //bnd_x = boundary_in_x(end), bnd_y = boundary_in_y(end);
       if (loc != CGAL::ARR_INTERIOR) goto Lendloop;
       pt = cv1.curve_end(end);
-      // easy case: intersection at singularity doesn't require to
-      // compare x/y-coordinates
-      /* if (is_singular(bnd_x)) {
-       *   if (bnd1_x == bnd_x || bnd2_x == bnd_x) *oi++ = std::make_pair(pt, 0);
-       * }
-       * else if(is_singular(bnd_y)) {
-       *   if (bnd1_y == bnd_y || bnd2_y == bnd_y) *oi++ = std::make_pair(pt, 0);
-       * } else if(is_on_disc(bnd_x)) {
-
-    // CONFUSION: if bndx != bnd1_x should we compare ys at -oo
-    // or at +oo ? or is this true for discontinuity:
-    // 0th interval == the last interval ? (i.e. intervals are mirrored ?)
-    // what if both conditions are satisfied at a time ? duplicates ?
-                if(bnd1_x == CGAL::AFTER_DISCONTINUITY &&
-                    _compare_arc_numbers(cv2, bnd1_x) == CGAL::EQUAL)
-                    *oi++ = std::make_pair(pt, 0);
-
-                if(bnd2_x == CGAL::BEFORE_DISCONTINUITY &&
-                    _compare_arc_numbers(cv2, bnd2_x) == CGAL::EQUAL)
-                    *oi++ = std::make_pair(pt, 0);
-
-            } else if(is_on_disc(bnd_y)) {
-                  // disc in y: compare only x-coordinates !
-    // what if both conditions are satisfied at a time ? duplicates ?
-
-                if(bnd1_y == CGAL::AFTER_DISCONTINUITY &&
-                    kernel_2.compare_1_object()(pt.x(), _minpoint().x()) ==
-                        CGAL::EQUAL)
-                    *oi++ = std::make_pair(pt, 0);
-
-                if(bnd2_y == CGAL::BEFORE_DISCONTINUITY &&
-                    kernel_2.compare_1_object()(pt.x(), _maxpoint().x()) ==
-                        CGAL::EQUAL)
-                    *oi++ = std::make_pair(pt, 0);
-              // ordinar normal case:
-              // selection is exclusive since arcs cannot intersect twice
-              // at the same finite end-point
-              }
-              else
-      */
       if ((f2_min && pt == cv2._minpoint()) || (f2_max && pt == cv2._maxpoint())) *oi++ = std::make_pair(pt, 0);
 
     Lendloop:
@@ -1529,31 +1481,10 @@ protected:
         for (std::size_t i = 0; i < n; ++i) {
           const Coordinate_2& curr_xy = pts[i].first;
 
-#if 0
-          // EBEB: Disabled this test as curr_xy's curve
-          //       is not guaranteed to be wrt cv.curve()
-
-          CERR("check if arcnos match: " << curr_xy << "; arc = " << cv << "\n\n");
-          // this is the simpler test, thus we evaluate it first
-          if (cv.arcno() == curr_xy.arcno()) {
-            CERR("check if x-coordinate lies in interior: " << curr_xy << "; arc = " << cv << "\n\n");
-            // this is the more sophisticated test, thus second
-            if (this->is_in_x_range_interior(cv, curr_xy.x())) {
-              CERR("update y coordinates");
-
-              std::pair<Bound, Bound> xy_approx = this->curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
-
-              // adapt y-interval
-              ymin = (CGAL::min)(ymin, CGAL::to_double(xy_approx.first));
-              ymax = (CGAL::max)(ymax, CGAL::to_double(xy_approx.second));
-            }
-          }
-#else
-          // this is the more sophisticated test, thus second
+          // keep the candidates that lie on the arc, over the interior of its x-range
           if (this->is_in_x_range_interior(cv, curr_xy.x())) {
-            // TODO replace with is_on
             Point_2 curr_pt = this->_ckva()->construct_point_2_object()(curr_xy.x(), curr_xy.curve(), curr_xy.arcno());
-            if (this->_ckva()->compare_y_at_x_2_object()(curr_pt, cv) == CGAL::EQUAL) {
+            if (this->_ckva()->is_on_2_object()(curr_pt, cv)) {
               CERR("update y coordinates");
 
               std::pair<Bound, Bound> xy_approx = this->curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
@@ -1563,7 +1494,6 @@ protected:
               ymax = (CGAL::max)(ymax, CGAL::to_double(xy_approx.second));
             }
           }
-#endif
         }
       }
       cv.ptr()->m_bbox = CGAL::Bbox_2(xmin, ymin, xmax, ymax);
@@ -1670,7 +1600,6 @@ public:
     // avoid compiler warning
     (void)arc;
 
-    //CGAL::IO::set_pretty_mode(std::cerr);
     CERR("Construct_pt_on_arc: " << CGAL::to_double(x) << ", " << arcno << ", " << c.id() << "\narc = " << arc << "\n");
 
     //CGAL_assertion(c.id() == arc.curve().id());
@@ -2294,18 +2223,7 @@ public:
     // due to the order, we have to return the opposite
     if (cv2.is_vertical()) return CGAL::LARGER;
 
-    // Check singularity in y
-    if (cv1.is_singular()) CGAL_error_msg("Handling singularity in y is not yet implemented");
-
-    // vertical line immediately to the left of p: if p lies on boundary
-    // get the vertical line over the last interval; otherwise
-    // obtain the interval w.r.t. point's x-coordinate (this also valid
-    // for discontinuity in y)
-    /* if(bndp_x == CGAL::BEFORE_SINGULARITY || bndp_x == CGAL::BEFORE_DISCONTINUITY)
-     *   return _compare_arc_numbers(cv2, bndp_x);
-     * else
-     */
-
+    // compare the arc numbers over the interval immediately to the left of p
     CGAL::Comparison_result res = this->_compare_arc_numbers(cv1, cv2, CGAL::ARR_INTERIOR, p.x(), CGAL::NEGATIVE);
     CERR("result: " << res << "\n");
     return res;
@@ -2376,18 +2294,7 @@ public:
     // due to the order, we have to return the opposite
     if (cv2.is_vertical()) return CGAL::SMALLER;
 
-    if (cv1.is_singular()) { // singularity in y
-      CGAL_error_msg("Handling singularity in y is not yet implemented");
-    }
-
-    // vertical line immediately to the right of p: if p lies on boundary
-    // get the vertical line over the first interval; otherwise
-    // obtain the interval w.r.t. point's x-coordinate (this also valid
-    // for discontinuity in y)
-    /*if(bndp_x == CGAL::AFTER_SINGULARITY ||
-      bndp_x == CGAL::AFTER_DISCONTINUITY)
-      return _compare_arc_numbers(cv2, bndp_x);
-      else*/
+    // compare the arc numbers over the interval immediately to the right of p
     CGAL::Comparison_result res = this->_compare_arc_numbers(cv1, cv2, CGAL::ARR_INTERIOR, p.x(), CGAL::POSITIVE);
     CERR("result: " << res << "\n");
     return res;
@@ -3501,9 +3408,6 @@ public:
 
     // this curve end has boundary only in y
     CGAL_precondition(cv.is_on_bottom_top(cv.location(ce)));
-    if (cv.is_singular()) // the curve end goes to contraction => x-order
-      return CGAL::EQUAL; // doesn't matter
-
     CGAL::Comparison_result res = this->curve_kernel().compare_1_object()(p.x(), cv.curve_end_x(ce));
     CERR("result: " << res << "\n");
     return res;
@@ -3530,17 +3434,10 @@ public:
   result_type operator()(const Arc_2& cv1, CGAL::Arr_curve_end ce1, const Arc_2& cv2, CGAL::Arr_curve_end ce2) const {
     CERR("\ncompare_x_on_boundary: cv1: " << cv1 << "\n cv2: " << cv2 << "; end1: " << ce1 << "; end2: " << ce2
                                           << "\n");
-    /*CGAL::Arr_boundary_type bnd1 = boundary(end1),
-      bnd2 = cv2.boundary(ce2);*/
     CGAL_precondition_code(CGAL::Arr_parameter_space loc1 = cv1.location(ce1));
     CGAL_precondition_code(CGAL::Arr_parameter_space loc2 = cv2.location(ce2));
     CGAL_precondition(cv1.is_on_bottom_top(loc1));
     CGAL_precondition(cv2.is_on_bottom_top(loc2));
-
-    if (cv1.is_singular() != cv2.is_singular()) {
-      // only one curve end lies at singularity (another at +/-oo)
-      CGAL_error_msg("SINGULARITY + INF comparison is not yet implemented");
-    }
 
     CGAL::Comparison_result res = this->curve_kernel().compare_1_object()(cv1.curve_end_x(ce1), cv2.curve_end_x(ce2));
     CERR("result: " << res << "\n");
