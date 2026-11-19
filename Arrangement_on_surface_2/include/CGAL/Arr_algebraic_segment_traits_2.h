@@ -451,8 +451,7 @@ public:
   Construct_x_monotone_segment_2 construct_x_monotone_segment_2_object() const
   { return Construct_x_monotone_segment_2(curved_kernel()); }
 
-  class Construct_curve_2 :
-    public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
+  class Construct_curve_2 : public internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2> {
   public:
     using Base = internal::CKvA_2_functors::Curved_kernel_via_analysis_2_functor_base<CKvA_2>;
 
