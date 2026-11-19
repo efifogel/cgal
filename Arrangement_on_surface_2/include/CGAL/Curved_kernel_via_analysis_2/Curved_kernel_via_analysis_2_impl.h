@@ -105,11 +105,10 @@ public:
   /*! access to static Curve_interval_arcno_cache */
   const Curve_interval_arcno_cache& interval_arcno_cache() const { return m_interval_arcno_cache; }
 
-  /*! obtains the internal Curve_kernel_2 instance
-   *
-   * \return
+  /*! obtains the internal Curve_kernel_2 instance. Its functors are obtained through const member functions, and
+   * its caches are shared by its copies.
    */
-  Curve_kernel_2& kernel() const { return m_kernel; }
+  const Curve_kernel_2& kernel() const { return m_kernel; }
 
   //!@}
 
@@ -118,10 +117,10 @@ protected:
   //!@{
 
   //! an instance of \c Curve_kernel_2
-  mutable Curve_kernel_2 m_kernel;
+  Curve_kernel_2 m_kernel;
 
   //! an instance of \c Curve_interval_arcno_cache
-  mutable Curve_interval_arcno_cache m_interval_arcno_cache;
+  Curve_interval_arcno_cache m_interval_arcno_cache;
 
   //!@}
 

@@ -136,7 +136,7 @@ protected:
 
   /*! obtains the curve kernel of the curved kernel
    */
-  Curve_kernel_2& curve_kernel() const { return _ckva()->kernel(); }
+  const Curve_kernel_2& curve_kernel() const { return _ckva()->kernel(); }
 
   //!@}
 
