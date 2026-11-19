@@ -1472,6 +1472,7 @@ compile_and_run(test_insertion)
 compile_and_run(test_unbounded_rational_insertion)
 compile_and_run(test_unbounded_rational_direct_insertion)
 compile_and_run(test_unbounded_rational_aggregate_insertion)
+compile_and_run(test_unbounded_linear_overlap_insertion)
 compile_and_run(test_rational_function_traits_2)
 compile_and_run(test_iso_verts)
 
