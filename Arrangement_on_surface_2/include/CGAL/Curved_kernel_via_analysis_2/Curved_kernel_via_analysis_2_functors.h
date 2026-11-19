@@ -298,74 +298,6 @@ protected:
     return mult;
   }
 
-  /*! computes the next intersection of \c cv and \c cv2 right of \c p
-   * in lexicographical order and returns it through \c intersection
-   * argument
-   *
-   * intersect_right_of_point is not called when using sweep_curves() with
-   * intersection dictionary and without validation of internal structures
-   * (as is standard). Hence we can be lazy here for the moment
-   * without losing performance.
-   *
-   * \param cv2 The second arc
-   * \param p The minimal bound point
-   * \param intersection The next intersection
-   * \return \c true, if there is a next intersection and
-   *         \c intersection has been set properly, \c false otherwise
-   * \pre The arcs are not allowed to overlap
-   */
-  bool intersect_right_of_point(const Arc_2& cv, const Arc_2& cv2, const Point_2& p, Point_2& intersection) const {
-    CGAL_precondition(! this->_ckva()->do_overlap_2_object()(cv, cv2));
-
-    // TODO rewrite intersect_right_of_point (Pavel)
-    // use static member for Intersect, Left & Right
-    // with parameters for direction and where to stop
-    using Point_container = std::vector<std::pair<Point_2, int>>;
-    Point_container tmp;
-    this->_intersection_points(cv, cv2, std::back_inserter(tmp));
-    for (auto it = tmp.begin(); it != tmp.end(); it++) {
-      if (it->first > p) {
-        intersection = it->first;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /*! computes the next intersection of \c cv and \c cv2 left of \c p
-   * in lexicographical order and returns it through \c intersection
-   * argument
-   *
-   * intersect_right_of_point is not called when using sweep_curves() with
-   * intersection dictionary and without validation of internal structures
-   * (as is standard). Hence we can be lazy here for the moment
-   * without losing performance.
-   *
-   * \param cv2 The second arc
-   * \param p The maximal bound point
-   * \param intersection The next intersection
-   * \return \c true, if there is a next intersection
-   *         and \c intersection has been set properly, \c false otherwise
-   * \pre The arcs are not allowed to overlap
-   */
-  bool intersect_left_of_point(const Arc_2& cv, const Arc_2& cv2, const Point_2& p, Point_2& intersection) const {
-    CGAL_precondition(! this->_ckva()->do_overlap_2_object()(cv, cv2));
-
-    // TODO rewrite intersect_left_of_point (Pavel)
-    // use static member for Intersect, Left & Right
-    // with parameters for direction and where to stop
-    using Point_container = std::vector<std::pair<Point_2, int>>;
-    Point_container tmp;
-    this->_intersection_points(cv, cv2, std::back_inserter(tmp));
-    for (auto it = tmp.rbegin(); it != tmp.rend(); it++) {
-      if (it->first < p) {
-        intersection = it->first;
-        return true;
-      }
-    }
-    return false;
-  }
-
   /*! simplifies representation of \c cv and/or \c p in case they have
    *  non-coprime supporting curves.
    *
@@ -597,9 +529,6 @@ protected:
       auto cmp_xy = this->curve_kernel().compare_xy_2_object();
 
       for (int k = 0; k < cv_line.number_of_events(); k++) {
-        // TODO: replace by _compare_arc_numbers !! (Pavel)
-        // no way since _compare_arc_numbers compares only against cv arc
-
         Coordinate_2 tmp(x0, cv.curve(), k);
         bool res1 = true;
         bool res2 = true;
@@ -2665,6 +2594,18 @@ public:
    */
   result_type operator()(const Arc_2& xcv1, const Arc_2& xcv2, bool closed = true) const {
     CERR("\nintersect; cv1: " << xcv1 << ";\n cv2:" << xcv2 << "");
+
+    // arcs with disjoint x-ranges do not intersect
+    auto cmp_x = this->_ckva()->compare_x_2_object();
+    // determines whether the max end of an arc lies strictly to the left of the min end of another arc
+    auto is_left_of = [&](const Arc_2& cv1, const Arc_2& cv2) {
+      const Point_2& max1 = cv1._maxpoint();
+      const Point_2& min2 = cv2._minpoint();
+      if (max1.is_on_left_right() || min2.is_on_left_right()) return false; // an end at x = +-oo
+      return cmp_x(max1, min2) == CGAL::SMALLER;
+    };
+    if (is_left_of(xcv1, xcv2) || is_left_of(xcv2, xcv1)) return false;
+
     std::vector<Arc_2> arcs;
     if (this->_trim_if_overlapped(xcv1, xcv2, std::back_inserter(arcs))) {
       arcs.clear();
