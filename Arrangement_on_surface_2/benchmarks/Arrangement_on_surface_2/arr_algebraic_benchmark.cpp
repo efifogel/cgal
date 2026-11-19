@@ -68,6 +68,9 @@ int main() {
 #include <CGAL/Arr_naive_point_location.h>
 #include <CGAL/Arr_walk_along_line_point_location.h>
 #include <CGAL/Arr_trapezoid_ric_point_location.h>
+#include <CGAL/Draw_aos/Arr_bounded_renderer.h>
+#include <CGAL/Draw_aos/Arr_face_point_generator.h>
+#include <CGAL/Draw_aos/Arr_render_context.h>
 
 #include "bench_harness.hpp"
 
@@ -689,6 +692,33 @@ static void add_approximate(std::vector<Benchmark>& b, Input& in, const Options&
   }
 }
 
+/*! adds a benchmark that renders the arrangement within a view, as the drawing code (Draw_aos) does on every change
+ * of the view; the error is the size of a pixel of a view 1000 pixels wide. The checksum records the numbers of
+ * polyline points and triangles, which depend on the decisions of the renderer only.
+ */
+template <typename Tr>
+static void add_render(std::vector<Benchmark>& b, const std::string& name, const std::string& description, Input& in,
+                       double half_width) {
+  if constexpr (has_approximate<Tr>) {
+    b.push_back({name, description, [&in, half_width](Stopwatch& sw) -> std::uint64_t {
+        using Face_point_generator = CGAL::draw_aos::Arr_face_point_generator<Arr>;
+        const CGAL::Bbox_2 view(-half_width, -half_width, half_width, half_width);
+        const double error = 2 * half_width / 1000;
+        sw.start();
+        auto face_points = Face_point_generator()(*in.arr, error);
+        CGAL::draw_aos::Arr_render_context<Arr> ctx(*in.arr, error, face_points);
+        auto cache = CGAL::draw_aos::Arr_bounded_renderer<Arr>(ctx, view).render();
+        sw.stop();
+        // sums, as the order of the caches depends on the addresses of the features
+        std::uint64_t points = 0;
+        std::uint64_t triangles = 0;
+        for (const auto& hp : cache.halfedges()) points += hp.second.size();
+        for (const auto& fp : cache.faces()) triangles += fp.second.triangles.size();
+        return mix(points, triangles);
+      }});
+  }
+}
+
 static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
   std::vector<Benchmark> b;
   const Traits& tr = *in.traits;
@@ -870,6 +900,9 @@ static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
            });
 
   add_approximate<Traits>(b, in, opt);
+  add_render<Traits>(b, "render", "render the arrangement within [-range,range]^2 (Draw_aos)", in, opt.range);
+  add_render<Traits>(b, "render_zoomed", "render the arrangement within [-range/10,range/10]^2 (Draw_aos)", in,
+                     opt.range / 10);
 
   return b;
 }
