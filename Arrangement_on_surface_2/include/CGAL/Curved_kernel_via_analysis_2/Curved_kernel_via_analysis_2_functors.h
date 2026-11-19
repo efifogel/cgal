@@ -1299,9 +1299,11 @@ protected:
       low_idx = line.index();
       index_at_event_min = line.is_event();
       if (index_at_event_min) {
+        // An arc whose minimal end lies on the bottom or top boundary at low_x (a vertical asymptote) has no point
+        // over low_x; hence, the arcs do not intersect there (the curves might, through other branches), and the
+        // event is skipped.
         if ((cv1._minpoint().is_on_bottom_top() && low_x.x() == cv1._minpoint().x()) ||
             (cv2._minpoint().is_on_bottom_top() && low_x.x() == cv2._minpoint().x())) {
-          // hack: no intersection with asymptotic end
           low_idx++;
           index_at_event_min = false;
         }
@@ -1316,7 +1318,7 @@ protected:
         high_idx--;
       else if ((cv1._maxpoint().is_on_bottom_top() && high_x.x() == cv1._maxpoint().x()) ||
                (cv2._maxpoint().is_on_bottom_top() && high_x.x() == cv2._maxpoint().x())) {
-        // hack: no intersection with asymptotic end
+        // as above, for a maximal end over high_x
         high_idx--;
         index_at_event_max = false;
       }
