@@ -486,8 +486,7 @@ public:
       os << std::flush;
       break;
      case ::CGAL::IO::BINARY:
-      std::cerr << "BINARY format not yet implemented" << std::endl;
-      break;
+      CGAL_error_msg("the binary format is not supported");
      default:
       // ASCII
       os << "Point_2(";
