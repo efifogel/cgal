@@ -1396,7 +1396,7 @@ protected:
      default: CGAL_error();
     } // switch
 
-    return std::make_pair(CGAL::to_double(y_approx.first), CGAL::to_double(y_approx.second));
+    return std::make_pair(CGAL::to_interval(y_approx.first).first, CGAL::to_interval(y_approx.second).second);
   }
 
   CGAL::Bbox_2 bbox(const Arc_2& cv) const {
@@ -1410,7 +1410,8 @@ protected:
       double ymin = PINF; // correct as we modify shrink below
       double ymax = MINF; // correct as we modify shrink below
 
-      // TODO choose precision
+      // the bounds are rounded outwards, so any precision yields a box that contains the arc; a lower one is cheaper
+      // but looser
       long prec = 53;
 
       std::pair<double, double> y_dapprox;
@@ -1424,7 +1425,7 @@ protected:
         std::pair<Bound, Bound> x_approx =
           this->curve_kernel().approximate_absolute_1_object()(cv.curve_end_x(CGAL::ARR_MIN_END), prec);
 
-        xmin = CGAL::to_double(x_approx.first);
+        xmin = CGAL::to_interval(x_approx.first).first;
       }
       else {
         // left end can only lie on LEFT BOUNDARY
@@ -1447,7 +1448,7 @@ protected:
         std::pair<Bound, Bound> x_approx =
           this->curve_kernel().approximate_absolute_1_object()(cv.curve_end_x(CGAL::ARR_MAX_END), prec);
 
-        xmax = CGAL::to_double(x_approx.second);
+        xmax = CGAL::to_interval(x_approx.second).second;
       }
       else {
         // right end can only lie on RIGHT BOUNDARY
@@ -1470,11 +1471,16 @@ protected:
 
         std::vector<std::pair<Coordinate_2, Multiplicity_type>> pts;
 
-        // TODO can cv.curve()->polynomial be not squarefree?
-        this->curve_kernel().solve_2_object()(
-          cv.curve(),
-          this->curve_kernel().construct_curve_2_object()(CGAL::differentiate(cv.curve().polynomial_2(), 0)),
-          std::back_inserter(pts));
+        // the candidates are the points of the curve f = 0 where f_x vanishes. A factor of f that f_x shares (a
+        // horizontal line, or a multiple factor) is removed from f_x, as the two curves must not share a component.
+        using Polynomial_2 = typename Curve_analysis_2::Polynomial_2;
+        const Polynomial_2& f = cv.curve().polynomial_2();
+        Polynomial_2 fx = CGAL::differentiate(f, 0);
+        if (! CGAL::is_zero(fx))
+          fx = CGAL::integral_division_up_to_constant_factor(fx, CGAL::gcd_up_to_constant_factor(f, fx));
+        if (CGAL::total_degree(fx) > 0)
+          this->curve_kernel().solve_2_object()(cv.curve(), this->curve_kernel().construct_curve_2_object()(fx),
+                                                std::back_inserter(pts));
 
         const std::size_t n = pts.size();
         CERR("check candidates for y-extremal points: #" << n);
@@ -1490,8 +1496,8 @@ protected:
               std::pair<Bound, Bound> xy_approx = this->curve_kernel().approximate_absolute_y_2_object()(curr_xy, prec);
 
               // adapt y-interval
-              ymin = (CGAL::min)(ymin, CGAL::to_double(xy_approx.first));
-              ymax = (CGAL::max)(ymax, CGAL::to_double(xy_approx.second));
+              ymin = (CGAL::min)(ymin, CGAL::to_interval(xy_approx.first).first);
+              ymax = (CGAL::max)(ymax, CGAL::to_interval(xy_approx.second).second);
             }
           }
         }
@@ -2785,6 +2791,19 @@ private:
       xmax = (std::min)(xmax, bbox->xmax());
     }
     if (! (xmin < xmax)) return;
+
+    // an arc that lies above or below the bounding box is approximated by the top or bottom side of the box; this is
+    // known from the bounding box of the arc, which contains the arc and is cached in it, without sampling the arc
+    if (bbox != nullptr) {
+      const CGAL::Bbox_2 cv_bbox = this->_ckva()->construct_bbox_2_object()(cv);
+      const bool above = (cv_bbox.ymin() >= bbox->ymax());
+      if (above || (cv_bbox.ymax() <= bbox->ymin())) {
+        const double y = above ? bbox->ymax() : bbox->ymin();
+        pts.emplace_back(xmin, y);
+        pts.emplace_back(xmax, y);
+        return;
+      }
+    }
 
     const auto first = end_point(cv, CGAL::ARR_MIN_END, xmin, xmax, bbox);
     const auto last = end_point(cv, CGAL::ARR_MAX_END, xmax, xmin, bbox);
