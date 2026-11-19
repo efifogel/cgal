@@ -129,45 +129,14 @@ public:
   //!\name Static Member to provide CKvA instance
   //!@{
 
-  /*! obtains a default instance of \c Curved_kernel_via_analysis_2
+  /*! obtains the default instance of \c Curved_kernel_via_analysis_2 of the calling thread. (A traits that holds
+   * its own curved kernel does not use it.)
    *
-   * \return static instance of \c Curved_kernel_via_analysis_2
+   * \return the thread-local instance of \c Curved_kernel_via_analysis_2
    */
-  static NewCKvA& instance() { return set_instance(_set_instance()); }
-
-  /*! sets static instance of \c Curved_kernel_via_analysis_2 to \c ckva
-   *
-   * \param ckva The instance that should be stored
-   * \return the stored instance
-   */
-  static NewCKvA& set_instance(const NewCKvA& ckva) {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, binstance);
-
-    if (&ckva == &_reset_instance()) {
-      instance = binstance;
-    }
-    else if (&ckva != &_set_instance()) {
-      binstance = instance;
-      instance = ckva;
-    }
-    return instance;
-  }
-
-  /*! resets static instance to original one */
-  static void reset_instance() { set_instance(_reset_instance()); }
-
-private:
-  /*! sets instance to default for internal purposes */
-  static NewCKvA& _set_instance() {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    return instance;
-  }
-
-  /*! sets instance to default for internal purposes */
-  static NewCKvA& _reset_instance() {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    return instance;
+  static NewCKvA& instance() {
+    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, s_instance);
+    return s_instance;
   }
 
   //!@}
