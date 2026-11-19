@@ -28,8 +28,6 @@
 #include <vector>
 
 #include <CGAL/Arr_enums.h>
-
-// TODO remove polynomial_traits
 #include <CGAL/assertions.h>
 #include <CGAL/Polynomial_traits_d.h>
 
@@ -113,9 +111,7 @@ struct Make_x_monotone_2 {
   OutputIterator operator()(Curve_analysis_2 curve, OutputIterator oi) const {
     using Make_x_monotone_result = std::variant<Point_2, Arc_2>;
 
-    // use CGAL::Total_degree ?
-    using Polynomial_2 = typename Curve_analysis_2::Polynomial_2;
-    if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(curve.polynomial_2()) < 1) return oi;
+    if (CGAL::total_degree(curve.polynomial_2()) < 1) return oi;
 
     auto construct_point = m_curved_kernel->construct_point_2_object();
     const int total_events = curve.number_of_status_lines_with_event();

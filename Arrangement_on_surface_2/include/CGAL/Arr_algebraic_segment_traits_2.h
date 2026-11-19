@@ -227,8 +227,7 @@ public:
       const internal::Make_x_monotone_2<CKvA_2> make_x_monotone(this->_ckva());
       auto new_point = [&](const Algebraic_real_1& x, int j) { return construct_point(x, cv, j); };
 
-      CGAL_precondition(typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(cv.polynomial_2()) > 0);
-      if (typename CGAL::Polynomial_traits_d<Polynomial_2>::Total_degree()(cv.polynomial_2()) < 1) return out;
+      if (CGAL::total_degree(cv.polynomial_2()) < 1) return out;
       const int total_events = cv.number_of_status_lines_with_event();
 
       // Find the arc that contains p, testing the candidates in the order of the decomposition. The arc is the
