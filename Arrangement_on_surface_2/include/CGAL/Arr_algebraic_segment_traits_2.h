@@ -58,11 +58,16 @@ public:
   using Shared_ckva = std::shared_ptr<CKvA_2>;
 
   /*! constructs default. The functors of this traits use the curved kernel of the calling thread, that is,
-   * \c CKvA_2::instance().
+   * \c CKvA_2::instance(), and thus share its caches with all default-constructed traits of the thread. That curved
+   * kernel is destroyed when the thread exits; hence, objects constructed with such a traits (curves, points,
+   * arrangements) must not be used after the thread that constructed them exits.
    */
   Arr_algebraic_segment_traits_2() = default;
 
-  /*! constructs from a curved kernel, which all functors obtained from this traits use.
+  /*! constructs from a curved kernel, which all functors obtained from this traits use. A curved kernel with caches
+   * of its own is obtained by `std::make_shared<CKvA_2>(std::make_shared<typename CKvA_2::Curve_kernel_2>())`. Such a
+   * traits does not depend on the calling thread: objects constructed with it can be used in another thread, also
+   * after the thread that constructed them exits (but not concurrently).
    */
   explicit Arr_algebraic_segment_traits_2(Shared_ckva ckva) : m_ckva(std::move(ckva)) {}
 

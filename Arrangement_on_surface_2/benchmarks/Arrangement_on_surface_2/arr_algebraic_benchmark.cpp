@@ -103,24 +103,30 @@ constexpr bool has_approximate<Tr, std::void_t<decltype(std::declval<const Tr&>(
 
 /*! constructs a traits; with `cold`, if supported, one that holds a fresh curved kernel with empty caches.
  *
- * A default-constructed curved kernel copies the static curve kernel, and thus shares its caches; hence the
- * curved kernel is constructed from a new curve kernel. The curved kernel stores a copy of the curve kernel,
- * which shares the caches of the original, and the caches refer back to the original; the original must
- * therefore outlive the curved kernel. Both are kept in one block, to which the returned pointer refers.
+ * A default-constructed curved kernel uses the curve kernel of the thread, and thus shares its caches; hence the
+ * curved kernel is constructed from a new curve kernel, whose ownership it shares. (Older trees lack that
+ * constructor; there, the curved kernel stores a copy of the curve kernel, which shares the caches of the original,
+ * and the caches refer back to the original, which must therefore outlive the curved kernel; both are kept in one
+ * block, to which the returned pointer refers.)
  */
 template <typename Tr>
 std::shared_ptr<Tr> make_traits(bool cold) {
   if constexpr (has_own_kernel<Tr>) {
     using CKvA_2 = typename Tr::CKvA_2;
     using Curve_kernel_2 = typename CKvA_2::Curve_kernel_2;
-    struct Fresh_kernels {
-      Curve_kernel_2 curve_kernel;
-      CKvA_2 curved_kernel;
-      Fresh_kernels() : curved_kernel(curve_kernel) {}
-    };
     if (cold) {
-      auto kernels = std::make_shared<Fresh_kernels>();
-      return std::make_shared<Tr>(std::shared_ptr<CKvA_2>(kernels, &kernels->curved_kernel));
+      if constexpr (std::is_constructible_v<CKvA_2, std::shared_ptr<Curve_kernel_2>>) {
+        return std::make_shared<Tr>(std::make_shared<CKvA_2>(std::make_shared<Curve_kernel_2>()));
+      }
+      else {
+        struct Fresh_kernels {
+          Curve_kernel_2 curve_kernel;
+          CKvA_2 curved_kernel;
+          Fresh_kernels() : curved_kernel(curve_kernel) {}
+        };
+        auto kernels = std::make_shared<Fresh_kernels>();
+        return std::make_shared<Tr>(std::shared_ptr<CKvA_2>(kernels, &kernels->curved_kernel));
+      }
     }
   }
   return std::make_shared<Tr>();

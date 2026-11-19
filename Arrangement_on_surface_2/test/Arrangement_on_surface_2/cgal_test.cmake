@@ -1466,6 +1466,7 @@ test_algebraic_traits_gmp()
 test_algebraic_traits_leda()
 compile_and_run(test_algebraic_bbox)
 compile_and_run(test_algebraic_asymptote_intersection)
+compile_and_run(test_algebraic_own_kernel)
 
 compile_and_run(test_data_traits)
 

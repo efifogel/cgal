@@ -22,6 +22,9 @@
  * Defines points and arcs supported by curves that can be analyzed.
  */
 
+#include <memory>
+#include <utility>
+
 #include <CGAL/tags.h>
 #include <CGAL/tss.h>
 #include <CGAL/Arr_tags.h>
@@ -91,11 +94,21 @@ public:
   //! \name Constructors
   //!@{
 
-  //! constructs default
-  Curved_kernel_via_analysis_2_base() : m_kernel(Curve_kernel_2()) {}
+  //! constructs using (a copy of) the curve kernel of the calling thread
+  Curved_kernel_via_analysis_2_base() : m_kernel(Curve_kernel_2::get_static_instance()) {}
 
-  //! constructs using specific Curve_kernel_2 instance \c kernel
-  Curved_kernel_via_analysis_2_base(const Curve_kernel_2& kernel) : m_kernel(kernel) {}
+  /*! constructs using (a copy of) the curve kernel \c kernel, sharing its ownership. The copy shares the caches of
+   * \c kernel, which refer back to \c kernel; the shared ownership keeps \c kernel alive.
+   */
+  explicit Curved_kernel_via_analysis_2_base(std::shared_ptr<Curve_kernel_2> kernel) :
+    m_kernel_owner(std::move(kernel)),
+    m_kernel(dereference(m_kernel_owner))
+  {}
+
+  /*! constructs using a copy of \c kernel. The copy shares the caches of \c kernel, which refer back to \c kernel;
+   * hence, \c kernel must outlive this object.
+   */
+  explicit Curved_kernel_via_analysis_2_base(const Curve_kernel_2& kernel) : m_kernel(kernel) {}
 
   //!@}
 
@@ -116,7 +129,16 @@ protected:
   //!\name private members
   //!@{
 
-  //! an instance of \c Curve_kernel_2
+  //! obtains the curve kernel that \c kernel points to
+  static const Curve_kernel_2& dereference(const std::shared_ptr<Curve_kernel_2>& kernel) {
+    CGAL_precondition(kernel != nullptr);
+    return *kernel;
+  }
+
+  //! the owner of the curve kernel that the caches of \c m_kernel refer back to; empty if it is not owned
+  std::shared_ptr<Curve_kernel_2> m_kernel_owner;
+
+  //! a copy of the curve kernel, which shares its caches (kept by value to save an indirection)
   Curve_kernel_2 m_kernel;
 
   //! an instance of \c Curve_interval_arcno_cache
@@ -184,13 +206,23 @@ public:
   //! \name Constructors
   //!@{
 
-  /*! constructs default. */
-  Curved_kernel_via_analysis_2() : Base_kernel(Curve_kernel_2::get_static_instance()) {}
+  /*! constructs default; uses the curve kernel of the calling thread, and thus shares its caches. */
+  Curved_kernel_via_analysis_2() {}
 
-  /*! constructs from \c kernel
+  /*! constructs from \c kernel, sharing its ownership. For example, `std::make_shared<Curve_kernel_2>()` yields a
+   * curved kernel with caches of its own.
    *
-   * \param kernel Kernel to use internally
+   * \param kernel the curve kernel to use internally
    */
+  explicit Curved_kernel_via_analysis_2(std::shared_ptr<Curve_kernel_2> kernel) : Base_kernel(std::move(kernel)) {}
+
+  /*! constructs from a copy of \c kernel. The copy shares the caches of \c kernel, which refer back to \c kernel;
+   * hence, \c kernel must outlive this object.
+   *
+   * \deprecated use the constructor that takes a `std::shared_ptr<Curve_kernel_2>`.
+   */
+  CGAL_DEPRECATED_MSG("the curve kernel must outlive the curved kernel; use the constructor that takes a "
+                      "std::shared_ptr<Curve_kernel_2>")
   Curved_kernel_via_analysis_2(const Curve_kernel_2& kernel) : Base_kernel(kernel) {}
 
   //!@}
