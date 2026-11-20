@@ -149,6 +149,16 @@ void Arrangement_zone_2<Arrangement, ZoneVisitor>::compute_zone() {
       // overlaps the curve associated with this edge.
       m_intersect_he = m_arr.non_const_handle(*hh);
 
+      // The unbounded left end of the curve coincides with the left end-vertex
+      // of this edge, which lies on the open boundary, and the overlap starts
+      // at this vertex. Set it as the left vertex, so that the visitor does
+      // not attempt to split the edge at the left endpoint of the overlap,
+      // which does not exist.
+      Vertex_handle he_left_v =
+        (m_intersect_he->direction() == ARR_LEFT_TO_RIGHT) ?
+        m_intersect_he->source() : m_intersect_he->target();
+      if (he_left_v->is_at_open_boundary()) m_left_v = he_left_v;
+
       Arr_parameter_space dummy;
       auto obj = _compute_next_intersection(m_intersect_he, false, dummy);
       m_overlap_cv = std::get<X_monotone_curve_2>(*obj);
