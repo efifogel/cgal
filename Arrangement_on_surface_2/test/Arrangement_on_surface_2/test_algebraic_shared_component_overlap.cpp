@@ -7,7 +7,8 @@
 // the arcs do not overlap (unless Do_overlap_2 had been applied to the same arcs before, which simplifies their
 // supporting curves). Every pair of arcs is intersected in both orders, each time with arcs that are constructed anew;
 // the result must be an overlap exactly when Do_overlap_2 reports one, and the intersection points must lie on both
-// arcs.
+// arcs. Finally, the operations must not modify the arcs: the supporting curve of every arc must remain the curve that
+// the arc was constructed from (the simplification of supporting curves that share a component is kept apart).
 
 #include <CGAL/config.h>
 #include <iostream>
@@ -45,7 +46,7 @@ int main() {
   auto do_overlap = traits.curved_kernel()->do_overlap_2_object();
   auto is_on = traits.is_on_2_object();
 
-  // obtains new x-monotone arcs of the curve of a polynomial (Do_overlap_2 modifies the arcs it is applied to)
+  // obtains new x-monotone arcs of the curve of a polynomial
   auto arcs = [&](const Polynomial_2& p) {
     std::vector<std::variant<Point_2, X_monotone_curve_2>> objs;
     make_x_monotone(construct_curve(p), std::back_inserter(objs));
@@ -121,6 +122,35 @@ int main() {
                   << tc.overlaps << std::endl;
         ok = false;
       }
+    }
+  }
+
+  // the operations must not modify the arcs (or their copies)
+  for (const auto& tc : cases) {
+    const Traits::Curve_2 cg = construct_curve(tc.g);
+    const Traits::Curve_2 cf = construct_curve(tc.f);
+    const auto ag = arcs(tc.g);
+    const auto af = arcs(tc.f);
+    const std::vector<X_monotone_curve_2> copies_g(ag);
+    const std::vector<X_monotone_curve_2> copies_f(af);
+    auto equal = traits.equal_2_object();
+    for (const auto& xg : ag) {
+      for (const auto& xf : af) {
+        std::vector<Intersection_result> res;
+        intersect(xg, xf, std::back_inserter(res));
+        do_overlap(xf, xg);
+        equal(xg, xf);
+      }
+    }
+    for (std::size_t i = 0; i < ag.size(); ++i) {
+      if (ag[i].curve().is_identical(cg) && copies_g[i].curve().is_identical(cg)) continue;
+      std::cerr << "Error: " << tc.name << ": an arc of the first curve changed its supporting curve" << std::endl;
+      ok = false;
+    }
+    for (std::size_t j = 0; j < af.size(); ++j) {
+      if (af[j].curve().is_identical(cf) && copies_f[j].curve().is_identical(cf)) continue;
+      std::cerr << "Error: " << tc.name << ": an arc of the second curve changed its supporting curve" << std::endl;
+      ok = false;
     }
   }
 

@@ -282,45 +282,74 @@ protected:
     CGAL_expensive_precondition(this->_ckva()->compare_y_at_x_2_object()(p, cv) == CGAL::EQUAL &&
                                 this->_ckva()->compare_y_at_x_2_object()(p, cv2) == CGAL::EQUAL);
 
-    this->simplify(cv, cv2);
-    CGAL_precondition(! cv.curve().is_identical(cv2.curve()));
-    if (cv.is_vertical() || cv2.is_vertical()) {
-      CGAL_assertion(! (cv.is_vertical() && cv2.is_vertical()));
+    auto [a1, a2] = this->simplified(cv, cv2);
+    CGAL_precondition(! a1.curve().is_identical(a2.curve()));
+    if (a1.is_vertical() || a2.is_vertical()) {
+      CGAL_assertion(! (a1.is_vertical() && a2.is_vertical()));
       return 1;
     }
 
-    Curve_pair_analysis_2 cpa_2 = this->curve_kernel().construct_curve_pair_2_object()(cv.curve(), cv2.curve());
+    Curve_pair_analysis_2 cpa_2 = this->curve_kernel().construct_curve_pair_2_object()(a1.curve(), a2.curve());
 
     typename Curve_pair_analysis_2::Status_line_1 cpv_line = cpa_2.status_line_for_x(p.x());
 
     CGAL_precondition(cpv_line.is_intersection());
-    int j = cpv_line.event_of_curve(this->arcno(cv, p.x()), cv.curve());
+    int j = cpv_line.event_of_curve(this->arcno(a1, p.x()), a1.curve());
     int mult = cpv_line.multiplicity_of_intersection(j);
 
     CGAL_postcondition(mult > 0);
     return mult;
   }
 
-  /*! simplifies representation of \c cv1 and/or \c cv2 in case they have
-   * non-coprime supporting curves.
+  /*! obtains the arcs \c cv1 and \c cv2 with their supporting curves simplified, in case these share a component:
+   * each supporting curve is replaced by the component that the arc lies on, so that the supporting curves of the
+   * obtained arcs are either identical or coprime. The given arcs keep their supporting curves and arc numbers; a
+   * simplified arc is a copy with a representation of its own, kept in the cache of the curved kernel (keyed by the
+   * arc and the other supporting curve), so that it is computed once.
    *
-   *  \return \c true if simplification took place, \c false otherwise
+   * \return references to the given arcs, or to their simplified copies; they remain valid as long as the given
+   *         arcs and the curved kernel do
    */
-  bool simplify(const Arc_2& cv1, const Arc_2& cv2) const {
-    if (cv1.curve().is_identical(cv2.curve())) return false;
+  std::pair<const Arc_2&, const Arc_2&> simplified(const Arc_2& cv1, const Arc_2& cv2) const {
+    using Result = std::pair<const Arc_2&, const Arc_2&>;
+    if (cv1.curve().is_identical(cv2.curve())) return Result(cv1, cv2);
+
+    // the simplifications computed before, if any
+    const std::optional<Arc_2>* s1 = nullptr;
+    const std::optional<Arc_2>* s2 = nullptr;
+    if (const auto* cache = this->_ckva()->arc_simplification_cache_if_any()) {
+      s1 = cache->find(cv1, cv2.curve());
+      s2 = cache->find(cv2, cv1.curve());
+      if (s1 != nullptr && s2 != nullptr) return Result(*s1 ? **s1 : cv1, *s2 ? **s2 : cv2);
+    }
+
     std::vector<Curve_analysis_2> parts_of_f;
     std::vector<Curve_analysis_2> parts_of_g;
     std::vector<Curve_analysis_2> common;
+    if (! this->curve_kernel().decompose_2_object()(cv1.curve(), cv2.curve(), std::back_inserter(parts_of_f),
+                                                    std::back_inserter(parts_of_g), std::back_inserter(common)))
+      return Result(cv1, cv2);   // coprime supporting curves (not cached)
+    CGAL_assertion((parts_of_f.size() == 1 || parts_of_g.size() == 1) && common.size() == 1);
 
-    if (this->curve_kernel().decompose_2_object()(cv1.curve(), cv2.curve(), std::back_inserter(parts_of_f),
-                                            std::back_inserter(parts_of_g), std::back_inserter(common))) {
-      CGAL_assertion((parts_of_f.size() == 1 || parts_of_g.size() == 1) && common.size() == 1);
-      auto construct_curve_pair = this->curve_kernel().construct_curve_pair_2_object();
-      if (parts_of_f.size() == 1) this->_simplify_by(cv1, construct_curve_pair(parts_of_f[0], common[0]));
-      if (parts_of_g.size() == 1) this->_simplify_by(cv2, construct_curve_pair(parts_of_g[0], common[0]));
-      return true;
-    }
-    return false;
+    // simplifies an arc (unless it lies on the common component), and caches the result
+    auto& cache = this->_ckva()->arc_simplification_cache();
+    auto simplify_one = [&](const Arc_2& cv, const Curve_analysis_2& other, const std::optional<Arc_2>* cached,
+                            const std::vector<Curve_analysis_2>& parts) -> const Arc_2& {
+      if (cached == nullptr) {
+        std::optional<Arc_2> res;
+        if (parts.size() == 1) {
+          Arc_2 a(cv);
+          a.copy_on_write();
+          this->_simplify_by(a, this->curve_kernel().construct_curve_pair_2_object()(parts[0], common[0]));
+          res = std::move(a);
+        }
+        cached = &cache.insert(cv, other, std::move(res));
+      }
+      return *cached ? **cached : cv;
+    };
+    const Arc_2& a1 = simplify_one(cv1, cv2.curve(), s1, parts_of_f);
+    const Arc_2& a2 = simplify_one(cv2, cv1.curve(), s2, parts_of_g);
+    return Result(a1, a2);
   }
 
   Arc_2 _trim(const Arc_2& cv, const Point_2& p, const Point_2& q) const {
@@ -602,9 +631,9 @@ protected:
                                                CGAL::Sign perturb = CGAL::ZERO) const {
     CGAL_precondition(! cv.is_on_bottom_top(where));
     CGAL_assertion(true);
-    this->simplify(cv, cv2);
-    if (cv.curve().is_identical(cv2.curve())) return CGAL::sign(cv.arcno() - cv2.arcno());
-    return this->_compare_coprime(cv, cv2, where, x0, perturb);
+    auto [a1, a2] = this->simplified(cv, cv2);
+    if (a1.curve().is_identical(a2.curve())) return CGAL::sign(a1.arcno() - a2.arcno());
+    return this->_compare_coprime(a1, a2, where, x0, perturb);
   }
 
   /*! computes vertical ordering of \c cv and \c cv2
@@ -965,19 +994,19 @@ protected:
       // check for x-coordinates equality
       if (this->_ckva()->compare_x_2_object()(cv._minpoint(), cv2._minpoint()) != CGAL::EQUAL) return false;
 
-      this->simplify(cv, cv2);
+      auto [a1, a2] = this->simplified(cv, cv2);
       // coprime support => no overlaps
-      if (! cv.curve().is_identical(cv2.curve())) return false;
+      if (! a1.curve().is_identical(a2.curve())) return false;
 
       // LARGER source and smaller target
-      Point_2 src = (this->_same_arc_compare_xy(cv, cv._minpoint(), cv2._minpoint(), true) == CGAL::LARGER ?
-                     cv._minpoint() : cv2._minpoint());
-      Point_2 tgt = (this->_same_arc_compare_xy(cv, cv._maxpoint(), cv2._maxpoint(), true) == CGAL::SMALLER ?
-                     cv._maxpoint() : cv2._maxpoint());
+      Point_2 src = (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._minpoint(), true) == CGAL::LARGER ?
+                     a1._minpoint() : a2._minpoint());
+      Point_2 tgt = (this->_same_arc_compare_xy(a1, a1._maxpoint(), a2._maxpoint(), true) == CGAL::SMALLER ?
+                     a1._maxpoint() : a2._maxpoint());
       // vertical arcs do not overlap
-      if (this->_same_arc_compare_xy(cv, src, tgt, true) != CGAL::SMALLER) return false;
+      if (this->_same_arc_compare_xy(a1, src, tgt, true) != CGAL::SMALLER) return false;
       // construct a common part
-      *oi++ = (this->_replace_endpoints(cv, src, tgt, -1, -1).first);
+      *oi++ = (this->_replace_endpoints(a1, src, tgt, -1, -1).first);
       return true;
     }
     // ask for joint x-range of two arcs
@@ -989,14 +1018,14 @@ protected:
     // If the supporting curves share a component, replace each supporting curve by the part that the arc lies on
     // (the common component or the rest of the curve), as in the vertical case. Then the supporting curves are either
     // identical or coprime (the curves are square free).
-    this->simplify(cv, cv2);
-    if (cv.curve().is_identical(cv2.curve())) {
+    auto [a1, a2] = this->simplified(cv, cv2);
+    if (a1.curve().is_identical(a2.curve())) {
       // arcnos are not equal => no overlaps
-      if (cv.arcno() != cv2.arcno()) return false;
-      int a_min = (src.is_on_left_right() ? -1 : this->arcno(cv, src.x()));
-      int a_max = (tgt.is_on_left_right() ? -1 : this->arcno(cv, tgt.x()));
+      if (a1.arcno() != a2.arcno()) return false;
+      int a_min = (src.is_on_left_right() ? -1 : this->arcno(a1, src.x()));
+      int a_max = (tgt.is_on_left_right() ? -1 : this->arcno(a1, tgt.x()));
       // construct a common  part
-      *oi++ = this->_replace_endpoints(cv, src, tgt, a_min, a_max).first;
+      *oi++ = this->_replace_endpoints(a1, src, tgt, a_min, a_max).first;
       return true;
     }
 
@@ -1023,11 +1052,11 @@ protected:
     // curve => only end-point intersections
 
     CERR("\nintersection_points\n");
-    this->simplify(cv1, cv2);
-    if (cv1.curve().is_identical(cv2.curve())) return this->_intersect_at_endpoints(cv1, cv2, oi);
+    auto [a1, a2] = this->simplified(cv1, cv2);
+    if (a1.curve().is_identical(a2.curve())) return this->_intersect_at_endpoints(a1, a2, oi);
 
     // else general case: distinct supporting curves
-    return this->_intersect_coprime_support(cv1, cv2, oi);
+    return this->_intersect_coprime_support(a1, a2, oi);
   }
 
   /*! computes intersection of two arcs meeting only at their curve ends.
@@ -2260,19 +2289,19 @@ public:
     // only one of the arcs is vertical => not equal
     if (cv1.is_vertical() != cv2.is_vertical()) return false;
 
-    this->simplify(cv1, cv2);
+    auto [a1, a2] = this->simplified(cv1, cv2);
     // distinct supporting curves implies inequality, provided the
     // coprimality condition is satisfied
-    if (! cv1.curve().is_identical(cv2.curve())) return false;
+    if (! a1.curve().is_identical(a2.curve())) return false;
 
     // here either both or none of the arcs are vertical, check for arcnos
     // equality
-    if (! cv1.is_vertical() && cv1.arcno() != cv2.arcno()) return false;
+    if (! a1.is_vertical() && a1.arcno() != a2.arcno()) return false;
 
     // otherwise compare respective curve ends: supporting curves and
     // arcnos are equal => the curve ends belong to the same arc
-    return ((this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._minpoint()) == CGAL::EQUAL &&
-             this->_same_arc_compare_xy(cv1, cv1._maxpoint(), cv2._maxpoint()) == CGAL::EQUAL));
+    return ((this->_same_arc_compare_xy(a1, a1._minpoint(), a2._minpoint()) == CGAL::EQUAL &&
+             this->_same_arc_compare_xy(a1, a1._maxpoint(), a2._maxpoint()) == CGAL::EQUAL));
   }
 };
 
@@ -2308,44 +2337,44 @@ public:
     CERR("\ndo_overlap\n");
     if (cv1.is_identical(cv2)) return true;
 
-    this->simplify(cv1, cv2);
+    auto [a1, a2] = this->simplified(cv1, cv2);
     // arcs with coprime support do not overlap
-    if (! cv1.curve().is_identical(cv2.curve())) return false;
+    if (! a1.curve().is_identical(a2.curve())) return false;
 
-    if (cv1.is_vertical() != cv2.is_vertical()) {
+    if (a1.is_vertical() != a2.is_vertical()) {
       return false; // only one arc is vertical => can't overlap
     }
-    if (cv1.is_vertical()) { // both arcs are vertical
+    if (a1.is_vertical()) { // both arcs are vertical
       // check for x-coordinates equality
-      if (this->curve_kernel().compare_1_object()(cv1._minpoint().x(), cv2._minpoint().x()) != CGAL::EQUAL)
+      if (this->curve_kernel().compare_1_object()(a1._minpoint().x(), a2._minpoint().x()) != CGAL::EQUAL)
         return false;
 
       // compare y-coordinates of min curve ends
-      switch (this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._minpoint(), true)) {
+      switch (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._minpoint(), true)) {
        case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
        case CGAL::SMALLER: // this->source < cv2->source
         // check whether this->target > cv2->source
-        return (this->_same_arc_compare_xy(cv1, cv1._maxpoint(), cv2._minpoint(), true) == CGAL::LARGER);
+        return (this->_same_arc_compare_xy(a1, a1._maxpoint(), a2._minpoint(), true) == CGAL::LARGER);
 
        case CGAL::LARGER: // this->source> cv2->source
         // check whether this->source < cv2->target
-        return (this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._maxpoint(), true) == CGAL::SMALLER);
+        return (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._maxpoint(), true) == CGAL::SMALLER);
       }
     }
     // processing non-vertical arcs
-    if (cv1.arcno() != cv2.arcno()) return false;
+    if (a1.arcno() != a2.arcno()) return false;
 
     /* At this point, we have two non-vertical arcs supported by the same
      * curve with equal arc numbers in their interior. They do overlap if
      * their x-ranges overlap. Compare only x-coordinates */
-    switch (this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._minpoint(), false, true)) {
+    switch (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._minpoint(), false, true)) {
      case CGAL::EQUAL: return true;  // this->source == cv2->source => overlap !
      case CGAL::SMALLER: // this->source < cv2->source
       // check whether this->target > cv2->source
-      return (this->_same_arc_compare_xy(cv1, cv1._maxpoint(), cv2._minpoint(), false, true) == CGAL::LARGER);
+      return (this->_same_arc_compare_xy(a1, a1._maxpoint(), a2._minpoint(), false, true) == CGAL::LARGER);
      case CGAL::LARGER: // this->source > cv2->source
       // check whether this->source < cv2->target
-      return (this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._maxpoint(), false, true) == CGAL::SMALLER);
+      return (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._maxpoint(), false, true) == CGAL::SMALLER);
     }
     CGAL_error_msg("bogus comparison result");
     return false;
@@ -2946,7 +2975,7 @@ public:
   void operator()(const Arc_2& cv1, const Arc_2& cv2, Arc_2& c) const {
     CERR("merge\n");
     CGAL_precondition(this->_ckva()->are_mergeable_2_object()(cv1, cv2));
-    this->simplify(cv1, cv2);
+    auto [a1, a2] = this->simplified(cv1, cv2);
 
     Point_2 src;
     Point_2 tgt;
@@ -2954,15 +2983,15 @@ public:
     int arcno_t = -1;
     bool replace_src; // true if cv2 < *this otherwise *this arc < cv2 arc
     // arcs are mergeable => they have one common finite end-point
-    replace_src = (this->_same_arc_compare_xy(cv1, cv1._minpoint(), cv2._maxpoint()) == CGAL::EQUAL);
-    src = (replace_src ? cv2._minpoint() : cv1._minpoint());
-    tgt = (replace_src ? cv1._maxpoint() : cv2._maxpoint());
+    replace_src = (this->_same_arc_compare_xy(a1, a1._minpoint(), a2._maxpoint()) == CGAL::EQUAL);
+    src = (replace_src ? a2._minpoint() : a1._minpoint());
+    tgt = (replace_src ? a1._maxpoint() : a2._maxpoint());
 
-    if (! cv1.is_vertical()) {
-      arcno_s = (replace_src ? cv2.arcno(CGAL::ARR_MIN_END) : cv1.arcno(CGAL::ARR_MIN_END));
-      arcno_t = (replace_src ? cv1.arcno(CGAL::ARR_MAX_END) : cv2.arcno(CGAL::ARR_MAX_END));
+    if (! a1.is_vertical()) {
+      arcno_s = (replace_src ? a2.arcno(CGAL::ARR_MIN_END) : a1.arcno(CGAL::ARR_MIN_END));
+      arcno_t = (replace_src ? a1.arcno(CGAL::ARR_MAX_END) : a2.arcno(CGAL::ARR_MAX_END));
     }
-    Arc_2 arc = this->_replace_endpoints(cv1, src, tgt, arcno_s, arcno_t).first;
+    Arc_2 arc = this->_replace_endpoints(a1, src, tgt, arcno_s, arcno_t).first;
     // arc.set_boundaries_after_merge(*this, s); - no need to, since
     // boundaries are stored in Point_2 type and will be copied implicitly
 

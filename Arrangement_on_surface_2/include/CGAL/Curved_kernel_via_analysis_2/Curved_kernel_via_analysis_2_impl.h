@@ -31,6 +31,7 @@
 #include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curve_interval_arcno_cache.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Arc_simplification_cache.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 
 namespace CGAL {
@@ -88,6 +89,9 @@ public:
   //! type of interval arcno cache
   using Curve_interval_arcno_cache = internal::Curve_interval_arcno_cache<Curve_kernel_2>;
 
+  //! type of the cache of arcs with simplified supporting curves
+  using Arc_simplification_cache = internal::Arc_simplification_cache<NewCKvA>;
+
   //!@}
 
 public:
@@ -118,6 +122,18 @@ public:
   /*! access to static Curve_interval_arcno_cache */
   const Curve_interval_arcno_cache& interval_arcno_cache() const { return m_interval_arcno_cache; }
 
+  /*! obtains the cache of arcs with simplified supporting curves, allocating it if needed. (Supporting curves rarely
+   * share components; hence, it is allocated when first used.) Copies of this object share the cache.
+   */
+  Arc_simplification_cache& arc_simplification_cache() const {
+    if (! m_arc_simplification_cache) m_arc_simplification_cache = std::make_shared<Arc_simplification_cache>();
+    return *m_arc_simplification_cache;
+  }
+
+  /*! obtains the cache of arcs with simplified supporting curves, or \c nullptr if it is not allocated yet.
+   */
+  const Arc_simplification_cache* arc_simplification_cache_if_any() const { return m_arc_simplification_cache.get(); }
+
   /*! obtains the internal Curve_kernel_2 instance. Its functors are obtained through const member functions, and
    * its caches are shared by its copies.
    */
@@ -143,6 +159,9 @@ protected:
 
   //! an instance of \c Curve_interval_arcno_cache
   Curve_interval_arcno_cache m_interval_arcno_cache;
+
+  //! the cache of arcs with simplified supporting curves, or null if it is not allocated yet
+  mutable std::shared_ptr<Arc_simplification_cache> m_arc_simplification_cache;
 
   //!@}
 
