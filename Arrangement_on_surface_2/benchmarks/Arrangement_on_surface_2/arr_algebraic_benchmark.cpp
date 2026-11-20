@@ -94,6 +94,13 @@ constexpr CGAL::Arr_curve_end MAX_END = CGAL::ARR_MAX_END;
 template <typename Tr>
 constexpr bool has_own_kernel = std::is_constructible_v<Tr, std::shared_ptr<typename Tr::CKvA_2>>;
 
+// Whether the traits provides its curved kernel (and thus Do_overlap_2).
+template <typename Tr, typename = void>
+constexpr bool has_curved_kernel = false;
+
+template <typename Tr>
+constexpr bool has_curved_kernel<Tr, std::void_t<decltype(std::declval<const Tr&>().curved_kernel())>> = true;
+
 // Whether the traits approximates points and curves.
 template <typename Tr, typename = void>
 constexpr bool has_approximate = false;
@@ -319,6 +326,13 @@ struct Arc_pair {
   Xcv xcv2;
 };
 
+//! a pair of arcs of a pair of curves that share a component, given by indices
+struct Shared_index {
+  std::size_t k;   // the pair of curves
+  std::size_t a;   // the arc of the first curve
+  std::size_t b;   // the arc of the second curve
+};
+
 struct Arc_pair_at_point {
   Xcv xcv1;
   Xcv xcv2;
@@ -361,6 +375,9 @@ struct Input {
   std::vector<std::pair<Arc_pair, CGAL::Arr_curve_end>> left_right_pairs;  // ends on the left/right boundary
   std::vector<Arc_end_pair> bottom_top_pairs;  // ends on the bottom/top boundary
   std::unique_ptr<Arr> arr;              // the arrangement of all curves
+  std::vector<std::pair<Curve, Curve>> shared_curves;  // pairs of curves that share a component
+  std::vector<Shared_index> shared_indices;          // pairs of their arcs
+  std::vector<Arc_pair> shared_pairs;                // the same pairs of arcs
   std::size_t dropped = 0;               // prepared inputs dropped because they failed
 };
 
@@ -378,6 +395,17 @@ static void keep_valid(std::vector<T>& v, F f, std::size_t& dropped) {
     catch (...) { ++dropped; }
   }
   v.swap(res);
+}
+
+/*! obtains new x-monotone arcs of a curve.
+ */
+static std::vector<Xcv> arcs_of(const Traits& tr, const Curve& cv) {
+  std::vector<Make_x_monotone_result> objs;
+  tr.make_x_monotone_2_object()(cv, std::back_inserter(objs));
+  std::vector<Xcv> xcvs;
+  for (const auto& obj : objs)
+    if (const auto* xcv = std::get_if<Xcv>(&obj)) xcvs.push_back(*xcv);
+  return xcvs;
 }
 
 static void prepare(Input& in, const Options& opt) {
@@ -548,6 +576,47 @@ static void prepare(Input& in, const Options& opt) {
              [&](const auto& t) { cmp_y_near_boundary(t.first.xcv1, t.first.xcv2, t.second); }, in.dropped);
   keep_valid(in.bottom_top_pairs, [&](const auto& t) { cmp_x_on_boundary(t.xcv1, t.ce1, t.xcv2, t.ce2); },
              in.dropped);
+
+  // pairs of curves that share a component: the products of the first curves with two random lines each (with a
+  // separate random stream, so that the other inputs do not change)
+  CGAL::Random shared_rnd(opt.seed + 3);
+  const Polynomial x = CGAL::shift(Polynomial(1), 1, 0);
+  const Polynomial y = CGAL::shift(Polynomial(1), 1, 1);
+  typename CGAL::Polynomial_traits_d<Polynomial>::Is_square_free is_square_free;
+  auto random_multiple = [&](const Polynomial& p) {
+    while (true) {
+      const int a = shared_rnd.get_int(-opt.coefficient, opt.coefficient + 1);
+      const int b = shared_rnd.get_int(-opt.coefficient, opt.coefficient + 1);
+      const int c = shared_rnd.get_int(-opt.coefficient, opt.coefficient + 1);
+      if (a == 0 && b == 0) continue;
+      const Polynomial f = p * (Polynomial(Integer(a)) * x + Polynomial(Integer(b)) * y + Polynomial(Integer(c)));
+      if (is_square_free(f)) return f;
+    }
+  };
+  const std::size_t n_shared = (std::min)(in.polynomials.size(), std::size_t(4));
+  std::vector<std::vector<Xcv>> check_f, check_g;
+  for (std::size_t k = 0; k < n_shared; ++k) {
+    const Curve f = ctr_cv(random_multiple(in.polynomials[k]));
+    const Curve g = ctr_cv(random_multiple(in.polynomials[k]));
+    in.shared_curves.emplace_back(f, g);
+    check_f.push_back(arcs_of(tr, f));
+    check_g.push_back(arcs_of(tr, g));
+    for (std::size_t a = 0; a < check_f.back().size(); ++a)
+      for (std::size_t b = 0; b < check_g.back().size(); ++b) in.shared_indices.push_back({k, a, b});
+  }
+  subsample(in.shared_indices, opt.pairs, shared_rnd);
+  auto intersect_shared = tr.intersect_2_object();
+  keep_valid(in.shared_indices, [&](const Shared_index& si) {
+    std::vector<Intersection_result> res;
+    intersect_shared(check_f[si.k][si.a], check_g[si.k][si.b], std::back_inserter(res));
+  }, in.dropped);
+  // the arcs of the rows that reuse them (separate from the arcs used for the check above)
+  std::vector<std::vector<Xcv>> arcs_f, arcs_g;
+  for (const auto& fg : in.shared_curves) {
+    arcs_f.push_back(arcs_of(tr, fg.first));
+    arcs_g.push_back(arcs_of(tr, fg.second));
+  }
+  for (const auto& si : in.shared_indices) in.shared_pairs.push_back({arcs_f[si.k][si.a], arcs_g[si.k][si.b]});
 }
 
 //-----------------------------------------------------------------------------
@@ -866,6 +935,51 @@ static std::vector<Benchmark> make_benchmarks(Input& in, const Options& opt) {
            });
   add_loop(b, "do_intersect", "Do_intersect_2 on pairs of arcs", in.arc_pairs, opt.loops,
            [f = tr.do_intersect_2_object()](const Arc_pair& ap) { return f(ap.xcv1, ap.xcv2) ? 1 : 0; });
+
+  // Pairs of arcs whose supporting curves share a component. The operations replace the supporting curves by the
+  // components that the arcs lie on, and the replacement is kept in the arcs; hence, the rows that reuse the arcs
+  // measure the case where this is already done, and the _fresh row measures the first use of the arcs.
+  auto intersection_hash = [](const std::vector<Intersection_result>& res) {
+    std::uint64_t h = res.size();
+    for (const auto& r : res) {
+      if (const auto* ip = std::get_if<std::pair<Point, Multiplicity>>(&r)) h = mix(h, ip->second);
+      else h = mix(h, 1000);
+    }
+    return h;
+  };
+  add_loop(b, "intersect_shared", "Intersect_2 on pairs of arcs whose curves share a component", in.shared_pairs,
+           opt.loops, [f = tr.intersect_2_object(), intersection_hash](const Arc_pair& ap) {
+             std::vector<Intersection_result> res;
+             f(ap.xcv1, ap.xcv2, std::back_inserter(res));
+             return intersection_hash(res);
+           });
+  b.push_back({"intersect_shared_fresh", "intersect_shared on new arcs (their first use)",
+    [&in, intersection_hash](Stopwatch& sw) -> std::uint64_t {
+      const Traits& tr = *in.traits;
+      std::vector<std::vector<Xcv>> arcs_f, arcs_g;
+      for (const auto& fg : in.shared_curves) {
+        arcs_f.push_back(arcs_of(tr, fg.first));
+        arcs_g.push_back(arcs_of(tr, fg.second));
+      }
+      auto f = tr.intersect_2_object();
+      std::uint64_t h = in.shared_indices.size();
+      sw.start();
+      for (const auto& si : in.shared_indices) {
+        std::vector<Intersection_result> res;
+        f(arcs_f[si.k][si.a], arcs_g[si.k][si.b], std::back_inserter(res));
+        h = mix(h, intersection_hash(res));
+      }
+      sw.stop();
+      return h;
+    }});
+  add_loop(b, "equal_shared", "Equal_2 on pairs of arcs whose curves share a component", in.shared_pairs, opt.loops,
+           [f = tr.equal_2_object()](const Arc_pair& ap) { return f(ap.xcv1, ap.xcv2) ? 1 : 0; });
+  if constexpr (has_curved_kernel<Traits>) {
+    add_loop(b, "do_overlap_shared", "Do_overlap_2 on pairs of arcs whose curves share a component", in.shared_pairs,
+             opt.loops, [f = tr.curved_kernel()->do_overlap_2_object()](const Arc_pair& ap) {
+               return f(ap.xcv1, ap.xcv2) ? 1 : 0;
+             });
+  }
   add_loop(b, "split", "Split_2 on arcs at interior points", in.arc_points, opt.loops,
            [f = tr.split_2_object(), is_vertical = tr.is_vertical_2_object()](const Arc_point& ap) {
              Xcv xcv1;
@@ -943,7 +1057,7 @@ int main(int argc, char* argv[]) {
             << "functor inputs: " << in.point_pairs.size() << " point pairs, " << in.point_arc_pairs.size()
             << " point/arc pairs, " << in.arc_pairs.size() << " arc pairs, " << in.arc_points.size()
             << " arcs with interior points, " << in.segment_ends.size() << " segment ends, " << in.query_pairs.size()
-            << " rational point pairs, "
+            << " rational point pairs, " << in.shared_indices.size() << " shared-component arc pairs, "
             << in.right_pairs.size() << "/" << in.left_pairs.size() << " right/left pairs, "
             << in.left_right_pairs.size() << "/" << in.bottom_top_pairs.size()
             << " left-right/bottom-top boundary pairs; " << in.dropped << " dropped\n\n";

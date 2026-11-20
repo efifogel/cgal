@@ -301,29 +301,6 @@ protected:
     return mult;
   }
 
-  /*! simplifies representation of \c cv and/or \c p in case they have
-   *  non-coprime supporting curves.
-   *
-   *  \return \c true if simplification took place, \c false otherwise
-   */
-  bool simplify(const Arc_2& cv, const Coordinate_2& p) const {
-    if (cv.curve().is_identical(p.curve())) return false;
-
-    std::vector<Curve_analysis_2> parts_of_f;
-    std::vector<Curve_analysis_2> parts_of_g;
-    std::vector<Curve_analysis_2> common;
-
-    if (this->curve_kernel().decompose_2_object()(cv.curve(), p.curve(), std::back_inserter(parts_of_f),
-                                            std::back_inserter(parts_of_g), std::back_inserter(common))) {
-      CGAL_assertion((parts_of_f.size() == 1 || parts_of_g.size() == 1) && common.size() == 1);
-      auto construct_curve_pair = this->curve_kernel().construct_curve_pair_2_object();
-      if (parts_of_f.size() == 1) this->_simplify_by(cv, construct_curve_pair(parts_of_f[0], common[0]));
-      if (parts_of_g.size() == 1) p.simplify_by(construct_curve_pair(parts_of_g[0], common[0]));
-      return true;
-    }
-    return false;
-  }
-
   /*! simplifies representation of \c cv1 and/or \c cv2 in case they have
    * non-coprime supporting curves.
    *
