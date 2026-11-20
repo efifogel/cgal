@@ -1009,6 +1009,10 @@ protected:
     Point_2 tgt;
     if (! this->_joint_x_range(cv, cv2, src, tgt)) return false;
 
+    // If the supporting curves share a component, replace each supporting curve by the part that the arc lies on
+    // (the common component or the rest of the curve), as in the vertical case. Then the supporting curves are either
+    // identical or coprime (the curves are square free).
+    this->simplify(cv, cv2);
     if (cv.curve().is_identical(cv2.curve())) {
       // arcnos are not equal => no overlaps
       if (cv.arcno() != cv2.arcno()) return false;
@@ -1019,98 +1023,8 @@ protected:
       return true;
     }
 
-    // we are left with two non-vertical arcs whose supporting curves
-    // are different => look for overlapping parts of the curves
-    using Curve_arcno_container = std::vector<std::pair<Curve_analysis_2, int>>;
-    using Curve_container = std::vector<Curve_analysis_2>;
-    Curve_container parts_f;
-    Curve_container parts_g;
-    Curve_container common;
-
-    if (! this->curve_kernel().decompose_2_object()(cv.curve(), cv2.curve(), std::back_inserter(parts_f),
-                                                    std::back_inserter(parts_g), std::back_inserter(common))) {
-      return false; // supporting curves are coprime => quit
-    }
-    Coordinate_1 x0;
-    bool yes = false;
-    bool inf_x = src.is_on_left_right();
-    // choose a target x-coordinate from the joint x-range
-    if (! inf_x) x0 = src.x();
-    std::pair<int, int> ipair;
-    Curve_pair_analysis_2 cpa_2;
-    Curve_arcno_container found;
-    Curve_arcno_container overlaps;
-    auto construct_curve_pair = this->curve_kernel().construct_curve_pair_2_object();
-
-    CERR("_trim_if_overlapped: non-coprime supporting curves\n");
-
-    typename Curve_pair_analysis_2::Status_line_1 cpv_line;
-    // iterate to find all overlapping parts
-    typename Curve_container::const_iterator it_parts;
-    typename Curve_container::const_iterator it_com;
-    for (it_com = common.begin(); it_com != common.end(); it_com++) {
-      for (it_parts = parts_f.begin(); it_parts != parts_f.end(); it_parts++) {
-        cpa_2 = construct_curve_pair(*it_com, *it_parts);
-        cpv_line = (inf_x ? cpa_2.status_line_of_interval(0) : cpa_2.status_line_for_x(x0, CGAL::POSITIVE));
-        // no intersections at this curve pair => skip it
-        if (cv.arcno() >= cpv_line.number_of_events()) continue;
-        ipair = cpv_line.curves_at_event(cv.arcno(), *it_com, *it_parts);
-        // this must be 1-curve event: is this true ???
-        CGAL_assertion(! (ipair.first != -1 && ipair.second != -1));
-        if (ipair.first != -1) // lies on a common part
-          found.push_back(std::make_pair(*it_com, ipair.first));
-      }
-    }
-
-    // now iterate over all "suspicious" common parts to find real overlaps
-    typename Curve_arcno_container::const_iterator it_found;
-    for (it_found = found.begin(); it_found != found.end(); it_found++) {
-      for (it_parts = parts_g.begin(); it_parts != parts_g.end(); it_parts++) {
-        cpa_2 = construct_curve_pair(it_found->first, *it_parts);
-
-        cpv_line = (inf_x ? cpa_2.status_line_of_interval(0) : cpa_2.status_line_for_x(x0, CGAL::POSITIVE));
-        // no intersections at this curve pair => skip it
-        if (cv2.arcno() >= cpv_line.number_of_events()) continue;
-        ipair = cpv_line.curves_at_event(cv2.arcno(), it_found->first, *it_parts);
-        // this must be 1-curve event: is this true ???
-        CGAL_assertion(! (ipair.first != -1 && ipair.second != -1));
-        if (ipair.first == -1 || ipair.first == it_found->second) continue;
-        // lies on a common part and arcnos are the same: VUALA!!!
-        // here we need to "clip" [src.x(), tgt.x()] w.r.t. the
-        // defining x-range of a common part *it_found.. how ?
-        yes = true; // we've got it!
-        // now construct a common arc
-        typename Arc_2::Rep rep(*(cv.ptr()));
-        rep.m_min = src;
-        rep.m_max = tgt;
-        rep.m_support = it_found->first;
-        rep.m_arcno = it_found->second;
-        rep.m_arcno_min = rep.m_arcno_max = rep.m_arcno;
-
-        if (! inf_x) {
-          int a = this->arcno(cv, src.x());
-          if (a != cv.arcno()) {
-            cpv_line = cpa_2.status_line_for_x(src.x());
-            ipair = cpv_line.curves_at_event(a, it_found->first, *it_parts);
-            // should ultimately lie on the common curve ?
-            CGAL_assertion(ipair.first != -1);
-            rep.m_arcno_min = ipair.first;
-          }
-        }
-        if (! tgt.is_on_left_right()) {
-          int a = this->arcno(cv, tgt.x());
-          if (a != cv.arcno()) {
-            cpv_line = cpa_2.status_line_for_x(tgt.x());
-            ipair = cpv_line.curves_at_event(a, it_found->first, *it_parts);
-            // should ultimately lie on the common curve ?
-            CGAL_assertion(ipair.first != -1);
-            rep.m_arcno_max = ipair.first;
-          }
-        }
-        *oi++ = Arc_2(rep);
-      }
-    }
-    return yes;
+    // coprime supporting curves => no overlaps
+    return false;
   }
 
   /*! computes zero-dimensional intersections of \c cv1 with \c cv2.
