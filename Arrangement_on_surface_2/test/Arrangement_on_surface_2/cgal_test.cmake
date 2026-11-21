@@ -1355,7 +1355,9 @@ function(test_rational_arc_traits)
   execute_commands_new_structure(rational_arcs rational_arc_traits
     COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
     COMPARE_X_ON_BOUNDARY COMPARE_X_NEAR_BOUNDARY COMPARE_Y_NEAR_BOUNDARY
+    INTERSECT
     IS_VERTICAL
+    MAKE_X_MONOTONE
     MERGE
     SPLIT
     VERTEX)
