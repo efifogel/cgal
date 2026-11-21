@@ -11,3 +11,185 @@ intersect 16 18 0
 intersect 19 16 0
 # a vertical line intersects an arc of x*y = 1 at (-1,-1)
 intersect 17 19 1 0 13 1
+# arcs that approach a vertical asymptote, on which their curve also has a finite point (e.g.,
+# x*y^2 - y - x approaches x = 0 and passes through (0,0)); the curve-pair event there must not be
+# attributed to the asymptotic arcs
+intersect 20 21 1 0 15 1
+intersect 22 21 1 0 16 0
+intersect 23 21 1 0 16 0
+intersect 24 21 1 0 17 1
+intersect 20 25 0
+intersect 22 25 1 0 16 0
+intersect 23 25 1 0 16 0
+intersect 24 25 0
+intersect 20 26 0
+intersect 22 26 1 0 16 0
+intersect 23 26 1 0 16 0
+intersect 24 26 0
+intersect 20 27 1 0 18 1
+intersect 22 27 0
+intersect 23 27 1 0 19 1
+intersect 24 27 1 0 20 1
+intersect 20 28 1 0 21 1
+intersect 22 28 0
+intersect 23 28 1 0 22 1
+intersect 24 28 1 0 23 1
+intersect 20 29 0
+intersect 20 30 0
+intersect 22 29 0
+intersect 22 30 0
+intersect 23 29 0
+intersect 23 30 0
+intersect 24 29 0
+intersect 24 30 0
+intersect 20 31 0
+intersect 20 32 0
+intersect 22 31 0
+intersect 22 32 0
+intersect 23 31 0
+intersect 23 32 0
+intersect 24 31 0
+intersect 24 32 1 0 24 1
+intersect 33 21 1 0 25 1
+intersect 34 21 1 0 26 1
+intersect 35 21 0
+intersect 36 21 1 0 27 1
+intersect 33 25 0
+intersect 34 25 1 0 28 1
+intersect 35 25 0
+intersect 36 25 0
+intersect 33 26 0
+intersect 34 26 1 0 29 0
+intersect 35 26 1 0 29 0
+intersect 36 26 0
+intersect 33 27 1 0 30 1
+intersect 34 27 1 0 29 0
+intersect 35 27 1 0 29 0
+intersect 36 27 1 0 31 1
+intersect 33 28 1 0 32 1
+intersect 34 28 1 0 29 0
+intersect 35 28 1 0 29 0
+intersect 36 28 1 0 33 1
+intersect 33 29 1 0 34 1
+intersect 33 30 0
+intersect 34 29 0
+intersect 34 30 0
+intersect 35 29 0
+intersect 35 30 0
+intersect 36 29 0
+intersect 36 30 0
+intersect 33 31 0
+intersect 33 32 0
+intersect 34 31 0
+intersect 34 32 0
+intersect 35 31 0
+intersect 35 32 0
+intersect 36 31 0
+intersect 36 32 0
+# arcs whose supporting curves share a component (overlaps, in both orders)
+intersect 21 37 1 1 37
+intersect 21 38 1 1 38
+intersect 21 39 1 0 15 0
+intersect 21 40 0
+intersect 21 41 1 0 15 0
+intersect 21 42 1 1 42
+intersect 21 43 1 0 17 0
+intersect 21 44 0
+intersect 21 45 1 0 17 0
+intersect 21 46 1 1 46
+intersect 21 47 1 1 47
+intersect 37 21 1 1 37
+intersect 38 21 1 1 38
+intersect 39 21 1 0 15 0
+intersect 40 21 0
+intersect 41 21 1 0 15 0
+intersect 42 21 1 1 42
+intersect 43 21 1 0 17 0
+intersect 44 21 0
+intersect 45 21 1 0 17 0
+intersect 46 21 1 1 46
+intersect 47 21 1 1 47
+intersect 26 48 1 1 48
+intersect 26 49 2 0 35 0 0 29 0
+intersect 26 50 1 1 50
+intersect 26 51 2 0 35 0 0 29 0
+intersect 26 52 1 1 52
+intersect 48 26 1 1 48
+intersect 49 26 2 0 35 0 0 29 0
+intersect 50 26 1 1 50
+intersect 51 26 2 0 35 0 0 29 0
+intersect 52 26 1 1 52
+intersect 53 54 0
+intersect 53 55 0
+intersect 53 56 0
+intersect 53 57 0
+intersect 53 58 0
+intersect 53 59 0
+intersect 60 54 1 0 36 0
+intersect 60 55 1 1 55
+intersect 60 56 1 1 56
+intersect 60 57 2 0 36 0 0 37 0
+intersect 60 58 1 0 37 0
+intersect 60 59 1 1 59
+intersect 54 53 0
+intersect 55 53 0
+intersect 56 53 0
+intersect 57 53 0
+intersect 58 53 0
+intersect 59 53 0
+intersect 54 60 1 0 36 0
+intersect 55 60 1 1 55
+intersect 56 60 1 1 56
+intersect 57 60 2 0 36 0 0 37 0
+intersect 58 60 1 0 37 0
+intersect 59 60 1 1 59
+intersect 61 62 0
+intersect 61 63 0
+intersect 61 49 0
+intersect 61 51 0
+intersect 61 64 0
+intersect 49 62 0
+intersect 49 63 0
+intersect 49 49 1 1 49
+intersect 49 51 2 0 35 0 0 29 0
+intersect 49 64 0
+intersect 51 62 0
+intersect 51 63 0
+intersect 51 49 2 0 35 0 0 29 0
+intersect 51 51 1 1 51
+intersect 51 64 0
+intersect 65 62 0
+intersect 65 63 0
+intersect 65 49 0
+intersect 65 51 0
+intersect 65 64 0
+intersect 66 62 0
+intersect 66 63 0
+intersect 66 49 0
+intersect 66 51 0
+intersect 66 64 0
+intersect 62 61 0
+intersect 63 61 0
+intersect 49 61 0
+intersect 51 61 0
+intersect 64 61 0
+intersect 62 49 0
+intersect 63 49 0
+intersect 49 49 1 1 49
+intersect 51 49 2 0 35 0 0 29 0
+intersect 64 49 0
+intersect 62 51 0
+intersect 63 51 0
+intersect 49 51 2 0 35 0 0 29 0
+intersect 51 51 1 1 51
+intersect 64 51 0
+intersect 62 65 0
+intersect 63 65 0
+intersect 49 65 0
+intersect 51 65 0
+intersect 64 65 0
+intersect 62 66 0
+intersect 63 66 0
+intersect 49 66 0
+intersect 51 66 0
+intersect 64 66 0
