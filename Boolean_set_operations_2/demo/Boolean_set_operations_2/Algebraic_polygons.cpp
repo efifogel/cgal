@@ -24,8 +24,8 @@
 
 #include "Algebraic_polygons.h"
 
-#include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <unordered_map>
 #include <utility>
 
@@ -72,30 +72,28 @@ std::vector<QPointF> algebraic_arc_points(const Algebraic_X_monotone_curve& a_xc
   if (it != s_cache.end()) return it->second.second;
   if (s_cache.size() > 10000) s_cache.clear();
 
-  auto to_point = [](const std::pair<double, double>& a_p) { return QPointF(a_p.first, a_p.second); };
-  QPointF min = to_point(a_xcv.curve_end(CGAL::ARR_MIN_END).to_double());
-  QPointF max = to_point(a_xcv.curve_end(CGAL::ARR_MAX_END).to_double());
-  std::vector<QPointF> points;
-  points.push_back(min);
-  if (! a_xcv.is_vertical()) {
-    // The x-coordinates are denser near the endpoints, where the arc may be steep (e.g., uniform in the angle along a
-    // half circle).
-    using Bound = Algebraic_traits::Bound;
-    using Coordinate_1 = Algebraic_traits::Algebraic_real_1;
-    auto construct_point = Algebraic_traits::CKvA_2::instance().construct_point_2_object();
-    const int n = 64;
-    double mid = (min.x() + max.x()) / 2, half = (max.x() - min.x()) / 2;
-    for (int i = 1; i < n; ++i) {
-      double x = mid - half * std::cos(M_PI * i / n);
-      if ((x <= min.x()) || (x >= max.x())) continue;
-      points.push_back(to_point(construct_point(Coordinate_1{Bound(x)}, a_xcv.curve(), a_xcv.arcno()).to_double()));
-    }
+  Algebraic_traits traits;
+  auto approximate = traits.approximate_2_object();
+  CGAL::Bbox_2 bbox = traits.construct_bbox_2_object()(a_xcv);
+  // The error is relative to the size of the arc, as curves may be of any scale.
+  double error = 1e-4 * std::hypot(bbox.x_span(), bbox.y_span());
+  bool l2r = (traits.compare_endpoints_xy_2_object()(a_xcv) == CGAL::SMALLER);
+  std::vector<Algebraic_traits::Approximate_2::Approximate_point_2> approx_points;
+  approximate(a_xcv, error, std::back_inserter(approx_points), l2r);
+  if (approx_points.empty()) {
+    // Nothing is output if the x-coordinates of the endpoints round to the same number; the path must stay connected.
+    auto source = l2r ? CGAL::ARR_MIN_END : CGAL::ARR_MAX_END;
+    auto target = l2r ? CGAL::ARR_MAX_END : CGAL::ARR_MIN_END;
+    approx_points = {approximate(a_xcv.curve_end(source)), approximate(a_xcv.curve_end(target))};
   }
-  points.push_back(max);
-  if (Algebraic_traits().compare_endpoints_xy_2_object()(a_xcv) == CGAL::LARGER)
-    std::reverse(points.begin(), points.end());
+
+  std::vector<QPointF> points;
+  points.reserve(approx_points.size());
+  for (const auto& p : approx_points) points.emplace_back(p.x(), p.y());
   s_cache.emplace(a_xcv.id(), std::make_pair(a_xcv, points));
   return points;
 }
 
-CGAL::Bbox_2 algebraic_arc_bbox(const Algebraic_X_monotone_curve& a_xcv) { return a_xcv.bbox(); }
+CGAL::Bbox_2 algebraic_arc_bbox(const Algebraic_X_monotone_curve& a_xcv) {
+  return Algebraic_traits().construct_bbox_2_object()(a_xcv);
+}

@@ -1,7 +1,4 @@
 1. Algebraic curves
-- Implement the Approximate_2 functor of Arr_algebraic_segment_traits_2, in particular the operator that approximates
-  an x-monotone curve (by a polyline, given an error bound), as in the other traits. Then use it to draw the arcs
-  instead of the fixed sampling of algebraic_arc_points().
 - Files (.aps): a set after operations is not described by equations alone, so arcs need their curve, arc number,
   and endpoints.
 - Python programs (the log has a comment instead) and the console.
