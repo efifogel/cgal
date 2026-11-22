@@ -2506,7 +2506,9 @@ public:
  * Arcs are approximated by adaptive subdivision: the polyline is refined at rational x-coordinates, where the
  * points on the arc are computed exactly and then rounded, until every computed point lies within the error bound
  * of the chord that it replaces, with a margin (or until a maximal subdivision depth is reached, e.g., near vertical
- * tangents). The error bound is thus not guaranteed, but met in practice.
+ * tangents). The error bound is thus not guaranteed, but met in practice. An arc whose x-range is too narrow to
+ * sample in double precision is approximated by its ends and its extreme y-coordinates; the polyline is then not
+ * x-monotone.
  */
 template <typename CurvedKernelViaAnalysis_2>
 class Approximate_2 : public Curved_kernel_via_analysis_2_functor_base<CurvedKernelViaAnalysis_2> {
@@ -2648,7 +2650,9 @@ private:
    */
   std::optional<Approximate_point_2> end_point(const Arc_2& cv, CGAL::Arr_curve_end ce, double x, double inner,
                                                const CGAL::Bbox_2* bbox) const {
-    const bool clipped = (bbox != nullptr) && ((ce == CGAL::ARR_MIN_END) ? (x == bbox->xmin()) : (x == bbox->xmax()));
+    // the box cuts the arc only if its side lies in the interior of the x-range of the arc
+    const bool clipped = (bbox != nullptr) && ((ce == CGAL::ARR_MIN_END) ? (x == bbox->xmin()) : (x == bbox->xmax())) &&
+      this->is_in_x_range_interior(cv, Coordinate_1(Bound(x)));
     if (cv.is_finite(ce) && ! clipped) {
       const auto approx = cv.curve_end(ce).to_double();
       return Approximate_point_2(approx.first, clamp_y(approx.second, bbox));
@@ -2695,6 +2699,21 @@ private:
       -inf : CGAL::to_double(cv.curve_end_x(CGAL::ARR_MIN_END));
     double xmax = (cv.location(CGAL::ARR_MAX_END) == CGAL::ARR_RIGHT_BOUNDARY) ?
       inf : CGAL::to_double(cv.curve_end_x(CGAL::ARR_MAX_END));
+
+    // an arc whose ends are at the same or at consecutive doubles in x cannot be sampled; it is approximated through
+    // its extreme y-coordinates, which are known from its bounding box
+    if ((xmin <= xmax) && (std::nextafter(xmin, inf) >= xmax)) {
+      if ((bbox != nullptr) && ((xmax < bbox->xmin()) || (xmin > bbox->xmax()))) return;
+      const CGAL::Bbox_2 cv_bbox = this->_ckva()->construct_bbox_2_object()(cv);
+      if (cv.is_finite(CGAL::ARR_MIN_END))
+        pts.emplace_back(xmin, clamp_y(cv.curve_end(CGAL::ARR_MIN_END).to_double().second, bbox));
+      pts.emplace_back(xmin, clamp_y(cv_bbox.ymin(), bbox));
+      pts.emplace_back(xmin, clamp_y(cv_bbox.ymax(), bbox));
+      if (cv.is_finite(CGAL::ARR_MAX_END))
+        pts.emplace_back(xmax, clamp_y(cv.curve_end(CGAL::ARR_MAX_END).to_double().second, bbox));
+      return;
+    }
+
     if (bbox != nullptr) {
       xmin = (std::max)(xmin, bbox->xmin());
       xmax = (std::min)(xmax, bbox->xmax());
