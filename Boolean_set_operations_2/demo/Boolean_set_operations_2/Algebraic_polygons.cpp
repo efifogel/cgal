@@ -80,12 +80,6 @@ std::vector<QPointF> algebraic_arc_points(const Algebraic_X_monotone_curve& a_xc
   bool l2r = (traits.compare_endpoints_xy_2_object()(a_xcv) == CGAL::SMALLER);
   std::vector<Algebraic_traits::Approximate_2::Approximate_point_2> approx_points;
   approximate(a_xcv, error, std::back_inserter(approx_points), l2r);
-  if (approx_points.empty()) {
-    // Nothing is output if the x-coordinates of the endpoints round to the same number; the path must stay connected.
-    auto source = l2r ? CGAL::ARR_MIN_END : CGAL::ARR_MAX_END;
-    auto target = l2r ? CGAL::ARR_MAX_END : CGAL::ARR_MIN_END;
-    approx_points = {approximate(a_xcv.curve_end(source)), approximate(a_xcv.curve_end(target))};
-  }
 
   std::vector<QPointF> points;
   points.reserve(approx_points.size());
