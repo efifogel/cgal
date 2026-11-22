@@ -19,3 +19,14 @@
 2/1 1/3
 -2/1 -1/3
 2/1 -1/3
+# 21-25: points with irrational coordinates ("a x p q": the point at x on p/q)
+# 21: (-sqrt(3),1)
+a {3 -3 0 1 -2 -1} 1 1 1 1
+# 22: (sqrt(3),1)
+a {3 -3 0 1 1 2} 1 1 1 1
+# 23: the point of x^2-2 at the real root of x^3-4x-4 (~2.383)
+a {4 -4 -4 0 1 2 3} 3 -2 0 1 1 1
+# 24: (-sqrt(3),-3sqrt(3))
+a {3 -3 0 1 -2 -1} 4 0 0 0 1 1 1
+# 25: (sqrt(3),3sqrt(3))
+a {3 -3 0 1 1 2} 4 0 0 0 1 1 1

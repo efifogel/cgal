@@ -1,3 +1,29 @@
 intersect 1 14 1 0 20 1
 intersect 2 14 1 0 19 1
 intersect 3 0 1 0 5 2
+# the curves of the sweep test in test_rational_function_traits_2: 1 (40), x^2-2 (41), x^3 (42), and the
+# pieces of x^3/(x^2-2) (43-45); x^3 - x^3/(x^2-2) = x^3(x^2-3)/(x^2-2), so (0,0) has multiplicity 3
+intersect 40 41 2 0 21 1 0 22 1
+intersect 41 40 2 0 21 1 0 22 1
+intersect 40 42 1 0 8 1
+intersect 42 40 1 0 8 1
+intersect 40 43 0
+intersect 43 40 0
+intersect 40 44 1 0 2 1
+intersect 44 40 1 0 2 1
+intersect 40 45 0
+intersect 45 40 0
+intersect 41 42 1 0 0 1
+intersect 42 41 1 0 0 1
+intersect 41 43 0
+intersect 43 41 0
+intersect 41 44 1 0 6 1
+intersect 44 41 1 0 6 1
+intersect 41 45 1 0 23 1
+intersect 45 41 1 0 23 1
+intersect 42 43 1 0 24 1
+intersect 43 42 1 0 24 1
+intersect 42 44 1 0 4 3
+intersect 44 42 1 0 4 3
+intersect 42 45 1 0 25 1
+intersect 45 42 1 0 25 1

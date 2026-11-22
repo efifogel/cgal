@@ -1355,7 +1355,9 @@ function(test_rational_arc_traits)
   execute_commands_new_structure(rational_arcs rational_arc_traits
     COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
     COMPARE_X_ON_BOUNDARY COMPARE_X_NEAR_BOUNDARY COMPARE_Y_NEAR_BOUNDARY
+    INTERSECT
     IS_VERTICAL
+    MAKE_X_MONOTONE
     MERGE
     SPLIT
     VERTEX)
@@ -1378,7 +1380,7 @@ function(test_algebraic_traits_gmp)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_gmp)
 
   execute_commands_new_structure(algebraic algebraic_traits_gmp
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1402,7 +1404,7 @@ function(test_algebraic_traits_leda)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_leda)
 
   execute_commands_new_structure(algebraic algebraic_traits_leda
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1425,7 +1427,7 @@ function(test_algebraic_traits_core)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_core)
 
   execute_commands_new_structure(algebraic algebraic_traits_core
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1464,12 +1466,17 @@ test_rational_arc_traits()
 test_algebraic_traits_core()
 test_algebraic_traits_gmp()
 test_algebraic_traits_leda()
+compile_and_run(test_algebraic_bbox)
+compile_and_run(test_algebraic_own_kernel)
+compile_and_run(test_algebraic_shared_component_overlap)
 
 compile_and_run(test_data_traits)
 
 compile_and_run(test_insertion)
 compile_and_run(test_unbounded_rational_insertion)
 compile_and_run(test_unbounded_rational_direct_insertion)
+compile_and_run(test_unbounded_rational_aggregate_insertion)
+compile_and_run(test_unbounded_linear_overlap_insertion)
 compile_and_run(test_rational_function_traits_2)
 compile_and_run(test_iso_verts)
 

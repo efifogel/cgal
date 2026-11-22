@@ -8,45 +8,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Commercial
 //
 //
-// Author(s)     : Eric Berberich <eric@mpi-inf.mpg.de>
-//                 Pavel Emeliyanenko <asm@mpi-sb.mpg.de>
+// Author(s) : Eric Berberich <eric@mpi-inf.mpg.de>
+//             Pavel Emeliyanenko <asm@mpi-sb.mpg.de>
 
 #ifndef CGAL_CURVED_KERNEL_VIA_ANALYSIS_2_IMPL_H
 #define CGAL_CURVED_KERNEL_VIA_ANALYSIS_2_IMPL_H
 
 #include <CGAL/license/Arrangement_on_surface_2.h>
 
-
 /*!\file include/CGAL/Curved_kernel_via_analysis_2.h
- * \brief defines class \c Curved_kernel_via_analysis_2
+ * defines class \c Curved_kernel_via_analysis_2
  *
  * Defines points and arcs supported by curves that can be analyzed.
  */
 
-#include <CGAL/config.h>
+#include <memory>
+#include <utility>
 
+#include <CGAL/tags.h>
 #include <CGAL/tss.h>
-#include <CGAL/Arr_enums.h>
 #include <CGAL/Arr_tags.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Point_2.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Arc_2.h>
-
-#include <CGAL/Curved_kernel_via_analysis_2/Non_x_monotone_arc_2.h>
-
 #include <CGAL/Curved_kernel_via_analysis_2/Curve_interval_arcno_cache.h>
+#include <CGAL/Curved_kernel_via_analysis_2/Arc_simplification_cache.h>
 #include <CGAL/Curved_kernel_via_analysis_2/Curved_kernel_via_analysis_2_functors.h>
 
 namespace CGAL {
-
 namespace internal {
 
-/*!\brief
- * Provides basic types for Curved_kernel_via_analysis_2
- */
+/*! provides basic types for Curved_kernel_via_analysis_2 */
 template <typename NewCKvA, typename BaseCKvA, typename CurveKernel_2,
-          template <typename, typename> typename FunctorBase = Curved_kernel_via_analysis_2_functors >
+          template <typename, typename> typename FunctorBase = Curved_kernel_via_analysis_2_functors>
 class Curved_kernel_via_analysis_2_base : public FunctorBase<NewCKvA, BaseCKvA> {
-
 public:
   //!\name Global types
   //!@{
@@ -55,7 +49,7 @@ public:
   using Curve_kernel_2 = CurveKernel_2;
 
   //! rebinds functor base to a new CKvA
-  template <class X>
+  template <typename X>
   struct rebind {
     using Functor_base = FunctorBase<X, typename BaseCKvA::Curved_kernel_via_analysis_2>;
   };
@@ -64,9 +58,6 @@ public:
 
   //! type of curve that can be analyzed
   using Curve_2 = typename Curve_kernel_2::Curve_analysis_2;
-
-  //! type of non x-monotone arc on a curve that can be analyzed
-  using Non_x_monotone_arc_2 = internal::Non_x_monotone_arc_2<NewCKvA>;
 
   //! the multiplicity type
   using Multiplicity = unsigned int;
@@ -98,34 +89,55 @@ public:
   //! type of interval arcno cache
   using Curve_interval_arcno_cache = internal::Curve_interval_arcno_cache<Curve_kernel_2>;
 
+  //! type of the cache of arcs with simplified supporting curves
+  using Arc_simplification_cache = internal::Arc_simplification_cache<NewCKvA>;
+
   //!@}
 
 public:
   //! \name Constructors
   //!@{
 
-  //! default constructor
-  Curved_kernel_via_analysis_2_base() : _m_kernel(Curve_kernel_2()) {}
+  //! constructs using (a copy of) the curve kernel of the calling thread
+  Curved_kernel_via_analysis_2_base() : m_kernel(Curve_kernel_2::get_static_instance()) {}
 
-  //! construct using specific Curve_kernel_2 instance \c kernel
-  Curved_kernel_via_analysis_2_base(const Curve_kernel_2& kernel) : _m_kernel(kernel) {}
+  /*! constructs using (a copy of) the curve kernel \c kernel, sharing its ownership. The copy shares the caches of
+   * \c kernel, which refer back to \c kernel; the shared ownership keeps \c kernel alive.
+   */
+  explicit Curved_kernel_via_analysis_2_base(std::shared_ptr<Curve_kernel_2> kernel) :
+    m_kernel_owner(std::move(kernel)),
+    m_kernel(dereference(m_kernel_owner))
+  {}
+
+  /*! constructs using a copy of \c kernel. The copy shares the caches of \c kernel, which refer back to \c kernel;
+   * hence, \c kernel must outlive this object.
+   */
+  explicit Curved_kernel_via_analysis_2_base(const Curve_kernel_2& kernel) : m_kernel(kernel) {}
 
   //!@}
 
   //!\name underlying curve kernel + caching
   //!@{
 
-  /*!\brief
-   * access to static Curve_interval_arcno_cache
-   */
-  const Curve_interval_arcno_cache& interval_arcno_cache() const { return _m_interval_arcno_cache; }
+  /*! access to static Curve_interval_arcno_cache */
+  const Curve_interval_arcno_cache& interval_arcno_cache() const { return m_interval_arcno_cache; }
 
-  /*!\brief
-   * instance of internal Curve_kernel_2 instance
-   *
-   * \return
+  /*! obtains the cache of arcs with simplified supporting curves, allocating it if needed. (Supporting curves rarely
+   * share components; hence, it is allocated when first used.) Copies of this object share the cache.
    */
-  Curve_kernel_2& kernel() const { return _m_kernel; }
+  Arc_simplification_cache& arc_simplification_cache() const {
+    if (! m_arc_simplification_cache) m_arc_simplification_cache = std::make_shared<Arc_simplification_cache>();
+    return *m_arc_simplification_cache;
+  }
+
+  /*! obtains the cache of arcs with simplified supporting curves, or \c nullptr if it is not allocated yet.
+   */
+  const Arc_simplification_cache* arc_simplification_cache_if_any() const { return m_arc_simplification_cache.get(); }
+
+  /*! obtains the internal Curve_kernel_2 instance. Its functors are obtained through const member functions, and
+   * its caches are shared by its copies.
+   */
+  const Curve_kernel_2& kernel() const { return m_kernel; }
 
   //!@}
 
@@ -133,11 +145,23 @@ protected:
   //!\name private members
   //!@{
 
-  //! an instance of \c Curve_kernel_2
-  mutable Curve_kernel_2 _m_kernel;
+  //! obtains the curve kernel that \c kernel points to
+  static const Curve_kernel_2& dereference(const std::shared_ptr<Curve_kernel_2>& kernel) {
+    CGAL_precondition(kernel != nullptr);
+    return *kernel;
+  }
+
+  //! the owner of the curve kernel that the caches of \c m_kernel refer back to; empty if it is not owned
+  std::shared_ptr<Curve_kernel_2> m_kernel_owner;
+
+  //! a copy of the curve kernel, which shares its caches (kept by value to save an indirection)
+  Curve_kernel_2 m_kernel;
 
   //! an instance of \c Curve_interval_arcno_cache
-  mutable Curve_interval_arcno_cache _m_interval_arcno_cache;
+  Curve_interval_arcno_cache m_interval_arcno_cache;
+
+  //! the cache of arcs with simplified supporting curves, or null if it is not allocated yet
+  mutable std::shared_ptr<Arc_simplification_cache> m_arc_simplification_cache;
 
   //!@}
 
@@ -145,53 +169,14 @@ public:
   //!\name Static Member to provide CKvA instance
   //!@{
 
-  /*!\brief
-   * a default instance of \c Curved_kernel_via_analysis_2
+  /*! obtains the default instance of \c Curved_kernel_via_analysis_2 of the calling thread. (A traits that holds
+   * its own curved kernel does not use it.)
    *
-   * \return static instance of \c Curved_kernel_via_analysis_2
+   * \return the thread-local instance of \c Curved_kernel_via_analysis_2
    */
-  static NewCKvA& instance() { return set_instance(_set_instance()); }
-
-  /*!\brief
-   * sets static instance of \c Curved_kernel_via_analysis_2 to \c ckva
-   *
-   * \param ckva The instance that should be stored
-   * \return the stored instance
-   */
-  static NewCKvA& set_instance(const NewCKvA& ckva) {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, binstance);
-
-    if (&ckva == &_reset_instance()) {
-      instance = binstance;
-    }
-    else if (&ckva != &_set_instance()) {
-      binstance = instance;
-      instance = ckva;
-    }
-    return instance;
-  }
-
-  /*!\brief
-   * resets static instance to original one
-   */
-  static void reset_instance() { set_instance(_reset_instance()); }
-
-private:
-  /*!\brief
-   * sets instance to default for internal purposes
-   */
-  static NewCKvA& _set_instance() {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    return instance;
-  }
-
-  /*!\brief
-   * sets instance to default for internal purposes
-   */
-  static NewCKvA& _reset_instance() {
-    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, instance);
-    return instance;
+  static NewCKvA& instance() {
+    CGAL_STATIC_THREAD_LOCAL_VARIABLE_0(NewCKvA, s_instance);
+    return s_instance;
   }
 
   //!@}
@@ -199,10 +184,10 @@ private:
 
 } // namespace internal
 
-template < class CurveKernel_2 >
-class Curved_kernel_via_analysis_2 :
-    public internal::Curved_kernel_via_analysis_2_base<Curved_kernel_via_analysis_2<CurveKernel_2>,
-                                                       void, CurveKernel_2> {
+template <typename CurveKernel_2>
+class Curved_kernel_via_analysis_2
+  : public internal::Curved_kernel_via_analysis_2_base<Curved_kernel_via_analysis_2<CurveKernel_2>, void,
+                                                       CurveKernel_2> {
 public:
   //! type of curve kernel
   using Curve_kernel_2 = CurveKernel_2;
@@ -220,9 +205,9 @@ public:
   //!\name Embedded types to fulfill \c AosTraits_2 concept
   //!@{
 
-  using Point_2 = internal::Point_2< Self >;
+  using Point_2 = internal::Point_2<Self>;
 
-  using Arc_2 = internal::Arc_2< Self >;
+  using Arc_2 = internal::Arc_2<Self>;
 
   //! type of weakly x-monotone arc for \c AosTraits_2
   using X_monotone_curve_2 = Arc_2;
@@ -240,26 +225,28 @@ public:
   //! \name Constructors
   //!@{
 
-  /*!\brief
-   * default constructor
-   */
-  Curved_kernel_via_analysis_2() :
-    Base_kernel(Curve_kernel_2::get_static_instance()) {
-  }
+  /*! constructs default; uses the curve kernel of the calling thread, and thus shares its caches. */
+  Curved_kernel_via_analysis_2() {}
 
-  /*!\brief
-   * construct from \c kernel
+  /*! constructs from \c kernel, sharing its ownership. For example, `std::make_shared<Curve_kernel_2>()` yields a
+   * curved kernel with caches of its own.
    *
-   * \param kernel Kernel to use internally
+   * \param kernel the curve kernel to use internally
    */
-  Curved_kernel_via_analysis_2(const Curve_kernel_2& kernel) :
-    Base_kernel(kernel) {
-  }
+  explicit Curved_kernel_via_analysis_2(std::shared_ptr<Curve_kernel_2> kernel) : Base_kernel(std::move(kernel)) {}
+
+  /*! constructs from a copy of \c kernel. The copy shares the caches of \c kernel, which refer back to \c kernel;
+   * hence, \c kernel must outlive this object.
+   *
+   * \deprecated use the constructor that takes a `std::shared_ptr<Curve_kernel_2>`.
+   */
+  CGAL_DEPRECATED_MSG("the curve kernel must outlive the curved kernel; use the constructor that takes a "
+                      "std::shared_ptr<Curve_kernel_2>")
+  Curved_kernel_via_analysis_2(const Curve_kernel_2& kernel) : Base_kernel(kernel) {}
 
   //!@}
 };
 
-} //namespace CGAL
+} // namespace CGAL
 
-#endif // CGAL_CURVED_KERNEL_VIA_ANALYSIS_2_IMPL_H
-// EOF
+#endif

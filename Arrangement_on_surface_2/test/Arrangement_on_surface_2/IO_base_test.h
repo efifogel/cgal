@@ -1266,25 +1266,31 @@ bool IO_base_test<Base_geom_traits>::read_curve(InputStream_& is, Curve_2& cv)
 
 // Rational arc
 #elif TEST_GEOM_TRAITS == RATIONAL_ARC_GEOM_TRAITS
-/*! Read a point */
 
-template <>
-template <typename InputStream_>
-bool IO_base_test<Base_geom_traits>::read_point(InputStream_& is, Point_2& p)
-{
-  Base_geom_traits::Construct_point_2 construct_point_2 =
-    m_geom_traits.construct_point_2_object();
+#include <CGAL/IO/io.h>
 
-  Rational x, y;
-  is >> x >> y ;
-  p = construct_point_2(x, y);
-  return true;
-}
-
+/*! Read an x-coordinate: either a rational, or an algebraic number given as
+ * "{ n c_0 ... c_{n-1} lo hi }", the root of the polynomial
+ * c_0 + c_1 x + ... + c_{n-1} x^{n-1} (with integral coefficients) in the
+ * interval [lo, hi], which isolates it.
+ */
 template <typename InputStream_>
 bool read_rational_to_real(InputStream_& is, Algebraic_real_1& r)
 {
   static Base_geom_traits::Algebraic_kernel_d_1 algebraic_kernel;
+  is >> std::ws;
+  if (is.peek() == '{') {
+    CGAL::swallow(is, '{');
+    unsigned int num_coeffs;
+    is >> num_coeffs;
+    std::vector<Base_geom_traits::Coefficient> coeffs(num_coeffs);
+    for (auto& c : coeffs) is >> c;
+    Base_geom_traits::Bound lo, hi;
+    is >> lo >> hi;
+    CGAL::swallow(is, '}');
+    r = Algebraic_real_1(Base_geom_traits::Polynomial_1(coeffs.begin(), coeffs.end()), lo, hi);
+    return true;
+  }
   Rational rat;
   is >> rat;
   r = algebraic_kernel.construct_algebraic_real_1_object()(rat);
@@ -1302,6 +1308,38 @@ bool read_coefficients(InputStream_& is, Rat_vector& coeffs)
     is >> rat;
     coeffs.push_back(rat);
   }
+  return true;
+}
+
+/*! Read a point: either "x y" (rationals), or "a x p q", the point with the
+ * x-coordinate x (see read_rational_to_real()) on the rational function p/q,
+ * where p and q are given by their coefficients (see read_coefficients()).
+ */
+template <>
+template <typename InputStream_>
+bool IO_base_test<Base_geom_traits>::read_point(InputStream_& is, Point_2& p)
+{
+  Base_geom_traits::Construct_point_2 construct_point_2 =
+    m_geom_traits.construct_point_2_object();
+
+  is >> std::ws;
+  if (is.peek() == 'a') {
+    CGAL::swallow(is, 'a');
+    Algebraic_real_1 x;
+    Rat_vector p_coeffs, q_coeffs;
+    if (! read_rational_to_real(is, x)) return false;
+    if (! read_coefficients(is, p_coeffs)) return false;
+    if (! read_coefficients(is, q_coeffs)) return false;
+    // the curve normalizes the rational function
+    const Curve_2 cv =
+      m_geom_traits.construct_curve_2_object()(p_coeffs.begin(), p_coeffs.end(), q_coeffs.begin(), q_coeffs.end());
+    p = construct_point_2(m_geom_traits.cache().get_rational_function(cv.numerator(), cv.denominator()), x);
+    return true;
+  }
+
+  Rational x, y;
+  is >> x >> y ;
+  p = construct_point_2(x, y);
   return true;
 }
 

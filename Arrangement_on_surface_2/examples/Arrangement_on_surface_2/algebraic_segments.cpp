@@ -93,12 +93,11 @@ int main() {
   Arrangement arr(&traits);
   CGAL::insert(arr, segs.begin(), segs.end());
 
-  // Add some isolated points (must be wrapped into CGAL::Object).
-  std::vector<CGAL::Object> isolated_pts;
-  isolated_pts.push_back(CGAL::make_object(ctr_pt(Algebraic_real(2), cv4, 0)));
-  isolated_pts.push_back(CGAL::make_object(ctr_pt(Integer(1), Integer(2))));
-  isolated_pts.push_back(CGAL::make_object(ctr_pt(Algebraic_real(-1),
-                                                  Algebraic_real(2))));
+  // Add some isolated points.
+  std::vector<Point> isolated_pts;
+  isolated_pts.push_back(ctr_pt(Algebraic_real(2), cv4, 0));
+  isolated_pts.push_back(ctr_pt(Integer(1), Integer(2)));
+  isolated_pts.push_back(ctr_pt(Algebraic_real(-1), Algebraic_real(2)));
   CGAL::insert(arr, isolated_pts.begin(), isolated_pts.end());
 
   print_arrangement_size(arr);                  // print the arrangement size

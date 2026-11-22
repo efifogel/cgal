@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <cmath>
 
+#include <CGAL/Bbox_2.h>
 #include <CGAL/Arr_geodesic_arc_on_sphere_traits_2.h>
 
 namespace CGAL {
@@ -105,6 +106,32 @@ constexpr bool has_approximate_traits_v =
   has_approximate_2_object_v<Gt> && has_approximate_point_v<Gt, typename Gt::Approximate_2> &&
   (has_approximate_xcv_v<Gt, typename Gt::Approximate_2> ||
    has_approximate_xcv_with_bounds_v<Gt, typename Gt::Approximate_2>);
+
+template <typename Gt, typename = std::void_t<>>
+struct is_kernel_based : std::false_type
+{};
+
+// Detect whether Gt is or derives from a kernel (e.g., the segment and linear traits)
+template <typename Gt>
+struct is_kernel_based<Gt, std::void_t<typename Gt::Rep_tag>> : std::true_type
+{};
+
+template <typename Gt, typename = std::void_t<>>
+struct has_construct_curve_bbox_2 : std::false_type
+{};
+
+template <typename Gt>
+struct has_construct_curve_bbox_2<
+  Gt, std::void_t<decltype(Bbox_2(std::declval<const Gt&>().construct_bbox_2_object()(
+        std::declval<const typename Gt::X_monotone_curve_2&>())))>> : std::true_type
+{};
+
+// Detect whether a geometry traits constructs the bounding box of an x-monotone curve. The functor of a traits that
+// derives from a kernel is the kernel's, which does not apply to the curve, and cannot be tested without a hard error;
+// hence such a traits is excluded first.
+template <typename Gt>
+inline constexpr bool has_construct_bbox_2_v =
+  std::conjunction_v<std::negation<is_kernel_based<Gt>>, has_construct_curve_bbox_2<Gt>>;
 
 template <typename Gt, typename = std::void_t<>>
 struct has_is_in_x_range : std::false_type
@@ -199,7 +226,13 @@ class Construct_gt_point_2 {
   using Gt_point = typename Gt::Point_2;
 
 public:
-  Gt_point operator()(const Approx_point& pt) const { return Gt_point(pt.x(), pt.y()); }
+  Gt_point operator()(const Approx_point& pt) const {
+    // some traits (e.g., the algebraic segment traits) construct their points through a functor only
+    if constexpr (std::is_constructible_v<Gt_point, decltype(pt.x()), decltype(pt.y())>)
+      return Gt_point(pt.x(), pt.y());
+    else
+      return Gt().construct_point_2_object()(pt.x(), pt.y());
+  }
 };
 
 // Specialization for Arr_geodesic_arc_on_sphere_traits_2

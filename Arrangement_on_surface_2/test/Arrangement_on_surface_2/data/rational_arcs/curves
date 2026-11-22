@@ -12,3 +12,8 @@ e 3 1 0 0 3 1 1 0
 f 3 1 0 0 3 1 1 0 5/10 0
 # 6: 
 g 3 1 0 0 3 1 1 0 2/10 75/100 
+# 7-10: the curves of the sweep test in test_rational_function_traits_2: 1, x^2-2, x^3, x^3/(x^2-2)
+b 1 1
+b 3 -2 0 1
+b 4 0 0 0 1
+e 4 0 0 0 1 3 -2 0 1

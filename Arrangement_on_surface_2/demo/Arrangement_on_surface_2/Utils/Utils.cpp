@@ -22,6 +22,8 @@
 
 #include <CGAL/Arr_default_overlay_traits.h>
 #include <CGAL/Arr_overlay_2.h>
+#include <algorithm>
+#include <type_traits>
 
 //
 template <typename Kernel_>
@@ -196,19 +198,23 @@ operator()(const Point_2& p, const X_monotone_curve_2& curve) const {
     -view->horizontalScrollBar()->value(), -view->verticalScrollBar()->value());
   worldTransform = view->transform() * worldTransform;
 
-  QTransform facadeToViewport =
-    painterOstream.getPointsListMapping(worldTransform);
-
   auto points = painterOstream.getPointsList(curve);
 
   QPoint p_viewport =
     view->mapFromScene(QPointF{CGAL::to_double(p.x()), CGAL::to_double(p.y())});
 
+  // the distance (in pixels) from the point to the polyline that approximates the curve
+  const QPointF q(p_viewport);
   double min_dist = (std::numeric_limits<double>::max)();
   for (auto& vec : points) {
-    for (auto vit = vec.begin(); vit != vec.end(); ++vit) {
-      QPoint coord(vit->first, vit->second);
-      float cur_dist = QLineF{facadeToViewport.map(coord), p_viewport}.length();
+    for (std::size_t i = 0; i < vec.size(); ++i) {
+      const QPointF a = worldTransform.map(QPointF(vec[i].first, vec[i].second));
+      const QPointF b = (i + 1 < vec.size()) ? worldTransform.map(QPointF(vec[i + 1].first, vec[i + 1].second)) : a;
+      const QPointF ab = b - a;
+      const double len2 = QPointF::dotProduct(ab, ab);
+      double t = (len2 > 0) ? QPointF::dotProduct(q - a, ab) / len2 : 0;
+      t = (std::min)((std::max)(t, 0.0), 1.0);
+      const double cur_dist = QLineF{a + t * ab, q}.length();
       min_dist = cur_dist < min_dist ? cur_dist : min_dist;
     }
   }
@@ -244,6 +250,15 @@ operator()(const Point_2& p, const X_monotone_curve_2& curve) const {
 }
 
 //
+// constructs a point from its coordinates; directly if the point type allows it, otherwise through the traits
+// (e.g., the algebraic segment traits, whose points are constructed by the Construct_point_2 functor)
+template <typename Traits, typename X, typename Y>
+typename Traits::Point_2 make_point_2(const Traits* traits, const X& x, const Y& y) {
+  using Point_2 = typename Traits::Point_2;
+  if constexpr (std::is_constructible_v<Point_2, X, Y>) return Point_2(x, y);
+  else return traits->construct_point_2_object()(x, y);
+}
+
 template <typename ArrTraits>
 auto Arr_construct_point_2<ArrTraits>::
 operator()(const Kernel_point_2& pt) -> Point_2
@@ -259,11 +274,10 @@ operator()(const FT& x, const FT& y) -> Point_2
 template <typename ArrTraits>
 template <typename TTraits>
 auto Arr_construct_point_2<ArrTraits>::
-operator()(const FT& x, const FT& y, const TTraits*) -> Point_2 {
+operator()(const FT& x, const FT& y, const TTraits* traits_) -> Point_2 {
   CoordinateType xx(x);
   CoordinateType yy(y);
-  Point_2 res(xx, yy);
-  return res;
+  return make_point_2(traits_, xx, yy);
 }
 
 //
@@ -416,7 +430,7 @@ auto Construct_x_monotone_subcurve_2<ArrTraits>::operator()(
   {
     auto y1 = this->compute_y_at_x(curve, pLeft->x());
 
-    Point_2 splitPoint = {pLeft->x(), y1};
+    Point_2 splitPoint = make_point_2(this->traits, pLeft->x(), y1);
     this->split_2(curve, splitPoint, unusedTrimmings, subcurve);
   }
   else {
@@ -427,7 +441,7 @@ auto Construct_x_monotone_subcurve_2<ArrTraits>::operator()(
       (unbounded_max || this->compare_x_2(*pRight, pMax) == CGAL::SMALLER))
   {
     auto y2 = this->compute_y_at_x(subcurve, pRight->x());
-    Point_2 splitPoint = {pRight->x(), y2};
+    Point_2 splitPoint = make_point_2(this->traits, pRight->x(), y2);
     this->split_2(subcurve, splitPoint, finalSubcurve, unusedTrimmings);
   }
   else {

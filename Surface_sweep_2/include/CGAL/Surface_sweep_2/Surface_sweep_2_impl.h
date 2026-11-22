@@ -621,8 +621,16 @@ void Surface_sweep_2<Vis>::_intersect(Subcurve* c1, Subcurve* c2,
         xc = *ovl;
       }
 
+      // The comparer obtains the location of the curve end from the
+      // boundary conditions set beforehand.
+      CGAL_assertion_code
+        (this->m_queueEventLess.set_parameter_space_in_x
+         (this->m_traits->parameter_space_in_x_2_object()(xc, ARR_MIN_END));
+         this->m_queueEventLess.set_parameter_space_in_y
+         (this->m_traits->parameter_space_in_y_2_object()(xc, ARR_MIN_END));
+         this->m_queueEventLess.set_index(ARR_MIN_END));
       CGAL_assertion
-        (this->m_queueEventLess(ctr_min(xc),
+        (this->m_queueEventLess(xc,
                                 event_for_overlap == nullptr ?
                                 this->m_currentEvent : event_for_overlap) ==
          EQUAL);

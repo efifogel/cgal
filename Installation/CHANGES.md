@@ -28,6 +28,7 @@ Release date: December 2026
 - **Breaking change**: Enhanced the metadata traits-class decorators `Arr_counting_traits_2` and `Arr_tracing_traits_2`. Each is (still) parameterized with another traits class being decorated, but it does not inherit from it. In addition one can get and set a smart pointer to the class being decorated.
 - Speed up the polyline and polycurve traits (`Arr_polyline_traits_2`, `Arr_polycurve_traits_2`) and the surface sweep on long polylines, reducing construction time by up to 38%.
 - Fixed the surface sweep, which could produce invalid arrangements or crash on overlapping polylines, and the landmarks point location, which could fail to terminate on curves that cross the walk segment more than once or on antennas.
+- The algebraic segment traits `Arr_algebraic_segment_traits_2` now models the concepts `AosApproximatePointTraits_2`, `AosApproximateTraits_2`, and `AosApproximateUnboundedTraits_2`; that is, it approximates points and curves (unbounded curves within a bounding box), which enables drawing arrangements of algebraic curves. It also provides `Construct_bbox_2`, and it can hold its own curved kernel (passed to its constructor as a shared pointer).
 
 ### [2D and 3D Linear Geometry Kernel](https://doc.cgal.org/6.3/Manual/packages.html#PkgKernel23)
 
@@ -62,6 +63,11 @@ Release date: December 2026
 - **Breaking change** Removed the member function `vertices_in_conflict()` of the Delaunay and the regular triangulation  which were deprecated  since CGAL-3.8
 - Removed the concept `WeightedPoint`
 
+### [Polygon Mesh Processing](https://doc.cgal.org/6.3/Manual/packages.html#PkgPolygonMeshProcessing)
+- `CGAL::Polygon_mesh_processing::do_intersect()` and `CGAL::Polygon_mesh_processing::self_intersections()` functions now have a named parameter `concurrency_tag`,
+   specifying whether the task should be performed using a single or multiple threads.
+- The running times of the functions above have been improved.
+
 ### [Polygon Mesh Processing - Mesh Repair](https://doc.cgal.org/6.3/Manual/packages.html#PkgPMPMeshRepair)
 - **Breaking change**: Removed the function `CGAL::Polygon_mesh_processing::smooth_mesh()` which was deprecated since CGAL-5.5.
 - **Breaking change**: Removed the overload of the functions `CGAL::Polygon_mesh_processing::triangulate_hole()`, `CGAL::Polygon_mesh_processing::triangulate_and_refine_hole()`, and `CGAL::Polygon_mesh_processing::triangulate_refine_and_fair_hole()` having output iterators for vertices and faces as parameter, which were deprecated since CGAL-6.0.
@@ -76,6 +82,8 @@ Release date: December 2026
 - The corefinement based operations (including Boolean operations) has been optimized to better
   handle cases when some identical faces are shared between the input meshes. This leads to a significant speed up
   in those cases.
+- `corefine()` and its variants now have a named parameter `concurrency_tag`, specifying whether the task should be performed using a single or multiple threads.
+- The running times of `corefine()`, `autorefine()` and their variants have been improved.
 - Added new multithreading compatible functions operating directly on triangle soups, enabling the handling of non-manifold input and output volumes:
   `CGAL::Polygon_mesh_processing::compute_union_of_triangle_soups()`, `CGAL::Polygon_mesh_processing::compute_intersection_of_triangle_soups()`, and
   `CGAL::Polygon_mesh_processing::compute_difference_of_triangle_soups()`.
@@ -109,6 +117,15 @@ Release date: December 2026
  to distinguish between "constrained" edges that can be resampled while the constrained edges polyline graph remains topologically unchanged,
  and "protected" edges that may not be modified at all by remeshing.
  - Fix an API bug in `CGAL::Polygon_mesh_processing::remesh_planar_patches()`: when coplanarity/collinearity criteria are too relaxed, it might happen that some patches cannot be triangulated. To handle such cases, a Boolean is now returned to indicate if all patches could be triangulated (same behavior as `CGAL::Polygon_mesh_processing::remesh_almost_planar_patches()`). Also those two functions can now produce a (self-intersecting) mesh in case the simplified mesh turned out to be non-manifold (internally calling the function `CGAL::Polygon_mesh_processing::orient_polygon_soup()` on the corners and patches detected). In order to check if a non-manifoldness was worked around, the new named parameter `number_of_corners()` can be used and the filled value shall be compared to the number of vertices of the output mesh.
+
+### Number Types
+
+- **Breaking change**: The precisions of `CORE` (the default relative and absolute precisions of `CORE::Expr`, and the
+  precisions of `CORE::BigFloat` division and square root), which `CGAL::set_precision()` sets for `CORE::BigFloat`
+  intervals, are now thread-local: setting them affects only the calling thread, and every thread starts with the default
+  precisions. Previously they were shared by all threads, so concurrent computations with algebraic numbers (e.g.,
+  arrangements of algebraic curves or of rational functions constructed in different threads) used the precisions of each
+  other, which could produce wrong results or failed assertions.
 
 ## [Release 6.2](https://github.com/CGAL/cgal/releases/tag/v6.2)
 

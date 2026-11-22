@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <type_traits>
 
+#include <boost/utility/base_from_member.hpp>
+
 #include <QWidget>
 
 #include <CGAL/Qt/Basic_viewer.h>
@@ -86,12 +88,22 @@ protected:
     for (const auto& vh : m_arr.vertex_handles())
       bbox += traits.approximate_2_object()(vh->point()).bbox();
 
-    double approx_error = approximation_error(bbox, 100);
-    // Computes a more precise bounding box from the halfedges.
-    auto approx = traits.approximate_2_object();
-    for (const auto& he : m_arr.halfedge_handles()) {
-      approx(he->curve(), approx_error,
-             boost::make_function_output_iterator([&bbox](Approx_point pt) { bbox += pt.bbox(); }));
+    // Computes a more precise bounding box from the bounded curves (a halfedge and its twin share the curve).
+    if constexpr (has_construct_bbox_2_v<Geom_traits>) {
+      // Constructing the bounding box of a curve is cheaper than approximating it.
+      auto construct_bbox = traits.construct_bbox_2_object();
+      for (const auto& e : m_arr.edge_handles()) {
+        if (e->source()->is_at_open_boundary() || e->target()->is_at_open_boundary()) continue;
+        bbox += construct_bbox(e->curve());
+      }
+    }
+    else {
+      double approx_error = approximation_error(bbox, 100);
+      auto approx = traits.approximate_2_object();
+      for (const auto& e : m_arr.edge_handles()) {
+        approx(e->curve(), approx_error,
+               boost::make_function_output_iterator([&bbox](Approx_point pt) { bbox += pt.bbox(); }));
+      }
     }
     // Place margin around the bbox.
     double dx = bbox.x_span() * 0.1;
@@ -201,7 +213,8 @@ private:
  * \tparam GSOptions
  */
 template <typename Arrangement, typename GSOptions>
-class Arr_viewer : public Qt::Basic_viewer, Arr_viewport_helpers<Arrangement> {
+class Arr_viewer : private boost::base_from_member<CGAL::Graphics_scene>, public Qt::Basic_viewer, Arr_viewport_helpers<Arrangement> {
+  using Base_from_member = boost::base_from_member<CGAL::Graphics_scene>;
   using Basic_viewer = Qt::Basic_viewer;
   using Helpers = Arr_viewport_helpers<Arrangement>;
   using Vertex_const_handle = typename Arrangement::Vertex_const_handle;
@@ -306,8 +319,9 @@ private:
 
 public:
   Arr_viewer(QWidget* parent, const Arrangement& arr, const GSOptions& gso, const char* title, Bbox_2 initial_bbox) :
-    Basic_viewer(parent, m_gs, title),
+    Base_from_member(), Basic_viewer(parent, member, title),
     Helpers(arr),
+    m_gs(member),
     m_gso(gso),
     m_arr(arr),
     m_coords(*arr.geometry_traits()) {
@@ -345,7 +359,7 @@ public:
   virtual ~Arr_viewer() {}
 
 private:
-  Graphics_scene m_gs;
+  Graphics_scene& m_gs;
   GSOptions m_gso;
   const Arrangement& m_arr;
   bool m_initialized{false};

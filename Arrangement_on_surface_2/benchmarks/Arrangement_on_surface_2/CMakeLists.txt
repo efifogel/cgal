@@ -21,3 +21,13 @@ target_link_libraries(bench_arr_polylines PRIVATE CGAL::CGAL Boost::program_opti
 add_executable(bench_arr_polylines_rational bench_arr_polylines.cpp)
 target_compile_definitions(bench_arr_polylines_rational PRIVATE CGAL_BENCH_KERNEL=2)
 target_link_libraries(bench_arr_polylines_rational PRIVATE CGAL::CGAL Boost::program_options)
+
+# Performance of the operations that go through the arrangement geometry
+# traits; used, e.g., to compare builds before and after a change.
+add_executable(arr_traits_benchmark arr_traits_benchmark.cpp)
+target_link_libraries(arr_traits_benchmark PRIVATE CGAL::CGAL)
+
+# Performance of the algebraic segment traits and its curved kernel; used,
+# e.g., to compare builds before and after a change of the traits internals.
+add_executable(arr_algebraic_benchmark arr_algebraic_benchmark.cpp)
+target_link_libraries(arr_algebraic_benchmark PRIVATE CGAL::CGAL)
