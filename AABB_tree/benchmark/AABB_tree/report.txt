@@ -2,7 +2,10 @@ Line-mesh intersection
 ======================
 
 Benchmark: all_intersections.cpp (Release build in build/), 22 threads,
-single runs, on cgal/main (a25894af4d4). Query sets (-l): random (two random points), vertices (two mesh
+single runs, on cgal/main (a25894af4d4) with two library branches merged:
+Filtered_kernel-line_bbox_static_filter-efif (a Line_3/Bbox_3 static filter,
+on top of #9807) and AABB_tree-conservative_pruning-efif (a conservative box
+test for linear queries in the AABB tree traversal). Query sets (-l): random (two random points), vertices (two mesh
 vertices), grid (two integer points; many lines lie in planes of faces),
 vertex-point / edge-point (a vertex / edge midpoint and a random point; many
 lines touch the solid at that point only).
@@ -68,19 +71,20 @@ terrain12.off in this directory (generate_terrain.py 12 1).
 5. Performance findings
 -----------------------
 
-5.1 Epick has no static filter for do_intersect(Line_3, Bbox_3)
-    (Filtered_kernel/.../Static_filters/Do_intersect_3.h). The benchmark
-    uses a conservative slab test in doubles (Fast_line). Finding the faces
-    the line meets (armadillo, 200000 lines):
+5.1 Finding the faces the line meets (armadillo, 200000 lines):
                                                      random    vertices
-      Epeck tree, all_intersected_primitives         2.30 s    31.85 s
-      Epick tree, Fast_line + exact leaf test        0.61 s     2.83 s
-      Epick tree, Filtered_line + exact leaf test    1.03 s     3.78 s
-    Filtered_line is CGAL's static-filter slab test on the two input points
-    (exact when certain); Fast_line precomputes the inverse direction once.
+      Epeck tree, all_intersected_primitives         1.06 s    26.55 s
+      Epick tree, Fast_line + exact leaf test        0.60 s     2.71 s
+      Epick tree, Filtered_line + exact leaf test    1.00 s     3.61 s
+    The library traversal prunes with the conservative box test of
+    AABB_tree-conservative_pruning-efif (on cgal/main: 2.30 s and 31.85 s).
+    Fast_line is the benchmark's slab test in doubles; Filtered_line is
+    CGAL's static-filter slab test on the two input points (exact when
+    certain). The Line_3/Bbox_3 static filter does not apply: an Epick
+    Line_3 through two points stores a rounded direction.
 
 5.2 Lazy Epeck intersections fall back to exact arithmetic at edges and
-    vertices: all_intersections takes 2.37 s (random) vs 52.4 s (vertices).
+    vertices: all_intersections takes 1.10 s (random) vs 45.0 s (vertices).
 
 5.3 Classifying contacts by predicates on the input points avoids
     constructions; only output points are constructed.
@@ -90,19 +94,22 @@ terrain12.off in this directory (generate_terrain.py 12 1).
 ---------------------------
 
                  armadillo random   armadillo vertices   cube_meshed grid
-baseline          2.57 s             79.3 s               160.7 s
-sorted            2.47 s             67.9 s               137.2 s
-cached            2.42 s             59.9 s                91.6 s
-hybrid-fast       1.12 s             53.5 s                72.5 s
-predicates        0.76 s   (3.4x)     3.8 s   (21x)         1.5 s   (109x)
-predicates-mt     0.10 s    (25x)     0.42 s (189x)         0.16 s (1027x)
+baseline          1.28 s             70.6 s               152.6 s
+sorted            1.16 s             60.3 s               129.5 s
+cached            1.12 s             52.9 s                84.3 s
+hybrid-fast       1.09 s             52.3 s                72.6 s
+predicates        0.73 s   (1.7x)     3.6 s   (20x)         1.4 s   (108x)
+predicates-mt     0.09 s    (14x)     0.41 s (173x)         0.16 s  (939x)
+
+With the pruning, the library-based variants (baseline, sorted, cached) are
+about 2x faster on random lines than on cgal/main (2.57, 2.47, 2.42 s) and
+5-12% faster on degenerate lines; the others search with Fast_line.
 
 
 7. Recommendation
 -----------------
 
-Use predicates (multi-threaded for batches). Library improvements, on
-separate branches: a Line_3/Bbox_3 static filter in Filtered_kernel
-(Filtered_kernel-line_bbox_static_filter-efif), and a conservative box test
-for linear queries in the AABB tree traversal, about 2x faster on
-all_intersections() in general position (AABB_tree-conservative_pruning-efif).
+Use predicates (multi-threaded for batches). The two library branches merged
+here are proposed separately: the conservative box test halves the cost of
+library line queries in general position; the static filter speeds up the
+Epick Line_3/Bbox_3 test (1.9x), which this benchmark does not use.
