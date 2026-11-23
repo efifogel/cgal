@@ -10,6 +10,7 @@ create_single_source_cgal_program("old_bench_AABB_tree.cpp")
 create_single_source_cgal_program("tree_construction.cpp")
 create_single_source_cgal_program("knot_generation.cpp")
 create_single_source_cgal_program("tree_queries.cpp")
+create_single_source_cgal_program("linear_queries.cpp")
 
 find_package(Boost QUIET COMPONENTS program_options)
 if(TARGET Boost::program_options)
