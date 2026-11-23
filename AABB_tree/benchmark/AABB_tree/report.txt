@@ -1,0 +1,108 @@
+Line-mesh intersection
+======================
+
+Benchmark: all_intersections.cpp (Release build in build/), 22 threads,
+single runs, on cgal/main (a25894af4d4). Query sets (-l): random (two random points), vertices (two mesh
+vertices), grid (two integer points; many lines lie in planes of faces),
+vertex-point / edge-point (a vertex / edge midpoint and a random point; many
+lines touch the solid at that point only).
+
+
+1. Output
+---------
+
+The intersection of the line and the closed solid: the sorted maximal
+segments and isolated points, including those on the boundary only.
+Input: a closed, outward oriented triangle mesh without self intersections,
+duplicate vertices, or degenerate faces.
+
+
+2. Method
+---------
+
+- An open interval between consecutive contacts is either on the boundary
+  (in a face coplanar with the line) or off it; off it, it is inside iff the
+  line translated by an infinitesimal vector w = (e, e^2, e^3) is inside.
+- The translated line crosses the boundary at a contact iff it hits an odd
+  number of the faces there. Face (p0, p1, p2) is hit iff the signs
+  orientation(a, b, p_j, p_j+1) agree, a zero replaced by the sign of the
+  first non-zero coordinate of (b - a) x (p_j+1 - p_j).
+
+
+3. Variants
+-----------
+
+baseline       Epeck tree, all_intersections(), Epeck points sorted along
+               the line.
+sorted         baseline; perturbed test on the input points, sort by one
+               coordinate.
+cached         sorted + CacheDatum = Tag_true.
+hybrid-fast    Epick tree searched with Fast_line (5.1); Epeck intersections.
+predicates     Epick tree + Fast_line; contacts classified and sorted by exact
+               predicates on the input points; Epeck points constructed for
+               the output only.
+predicates-mt  predicates on std::threads (-j).
+
+
+4. Correctness
+--------------
+
+- Perturbation: orientation(a + w, b + w, p, q) = det_0 +
+  ((b - a) x (q - p)) * w. Near a contact the translated line meets faces
+  only in their interiors, transversally, so the parity rule is exact.
+- A maximal part of the line on the boundary starts and ends at a contact.
+- Fast_line is conservative: slab parameters have relative error <= ~4u,
+  far below its 1e-14 inflation; non-finite values accept the box.
+
+Validation (--validate): every output is compared with an independent
+reference (Epeck line against every face, Side_of_triangle_mesh on each
+interval). 10 meshes x 5 query sets x 3000 lines (about 15800 along the
+surface; about 6600 whose intersection is a single vertex or edge point):
+all variants match on every line. Debug build (checked on an earlier base):
+no assertion.
+The meshes are armadillo, fandisk, anchor, joint, cross, cube_meshed,
+cube-subdivided, large_cube_coplanar, cheese-box (Data/data/meshes), and
+terrain12.off in this directory (generate_terrain.py 12 1).
+
+
+5. Performance findings
+-----------------------
+
+5.1 Epick has no static filter for do_intersect(Line_3, Bbox_3)
+    (Filtered_kernel/.../Static_filters/Do_intersect_3.h). The benchmark
+    uses a conservative slab test in doubles (Fast_line). Finding the faces
+    the line meets (armadillo, 200000 lines):
+                                                     random    vertices
+      Epeck tree, all_intersected_primitives         2.30 s    31.85 s
+      Epick tree, Fast_line + exact leaf test        0.61 s     2.83 s
+      Epick tree, Filtered_line + exact leaf test    1.03 s     3.78 s
+    Filtered_line is CGAL's static-filter slab test on the two input points
+    (exact when certain); Fast_line precomputes the inverse direction once.
+
+5.2 Lazy Epeck intersections fall back to exact arithmetic at edges and
+    vertices: all_intersections takes 2.37 s (random) vs 52.4 s (vertices).
+
+5.3 Classifying contacts by predicates on the input points avoids
+    constructions; only output points are constructed.
+
+
+6. Timings (200000 queries)
+---------------------------
+
+                 armadillo random   armadillo vertices   cube_meshed grid
+baseline          2.57 s             79.3 s               160.7 s
+sorted            2.47 s             67.9 s               137.2 s
+cached            2.42 s             59.9 s                91.6 s
+hybrid-fast       1.12 s             53.5 s                72.5 s
+predicates        0.76 s   (3.4x)     3.8 s   (21x)         1.5 s   (109x)
+predicates-mt     0.10 s    (25x)     0.42 s (189x)         0.16 s (1027x)
+
+
+7. Recommendation
+-----------------
+
+Use predicates (multi-threaded for batches). Library improvements, on
+separate branches: a Line_3/Bbox_3 static filter in Filtered_kernel
+(Filtered_kernel-line_bbox_static_filter-efif), and a conservative box test
+for linear queries in the AABB tree traversal, about 2x faster on
+all_intersections() in general position (AABB_tree-conservative_pruning-efif).

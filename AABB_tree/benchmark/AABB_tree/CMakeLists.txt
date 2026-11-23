@@ -11,6 +11,14 @@ create_single_source_cgal_program("tree_construction.cpp")
 create_single_source_cgal_program("knot_generation.cpp")
 create_single_source_cgal_program("tree_queries.cpp")
 
+find_package(Boost QUIET COMPONENTS program_options)
+if(TARGET Boost::program_options)
+  create_single_source_cgal_program("all_intersections.cpp")
+  target_link_libraries(all_intersections PRIVATE Boost::program_options)
+else()
+  message(STATUS "NOTICE: The benchmark 'all_intersections.cpp' requires Boost Program Options, and will not be compiled.")
+endif()
+
 # google benchmark
 find_package(benchmark QUIET)
 if(benchmark_FOUND)
