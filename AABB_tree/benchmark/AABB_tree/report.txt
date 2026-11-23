@@ -93,17 +93,19 @@ terrain12.off in this directory (generate_terrain.py 12 1).
 6. Timings (200000 queries)
 ---------------------------
 
-                 armadillo random   armadillo vertices   cube_meshed grid
-baseline          1.28 s             70.6 s               152.6 s
-sorted            1.16 s             60.3 s               129.5 s
-cached            1.12 s             52.9 s                84.3 s
-hybrid-fast       1.09 s             52.3 s                72.6 s
-predicates        0.73 s   (1.7x)     3.6 s   (20x)         1.4 s   (108x)
-predicates-mt     0.09 s    (14x)     0.41 s (173x)         0.16 s  (939x)
+                 armadillo random       armadillo vertices     cube_meshed grid
+baseline          1.28 s                 70.6 s                 152.6 s
+sorted            1.16 s                 60.3 s                 129.5 s
+cached            1.12 s                 52.9 s                  84.3 s
+hybrid-fast       1.09 s                 52.3 s                  72.6 s
+predicates        0.73 s  (1.7x / 3.5x)   3.6 s  (20x / 22x)      1.4 s  (108x / 113x)
+predicates-mt     0.09 s   (14x / 28x)    0.41 s (173x / 194x)    0.16 s (939x / 990x)
 
-With the pruning, the library-based variants (baseline, sorted, cached) are
-about 2x faster on random lines than on cgal/main (2.57, 2.47, 2.42 s) and
-5-12% faster on degenerate lines; the others search with Fast_line.
+Speed-ups: against baseline here / against baseline on cgal/main (2.57 s,
+79.3 s, 160.7 s). With the pruning, the library-based variants (baseline,
+sorted, cached) are about 2x faster on random lines than on cgal/main (2.57,
+2.47, 2.42 s) and 5-12% faster on degenerate lines; hybrid-fast, predicates,
+and predicates-mt search with Fast_line and are unchanged.
 
 
 7. Recommendation
