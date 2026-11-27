@@ -15,22 +15,28 @@
 
 #include <CGAL/license/Boolean_set_operations_2.h>
 
+#include <cstddef>
+#include <limits>
 
 #include <CGAL/Boolean_set_operations_2/Gps_traits_decorator.h>
 
 namespace CGAL {
 
+/*! The index of a polygon vertex or edge that is not associated with any;
+ * it is invalid for every polygon (see `Gps_simplifier_traits::is_valid_index()`).
+ */
+inline constexpr std::size_t gps_simplifier_no_index = (std::numeric_limits<std::size_t>::max)();
+
 class Gps_simplifier_curve_data {
 protected:
-  std::size_t m_bc;
-  std::size_t m_twin_bc;
-  std::size_t m_index;
+  std::size_t m_bc = 0;
+  std::size_t m_twin_bc = 0;
+  std::size_t m_index = gps_simplifier_no_index;
 
 public:
-  Gps_simplifier_curve_data() {}
+  Gps_simplifier_curve_data() = default;
 
-  Gps_simplifier_curve_data(std::size_t bc, std::size_t twin_bc,
-                            std::size_t index):
+  Gps_simplifier_curve_data(std::size_t bc, std::size_t twin_bc, std::size_t index):
     m_bc(bc),
     m_twin_bc(twin_bc),
     m_index(index)
@@ -53,12 +59,12 @@ public:
   void set_index(std::size_t index) { m_index = index; }
 };
 
-struct Gps_simplifier_point_data {
+class Gps_simplifier_point_data {
 protected:
-  std::size_t m_index;
+  std::size_t m_index = gps_simplifier_no_index;
 
 public:
-  Gps_simplifier_point_data() {}
+  Gps_simplifier_point_data() = default;
 
   Gps_simplifier_point_data(std::size_t index) : m_index(index) {}
 
@@ -69,9 +75,7 @@ public:
 
 template <typename Traits_>
 class Gps_simplifier_traits :
-  public Gps_traits_decorator<Traits_,
-                              Gps_simplifier_curve_data,
-                              Gps_simplifier_point_data> {
+  public Gps_traits_decorator<Traits_, Gps_simplifier_curve_data, Gps_simplifier_point_data> {
 public:
   using Traits = Traits_;
   using Base = Gps_traits_decorator<Traits_, Gps_simplifier_curve_data, Gps_simplifier_point_data>;
@@ -106,8 +110,7 @@ public:
 
   void set_polygon_size(std::size_t pgn_size) const { m_pgn_size = pgn_size; }
 
-  bool is_valid_index(std::size_t index) const
-  { return (index < m_pgn_size); }
+  bool is_valid_index(std::size_t index) const { return (index < m_pgn_size); }
 
   std::size_t invalid_index() const { return (m_pgn_size); }
 
@@ -123,13 +126,11 @@ public:
 
   public:
     template <typename OutputIterator>
-    OutputIterator operator()(const X_monotone_curve_2& cv1,
-                              const X_monotone_curve_2& cv2,
-                              OutputIterator oi) const {
+    OutputIterator operator()(const X_monotone_curve_2& cv1, const X_monotone_curve_2& cv2, OutputIterator oi) const {
       using Intersection_base_point = const std::pair<Base_point_2, Multiplicity>;
       using Intersection_base_result = std::variant<Intersection_base_point, Base_x_monotone_curve_2>;
 
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_cmp_xy = base_traits->compare_xy_2_object();
       auto base_cmp_endpoints = base_traits->compare_endpoints_xy_2_object();
       auto base_ctr_min_vertex = base_traits->construct_min_vertex_2_object();
@@ -159,18 +160,15 @@ public:
       // convert objects that are associated with Base_x_monotone_curve_2 to
       // the extenede X_monotone_curve_2
       for (const auto& xection : xections) {
-        const Intersection_base_point* base_pt =
-          std::get_if<Intersection_base_point>(&xection);
+        const Intersection_base_point* base_pt = std::get_if<Intersection_base_point>(&xection);
         if (base_pt != nullptr) {
           Point_data pt_data(m_traits.invalid_index());
           Point_2 point_plus(base_pt->first, pt_data); // the extended point
-          *oi++ =
-            std::make_pair(point_plus, base_pt->second);
+          *oi++ = std::make_pair(point_plus, base_pt->second);
           continue;
         }
 
-        const Base_x_monotone_curve_2* overlap_cv =
-          std::get_if<Base_x_monotone_curve_2>(&xection);
+        const Base_x_monotone_curve_2* overlap_cv = std::get_if<Base_x_monotone_curve_2>(&xection);
 
         CGAL_assertion(overlap_cv != nullptr);
         std::size_t ov_bc;
@@ -214,15 +212,13 @@ public:
   public:
     void operator()(const X_monotone_curve_2& cv, const Point_2 & p,
                     X_monotone_curve_2& c1, X_monotone_curve_2& c2) const {
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_split = base_traits->split_2_object();
       base_split(cv.base(), p.base(), c1.base(), c2.base());
       const Curve_data& cv_data = cv.data();
-      c1.set_data(Curve_data(cv_data.bc(), cv_data.twin_bc(),
-                             m_traits.invalid_index()));
+      c1.set_data(Curve_data(cv_data.bc(), cv_data.twin_bc(), m_traits.invalid_index()));
 
-      c2.set_data(Curve_data(cv_data.bc(), cv_data.twin_bc(),
-                             m_traits.invalid_index()));
+      c2.set_data(Curve_data(cv_data.bc(), cv_data.twin_bc(), m_traits.invalid_index()));
     }
   };
 
@@ -243,7 +239,7 @@ public:
       * \return The left endpoint.
       */
     Point_2 operator()(const X_monotone_curve_2 & cv) const {
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_ctr_min_vertex = base_traits->construct_min_vertex_2_object();
 
       if (! m_traits.is_valid_index(cv.data().index()))
@@ -282,7 +278,7 @@ public:
       * \return The left endpoint.
       */
     Point_2 operator() (const X_monotone_curve_2 & cv) const {
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_ctr_max_vertex = base_traits->construct_max_vertex_2_object();
       if (! m_traits.is_valid_index(cv.data().index()))
         return Point_2(base_ctr_max_vertex(cv.base()), m_traits.invalid_index());
@@ -303,8 +299,7 @@ public:
   };
 
   /*! Get a Construct_min_vertex_2 functor object. */
-  Construct_max_vertex_2 construct_max_vertex_2_object () const
-  { return Construct_max_vertex_2(*this); }
+  Construct_max_vertex_2 construct_max_vertex_2_object () const { return Construct_max_vertex_2(*this); }
 
   class Compare_xy_2 {
   private:
@@ -320,12 +315,11 @@ public:
       * \return The left endpoint.
       */
     Comparison_result operator()(const Point_2& p1, const Point_2& p2) const {
-      const auto* base_traits = m_traits.m_base_traits;
+      const auto* base_traits = m_traits.m_base_traits.get();
       auto base_cmp_xy = base_traits->compare_xy_2_object();
 
       //if one of the indexes is invalid, compare p1 and p2
-      if (! m_traits.is_valid_index(p1.data().index()) ||
-          ! m_traits.is_valid_index(p2.data().index()))
+      if (! m_traits.is_valid_index(p1.data().index()) || ! m_traits.is_valid_index(p2.data().index()))
         return (base_cmp_xy(p1.base(), p2.base()));
 
       // if the two point has the same index, return EQUAL

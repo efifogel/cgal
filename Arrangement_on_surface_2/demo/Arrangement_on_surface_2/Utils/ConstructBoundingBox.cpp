@@ -15,6 +15,8 @@
 
 #include <CGAL/number_utils.h>
 #include <limits>
+#include <type_traits>
+#include <utility>
 
 //
 static const CGAL::Bbox_2 inf_bbox = {
@@ -24,6 +26,17 @@ static const CGAL::Bbox_2 inf_bbox = {
   std::numeric_limits<double>::infinity()};
 
 static constexpr double inf_double = std::numeric_limits<double>::infinity();
+
+// Whether the traits provides a functor that constructs the bounding box of an
+// x-monotone curve (e.g., the algebraic segment traits, whose curves do not
+// compute their own bounding boxes).
+template <typename Traits, typename = void>
+struct Has_construct_bbox_2 : std::false_type {};
+
+template <typename Traits>
+struct Has_construct_bbox_2<
+  Traits, std::void_t<decltype(std::declval<const Traits&>().construct_bbox_2_object())>> :
+  std::true_type {};
 
 //
 template <typename GeometryTraits>
@@ -46,7 +59,10 @@ public:
 
     CGAL::Bbox_2 bbox;
     try {
-      bbox = curve.bbox();
+      if constexpr (Has_construct_bbox_2<Traits>::value)
+        bbox = m_traits.construct_bbox_2_object()(curve);
+      else
+        bbox = curve.bbox();
     }
     // algebraic traits sometimes crash when calling bbox
     // example: xy=0

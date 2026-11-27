@@ -157,6 +157,14 @@ Release date: December 2026
   by points strictly below or above the box, respectively, rather than removed. The model `Arr_linear_traits_2` has been
   adapted accordingly. This enables the drawing of arrangements induced by unbounded curves without constructing exact points
   from approximate points.
+- Speed up the polyline and polycurve traits (`Arr_polyline_traits_2`, `Arr_polycurve_traits_2`) and the surface sweep
+  on long polylines, reducing construction time by up to 38%.
+- Fixed the surface sweep, which could produce invalid arrangements or crash on overlapping polylines, and the landmarks
+  point location, which could fail to terminate on curves that cross the walk segment more than once or on antennas.
+- The algebraic segment traits `Arr_algebraic_segment_traits_2` now models the concepts `AosApproximatePointTraits_2`,
+  `AosApproximateTraits_2`, and `AosApproximateUnboundedTraits_2`; that is, it approximates points and curves (unbounded
+  curves within a bounding box), which enables drawing arrangements of algebraic curves. It also provides
+  `Construct_bbox_2`, and it can hold its own curved kernel (passed to its constructor as a shared pointer).
 
 ### [3D Triangulations](https://doc.cgal.org/6.3/Manual/packages.html#PkgTriangulation3)
 
@@ -276,6 +284,15 @@ Release date: December 2026
 
 - **Breaking change**: Removed the class templates `Twotuple`, `Threetuple`, `Fourtuple`, and `Sixtuple`,
   which were deprecated since CGAL-3.4.
+
+### Number Types
+
+- **Breaking change**: The precisions of `CORE` (the default relative and absolute precisions of `CORE::Expr`, and the
+  precisions of `CORE::BigFloat` division and square root), which `CGAL::set_precision()` sets for `CORE::BigFloat`
+  intervals, are now thread-local: setting them affects only the calling thread, and every thread starts with the
+  default precisions. Previously they were shared by all threads, so concurrent computations with algebraic numbers
+  (e.g., arrangements of algebraic curves or of rational functions constructed in different threads) used the precisions
+  of each other, which could produce wrong results or failed assertions.
 
 ## [Release 6.2](https://github.com/CGAL/cgal/releases/tag/v6.2)
 

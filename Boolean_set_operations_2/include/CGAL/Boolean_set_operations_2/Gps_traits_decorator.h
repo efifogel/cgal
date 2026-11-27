@@ -15,523 +15,352 @@
 
 #include <CGAL/license/Boolean_set_operations_2.h>
 
+#include <memory>
+#include <ostream>
+#include <type_traits>
+
+#include <CGAL/enum.h>
+#include <CGAL/Arr_tags.h>
+
 namespace CGAL {
 
-template <class Traits_, class Curve_data_, class Point_data_>
-class Gps_traits_decorator
-{
+template <typename Traits_, typename Curve_data_, typename Point_data_>
+class Gps_traits_decorator {
 public:
-  typedef Traits_                              Base;
-  typedef typename Base::X_monotone_curve_2    Base_X_monotone_curve_2;
-  typedef typename Base::Point_2               Base_Point_2;
-  typedef typename Base::Multiplicity          Multiplicity;
+  using Base = Traits_;
+  using Base_X_monotone_curve_2 = typename Base::X_monotone_curve_2;
+  using Base_Point_2 = typename Base::Point_2;
+  using Multiplicity = typename Base::Multiplicity;
 
-  typedef Gps_traits_decorator<Traits_, Curve_data_, Point_data_>    Self;
+  using Self = Gps_traits_decorator<Traits_, Curve_data_, Point_data_>;
 
-  typedef Curve_data_                          Curve_data;
-  typedef Point_data_                          Point_data;
+  using Curve_data = Curve_data_;
+  using Point_data = Point_data_;
 
-  typedef typename Base::Compare_x_2               Base_Compare_x_2;
-  typedef typename Base::Compare_xy_2              Base_Compare_xy_2;
-  typedef typename Base::Construct_min_vertex_2    Base_Construct_min_vertex_2;
-  typedef typename Base::Construct_max_vertex_2    Base_Construct_max_vertex_2;
-  typedef typename Base::Is_vertical_2             Base_Is_vertical_2;
-  typedef typename Base::Compare_y_at_x_2          Base_Compare_y_at_x_2;
-  typedef typename Base::Compare_y_at_x_right_2    Base_Compare_y_at_x_right_2;
-  typedef typename Base::Equal_2                   Base_Equal_2;
-  typedef typename Base::Split_2                   Base_Split_2;
-  typedef typename Base::Intersect_2               Base_Intersect_2;
-  typedef typename Base::Compare_endpoints_xy_2    Base_Compare_endpoints_xy_2;
-  typedef typename Base::Construct_opposite_2      Base_Construct_opposite_2;
-  typedef typename Base::Has_left_category         Has_left_category;
-  typedef typename Base::Has_merge_category        Has_merge_category;
+  using Base_Compare_x_2 = typename Base::Compare_x_2;
+  using Base_Compare_xy_2 = typename Base::Compare_xy_2;
+  using Base_Construct_min_vertex_2 = typename Base::Construct_min_vertex_2;
+  using Base_Construct_max_vertex_2 = typename Base::Construct_max_vertex_2;
+  using Base_Is_vertical_2 = typename Base::Is_vertical_2;
+  using Base_Compare_y_at_x_2 = typename Base::Compare_y_at_x_2;
+  using Base_Compare_y_at_x_right_2 = typename Base::Compare_y_at_x_right_2;
+  using Base_Equal_2 = typename Base::Equal_2;
+  using Base_Split_2 = typename Base::Split_2;
+  using Base_Compare_endpoints_xy_2 = typename Base::Compare_endpoints_xy_2;
+  using Has_left_category = typename Base::Has_left_category;
+  using Has_merge_category = typename Base::Has_merge_category;
 
-  typedef typename Base::Left_side_category        Left_side_category;
-  typedef typename Base::Bottom_side_category      Bottom_side_category;
-  typedef typename Base::Top_side_category         Top_side_category;
-  typedef typename Base::Right_side_category       Right_side_category;
+  using Left_side_category = typename Base::Left_side_category;
+  using Bottom_side_category = typename Base::Bottom_side_category;
+  using Top_side_category = typename Base::Top_side_category;
+  using Right_side_category = typename Base::Right_side_category;
 
   // a side is either oblivious or open (unbounded)
-  static_assert(std::is_same< Left_side_category, Arr_oblivious_side_tag >::value ||
-                         std::is_same< Left_side_category, Arr_open_side_tag >::value);
-  static_assert(std::is_same< Bottom_side_category, Arr_oblivious_side_tag >::value ||
-                         std::is_same< Bottom_side_category, Arr_open_side_tag >::value);
-  static_assert(std::is_same< Top_side_category, Arr_oblivious_side_tag >::value ||
-                         std::is_same< Top_side_category, Arr_open_side_tag >::value);
-  static_assert(std::is_same< Right_side_category, Arr_oblivious_side_tag >::value ||
-                         std::is_same< Right_side_category, Arr_open_side_tag >::value);
+  static_assert(std::is_same_v<Left_side_category, Arr_oblivious_side_tag> ||
+                std::is_same_v<Left_side_category, Arr_open_side_tag>);
+  static_assert(std::is_same_v<Bottom_side_category, Arr_oblivious_side_tag> ||
+                std::is_same_v<Bottom_side_category, Arr_open_side_tag>);
+  static_assert(std::is_same_v<Top_side_category, Arr_oblivious_side_tag> ||
+                std::is_same_v<Top_side_category, Arr_open_side_tag>);
+  static_assert(std::is_same_v<Right_side_category, Arr_oblivious_side_tag> ||
+                std::is_same_v<Right_side_category, Arr_open_side_tag>);
 
-  class Ex_point_2
-  {
+  /*! A base point extended with data.
+   */
+  class Ex_point_2 {
   protected:
     Base_Point_2 m_base;
-    Point_data   m_data;
+    Point_data m_data;
 
   public:
-    Ex_point_2(): m_base(),
-                  m_data()
-    {}
+    /*! constructs default. */
+    Ex_point_2() : m_base(), m_data() {}
 
-    Ex_point_2(const Base_Point_2& pt) : m_base(pt),
-                                         m_data()
-    {}
+    /*! constructs from a base point with default data. */
+    Ex_point_2(const Base_Point_2& pt) : m_base(pt), m_data() {}
 
-    Ex_point_2(const Base_Point_2& pt, const Point_data& data): m_base(pt),
-                                                                m_data(data)
-    {}
+    /*! constructs from a base point and data. */
+    Ex_point_2(const Base_Point_2& pt, const Point_data& data) : m_base(pt), m_data(data) {}
 
-    const Base_Point_2& base() const
-    {
-      return m_base;
-    }
+    /*! obtains the base point (const version). */
+    const Base_Point_2& base() const { return m_base; }
 
-    Base_Point_2& base()
-    {
-      return m_base;
-    }
+    /*! obtains the base point (non-const version). */
+    Base_Point_2& base() { return m_base; }
 
-    operator const Base_Point_2& () const
-    {
-      return (m_base);
-    }
+    /*! converts to the base point. */
+    operator const Base_Point_2&() const { return m_base; }
 
-    Point_data& data()
-    {
-      return m_data;
-    }
+    /*! obtains the data (non-const version). */
+    Point_data& data() { return m_data; }
 
-    const Point_data& data() const
-    {
-      return m_data;
-    }
+    /*! obtains the data (const version). */
+    const Point_data& data() const { return m_data; }
 
-    void set_data(const Point_data& data)
-    {
-      m_data = data;
-    }
-
-
+    /*! sets the data. */
+    void set_data(const Point_data& data) { m_data = data; }
   };
 
-  class Ex_x_monotone_curve_2
-  {
+  /*! A base x-monotone curve extended with data.
+   */
+  class Ex_x_monotone_curve_2 {
   protected:
-    Base_X_monotone_curve_2    m_base;
-    Curve_data                 m_data;
+    Base_X_monotone_curve_2 m_base;
+    Curve_data m_data;
 
-    public:
-    Ex_x_monotone_curve_2(): m_base(),
-                             m_data()
-    {}
+  public:
+    /*! constructs default. */
+    Ex_x_monotone_curve_2() : m_base(), m_data() {}
 
-    Ex_x_monotone_curve_2(const Base_X_monotone_curve_2& pt) : m_base(pt),
-                                                               m_data()
-    {}
+    /*! constructs from a base curve with default data. */
+    Ex_x_monotone_curve_2(const Base_X_monotone_curve_2& xcv) : m_base(xcv), m_data() {}
 
-    Ex_x_monotone_curve_2(const Base_X_monotone_curve_2& pt,
-                          const Curve_data& data): m_base(pt),
-                                                   m_data(data)
-    {}
+    /*! constructs from a base curve and data. */
+    Ex_x_monotone_curve_2(const Base_X_monotone_curve_2& xcv, const Curve_data& data) : m_base(xcv), m_data(data) {}
 
-    const Base_X_monotone_curve_2& base() const
-    {
-      return m_base;
-    }
+    /*! obtains the base curve (const version). */
+    const Base_X_monotone_curve_2& base() const { return m_base; }
 
-    Base_X_monotone_curve_2& base()
-    {
-      return m_base;
-    }
+    /*! obtains the base curve (non-const version). */
+    Base_X_monotone_curve_2& base() { return m_base; }
 
-    operator const Base_X_monotone_curve_2& () const
-    {
-      return (m_base);
-    }
+    /*! converts to the base curve. */
+    operator const Base_X_monotone_curve_2&() const { return m_base; }
 
-    Curve_data& data()
-    {
-      return m_data;
-    }
+    /*! obtains the data (non-const version). */
+    Curve_data& data() { return m_data; }
 
-    const Curve_data& data() const
-    {
-      return m_data;
-    }
+    /*! obtains the data (const version). */
+    const Curve_data& data() const { return m_data; }
 
-    void set_data(const Curve_data& data)
-    {
-      m_data = data;
-    }
+    /*! sets the data. */
+    void set_data(const Curve_data& data) { m_data = data; }
   };
 
-  friend std::ostream& operator<< (std::ostream& os, const Ex_x_monotone_curve_2 & cv)
-  {
-    os << cv.base();
-    return (os);
+  /*! inserts an extended x-monotone curve into an output stream. */
+  friend std::ostream& operator<<(std::ostream& os, const Ex_x_monotone_curve_2& xcv) {
+    os << xcv.base();
+    return os;
   }
 
-  friend std::ostream& operator<< (std::ostream& os, const Ex_point_2 & pt)
-  {
+  /*! inserts an extended point into an output stream. */
+  friend std::ostream& operator<<(std::ostream& os, const Ex_point_2& pt) {
     os << pt.base();
-    return (os);
+    return os;
   }
 
-  typedef Ex_point_2                Point_2;
-  typedef Ex_x_monotone_curve_2     X_monotone_curve_2;
+  using Point_2 = Ex_point_2;
+  using X_monotone_curve_2 = Ex_x_monotone_curve_2;
 
-  protected:
+protected:
+  using Shared_base_traits = std::shared_ptr<const Base>;
 
-  //Data members
-  const Base* m_base_traits;
-  bool m_traits_owner;
+  // The base traits, shared with the copies of the decorator. Base traits
+  // given by the caller are not owned.
+  Shared_base_traits m_base_traits;
+
+  /*! wraps base traits owned by the caller in a non-owning shared pointer.
+   */
+  static Shared_base_traits _non_owning(const Base& base_traits)
+  { return Shared_base_traits(std::shared_ptr<void>(), &base_traits); }
 
 public:
+  /*! constructs default. */
+  Gps_traits_decorator() : m_base_traits(std::make_shared<Base>()) {}
 
-  Gps_traits_decorator() :
-    m_base_traits(new Base()),
-    m_traits_owner(true)
-  {}
+  /*! constructs given a shared base-traits object.
+   */
+  explicit Gps_traits_decorator(Shared_base_traits base_traits) : m_base_traits(std::move(base_traits)) {}
 
-  Gps_traits_decorator(const Base& base_traits) :
-    m_base_traits(&base_traits),
-    m_traits_owner(false)
-  {}
+  /*! constructs given a base-traits object. The caller retains ownership of
+   * the base traits and must keep it alive as long as the decorator (or any
+   * copy of it) exists.
+   */
+  Gps_traits_decorator(const Base& base_traits) : m_base_traits(_non_owning(base_traits)) {}
 
-  ~Gps_traits_decorator()
-  {
-    if (m_traits_owner) {
-      delete m_base_traits;
-      m_base_traits = nullptr;
-    }
-  }
-
-  class Compare_x_2
-  {
+  class Compare_x_2 {
   protected:
-
     Base_Compare_x_2 m_base;
 
   public:
-    Compare_x_2(Base_Compare_x_2& base) : m_base(base)
-    {}
+    explicit Compare_x_2(const Base_Compare_x_2& base) : m_base(base) {}
 
-    Comparison_result operator() (const Point_2& p1, const Point_2& p2) const
-    {
-      return (m_base(p1.base(), p2.base()));
-    }
+    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const { return m_base(p1.base(), p2.base()); }
   };
 
-  /*! Get a Compare_x_2 functor object. */
-  Compare_x_2 compare_x_2_object () const
-  {
-    return Compare_x_2(m_base_traits->compare_x_2_object());
-  }
+  /*! obtains a Compare_x_2 functor object. */
+  Compare_x_2 compare_x_2_object() const { return Compare_x_2(m_base_traits->compare_x_2_object()); }
 
-
-  class Compare_xy_2
-  {
+  class Compare_xy_2 {
   protected:
-
     Base_Compare_xy_2 m_base;
 
   public:
-    Compare_xy_2(const Base_Compare_xy_2& base) : m_base(base)
-    {}
+    explicit Compare_xy_2(const Base_Compare_xy_2& base) : m_base(base) {}
 
-    Comparison_result operator() (const Point_2& p1, const Point_2& p2) const
-    {
-      return (m_base(p1.base(), p2.base()));
-    }
+    Comparison_result operator()(const Point_2& p1, const Point_2& p2) const { return m_base(p1.base(), p2.base()); }
   };
 
-  /*! Get a Compare_xy_2 functor object. */
-  Compare_xy_2 compare_xy_2_object () const
-  {
-    return Compare_xy_2(m_base_traits->compare_xy_2_object());
-  }
+  /*! obtains a Compare_xy_2 functor object. */
+  Compare_xy_2 compare_xy_2_object() const { return Compare_xy_2(m_base_traits->compare_xy_2_object()); }
 
-  class Construct_min_vertex_2
-  {
+  class Construct_min_vertex_2 {
   protected:
-
     Base_Construct_min_vertex_2 m_base;
 
   public:
-    Construct_min_vertex_2(const Base_Construct_min_vertex_2& base) :
-      m_base(base)
-    {}
+    explicit Construct_min_vertex_2(const Base_Construct_min_vertex_2& base) : m_base(base) {}
 
-    Point_2 operator() (const X_monotone_curve_2& cv) const
-    {
-      return Point_2(m_base(cv.base()));
-    }
+    Point_2 operator()(const X_monotone_curve_2& xcv) const { return Point_2(m_base(xcv.base())); }
   };
 
-  /*! Get a Construct_min_vertex_2 functor object. */
-  Construct_min_vertex_2 construct_min_vertex_2_object () const
-  {
-    return Construct_min_vertex_2(m_base_traits->construct_min_vertex_2_object());
-  }
+  /*! obtains a Construct_min_vertex_2 functor object. */
+  Construct_min_vertex_2 construct_min_vertex_2_object() const
+  { return Construct_min_vertex_2(m_base_traits->construct_min_vertex_2_object()); }
 
-  class Construct_max_vertex_2
-  {
+  class Construct_max_vertex_2 {
   protected:
-
     Base_Construct_max_vertex_2 m_base;
 
   public:
-    Construct_max_vertex_2(const Base_Construct_max_vertex_2& base) :
-      m_base(base)
-    {}
+    explicit Construct_max_vertex_2(const Base_Construct_max_vertex_2& base) : m_base(base) {}
 
-    Point_2 operator() (const X_monotone_curve_2& cv) const
-    {
-      return Point_2(m_base(cv.base()));
-    }
+    Point_2 operator()(const X_monotone_curve_2& xcv) const { return Point_2(m_base(xcv.base())); }
   };
 
-  /*! Get a Construct_max_vertex_2 functor object. */
-  Construct_max_vertex_2 construct_max_vertex_2_object () const
-  {
-    return Construct_max_vertex_2(m_base_traits->construct_max_vertex_2_object());
-  }
+  /*! obtains a Construct_max_vertex_2 functor object. */
+  Construct_max_vertex_2 construct_max_vertex_2_object() const
+  { return Construct_max_vertex_2(m_base_traits->construct_max_vertex_2_object()); }
 
-
-  class Is_vertical_2
-  {
+  class Is_vertical_2 {
   protected:
-
     Base_Is_vertical_2 m_base;
 
   public:
-    Is_vertical_2(const Base_Is_vertical_2& base) : m_base(base)
-    {}
+    explicit Is_vertical_2(const Base_Is_vertical_2& base) : m_base(base) {}
 
-    bool operator() (const X_monotone_curve_2& cv) const
-    {
-      return (m_base(cv.base()));
-    }
+    bool operator()(const X_monotone_curve_2& xcv) const { return m_base(xcv.base()); }
   };
 
-  /*! Get a Is_vertical_2 functor object. */
-  Is_vertical_2 is_vertical_2_object() const
-  {
-    return Is_vertical_2(m_base_traits->is_vertical_2_object());
-  }
+  /*! obtains an Is_vertical_2 functor object. */
+  Is_vertical_2 is_vertical_2_object() const { return Is_vertical_2(m_base_traits->is_vertical_2_object()); }
 
-
-  class Compare_y_at_x_2
-  {
+  class Compare_y_at_x_2 {
   protected:
-
     Base_Compare_y_at_x_2 m_base;
 
   public:
-    Compare_y_at_x_2(const Base_Compare_y_at_x_2& base) : m_base(base)
-    {}
+    explicit Compare_y_at_x_2(const Base_Compare_y_at_x_2& base) : m_base(base) {}
 
-    Comparison_result operator() (const Point_2& p,
-                                  const X_monotone_curve_2& cv) const
-    {
-      return m_base(p.base(), cv.base());
-    }
+    Comparison_result operator()(const Point_2& p, const X_monotone_curve_2& xcv) const
+    { return m_base(p.base(), xcv.base()); }
   };
 
-  /*! Get a compare_y_at_x_2_object functor object. */
+  /*! obtains a Compare_y_at_x_2 functor object. */
   Compare_y_at_x_2 compare_y_at_x_2_object() const
-  {
-    return Compare_y_at_x_2(m_base_traits->compare_y_at_x_2_object());
-  }
+  { return Compare_y_at_x_2(m_base_traits->compare_y_at_x_2_object()); }
 
-
-  class Compare_y_at_x_right_2
-  {
+  class Compare_y_at_x_right_2 {
   protected:
-
     Base_Compare_y_at_x_right_2 m_base;
 
   public:
-    Compare_y_at_x_right_2(const Base_Compare_y_at_x_right_2& base) :
-      m_base(base)
-    {}
+    explicit Compare_y_at_x_right_2(const Base_Compare_y_at_x_right_2& base) : m_base(base) {}
 
-    Comparison_result operator() (const X_monotone_curve_2& cv1,
-                                  const X_monotone_curve_2& cv2,
-                                  const Point_2& p) const
-    {
-      return m_base(cv1.base(), cv2.base(), p.base());
-    }
+    Comparison_result operator()(const X_monotone_curve_2& xcv1, const X_monotone_curve_2& xcv2,
+                                 const Point_2& p) const
+    { return m_base(xcv1.base(), xcv2.base(), p.base()); }
   };
 
-  /*! Get a Compare_y_at_x_right_2 functor object. */
+  /*! obtains a Compare_y_at_x_right_2 functor object. */
   Compare_y_at_x_right_2 compare_y_at_x_right_2_object() const
-  {
-    return Compare_y_at_x_right_2(m_base_traits->compare_y_at_x_right_2_object());
-  }
+  { return Compare_y_at_x_right_2(m_base_traits->compare_y_at_x_right_2_object()); }
 
-
-  class Equal_2
-  {
+  class Equal_2 {
   protected:
-
     Base_Equal_2 m_base;
 
   public:
-    Equal_2(const Base_Equal_2& base) : m_base(base)
-    {}
+    explicit Equal_2(const Base_Equal_2& base) : m_base(base) {}
 
-    bool operator() (const Point_2& p1, const Point_2& p2) const
-    {
-      return m_base(p1.base(), p2.base());
-    }
+    bool operator()(const Point_2& p1, const Point_2& p2) const { return m_base(p1.base(), p2.base()); }
   };
 
-  /*! Get an `Equal_2` functor object. */
-  Equal_2 equal_2_object() const
-  {
-    return Equal_2(m_base_traits->equal_2_object());
-  }
+  /*! obtains an Equal_2 functor object. */
+  Equal_2 equal_2_object() const { return Equal_2(m_base_traits->equal_2_object()); }
 
-
-  class Split_2
-  {
+  class Split_2 {
   protected:
-
     Base_Split_2 m_base;
 
   public:
-    Split_2(const Base_Split_2& base) : m_base(base)
-    {}
+    explicit Split_2(const Base_Split_2& base) : m_base(base) {}
 
-    void operator() (const X_monotone_curve_2& cv,
-                     const Point_2& p,
-                     X_monotone_curve_2& c1, X_monotone_curve_2& c2) const
-    {
-      m_base(cv.base(), p.base(), c1.base(), c2.base());
-    }
+    void operator()(const X_monotone_curve_2& xcv, const Point_2& p,
+                    X_monotone_curve_2& xcv1, X_monotone_curve_2& xcv2) const
+    { m_base(xcv.base(), p.base(), xcv1.base(), xcv2.base()); }
   };
 
-  /*! Get a Split_2 functor object. */
-  Split_2 split_2_object() const
-  {
-    return Split_2(m_base_traits->split_2_object());
-  }
+  /*! obtains a Split_2 functor object. */
+  Split_2 split_2_object() const { return Split_2(m_base_traits->split_2_object()); }
 
-
-  class Intersect_2
-  {
+  class Compare_endpoints_xy_2 {
   protected:
-
-    Base_Intersect_2             m_base;
-    Base_Compare_xy_2            m_base_cmp_xy;
-    Base_Construct_min_vertex_2  m_ctr_min_v;
-
-  public:
-    Intersect_2(Base_Intersect_2&            base,
-                Base_Compare_xy_2&           base_cmp_xy,
-                Base_Construct_min_vertex_2& base_ctr_min_v) :
-      m_base(base),
-      m_base_cmp_xy(base_cmp_xy),
-      m_ctr_min_v(base_ctr_min_v)
-    {}
-
-    template<class OutputIterator>
-    OutputIterator operator() (const X_monotone_curve_2& cv1,
-                               const X_monotone_curve_2& cv2,
-                               OutputIterator oi) const
-    {
-      const std::pair<Base_Point_2, Multiplicity>   *base_pt;
-      const Base_X_monotone_curve_2                 *overlap_cv;
-
-       OutputIterator oi_end;
-      if(m_base_cmp_xy(m_ctr_min_v(cv1.base()),
-                       m_ctr_min_v(cv2.base())) == LARGER)
-        oi_end = m_base(cv1.base(), cv2.base(), oi);
-      else
-        oi_end = m_base(cv2.base(), cv1.base(), oi);
-
-      // convert objects that are associated with Base_X_monotone_curve_2 to
-      // the extenede X_monotone_curve_2
-      for(; oi != oi_end; ++oi)
-      {
-        base_pt = object_cast<std::pair<Base_Point_2, Multiplicity> >(&(*oi));
-
-        if (base_pt != nullptr)
-        {
-          Point_2 point_plus (base_pt->first); // the extended point
-          *oi = CGAL::make_object(std::make_pair(point_plus,
-                                                 base_pt->second));
-        }
-        else
-        {
-          overlap_cv = object_cast<Base_X_monotone_curve_2> (&(*oi));
-          CGAL_assertion(overlap_cv != nullptr);
-          *oi = CGAL::make_object (X_monotone_curve_2 (*overlap_cv));
-        }
-      }
-      //return past-end iterator
-      return oi_end;
-    }
-  };
-
-  /*! Get a Intersect_2 functor object. */
-  Intersect_2 intersect_2_object() const
-  {
-    return Intersect_2(m_base_traits->intersect_2_object(),
-                       m_base_traits->compare_xy_2_object(),
-                       m_base_traits->construct_min_vertex_2_object());
-  }
-
-
-  class Compare_endpoints_xy_2
-  {
-  protected:
-
     Base_Compare_endpoints_xy_2 m_base;
 
   public:
-    Compare_endpoints_xy_2(const Base_Compare_endpoints_xy_2& base) :
-      m_base(base)
-    {}
+    explicit Compare_endpoints_xy_2(const Base_Compare_endpoints_xy_2& base) : m_base(base) {}
 
-    Comparison_result operator()(const X_monotone_curve_2& cv) const
-    {
-      return (m_base(cv));
-
-    }
+    Comparison_result operator()(const X_monotone_curve_2& xcv) const { return m_base(xcv.base()); }
   };
 
-  /*! Get a Compare_endpoints_xy_2 functor object. */
+  /*! obtains a Compare_endpoints_xy_2 functor object. */
   Compare_endpoints_xy_2 compare_endpoints_xy_2_object() const
-  {
-    return Compare_endpoints_xy_2(m_base_traits->compare_endpoints_xy_2_object());
-  }
+  { return Compare_endpoints_xy_2(m_base_traits->compare_endpoints_xy_2_object()); }
 
+  /// \name Functors required by traits with open sides
+  /// The base traits is expected to be an arrangement traits adaptor (e.g.,
+  /// `Arr_traits_basic_adaptor_2`), which provides these functors regardless
+  /// of the side categories. The functors of the base are re-exported as is;
+  /// the extended point and curve types are implicitly converted to the base
+  /// types when the functors are applied.
+  /// Compare_y_on_boundary_2, Is_on_x_identification_2, and
+  /// Is_on_y_identification_2 are not provided, as they are required only by
+  /// traits with closed, contracted, or identified sides, which are excluded
+  /// by the static assertions above.
+  //@{
 
-  class Construct_opposite_2
-  {
-  protected:
+  // left-right
+  using Parameter_space_in_x_2 = typename Base::Parameter_space_in_x_2;
+  using Compare_y_near_boundary_2 = typename Base::Compare_y_near_boundary_2;
 
-    Base_Construct_opposite_2 m_base;
+  /*! obtains a Parameter_space_in_x_2 functor object. */
+  Parameter_space_in_x_2 parameter_space_in_x_2_object() const
+  { return m_base_traits->parameter_space_in_x_2_object(); }
 
-  public:
-    Construct_opposite_2(Base_Construct_opposite_2& base) :m_base(base)
-    {}
+  /*! obtains a Compare_y_near_boundary_2 functor object. */
+  Compare_y_near_boundary_2 compare_y_near_boundary_2_object() const
+  { return m_base_traits->compare_y_near_boundary_2_object(); }
 
-    X_monotone_curve_2 operator()(const X_monotone_curve_2& cv) const
-    {
-      return (X_monotone_curve_2(m_base(cv)));
-    }
-  };
+  // bottom-top
+  using Parameter_space_in_y_2 = typename Base::Parameter_space_in_y_2;
+  using Compare_x_near_boundary_2 = typename Base::Compare_x_near_boundary_2;
+  using Compare_x_on_boundary_2 = typename Base::Compare_x_on_boundary_2;
 
-  /*! Get a Construct_opposite_2 functor object. */
-  Construct_opposite_2 construct_opposite_2_object() const
-  {
-    return Construct_opposite_2(m_base_traits->construct_opposite_2_object());
-  }
+  /*! obtains a Parameter_space_in_y_2 functor object. */
+  Parameter_space_in_y_2 parameter_space_in_y_2_object() const
+  { return m_base_traits->parameter_space_in_y_2_object(); }
 
+  /*! obtains a Compare_x_near_boundary_2 functor object. */
+  Compare_x_near_boundary_2 compare_x_near_boundary_2_object() const
+  { return m_base_traits->compare_x_near_boundary_2_object(); }
+
+  /*! obtains a Compare_x_on_boundary_2 functor object. */
+  Compare_x_on_boundary_2 compare_x_on_boundary_2_object() const
+  { return m_base_traits->compare_x_on_boundary_2_object(); }
+  //@}
 };
 
-} //namespace CGAL
+} // namespace CGAL
 
 #endif

@@ -144,7 +144,8 @@ struct Algebraic_traits_decorating_test_objects : public Decorating_traits_test_
     // x^2+y^2-1=0, a unit circle
     this->cv = ctr_cv(CGAL::ipower(x, 4) + CGAL::ipower(y, 2) - 1);
     this->xcv_seg = first_x_monotone_curve(this->cv);
-    this->xcv_seg_pt = this->xcv_seg.compare_y_at_x(ctr_pt(0, 1)) == CGAL::EQUAL ? ctr_pt(0, 1) : ctr_pt(0, -1);
+    this->xcv_seg_pt =
+      base.compare_y_at_x_2_object()(ctr_pt(0, 1), this->xcv_seg) == CGAL::EQUAL ? ctr_pt(0, 1) : ctr_pt(0, -1);
     // x^4-y=0
     this->xcv_lr = first_x_monotone_curve(ctr_cv(CGAL::ipower(x, 4) - y));
     // y(x-2)-1=0

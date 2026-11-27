@@ -11,6 +11,7 @@
  * \cgalRefines{AosApproximateTraits_2}
  *
  * \cgalHasModelsBegin
+ * \cgalHasModels{CGAL::Arr_algebraic_segment_traits_2<Coefficient>}
  * \cgalHasModels{CGAL::Arr_linear_traits_2<Kernel>}
  * \cgalHasModelsEnd
  *

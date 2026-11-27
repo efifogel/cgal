@@ -336,12 +336,6 @@ public:
   {
   }
 
-  void setScene(QGraphicsScene* scene_) override
-  {
-    Superclass::setScene(scene_);
-    this->setupFacade();
-  }
-
   /*! Destructor (virtual) */
   virtual ~ArrangementPainterOstream() {}
 
@@ -349,26 +343,12 @@ public: // methods
 
   ArrangementPainterOstream& operator<<( const X_monotone_curve_2& curve );
 
-  // more efficient than repeatedly calling operator<< since we will only call
-  // remapFacadePainter once
   template <typename EdgesIterator>
   void paintEdges(EdgesIterator first, EdgesIterator last)
-  {
-    this->qp->save();
-    this->remapFacadePainter();
-    for (auto it = first; it != last; ++it)
-    {
-      X_monotone_curve_2 curve = it->curve();
-      this->paintCurve(curve);
-    }
-    this->qp->restore();
-  }
+  { for (auto it = first; it != last; ++it) this->paintCurve(it->curve()); }
 
-  // Maybe move these functions to someplace else?
+  // approximates the visible part of a curve by polylines in scene coordinates
   std::vector<Coord_vec_2> getPointsList(const X_monotone_curve_2& curve);
-  QTransform getPointsListMapping();
-  QTransform getPointsListMapping(const QTransform& worldTransform);
-  void setupFacade();
 
   template < typename T >
   ArrangementPainterOstream& operator<<( const T& p )
@@ -379,7 +359,8 @@ public: // methods
 
 protected:
   void paintCurve(const X_monotone_curve_2& curve);
-  void remapFacadePainter();
+
+  Traits traits;
 };
 
 template <typename AlgebraicKernel_d_1_>

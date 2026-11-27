@@ -100,9 +100,18 @@ public:
     for (const auto& vh : arr.vertex_handles()) bbox += approx(vh->point()).bbox();
     if (is_empty(bbox)) return Bbox_2(-1, -1, 1, 1);
 
-    // Computes a more precise bounding box from the edges. Avoid a zero error,
-    // which arises when all vertices lie on a vertical (or horizontal) line.
-    if constexpr (has_approximate_xcv_v<Geom_traits, typename Geom_traits::Approximate_2>) {
+    // Computes a more precise bounding box from the bounded edges. Constructing
+    // the bounding box of a curve is cheaper than approximating it.
+    if constexpr (has_construct_bbox_2_v<Geom_traits>) {
+      auto construct_bbox = traits.construct_bbox_2_object();
+      for (const auto& e : arr.edge_handles()) {
+        if (e->source()->is_at_open_boundary() || e->target()->is_at_open_boundary()) continue;
+        bbox += construct_bbox(e->curve());
+      }
+    }
+    // Otherwise, approximates the edges. Avoid a zero error, which arises when
+    // all vertices lie on a vertical (or horizontal) line.
+    else if constexpr (has_approximate_xcv_v<Geom_traits, typename Geom_traits::Approximate_2>) {
       double span = (std::max)(bbox.x_span(), bbox.y_span());
       double approx_error = (span > 0) ? span / 100 : 0.01;
       auto add = boost::make_function_output_iterator([&bbox](const Approx_point& pt) { bbox += pt.bbox(); });

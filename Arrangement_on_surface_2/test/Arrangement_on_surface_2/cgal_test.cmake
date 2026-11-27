@@ -805,6 +805,17 @@ function(test_point_location_circle_segments)
 endfunction()
 
 #---------------------------------------------------------------------#
+# point location with polylines
+#---------------------------------------------------------------------#
+function(test_point_location_polylines)
+  set(nt ${CGAL_GMPQ_NT})
+  set(kernel ${CARTESIAN_KERNEL})
+  set(geom_traits ${POLYLINE_GEOM_TRAITS})
+  set(flags "-DTEST_NT=${nt} -DTEST_KERNEL=${kernel} -DTEST_GEOM_TRAITS=${geom_traits}")
+  compile_and_run_with_flags(test_point_location polylines "${flags}")
+endfunction()
+
+#---------------------------------------------------------------------#
 # point location with linear objects
 #---------------------------------------------------------------------#
 function(test_point_location_linear)
@@ -1046,6 +1057,28 @@ function(test_polyline_traits)
     APPROXIMATE ARE_MERGEABLE
     COMPARE_Y_AT_X_LEFT COMPARE_Y_AT_X_RIGHT CONSTRUCTOR
     DO_INTERSECT)
+endfunction()
+
+#---------------------------------------------------------------------#
+# polyline traits that always construct curves directed left to right
+#---------------------------------------------------------------------#
+function(test_polyline_traits_left_to_right)
+  set(nt ${CGAL_GMPQ_NT})
+  set(kernel ${CARTESIAN_KERNEL})
+  set(geom_traits ${POLYLINE_GEOM_TRAITS})
+  set(flags "-DTEST_NT=${nt} -DTEST_KERNEL=${kernel} -DTEST_GEOM_TRAITS=${geom_traits} -DCGAL_ALWAYS_LEFT_TO_RIGHT")
+
+  compile_test_with_flags(test_traits polylines_left_to_right "${flags}")
+
+  # Curves that differ only in direction become identical, which changes the
+  # expected results of some of the are_mergeable cases of the merge test.
+  execute_commands_old_structure(polylines polyline_traits
+    APPROXIMATE ARE_MERGEABLE
+    COMPARE_Y_AT_X_LEFT COMPARE_Y_AT_X_RIGHT CONSTRUCTOR
+    DO_INTERSECT MERGE)
+  run_trapped_test(test_traits
+    data/empty.zero data/polylines/merge.xcv
+    data/empty.zero data/polylines/merge_left_to_right polyline_traits)
 endfunction()
 
 #---------------------------------------------------------------------#
@@ -1322,7 +1355,9 @@ function(test_rational_arc_traits)
   execute_commands_new_structure(rational_arcs rational_arc_traits
     COMPARE_Y_AT_X COMPARE_Y_AT_X_LEFT
     COMPARE_X_ON_BOUNDARY COMPARE_X_NEAR_BOUNDARY COMPARE_Y_NEAR_BOUNDARY
+    INTERSECT
     IS_VERTICAL
+    MAKE_X_MONOTONE
     MERGE
     SPLIT
     VERTEX)
@@ -1345,7 +1380,7 @@ function(test_algebraic_traits_gmp)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_gmp)
 
   execute_commands_new_structure(algebraic algebraic_traits_gmp
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1369,7 +1404,7 @@ function(test_algebraic_traits_leda)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_leda)
 
   execute_commands_new_structure(algebraic algebraic_traits_leda
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1392,7 +1427,7 @@ function(test_algebraic_traits_core)
   compile_test_with_flags(test_traits algebraic "${flags}" algebraic_traits_core)
 
   execute_commands_new_structure(algebraic algebraic_traits_core
-    COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
+    APPROXIMATE COMPARE COMPARE_Y_AT_X COMPARE_Y_AT_X_RIGHT COMPARE_Y_AT_X_LEFT
     IS_VERTICAL
     INTERSECT
     MAKE_X_MONOTONE
@@ -1409,6 +1444,7 @@ compile_and_run(construction_test_suite_generator)
 test_segment_traits()
 test_non_caching_segment_traits()
 test_polyline_traits()
+test_polyline_traits_left_to_right()
 test_polycurve_conic_traits()
 test_polycurve_circular_arc_traits()
 test_polycurve_bezier_traits()
@@ -1430,12 +1466,18 @@ test_rational_arc_traits()
 test_algebraic_traits_core()
 test_algebraic_traits_gmp()
 test_algebraic_traits_leda()
+compile_and_run(test_algebraic_approximate)
+compile_and_run(test_algebraic_bbox)
+compile_and_run(test_algebraic_own_kernel)
+compile_and_run(test_algebraic_shared_component_overlap)
 
 compile_and_run(test_data_traits)
 
 compile_and_run(test_insertion)
 compile_and_run(test_unbounded_rational_insertion)
 compile_and_run(test_unbounded_rational_direct_insertion)
+compile_and_run(test_unbounded_rational_aggregate_insertion)
+compile_and_run(test_unbounded_linear_overlap_insertion)
 compile_and_run(test_rational_function_traits_2)
 compile_and_run(test_iso_verts)
 
@@ -1453,6 +1495,7 @@ test_point_location_segments()
 test_point_location_segments_conversion()
 test_point_location_circle_segments()
 test_point_location_linear()
+test_point_location_polylines()
 
 test_point_location_dynamic_segments()
 
